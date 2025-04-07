@@ -34,4 +34,14 @@ const School = schoolSequelize.define(
   }
 );
 
+School.associate = function (models) {
+  School.hasMany(models.Class, { foreignKey: "school_id" });
+  School.hasMany(models.Subject, { foreignKey: "school_id" });
+  School.hasMany(models.Guardian, { foreignKey: "school_id" });
+  School.hasMany(models.Student, { foreignKey: "school_id" });
+  School.hasMany(models.Staff, { foreignKey: "school_id" });
+  School.hasMany(models.InternalExam, { foreignKey: "school_id" });
+  School.hasMany(models.Exam, { foreignKey: "school_id" });
+};
+
 module.exports = School;

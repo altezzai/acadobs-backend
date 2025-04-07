@@ -5,6 +5,11 @@ const { Op } = require("sequelize");
 const { compressAndSaveFile } = require("../utils/fileHandler");
 const Mark = require("../models/marks");
 const InternalExam = require("../models/internal_exams");
+const School = require("../models/school");
+const Class = require("../models/class");
+const Subject = require("../models/subject");
+const Student = require("../models/student");
+
 const createExamWithMarks = async (req, res) => {
   try {
     const {
@@ -44,7 +49,16 @@ const createExamWithMarks = async (req, res) => {
 const getAllExams = async (req, res) => {
   try {
     const exams = await InternalExam.findAll({
-      include: [{ model: Mark, as: "marks" }], // Must match alias exactly
+      include: [
+        {
+          model: Mark,
+          attributes: ["id", "marks_obtained"],
+          include: [{ model: Student, attributes: ["id", "full_name"] }],
+        },
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+      ],
     });
 
     res.status(200).json(exams);

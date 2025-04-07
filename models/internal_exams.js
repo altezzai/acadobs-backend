@@ -1,6 +1,10 @@
 "use strict";
 const { DataTypes } = require("sequelize");
 const { schoolSequelize } = require("../config/connection");
+const School = require("./school");
+const Class = require("./class");
+const Subject = require("./subject");
+const Mark = require("./marks");
 
 const InternalExam = schoolSequelize.define(
   "InternalExam",
@@ -21,26 +25,9 @@ const InternalExam = schoolSequelize.define(
 );
 
 // Associations will be declared later
-InternalExam.associate = (models) => {
-  InternalExam.hasMany(models.Mark, {
-    foreignKey: "internal_id",
-    as: "marks",
-  });
 
-  InternalExam.belongsTo(models.Class, {
-    foreignKey: "class_id",
-    as: "class",
-  });
-
-  InternalExam.belongsTo(models.Subject, {
-    foreignKey: "subject_id",
-    as: "subject",
-  });
-
-  InternalExam.belongsTo(models.School, {
-    foreignKey: "school_id",
-    as: "school",
-  });
-};
-
+InternalExam.hasMany(Mark, { foreignKey: "internal_id" });
+InternalExam.belongsTo(Class, { foreignKey: "class_id" });
+InternalExam.belongsTo(Subject, { foreignKey: "subject_id" });
+InternalExam.belongsTo(School, { foreignKey: "school_id" });
 module.exports = InternalExam;

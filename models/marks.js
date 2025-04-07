@@ -1,7 +1,7 @@
 "use strict";
 const { DataTypes } = require("sequelize");
 const { schoolSequelize } = require("../config/connection");
-
+const Student = require("./student");
 const Mark = schoolSequelize.define(
   "Mark",
   {
@@ -20,17 +20,18 @@ const Mark = schoolSequelize.define(
   }
 );
 
-// Associations will be declared later
-Mark.associate = (models) => {
-  Mark.belongsTo(models.InternalExam, {
-    foreignKey: "internal_id",
-    as: "exam",
-  });
-
-  Mark.belongsTo(models.Student, {
-    foreignKey: "student_id",
-    as: "student",
-  });
-};
+Mark.belongsTo(Student, {
+  foreignKey: "student_id",
+});
+// Mark.associate = (models) => {
+//   Mark.belongsTo(models.InternalExam, {
+//     foreignKey: "internal_id",
+//     as: "exam",
+//   });
+//   Mark.belongsTo(models.Student, {
+//     foreignKey: "student_id",
+//     as: "student",
+//   });
+// };
 
 module.exports = Mark;
