@@ -1,55 +1,35 @@
-"use strict";
+const Homework = require("./homework");
+const HomeworkAssignment = require("./homeworkassignment");
+const Student = require("./student");
+const Class = require("./class");
+const Subject = require("./subject");
+const School = require("./school");
+const InternalExam = require("./internal_exams");
+const Mark = require("./marks");
 
-const fs = require("fs");
-const path = require("path");
-const Sequelize = require("sequelize");
-const process = require("process");
-const basename = path.basename(__filename);
-const env = process.env.NODE_ENV || "development";
-const config = require(__dirname + "/../config/config.json")[env];
-const db = {};
+// Associations
+Homework.hasMany(HomeworkAssignment, { foreignKey: "homework_id" });
+Homework.belongsTo(Class, { foreignKey: "class_id" });
+Homework.belongsTo(Subject, { foreignKey: "subject_id" });
+Homework.belongsTo(School, { foreignKey: "school_id" });
 
-let sequelize;
-if (config.use_env_variable) {
-  sequelize = new Sequelize(process.env[config.use_env_variable], config);
-} else {
-  sequelize = new Sequelize(
-    config.database,
-    config.username,
-    config.password,
-    config
-  );
-}
+HomeworkAssignment.belongsTo(Homework, { foreignKey: "homework_id" });
+HomeworkAssignment.belongsTo(Student, { foreignKey: "student_id" });
 
-fs.readdirSync(__dirname)
-  .filter((file) => {
-    return (
-      file.indexOf(".") !== 0 &&
-      file !== basename &&
-      file.slice(-3) === ".js" &&
-      file.indexOf(".test.js") === -1
-    );
-  })
-  .forEach((file) => {
-    const model = require(path.join(__dirname, file))(
-      sequelize,
-      Sequelize.DataTypes
-    );
-    db[model.name] = model;
-  });
+InternalExam.hasMany(Mark, { foreignKey: "internal_id" });
+InternalExam.belongsTo(Class, { foreignKey: "class_id" });
+InternalExam.belongsTo(Subject, { foreignKey: "subject_id" });
+InternalExam.belongsTo(School, { foreignKey: "school_id" });
 
-Object.keys(db).forEach((modelName) => {
-  if (db[modelName].associate) {
-    db[modelName].associate(db);
-  }
-});
-// Set up associations
-Object.keys(db).forEach((modelName) => {
-  if ("associate" in db[modelName]) {
-    db[modelName].associate(db);
-  }
-});
-db.sequelize = sequelize;
-db.Sequelize = Sequelize;
+Mark.belongsTo(Student, { foreignKey: "student_id" });
 
-module.exports = db;
+module.exports = {
+  Homework,
+  HomeworkAssignment,
+  Student,
+  Class,
+  Subject,
+  School,
+  InternalExam,
+  Mark,
+};

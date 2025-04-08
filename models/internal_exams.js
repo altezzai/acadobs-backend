@@ -26,8 +26,4 @@ const InternalExam = schoolSequelize.define(
 
 // Associations will be declared later
 
-InternalExam.hasMany(Mark, { foreignKey: "internal_id" });
-InternalExam.belongsTo(Class, { foreignKey: "class_id" });
-InternalExam.belongsTo(Subject, { foreignKey: "subject_id" });
-InternalExam.belongsTo(School, { foreignKey: "school_id" });
 module.exports = InternalExam;

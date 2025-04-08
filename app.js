@@ -4,18 +4,20 @@ const app = express();
 require("dotenv").config();
 const PORT = process.env.PORT || 5000;
 
-const superadminRoutes = require("./routes/superAdminRoutes");
-const schooladminRoutes = require("./routes/schoolAdminRoutes");
-const staffRoutes = require("./routes/staffRoutes");
+const SuperadminRoutes = require("./routes/superAdminRoutes");
+const SchooladminRoutes = require("./routes/schoolAdminRoutes");
+const StaffRoutes = require("./routes/staffRoutes");
+const GuardianRoutes = require("./routes/guardianRoutes");
 
 app.use(cors());
 app.use(express.json());
 
 // Import routes
 // app.use("/api/auth", require("./routes/authRoutes"));
-app.use("/api/s1/superadmin", superadminRoutes);
-app.use("/api/s1/schooladmin", schooladminRoutes);
-app.use("/api/s1/staff", staffRoutes);
+app.use("/api/s1/superadmin", SuperadminRoutes);
+app.use("/api/s1/schooladmin", SchooladminRoutes);
+app.use("/api/s1/staff", StaffRoutes);
+app.use("/api/s1/guardian", GuardianRoutes);
 
 // Add other routes similarly...
 
