@@ -11,5 +11,12 @@ router.get(
   "/getHomeworkByStudentId/:student_id",
   guardianController.getHomeworkByStudentId
 );
-
+router.get(
+  "/getAttendanceByStudentId/:student_id",
+  guardianController.getAttendanceByStudentId
+);
+router.get(
+  "/getStudentAttendanceByDate/:student_id",
+  guardianController.getStudentAttendanceByDate
+);
 module.exports = router;

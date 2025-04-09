@@ -15,7 +15,7 @@ const Homework = schoolSequelize.define(
     class_id: DataTypes.INTEGER,
     subject_id: DataTypes.INTEGER,
     description: DataTypes.TEXT,
-    due_date: DataTypes.DATE,
+    due_date: DataTypes.DATEONLY,
     file: DataTypes.STRING,
     trash: { type: DataTypes.BOOLEAN, defaultValue: false },
     createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
@@ -26,9 +26,5 @@ const Homework = schoolSequelize.define(
     timestamps: true,
   }
 );
-// Homework.hasMany(HomeworkAssignment, { foreignKey: "homework_id" });
-// Homework.belongsTo(Class, { foreignKey: "class_id" });
-// Homework.belongsTo(Subject, { foreignKey: "subject_id" });
-// Homework.belongsTo(School, { foreignKey: "school_id" });
 
 module.exports = Homework;

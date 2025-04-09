@@ -1,41 +1,57 @@
 const express = require("express");
 const router = express.Router();
-const examController = require("../controllers/staffController");
+const staffController = require("../controllers/staffController");
 const { dpUpload } = require("../middlewares/upload");
-
-router.post("/internalExams", examController.createExamWithMarks);
-router.get("/internalExams", examController.getAllExams);
-router.get("/getAllmarks", examController.getAllmarks);
-router.put("/internalExams/:id", examController.updateExam);
-router.delete("/internalExams/:id", examController.deleteExam);
-router.put("/updateMark/:mark_id", examController.updateMark);
-
+// Internal Exam
+router.post("/internalExams", staffController.createExamWithMarks);
+router.get("/internalExams", staffController.getAllExams);
+router.put("/internalExams/:id", staffController.updateExam);
+router.delete("/internalExams/:id", staffController.deleteExam);
+router.put("/updateMark/:mark_id", staffController.updateMark);
+// Homework
 router.post(
   "/homeworks",
   dpUpload.single("file"),
-  examController.createHomeworkWithAssignments
+  staffController.createHomeworkWithAssignments
 );
-router.get("/homeworks", examController.getAllHomework);
-router.get("/homeworks/:id", examController.getHomeworkById);
+router.get("/homeworks", staffController.getAllHomework);
+router.get("/homeworks/:id", staffController.getHomeworkById);
 router.put(
   "/homeworks/:id",
   dpUpload.single("file"),
-  examController.updateHomework
+  staffController.updateHomework
 );
-router.delete("/homeworks/:id", examController.deleteHomework);
-router.patch("/homeworks/:id", examController.restoreHomework);
+router.delete("/homeworks/:id", staffController.deleteHomework);
+router.patch("/homeworks/:id", staffController.restoreHomework);
 router.delete(
   "/permentDeleteHomework/:id",
-  examController.permentDeleteHomework
+  staffController.permentDeleteHomework
 );
 router.put(
   "/updateHomeworkAssignment/:id",
   dpUpload.single("file"),
-  examController.updateHomeworkAssignment
+  staffController.updateHomeworkAssignment
 );
 router.put(
   "/bulkUpdateHomeworkAssignments/",
-  examController.bulkUpdateHomeworkAssignments
+  staffController.bulkUpdateHomeworkAssignments
+);
+router.get(
+  "/getHomeworkAssignmentById/:id",
+  staffController.getHomeworkAssignmentById
+);
+router.get("/getHomeworkByTeacher/", staffController.getHomeworkByTeacher);
+// Attendance
+router.post("/attendance", staffController.createAttendance);
+router.get("/attendance", staffController.getAllAttendance);
+router.put("/attendance/:id", staffController.updateAttendance);
+router.get("/getAttendanceById/:id", staffController.getAttendanceById);
+router.get("/getAttendanceByTeacher/", staffController.getAttendanceByTeacher);
+router.delete("/attendance/:id", staffController.deleteAttendance);
+router.patch("/attendance/:id", staffController.restoreAttendance);
+router.delete(
+  "/permentDeleteAttendance/:id",
+  staffController.permentDeleteAttendance
 );
 
 module.exports = router;

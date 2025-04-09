@@ -49,8 +49,15 @@ const getAllClasses = async (req, res) => {
     const searchQuery = req.query.q || "";
     const year = req.query.year || "";
     const division = req.query.division || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
 
-    const classes = await Class.findAll({
+    const { count, rows: classes } = await Class.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+
       where: {
         classname: { [Op.like]: `%${searchQuery}%` },
         year: { [Op.like]: `%${year}%` },
@@ -58,7 +65,13 @@ const getAllClasses = async (req, res) => {
         trash: false,
       },
     });
-    res.status(200).json(classes);
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      classes,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -134,14 +147,28 @@ const getSubjects = async (req, res) => {
     const searchQuery = req.query.q || "";
     const range = req.query.range || "";
 
-    const subjects = await Subject.findAll({
+    // const subjects = await Subject.findAll({
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: subjects } = await Subject.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
       where: {
         subject_name: { [Op.like]: `%${searchQuery}%` },
         class_range: { [Op.like]: `%${range}%` },
         trash: false,
       },
     });
-    res.status(200).json(subjects);
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      subjects,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -263,8 +290,33 @@ const createStaff = async (req, res) => {
 
 const getAllStaff = async (req, res) => {
   try {
-    const staff = await Staff.findAll({ where: { trash: false } });
-    res.status(200).json(staff);
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: staff } = await Staff.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: {
+        name: { [Op.like]: `%${searchQuery}%` },
+        trash: false,
+      },
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone", "dp"],
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      staff,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -551,8 +603,29 @@ const createGuardianService = async (guardianData, fileBuffer) => {
 };
 const getAllGuardians = async (req, res) => {
   try {
-    const guardians = await Guardian.findAll({ where: { trash: false } });
-    res.status(200).json(guardians);
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: guardians } = await Guardian.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: {
+        guardian_name: { [Op.like]: `%${searchQuery}%` },
+        trash: false,
+      },
+      include: [{ model: User, attributes: ["name", "email", "phone", "dp"] }],
+    });
+    // res.status(200).json(guardians);
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      guardians,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -713,12 +786,27 @@ const createStudent = async (req, res) => {
 };
 const getAllStudents = async (req, res) => {
   try {
-    const students = await Student.findAll({
-      where: { trash: false },
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: students } = await Student.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: {
+        full_name: { [Op.like]: `%${searchQuery}%` },
+        trash: false,
+      },
 
       include: [{ model: User, attributes: ["name", "email", "phone", "dp"] }],
     });
-    res.status(200).json(students);
+
+    const totalPages = Math.ceil(count / limit);
+    res
+      .status(200)
+      .json({ totalcontent: count, totalPages, currentPage: page, students });
   } catch (err) {
     console.error("Error fetching students:", err);
     res.status(500).json({ error: "Failed to fetch students" });

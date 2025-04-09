@@ -60,10 +60,27 @@ const createSchool = async (req, res) => {
 
 const getAllSchools = async (req, res) => {
   try {
-    const schools = await School.findAll({
-      where: { trash: false },
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: schools } = await School.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: {
+        name: { [Op.like]: `%${searchQuery}%` },
+        trash: false,
+      },
     });
-    res.status(200).json(schools);
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      schools,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -1,12 +1,8 @@
 "use strict";
 module.exports = {
-  async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("homeworks", {
-      id: {
-        type: Sequelize.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-      },
+  up: async (queryInterface, Sequelize) => {
+    await queryInterface.createTable("attendance", {
+      id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
       school_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
@@ -39,21 +35,26 @@ module.exports = {
           key: "id",
         },
       },
-      description: { type: Sequelize.TEXT, allowNull: false },
-      due_date: { type: Sequelize.DATEONLY, allowNull: true },
-      file: Sequelize.STRING,
+      period: { type: Sequelize.INTEGER, allowNull: false },
+      date: { type: Sequelize.DATEONLY, allowNull: false },
       trash: { type: Sequelize.BOOLEAN, defaultValue: false },
       createdAt: {
         type: Sequelize.DATE,
-        defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+        defaultValue: Sequelize.NOW,
       },
       updatedAt: {
         type: Sequelize.DATE,
-        defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+        defaultValue: Sequelize.NOW,
       },
     });
+    // Add composite unique constraint
+    await queryInterface.addConstraint("attendance", {
+      fields: ["school_id", "class_id", "period", "date"],
+      type: "unique",
+      name: "unique_class_combination",
+    });
   },
-  async down(queryInterface) {
-    await queryInterface.dropTable("homeworks");
+  down: async (queryInterface, Sequelize) => {
+    await queryInterface.dropTable("attendance");
   },
 };

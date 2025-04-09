@@ -9,6 +9,8 @@ const School = require("../models/school");
 const Class = require("../models/class");
 const Subject = require("../models/subject");
 const Student = require("../models/student");
+const Attendance = require("../models/attendance");
+const AttendanceMarked = require("../models/attendancemarked");
 
 const {
   Homework,
@@ -54,7 +56,22 @@ const createExamWithMarks = async (req, res) => {
 
 const getAllExams = async (req, res) => {
   try {
-    const exams = await InternalExam.findAll({
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: exams } = await InternalExam.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: {
+        trash: false,
+        [Op.or]: [
+          { internal_name: { [Op.like]: `%${searchQuery}%` } },
+          { date: { [Op.like]: `%${searchQuery}%` } },
+        ],
+      },
       include: [
         {
           model: Mark,
@@ -66,29 +83,20 @@ const getAllExams = async (req, res) => {
         { model: Subject, attributes: ["id", "subject_name"] },
       ],
     });
-
-    res.status(200).json(exams);
-  } catch (err) {
-    console.error("Error fetching exams:", err);
-    res.status(500).json({ error: "Failed to fetch exams" });
-  }
-};
-const getAllmarks = async (req, res) => {
-  try {
-    const exams = await Mark.findAll({
-      include: [
-        {
-          model: InternalExam,
-        },
-      ],
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      exams,
     });
-
-    res.status(200).json(exams);
+    // res.status(200).json(exams);
   } catch (err) {
     console.error("Error fetching exams:", err);
     res.status(500).json({ error: "Failed to fetch exams" });
   }
 };
+
 const updateExam = async (req, res) => {
   try {
     const { id } = req.params;
@@ -191,7 +199,19 @@ const createHomeworkWithAssignments = async (req, res) => {
 };
 const getAllHomework = async (req, res) => {
   try {
-    const homework = await Homework.findAll({
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: homework } = await Homework.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: {
+        description: { [Op.like]: `%${searchQuery}%` },
+        trash: false,
+      },
       include: [
         {
           model: HomeworkAssignment,
@@ -203,24 +223,16 @@ const getAllHomework = async (req, res) => {
               attributes: ["id", "reg_no", "full_name", "image"],
             },
           ],
-
-          // include: [
-          //   {
-          //     model: Student,
-          //     // attributes: ["id", "reg_no", "full_name", "image"],
-          //   },
-          // ],
         },
       ],
     });
-    // const homework = await Homework.findAll({
-    //   include: [
-    //     {
-    //       model: HomeworkAssignment,
-    //     },
-    //   ],
-    // });
-    res.status(200).json(homework);
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      homework,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -382,13 +394,301 @@ const bulkUpdateHomeworkAssignments = async (req, res) => {
     res.status(500).json({ error: "Bulk update failed" });
   }
 };
+const getHomeworkAssignmentById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const assignment = await HomeworkAssignment.findByPk(id, {
+      include: [
+        {
+          model: Student,
+          attributes: ["id", "reg_no", "full_name", "image"],
+        },
+      ],
+    });
+    if (!assignment) return res.status(404).json({ error: "Not found" });
+    res.status(200).json(assignment);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getHomeworkByTeacher = async (req, res) => {
+  try {
+    const { teacher_id } = req.query;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
 
+    const { count, rows: homework } = await Homework.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: {
+        teacher_id,
+        description: { [Op.like]: `%${searchQuery}%` },
+        trash: false,
+      },
+      include: [
+        {
+          model: HomeworkAssignment,
+          attributes: ["id", "status", "points", "solved_file"],
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "reg_no", "full_name", "image"],
+            },
+          ],
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      homework,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const createAttendance = async (req, res) => {
+  try {
+    const {
+      teacher_id,
+      school_id,
+      class_id,
+      subject_id,
+      period,
+      date,
+      students,
+    } = req.body;
+    if (
+      !teacher_id ||
+      !school_id ||
+      !class_id ||
+      !period ||
+      !date ||
+      !students
+    ) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const existingAttendance = await Attendance.findOne({
+      where: {
+        school_id,
+        class_id,
+        period,
+        date,
+      },
+    });
+
+    if (existingAttendance) {
+      return res
+        .status(400)
+        .json({ error: "Attendance already exists for the given date" });
+    }
+
+    const attendance = await Attendance.create({
+      teacher_id,
+      school_id,
+      class_id,
+      subject_id,
+      period,
+      date,
+    });
+
+    const records = students.map((student) => ({
+      attendance_id: attendance.id,
+      student_id: student.student_id,
+      status: student.status,
+      remarks: student.remarks || null,
+    }));
+
+    await AttendanceMarked.bulkCreate(records);
+
+    res.status(201).json({ message: "Attendance created", attendance });
+  } catch (err) {
+    console.error("Create Attendance Error", err);
+    res.status(500).json({ error: "Failed to create attendance" });
+  }
+};
+
+const getAllAttendance = async (req, res) => {
+  try {
+    const date = req.query.date || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+    };
+
+    if (date) {
+      whereClause.date = date;
+    }
+
+    const { count, rows: attendance } = await Attendance.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+
+      where: whereClause,
+      include: [
+        {
+          model: AttendanceMarked,
+          attributes: ["id", "status", "remarks"],
+          include: [
+            { model: Student, attributes: ["id", "full_name", "image"] },
+          ],
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      attendance,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const updateAttendance = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      teacher_id,
+      // school_id,
+      class_id,
+      subject_id,
+      period,
+      date,
+    } = req.body;
+    const attendance = await Attendance.findOne({
+      where: { id, trash: false },
+    });
+    if (!attendance) return res.status(404).json({ error: "Not found" });
+    await Attendance.update(
+      { teacher_id, class_id, subject_id, period, date },
+      { where: { id } }
+    );
+    res.json({ message: "Updated", attendance });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const updateAttendanceMarked = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, remarks } = req.body;
+    await AttendanceMarked.update({ status, remarks }, { where: { id } });
+    res.json({ message: "Updated" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const deleteAttendance = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const attendance = await Attendance.findByPk(id);
+    if (!attendance || attendance.trash)
+      return res.status(404).json({ error: "Not found" });
+
+    await Attendance.update({ trash: true }, { where: { id: id } });
+    res.status(200).json({
+      message: `Deleted successfully.`,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Delete failed" });
+  }
+};
+
+const restoreAttendance = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const attendance = await Attendance.findByPk(id);
+    if (!attendance) return res.status(404).json({ error: "Not found" });
+
+    await Attendance.update({ trash: false }, { where: { id: id } });
+
+    res.json({
+      message: `restored successfully.`,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+const permentDeleteAttendance = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await AttendanceMarked.destroy({ where: { attendance_id: id } });
+    await Attendance.destroy({ where: { id } });
+    res.json({ message: "Peremently Deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getAttendanceById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const attendance = await Attendance.findOne({
+      where: { id, trash: false },
+      include: [
+        {
+          model: AttendanceMarked,
+          attributes: ["id", "status", "remarks"],
+          include: [
+            { model: Student, attributes: ["id", "full_name", "image"] },
+          ],
+        },
+      ],
+    });
+    if (!attendance) return res.status(404).json({ error: "Not found" });
+    res.json(attendance);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const getAttendanceByTeacher = async (req, res) => {
+  try {
+    const { teacher_id } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: attendance } = await Attendance.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: { teacher_id },
+      include: [
+        {
+          model: AttendanceMarked,
+          attributes: ["id", "status", "remarks"],
+          include: [
+            { model: Student, attributes: ["id", "full_name", "image"] },
+          ],
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      attendance,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 module.exports = {
   createExamWithMarks,
   getAllExams,
   updateExam,
   updateMark,
-  getAllmarks,
   deleteExam,
 
   createHomeworkWithAssignments,
@@ -400,4 +700,16 @@ module.exports = {
   updateHomeworkAssignment,
   permentDeleteHomework,
   bulkUpdateHomeworkAssignments,
+  getHomeworkAssignmentById,
+  getHomeworkByTeacher,
+
+  createAttendance,
+  getAllAttendance,
+  updateAttendance,
+  updateAttendanceMarked,
+  deleteAttendance,
+  restoreAttendance,
+  permentDeleteAttendance,
+  getAttendanceById,
+  getAttendanceByTeacher,
 };

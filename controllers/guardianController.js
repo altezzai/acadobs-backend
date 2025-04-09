@@ -6,6 +6,14 @@ const { compressAndSaveFile } = require("../utils/fileHandler");
 const HomeworkAssignment = require("../models/homeworkassignment");
 const Student = require("../models/student");
 const Homework = require("../models/homework");
+const Attendance = require("../models/attendance");
+const AttendanceMarked = require("../models/attendancemarked");
+const InternalExam = require("../models/internal_exams");
+const Mark = require("../models/marks");
+const Subject = require("../models/subject");
+const School = require("../models/school");
+const User = require("../models/user");
+const { Class } = require("../models");
 
 const updateHomeworkAssignment = async (req, res) => {
   try {
@@ -36,20 +44,134 @@ const updateHomeworkAssignment = async (req, res) => {
 const getHomeworkByStudentId = async (req, res) => {
   try {
     const { student_id } = req.params;
-    const homework = await HomeworkAssignment.findAll({
+
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: homework } = await HomeworkAssignment.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
       where: { student_id: student_id },
       include: [
         {
           model: Homework,
+          where: {
+            description: {
+              [Op.like]: `%${searchQuery}%`,
+            },
+
+            trash: false,
+          },
           attributes: ["id", "description", "due_date", "file"],
+          include: [
+            {
+              model: User,
+              attributes: ["id", "name"],
+            },
+          ],
         },
       ],
     });
-    if (!homework) return res.status(404).json({ error: "Not found" });
-    res.status(200).json(homework);
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      homework,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getAttendanceByStudentId = async (req, res) => {
+  try {
+    const { student_id } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: attendance } = await AttendanceMarked.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: { student_id: student_id },
+      attributes: ["id", "status", "remarks"],
+      include: [
+        {
+          model: Attendance,
+          attributes: ["id", "date", "period"],
+
+          include: [
+            {
+              model: User,
+              attributes: ["name"],
+            },
+          ],
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      attendance,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getStudentAttendanceByDate = async (req, res) => {
+  try {
+    const student_id = req.params.student_id;
+    const date = req.query.date || new Date();
+    // const attendance = await AttendanceMarked.findAll({
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: attendance } = await AttendanceMarked.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+
+      where: { student_id: student_id },
+      attributes: ["id", "status", "remarks"],
+      include: [
+        {
+          model: Attendance,
+          where: { date: date, trash: false },
+          attributes: ["id", "date", "period"],
+
+          include: [
+            {
+              model: User,
+              attributes: ["name"],
+            },
+          ],
+        },
+      ],
+    });
+    if (!attendance) return res.status(404).json({ error: "Not found" });
+    // res.status(200).json(attendance);
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      attendance,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-module.exports = { updateHomeworkAssignment, getHomeworkByStudentId };
+module.exports = {
+  updateHomeworkAssignment,
+  getHomeworkByStudentId,
+  getAttendanceByStudentId,
+  getStudentAttendanceByDate,
+};
