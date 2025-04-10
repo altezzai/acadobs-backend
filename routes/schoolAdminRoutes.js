@@ -65,4 +65,32 @@ router.put(
   schoolAdminController.updateStudent
 );
 router.delete("/students/:id", schoolAdminController.deleteStudent);
+//duty
+router.post(
+  "/duties",
+  dpUpload.single("file"),
+  schoolAdminController.createDutyWithAssignments
+);
+router.get("/duties", schoolAdminController.getAllDuties);
+router.get("/duties/:id", schoolAdminController.getDutyById);
+router.put(
+  "/duties/:id",
+  dpUpload.single("file"),
+  schoolAdminController.updateDuty
+);
+router.delete("/duties/:id", schoolAdminController.deleteDuty);
+router.patch("/duties/:id", schoolAdminController.restoreDuty);
+router.delete(
+  "/permanentDeleteDuty/:id",
+  schoolAdminController.permanentDeleteDuty
+);
+router.put(
+  "/updateDutyAssigned/:id",
+  dpUpload.single("solved_file"),
+  schoolAdminController.updateDutyAssigned
+);
+router.put(
+  "/bulkUpdateDutyAssignments/",
+  schoolAdminController.bulkUpdateDutyAssignments
+);
 module.exports = router;

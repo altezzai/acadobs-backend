@@ -11,6 +11,9 @@ const Subject = require("../models/subject");
 const Student = require("../models/student");
 const Attendance = require("../models/attendance");
 const AttendanceMarked = require("../models/attendancemarked");
+const DutyAssignment = require("../models/dutyassignment");
+const Duty = require("../models/duty");
+const User = require("../models/user");
 
 const {
   Homework,
@@ -327,7 +330,7 @@ const deleteHomework = async (req, res) => {
     res.status(500).json({ error: "Delete failed" });
   }
 };
-const permentDeleteHomework = async (req, res) => {
+const permanentDeleteHomework = async (req, res) => {
   try {
     const { id } = req.params;
     const homework = await Homework.findByPk(id);
@@ -619,7 +622,7 @@ const restoreAttendance = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-const permentDeleteAttendance = async (req, res) => {
+const permanentDeleteAttendance = async (req, res) => {
   try {
     const { id } = req.params;
     await AttendanceMarked.destroy({ where: { attendance_id: id } });
@@ -684,6 +687,105 @@ const getAttendanceByTeacher = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const getAllDuties = async (req, res) => {
+  try {
+    const staff_id = req.query.staff_id;
+    const searchQuery = req.query.q || "";
+    const deadline = req.query.deadline || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+    };
+
+    if (deadline) {
+      whereClause.deadline = deadline;
+    }
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: duties } = await DutyAssignment.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: { staff_id },
+      attributes: ["id", "remarks", "status", "solved_file"],
+      include: [
+        {
+          model: Duty,
+          where: whereClause,
+          attributes: ["id", "title", "description", "deadline", "file"],
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      duties,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch duties" });
+  }
+};
+const getAssignedDutyById = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const staff_id = req.query.staff_id;
+    const duty = await DutyAssignment.findOne({
+      where: { id, staff_id },
+      attributes: ["id", "remarks", "status", "solved_file"],
+      include: [
+        {
+          model: Duty,
+
+          attributes: ["id", "title", "description", "deadline", "file"],
+        },
+      ],
+    });
+
+    if (!duty) {
+      return res.status(404).json({ error: "Duty not found" });
+    }
+
+    res.json(duty);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch duty" });
+  }
+};
+const updateAssignedDuty = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { remarks, status, staff_id } = req.body;
+    const assignedDuty = await DutyAssignment.findOne({
+      where: {
+        id,
+        staff_id,
+      },
+    });
+    if (!assignedDuty) {
+      return res.status(404).json({ error: "Not found" });
+    }
+    let fileName = null;
+    if (req.file) {
+      uploadPath = "uploads/solved_duties/";
+      fileName = await compressAndSaveFile(req.file, uploadPath);
+    }
+    const updatedDuty = await assignedDuty.update({
+      status,
+      remarks,
+      solved_file: fileName ? fileName : assignedDuty.solved_file,
+    });
+    res.json({ message: "Updated", updatedDuty });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 module.exports = {
   createExamWithMarks,
   getAllExams,
@@ -698,7 +800,7 @@ module.exports = {
   deleteHomework,
   restoreHomework,
   updateHomeworkAssignment,
-  permentDeleteHomework,
+  permanentDeleteHomework,
   bulkUpdateHomeworkAssignments,
   getHomeworkAssignmentById,
   getHomeworkByTeacher,
@@ -709,7 +811,11 @@ module.exports = {
   updateAttendanceMarked,
   deleteAttendance,
   restoreAttendance,
-  permentDeleteAttendance,
+  permanentDeleteAttendance,
   getAttendanceById,
   getAttendanceByTeacher,
+
+  getAllDuties,
+  getAssignedDutyById,
+  updateAssignedDuty,
 };

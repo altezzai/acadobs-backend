@@ -29,5 +29,17 @@ const compressAndSaveFile = async (file, uploadPath) => {
     throw new Error("Error processing file");
   }
 };
+const deletefilewithfoldername = async (file, foldername) => {
+  try {
+    if (file) {
+      const filePath = path.join(foldername + "/", file.filename);
+      if (fs.existsSync(filePath)) {
+        await fs.promises.unlink(filePath);
+      }
+    }
+  } catch (err) {
+    console.error("Error cleaning up" + foldername + " files:", err);
+  }
+};
 
-module.exports = { compressAndSaveFile };
+module.exports = { compressAndSaveFile, deletefilewithfoldername };

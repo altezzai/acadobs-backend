@@ -11,6 +11,8 @@ const Guardian = require("./guardian");
 const Staff = require("./staff");
 const Attendance = require("./attendance");
 const AttendanceMarked = require("./attendancemarked");
+const Duty = require("./duty");
+const DutyAssignment = require("./dutyassignment");
 // Relations
 
 // Associations
@@ -35,6 +37,11 @@ AttendanceMarked.belongsTo(Student, { foreignKey: "student_id" });
 Staff.belongsTo(User, { foreignKey: "user_id" });
 Guardian.belongsTo(User, { foreignKey: "user_id" });
 
+Duty.hasMany(DutyAssignment, { foreignKey: "duty_id" });
+Duty.belongsTo(School, { foreignKey: "school_id" });
+DutyAssignment.belongsTo(Duty, { foreignKey: "duty_id" });
+DutyAssignment.belongsTo(User, { foreignKey: "staff_id" });
+
 module.exports = {
   Homework,
   HomeworkAssignment,
@@ -44,4 +51,11 @@ module.exports = {
   School,
   InternalExam,
   Mark,
+  User,
+  Guardian,
+  Staff,
+  Attendance,
+  AttendanceMarked,
+  // Duty,
+  // DutyAssignment,
 };

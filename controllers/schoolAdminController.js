@@ -2,13 +2,19 @@ const path = require("path");
 const fs = require("fs");
 const bcrypt = require("bcrypt");
 const { Op } = require("sequelize");
-const { compressAndSaveFile } = require("../utils/fileHandler");
+const {
+  compressAndSaveFile,
+  deletefilewithfoldername,
+} = require("../utils/fileHandler");
 const Staff = require("../models/staff");
 const Class = require("../models/class");
 const Subject = require("../models/subject");
 const User = require("../models/user");
 const Guardian = require("../models/guardian");
 const Student = require("../models/student");
+const Duty = require("../models/duty");
+const DutyAssignment = require("../models/dutyassignment");
+const { schoolSequelize } = require("../config/connection");
 
 // CREATE
 const createClass = async (req, res) => {
@@ -902,6 +908,261 @@ const deleteStudent = async (req, res) => {
     res.status(500).json({ error: "Failed to delete student" });
   }
 };
+const createDutyWithAssignments = async (req, res) => {
+  let uploadPath = null;
+  const transaction = await schoolSequelize.transaction();
+
+  try {
+    const { school_id, title, description, deadline, assignments } = req.body;
+    if (!school_id || !title || !description || !assignments) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const existingDuty = await Duty.findOne({
+      where: { title, school_id, deadline },
+    });
+    if (existingDuty) {
+      return res
+        .status(400)
+        .json({ error: "Duty with the same title already exists" });
+    }
+    let fileName = null;
+
+    if (req.file) {
+      uploadPath = "uploads/duties/";
+      fileName = await compressAndSaveFile(req.file, uploadPath);
+    }
+    const duty = await Duty.create(
+      {
+        school_id,
+        title,
+        description,
+        deadline,
+        file: fileName ? fileName : null,
+      },
+      { transaction }
+    );
+
+    const bulkAssignments = assignments.map((item) => ({
+      ...item,
+      staff_id: 2,
+      duty_id: duty.id,
+    }));
+
+    await DutyAssignment.bulkCreate({ bulkAssignments }, { transaction });
+    await transaction.commit();
+    res.status(201).json({ duty, assignments });
+  } catch (err) {
+    await deletefilewithfoldername(req.file, uploadPath);
+    await transaction.rollback();
+    console.error(err);
+    res.status(500).json({ error: "Failed to create duty with assignments" });
+  }
+};
+
+const getAllDuties = async (req, res) => {
+  try {
+    const searchQuery = req.query.q || "";
+    const deadline = req.query.deadline || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+    };
+
+    if (deadline) {
+      whereClause.deadline = deadline;
+    }
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: duties } = await Duty.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        {
+          model: DutyAssignment,
+          attributes: ["id", "remarks", "status", "solved_file"],
+          include: [
+            {
+              model: User,
+              attributes: ["id", "name", "dp"],
+            },
+          ],
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      duties,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch duties" });
+  }
+};
+const getDutyById = async (req, res) => {
+  try {
+    const duty = await Duty.findByPk(req.params.id, {
+      include: [
+        {
+          model: DutyAssignment,
+          attributes: ["id", "remarks", "status", "solved_file"],
+          include: [
+            {
+              model: User,
+              attributes: ["id", "name", "dp"],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!duty) {
+      return res.status(404).json({ error: "Duty not found" });
+    }
+
+    res.json(duty);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch duty" });
+  }
+};
+const updateDuty = async (req, res) => {
+  try {
+    const { title, description, deadline, file } = req.body;
+    const duty = await Duty.findByPk(req.params.id);
+    if (!duty) return res.status(404).json({ error: "Duty not found" });
+
+    const existingDuty = await Duty.findOne({
+      where: { school_id: duty.school_id, title, deadline },
+    });
+    if (existingDuty && existingDuty.id !== duty.id) {
+      return res
+        .status(409)
+        .json({ error: "Duty with the same title already exists" });
+    }
+    let fileName = null;
+    if (req.file) {
+      uploadPath = "uploads/duties/";
+      fileName = await compressAndSaveFile(req.file, uploadPath);
+    }
+    await duty.update({
+      title,
+      description,
+      deadline,
+      file: fileName ? fileName : duty.file,
+    });
+    res.json(duty);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update duty" });
+  }
+};
+const updateDutyAssigned = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { remarks, status } = req.body;
+
+    const assignedDuty = await DutyAssignment.findByPk(id);
+    if (!assignedDuty) {
+      return res.status(404).json({ error: "Not found" });
+    }
+    let fileName = null;
+    if (req.file) {
+      uploadPath = "uploads/solved_duties/";
+      fileName = await compressAndSaveFile(req.file, uploadPath);
+    }
+    const updatedDuty = await assignedDuty.update({
+      status,
+      remarks,
+      solved_file: fileName ? fileName : assignedDuty.solved_file,
+    });
+    res.json({ message: "Updated", updatedDuty });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const bulkUpdateDutyAssignments = async (req, res) => {
+  try {
+    const { duty_id, updates } = req.body;
+
+    if (!duty_id || !Array.isArray(updates)) {
+      return res
+        .status(400)
+        .json({ error: "duty_id and updates array are required" });
+    }
+
+    const updatePromises = updates.map(async (item) => {
+      return DutyAssignment.update(
+        {
+          status: item.status,
+          remarks: item.remarks,
+        },
+        {
+          where: {
+            duty_id,
+            staff_id: item.staff_id,
+          },
+        }
+      );
+    });
+
+    await Promise.all(updatePromises);
+
+    res.status(200).json({ message: "Duty assignments updated successfully" });
+  } catch (error) {
+    console.error("Bulk update failed:", error);
+    res.status(500).json({ error: "Bulk update failed" });
+  }
+};
+const deleteDuty = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const duty = await Duty.findByPk(id);
+    if (!duty || duty.trash)
+      return res.status(404).json({ error: "Not found" });
+
+    await Duty.update({ trash: true }, { where: { id: id } });
+    res.status(200).json({
+      message: `Deleted successfully.`,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Delete failed duty" });
+  }
+};
+
+const restoreDuty = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const duty = await Duty.findByPk(id);
+    if (!duty) return res.status(404).json({ error: "Not found" });
+
+    await Duty.update({ trash: false }, { where: { id: id } });
+
+    res.json({
+      message: `restored successfully duty.`,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+const permanentDeleteDuty = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await DutyAssignment.destroy({ where: { duty_id: id } });
+    await Duty.destroy({ where: { id } });
+    res.json({ message: "Peremently Deleted Duty" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 module.exports = {
   createClass,
@@ -935,4 +1196,14 @@ module.exports = {
   getStudentById,
   updateStudent,
   deleteStudent,
+
+  createDutyWithAssignments,
+  getDutyById,
+  getAllDuties,
+  updateDuty,
+  deleteDuty,
+  restoreDuty,
+  permanentDeleteDuty,
+  updateDutyAssigned,
+  bulkUpdateDutyAssignments,
 };

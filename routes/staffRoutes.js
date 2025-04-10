@@ -24,8 +24,8 @@ router.put(
 router.delete("/homeworks/:id", staffController.deleteHomework);
 router.patch("/homeworks/:id", staffController.restoreHomework);
 router.delete(
-  "/permentDeleteHomework/:id",
-  staffController.permentDeleteHomework
+  "/permanentDeleteHomework/:id",
+  staffController.permanentDeleteHomework
 );
 router.put(
   "/updateHomeworkAssignment/:id",
@@ -50,8 +50,15 @@ router.get("/getAttendanceByTeacher/", staffController.getAttendanceByTeacher);
 router.delete("/attendance/:id", staffController.deleteAttendance);
 router.patch("/attendance/:id", staffController.restoreAttendance);
 router.delete(
-  "/permentDeleteAttendance/:id",
-  staffController.permentDeleteAttendance
+  "/permanentDeleteAttendance/:id",
+  staffController.permanentDeleteAttendance
 );
+router.get("/duties", staffController.getAllDuties);
+router.get("/duties/:id", staffController.getAssignedDutyById);
 
+router.put(
+  "/updateAssignedDuty/:id",
+  dpUpload.single("solved_file"),
+  staffController.updateAssignedDuty
+);
 module.exports = router;
