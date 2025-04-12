@@ -2,6 +2,19 @@ const express = require("express");
 const router = express.Router();
 const schoolAdminController = require("../controllers/schoolAdminController");
 const { dpUpload } = require("../middlewares/upload");
+const multer = require("multer");
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/proofs/");
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = Date.now() + "-" + file.originalname;
+    cb(null, uniqueName);
+  },
+});
+
+const upload = multer({ storage });
 // Class routes
 router.post("/classes", schoolAdminController.createClass); // Create a new class
 router.get("/classes", schoolAdminController.getAllClasses); // Get all classes
@@ -92,5 +105,20 @@ router.put(
 router.put(
   "/bulkUpdateDutyAssignments/",
   schoolAdminController.bulkUpdateDutyAssignments
+);
+router.post(
+  "/achievements",
+  dpUpload.any(),
+  schoolAdminController.createAchievementWithStudents
+);
+router.get("/achievements", schoolAdminController.getAllAchievements);
+router.get("/achievements/:id", schoolAdminController.getAchievementById);
+router.put("/achievements/:id", schoolAdminController.updateAchievement);
+router.delete("/achievements/:id", schoolAdminController.deleteAchievement);
+router.patch("/achievements/:id", schoolAdminController.restoreAchievement);
+router.put(
+  "/updateStudentAchievement/:id",
+  dpUpload.single("proof_document"),
+  schoolAdminController.updateStudentAchievement
 );
 module.exports = router;

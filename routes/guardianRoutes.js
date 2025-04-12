@@ -19,4 +19,12 @@ router.get(
   "/getStudentAttendanceByDate/:student_id",
   guardianController.getStudentAttendanceByDate
 );
+router.get(
+  "/allAchievementBySchoolId/:school_id",
+  guardianController.allAchievementBySchoolId
+);
+router.get(
+  "/achievementByStudentId/:student_id",
+  guardianController.achievementByStudentId
+);
 module.exports = router;

@@ -29,17 +29,45 @@ const compressAndSaveFile = async (file, uploadPath) => {
     throw new Error("Error processing file");
   }
 };
-const deletefilewithfoldername = async (file, foldername) => {
+const compressAndSaveMultiFile = async (file, uploadPath) => {
+  const ext = path.extname(file.originalname);
+  const fileName = `${Date.now()}_${file.originalname}`;
+  const fullPath = path.join(uploadPath, fileName);
+
+  // Ensure upload folder exists
+  if (!fs.existsSync(uploadPath)) {
+    fs.mkdirSync(uploadPath, { recursive: true });
+  }
+
+  // Check for image type
+  if (file.mimetype.startsWith("image/")) {
+    await sharp(file.buffer)
+      .resize({ width: 800 }) // optional
+      .jpeg({ quality: 80 })
+      .toFile(fullPath);
+  } else {
+    // Just save non-image files as is
+    fs.writeFileSync(fullPath, file.buffer);
+  }
+
+  return fileName;
+};
+const deletefilewithfoldername = async (filename, foldername) => {
   try {
-    if (file) {
-      const filePath = path.join(foldername + "/", file.filename);
+    if (filename) {
+      const filePath = path.join(foldername, filename);
       if (fs.existsSync(filePath)) {
         await fs.promises.unlink(filePath);
+        console.log("Deleted file:", filePath);
       }
     }
   } catch (err) {
-    console.error("Error cleaning up" + foldername + " files:", err);
+    console.error("Error cleaning up " + foldername + " files:", err);
   }
 };
 
-module.exports = { compressAndSaveFile, deletefilewithfoldername };
+module.exports = {
+  compressAndSaveFile,
+  compressAndSaveMultiFile,
+  deletefilewithfoldername,
+};

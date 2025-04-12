@@ -13,6 +13,8 @@ const Attendance = require("./attendance");
 const AttendanceMarked = require("./attendancemarked");
 const Duty = require("./duty");
 const DutyAssignment = require("./dutyassignment");
+const Achievement = require("./achievement");
+const StudentAchievement = require("./studentachievement");
 // Relations
 
 // Associations
@@ -41,6 +43,14 @@ Duty.hasMany(DutyAssignment, { foreignKey: "duty_id" });
 Duty.belongsTo(School, { foreignKey: "school_id" });
 DutyAssignment.belongsTo(Duty, { foreignKey: "duty_id" });
 DutyAssignment.belongsTo(User, { foreignKey: "staff_id" });
+
+Achievement.hasMany(StudentAchievement, { foreignKey: "achievement_id" });
+StudentAchievement.belongsTo(Achievement, { foreignKey: "achievement_id" });
+StudentAchievement.belongsTo(Student, { foreignKey: "student_id" });
+
+Student.belongsTo(Class, { foreignKey: "class_id" });
+Student.belongsTo(School, { foreignKey: "school_id" });
+Student.belongsTo(User, { foreignKey: "guardian_id" });
 
 module.exports = {
   Homework,

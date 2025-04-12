@@ -13,6 +13,9 @@ const Mark = require("../models/marks");
 const Subject = require("../models/subject");
 const School = require("../models/school");
 const User = require("../models/user");
+const Guardian = require("../models/guardian");
+const Achievement = require("../models/achievement");
+const StudentAchievement = require("../models/studentachievement");
 const { Class } = require("../models");
 
 const updateHomeworkAssignment = async (req, res) => {
@@ -168,10 +171,126 @@ const getStudentAttendanceByDate = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
+const getSchoolIdByStudentId = async (student_id) => {
+  try {
+    const student = await Student.findByPk(student_id);
+    if (!student) console.log("student not found ---");
+    const school_id = student.school_id;
+    return school_id;
+    // res.status(200).json({ school_id });
+  } catch (err) {
+    return "error in getting school id";
+  }
+};
+const allAchievementBySchoolId = async (req, res) => {
+  try {
+    const { school_id } = req.params;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+      school_id: school_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: achievement } = await Achievement.findAndCountAll({
+      offset,
+      distinct: true, // Add this line
+      limit,
+      where: whereClause, // Add this line
+      include: [
+        {
+          model: StudentAchievement,
+          attributes: ["student_id", "status", "proof_document", "remarks"],
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "reg_no", "image"],
+              include: [
+                {
+                  model: Class,
+                  attributes: ["id", "classname", "year", "division"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      achievement,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const achievementByStudentId = async (req, res) => {
+  try {
+    const { student_id } = req.params;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: achievement } =
+      await StudentAchievement.findAndCountAll({
+        offset,
+        distinct: true, // Add this line
+        limit,
+        where: { student_id: student_id },
+        attributes: ["id", "status", "proof_document", "remarks"],
+        include: [
+          {
+            model: Achievement,
+            where: whereClause,
+            attributes: [
+              "id",
+              "title",
+              "description",
+              "category",
+              "level",
+              "date",
+            ],
+          },
+        ],
+      });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      achievement,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 module.exports = {
   updateHomeworkAssignment,
   getHomeworkByStudentId,
   getAttendanceByStudentId,
   getStudentAttendanceByDate,
+
+  getSchoolIdByStudentId,
+
+  allAchievementBySchoolId,
+  achievementByStudentId,
 };
