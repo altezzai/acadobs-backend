@@ -2,7 +2,7 @@
 const { DataTypes } = require("sequelize");
 const { schoolSequelize } = require("../config/connection");
 
-const Event = sequelize.define(
+const Event = schoolSequelize.define(
   "Event",
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },

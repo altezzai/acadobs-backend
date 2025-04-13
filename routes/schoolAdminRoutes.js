@@ -124,4 +124,19 @@ router.put(
   dpUpload.single("proof_document"),
   schoolAdminController.updateStudentAchievement
 );
+//events
+router.post(
+  "/events",
+  dpUpload.single("file"),
+  schoolAdminController.createEvent
+);
+router.get("/events", schoolAdminController.getAllEvents);
+router.get("/events/:id", schoolAdminController.getEventById);
+router.put(
+  "/events/:id",
+  dpUpload.single("file"),
+  schoolAdminController.updateEvent
+);
+router.delete("/events/:id", schoolAdminController.deleteEvent);
+router.patch("/events/:id", schoolAdminController.restoreEvent);
 module.exports = router;

@@ -17,6 +17,7 @@ const Duty = require("../models/duty");
 const DutyAssignment = require("../models/dutyassignment");
 const Achievement = require("../models/achievement");
 const StudentAchievement = require("../models/studentachievement");
+const Event = require("../models/event");
 const { schoolSequelize } = require("../config/connection");
 
 // CREATE
@@ -259,9 +260,7 @@ const createStaff = async (req, res) => {
         .status(400)
         .json({ error: "SchoolAdmin email already exists in user table" });
     }
-    console.log(req.file);
-    // // const dp = req.file ? req.file.filename : null;
-    // const dp = req.file ? `/uploads/dp/${req.file.filename}` : null;
+
     let fileName = null;
 
     if (req.file) {
@@ -1431,6 +1430,120 @@ const updateStudentAchievement = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+const createEvent = async (req, res) => {
+  try {
+    const { school_id, title, description, date, url, venue } = req.body;
+
+    if (!school_id || !title || !date) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+    const existingEvent = await Event.findOne({
+      where: { school_id, title, date },
+    });
+    if (existingEvent) {
+      return res
+        .status(400)
+        .json({ error: "Event with the same title already exists" });
+    }
+    console.log(req.file);
+    let fileName = null;
+    if (req.file) {
+      const uploadPath = "uploads/event_files/";
+      fileName = await compressAndSaveFile(req.file, uploadPath);
+    }
+
+    const event = await Event.create({
+      school_id,
+      title,
+      description,
+      date,
+      url,
+      venue,
+      file: fileName ? fileName : null,
+    });
+
+    res.status(201).json(event);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getAllEvents = async (req, res) => {
+  try {
+    const events = await Event.findAll({ where: { trash: false } });
+    res.status(200).json(events);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getEventById = async (req, res) => {
+  try {
+    const event = await Event.findByPk(req.params.id);
+    if (!event || event.trash)
+      return res.status(404).json({ error: "Event not found" });
+    res.status(200).json(event);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const updateEvent = async (req, res) => {
+  try {
+    const { school_id, title, description, date, url, venue } = req.body;
+    const Id = req.params.id;
+    const existingEvent = await Event.findOne({
+      where: { school_id, title, date, id: { [Op.ne]: Id } },
+    });
+
+    if (existingEvent) {
+      return res
+        .status(409)
+        .json({ error: "Event with the same title already exists" });
+    }
+
+    const event = await Event.findByPk(Id);
+    if (!event || event.trash)
+      return res.status(404).json({ error: "Event not found" });
+
+    let fileName = event.file;
+    if (req.file) {
+      const uploadPath = "uploads/event_files/";
+      await deletefilewithfoldername(fileName, uploadPath);
+      fileName = await compressAndSaveFile(req.file, uploadPath);
+    }
+    await event.update({
+      school_id,
+      title,
+      description,
+      date,
+      url,
+      venue,
+      file: fileName,
+    });
+    res.status(200).json({ message: "Event updated successfully", event });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const deleteEvent = async (req, res) => {
+  try {
+    await Event.update({ trash: true }, { where: { id: req.params.id } });
+    res.status(200).json({ message: "Event soft deleted" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+const restoreEvent = async (req, res) => {
+  try {
+    await Event.update({ trash: false }, { where: { id: req.params.id } });
+    res.status(200).json({ message: "Event restored successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 module.exports = {
   createClass,
   getAllClasses,
@@ -1481,4 +1594,11 @@ module.exports = {
   deleteAchievement,
   restoreAchievement,
   updateStudentAchievement,
+
+  createEvent,
+  getAllEvents,
+  getEventById,
+  updateEvent,
+  deleteEvent,
+  restoreEvent,
 };
