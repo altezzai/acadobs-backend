@@ -61,4 +61,23 @@ router.put(
   dpUpload.single("solved_file"),
   staffController.updateAssignedDuty
 );
+
+router.post(
+  "/achievements",
+  dpUpload.any(),
+  staffController.createAchievementWithStudents
+);
+router.get(
+  "/achievementsByStaffId/:id",
+  staffController.getAllAchievementsByStaffId
+);
+router.get("/achievements/:id", staffController.getAchievementById);
+router.put("/achievements/:id", staffController.updateAchievement);
+router.delete("/achievements/:id", staffController.deleteAchievement);
+router.patch("/achievements/:id", staffController.restoreAchievement);
+router.put(
+  "/updateStudentAchievement/:id",
+  dpUpload.single("proof_document"),
+  staffController.updateStudentAchievement
+);
 module.exports = router;

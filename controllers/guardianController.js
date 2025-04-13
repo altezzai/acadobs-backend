@@ -199,7 +199,7 @@ const allAchievementBySchoolId = async (req, res) => {
         { description: { [Op.like]: `%${searchQuery}%` } },
       ];
     }
-    const { count, rows: achievement } = await Achievement.findAndCountAll({
+    const { count, rows: achievements } = await Achievement.findAndCountAll({
       offset,
       distinct: true, // Add this line
       limit,
@@ -228,7 +228,7 @@ const allAchievementBySchoolId = async (req, res) => {
       totalcontent: count,
       totalPages,
       currentPage: page,
-      achievement,
+      achievements,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

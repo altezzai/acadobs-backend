@@ -1,8 +1,12 @@
 const path = require("path");
 const fs = require("fs");
 const bcrypt = require("bcrypt");
-const { Op } = require("sequelize");
-const { compressAndSaveFile } = require("../utils/fileHandler");
+const { Op, where } = require("sequelize");
+const {
+  compressAndSaveFile,
+  compressAndSaveMultiFile,
+  deletefilewithfoldername,
+} = require("../utils/fileHandler");
 // const Mark = require("../models/marks");
 // const InternalExam = require("../models/internal_exams");
 const School = require("../models/school");
@@ -14,6 +18,9 @@ const AttendanceMarked = require("../models/attendancemarked");
 const DutyAssignment = require("../models/dutyassignment");
 const Duty = require("../models/duty");
 const User = require("../models/user");
+const Achievement = require("../models/achievement");
+const StudentAchievement = require("../models/studentachievement");
+const { schoolSequelize } = require("../config/connection");
 
 const {
   Homework,
@@ -786,6 +793,279 @@ const updateAssignedDuty = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const createAchievementWithStudents = async (req, res) => {
+  try {
+    const {
+      school_id,
+      title,
+      description,
+      category,
+      date,
+      awarding_body,
+      recorded_by,
+      students,
+    } = req.body;
+
+    let parsedStudents;
+    if (typeof students === "string") {
+      parsedStudents = JSON.parse(students);
+    } else {
+      parsedStudents = students;
+    }
+    const existingAchievement = await Achievement.findOne({
+      where: {
+        school_id,
+        title,
+        date,
+        recorded_by,
+      },
+    });
+
+    if (existingAchievement) {
+      return res
+        .status(400)
+        .json({ error: "An achievement with the same title already exists" });
+    }
+    const achievement = await Achievement.create({
+      school_id,
+      title,
+      description,
+      category,
+      level: "class",
+      date,
+      awarding_body,
+      recorded_by,
+    });
+
+    const uploadPath = "uploads/achievement_proofs/";
+
+    // Handle and compress each student's file
+    const studentAchievements = await Promise.all(
+      parsedStudents.map(async (student, index) => {
+        let compressedFileName = null;
+
+        if (req.files && req.files[index]) {
+          compressedFileName = await compressAndSaveMultiFile(
+            req.files[index],
+            uploadPath
+          );
+        }
+
+        return {
+          achievement_id: achievement.id,
+          student_id: student.student_id,
+          status: student.status,
+          proof_document: compressedFileName,
+          remarks: student.remarks,
+        };
+      })
+    );
+
+    await StudentAchievement.bulkCreate(studentAchievements);
+
+    res.status(201).json({
+      message: "Achievement with students saved successfully",
+      achievement,
+    });
+  } catch (err) {
+    console.error("Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+const getAllAchievementsByStaffId = async (req, res) => {
+  try {
+    const staffId = req.params.id;
+
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+      recorded_by: staffId,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: achievements } = await Achievement.findAndCountAll({
+      offset,
+      distinct: true, // Add this line
+      limit,
+      where: whereClause,
+      attributes: ["id", "title", "description", "category", "level", "date"],
+      include: [
+        {
+          model: StudentAchievement,
+          attributes: ["student_id", "status", "proof_document", "remarks"],
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "reg_no", "image"],
+              include: [
+                {
+                  model: Class,
+                  attributes: ["id", "classname", "year", "division"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      achievements,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const getAchievementById = async (req, res) => {
+  try {
+    const achievement = await Achievement.findByPk(req.params.id, {
+      attributes: ["id", "title", "description", "category", "level", "date"],
+      include: [
+        {
+          model: StudentAchievement,
+          attributes: ["student_id", "status", "proof_document", "remarks"],
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "reg_no", "image"],
+              include: [
+                {
+                  model: Class,
+                  attributes: ["id", "classname", "year", "division"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    res.status(200).json(achievement);
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const updateAchievement = async (req, res) => {
+  try {
+    const staffId = req.query.staff_id;
+    if (!staffId) {
+      return res.status(400).json({ error: "Staff ID is required" });
+    }
+    const achievement = await Achievement.findOne({
+      where: { id: req.params.id, recorded_by: staffId },
+      attributes: ["id", "title", "description", "category", "level", "date"],
+    });
+    if (!achievement) {
+      return res.status(404).json({ error: "Achievement not found" });
+    }
+    const {
+      title,
+      description,
+      category,
+      level,
+      date,
+      awarding_body,
+      recorded_by,
+    } = req.body;
+
+    await achievement.update({
+      title,
+      description,
+      category,
+      level,
+      date,
+      awarding_body,
+      recorded_by,
+    });
+    res
+      .status(200)
+      .json({ message: "Achievement updated successfully", achievement });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+const deleteAchievement = async (req, res) => {
+  try {
+    await Achievement.update({ trash: true }, { where: { id: req.params.id } });
+    res.status(200).json({ message: "Achievement trashed successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+const restoreAchievement = async (req, res) => {
+  try {
+    await Achievement.update(
+      { trash: false },
+      { where: { id: req.params.id } }
+    );
+    res.status(200).json({ message: "Achievement restored successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+const updateStudentAchievement = async (req, res) => {
+  try {
+    const staffId = req.query.staff_id;
+    if (!staffId) {
+      return res.status(400).json({ error: "Staff ID is required" });
+    }
+    const { status, proof_document, remarks } = req.body;
+    if (
+      status !== "1st prize" &&
+      status !== "2nd prize" &&
+      status !== "3rd prize" &&
+      status !== "participant" &&
+      status !== "other"
+    ) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+    const StudentAchievementData = await StudentAchievement.findOne({
+      where: { id: req.params.id },
+      attributes: ["id", "status", "proof_document", "remarks"],
+      include: [
+        {
+          model: Achievement,
+          where: { recorded_by: staffId },
+          attributes: ["id", "title"],
+        },
+      ],
+    });
+    if (!StudentAchievementData) {
+      return res.status(404).json({ error: "Student achievement not found" });
+    }
+
+    let AchievementFilename = StudentAchievementData.proof_document;
+    const uploadPath = "uploads/achievement_proofs/";
+    if (req.file) {
+      await deletefilewithfoldername(AchievementFilename, uploadPath);
+      AchievementFilename = await compressAndSaveFile(req.file, uploadPath);
+    }
+    await StudentAchievementData.update({
+      status,
+      proof_document,
+      remarks,
+      proof_document: AchievementFilename ? AchievementFilename : null,
+    });
+    res.status(200).json({
+      message: "Student achievement updated successfully",
+      StudentAchievementData,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 module.exports = {
   createExamWithMarks,
   getAllExams,
@@ -818,4 +1098,12 @@ module.exports = {
   getAllDuties,
   getAssignedDutyById,
   updateAssignedDuty,
+
+  createAchievementWithStudents,
+  getAllAchievementsByStaffId,
+  getAchievementById,
+  updateAchievement,
+  deleteAchievement,
+  restoreAchievement,
+  updateStudentAchievement,
 };

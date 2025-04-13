@@ -1248,10 +1248,28 @@ const createAchievementWithStudents = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
-const getAllAchievements = async (req, res) => {
+const getAllAchievementsBySchoolId = async (req, res) => {
   try {
-    const achievements = await Achievement.findAll({
-      where: { trash: false },
+    const school_id = req.params.id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+      school_id: school_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: achievements } = await Achievement.findAndCountAll({
+      offset,
+      distinct: true, // Add this line
+      limit,
+      where: whereClause,
       attributes: ["id", "title", "description", "category", "level", "date"],
       include: [
         {
@@ -1272,7 +1290,13 @@ const getAllAchievements = async (req, res) => {
         },
       ],
     });
-    res.status(200).json(achievements);
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      achievements,
+    });
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }
@@ -1364,15 +1388,25 @@ const restoreAchievement = async (req, res) => {
 const updateStudentAchievement = async (req, res) => {
   try {
     const { status, proof_document, remarks } = req.body;
-    const StudentAchievementData = await StudentAchievement.findOne(
-      {
-        where: { id: req.params.id },
-      },
-
-      {
-        attributes: ["id", "title", "description", "category", "level", "date"],
-      }
-    );
+    if (
+      status !== "1st prize" &&
+      status !== "2nd prize" &&
+      status !== "3rd prize" &&
+      status !== "participant" &&
+      status !== "other"
+    ) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+    const StudentAchievementData = await StudentAchievement.findOne({
+      where: { id: req.params.id },
+      attributes: ["id", "status", "proof_document", "remarks"],
+      include: [
+        {
+          model: Achievement,
+          attributes: ["id", "title"],
+        },
+      ],
+    });
     if (!StudentAchievementData) {
       return res.status(404).json({ error: "Student achievement not found" });
     }
@@ -1441,7 +1475,7 @@ module.exports = {
   bulkUpdateDutyAssignments,
 
   createAchievementWithStudents,
-  getAllAchievements,
+  getAllAchievementsBySchoolId,
   getAchievementById,
   updateAchievement,
   deleteAchievement,
