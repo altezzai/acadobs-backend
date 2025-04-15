@@ -18,6 +18,7 @@ const DutyAssignment = require("../models/dutyassignment");
 const Achievement = require("../models/achievement");
 const StudentAchievement = require("../models/studentachievement");
 const Event = require("../models/event");
+const Payment = require("../models/payment");
 const { schoolSequelize } = require("../config/connection");
 
 // CREATE
@@ -1471,8 +1472,36 @@ const createEvent = async (req, res) => {
 
 const getAllEvents = async (req, res) => {
   try {
-    const events = await Event.findAll({ where: { trash: false } });
-    res.status(200).json(events);
+    const searchQuery = req.query.q || "";
+    const date = req.query.date || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {};
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if (date) {
+      whereClause.date = date;
+    }
+    const { count, rows: events } = await Event.findAndCountAll({
+      offset,
+      distinct: true, // Add this line
+      limit,
+      where: whereClause,
+    });
+
+    // const events = await Event.findAll({ where: { trash: false } });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      events,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -1544,6 +1573,167 @@ const restoreEvent = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+const createPayment = async (req, res) => {
+  try {
+    const {
+      school_id,
+      student_id,
+      amount,
+      payment_date,
+      payment_type,
+      transaction_id,
+    } = req.body;
+
+    if (!school_id || !amount || !payment_date || !payment_type) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+    const existingTransaction_id = await Payment.findOne({
+      where: { transaction_id },
+    });
+    if (existingTransaction_id) {
+      return res.status(400).json({ error: "Transaction ID already exists" });
+    }
+    const existingPayment = await Payment.findOne({
+      where: {
+        school_id,
+        student_id,
+        amount,
+        payment_date,
+        payment_type,
+      },
+    });
+    if (existingPayment) {
+      return res
+        .status(400)
+        .json({ error: "Payment with the same details already exists" });
+    }
+
+    const payment = await Payment.create(req.body);
+    res.status(201).json(payment);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const getAllPayments = async (req, res) => {
+  try {
+    const searchQuery = req.query.q || "";
+    const date = req.query.date || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {};
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { payment_type: { [Op.like]: `%${searchQuery}%` } },
+        { amount: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if (date) {
+      whereClause.payment_date = date;
+    }
+    const { count, rows: payment } = await Payment.findAndCountAll({
+      offset,
+      distinct: true, // Add this line
+      limit,
+      where: whereClause,
+      include: [
+        {
+          model: Student,
+          attributes: ["id", "full_name", "reg_no", "image"],
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      payment,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const getPaymentById = async (req, res) => {
+  try {
+    const payment = await Payment.findByPk(req.params.id, {
+      include: [
+        {
+          model: Student,
+          attributes: ["id", "full_name", "reg_no", "image"],
+        },
+      ],
+    });
+    if (!payment || payment.trash)
+      return res.status(404).json({ error: "Payment not found" });
+    res.status(200).json(payment);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const updatePayment = async (req, res) => {
+  try {
+    const {
+      school_id,
+      student_id,
+      amount,
+      payment_date,
+      payment_type,
+      transaction_id,
+    } = req.body;
+    const Id = req.params.id;
+    const payment = await Payment.findByPk(Id);
+    if (!payment || payment.trash)
+      return res.status(404).json({ error: "Payment not found" });
+    const existingTransaction_id = await Payment.findOne({
+      where: { transaction_id, id: { [Op.ne]: req.params.id } },
+    });
+    if (existingTransaction_id) {
+      return res.status(400).json({ error: "Transaction ID already exists" });
+    }
+
+    const existingPayment = await Payment.findOne({
+      where: {
+        school_id,
+        student_id,
+        amount,
+        payment_date,
+        payment_type,
+        id: { [Op.ne]: Id },
+      },
+    });
+    if (existingPayment) {
+      return res
+        .status(400)
+        .json({ error: "Payment with the same details already exists" });
+    }
+    await payment.update(req.body);
+    res.status(200).json({ message: "Payment updated", payment });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const deletePayment = async (req, res) => {
+  try {
+    await Payment.update({ trash: true }, { where: { id: req.params.id } });
+    res.status(200).json({ message: "Payment soft deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const restorePayment = async (req, res) => {
+  try {
+    await Payment.update({ trash: false }, { where: { id: req.params.id } });
+    res.status(200).json({ message: "Payment restored successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 module.exports = {
   createClass,
   getAllClasses,
@@ -1601,4 +1791,11 @@ module.exports = {
   updateEvent,
   deleteEvent,
   restoreEvent,
+
+  createPayment,
+  getAllPayments,
+  getPaymentById,
+  updatePayment,
+  deletePayment,
+  restorePayment,
 };

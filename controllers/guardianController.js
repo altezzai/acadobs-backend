@@ -16,6 +16,7 @@ const User = require("../models/user");
 const Guardian = require("../models/guardian");
 const Achievement = require("../models/achievement");
 const StudentAchievement = require("../models/studentachievement");
+const Payment = require("../models/payment");
 const { Class } = require("../models");
 
 const updateHomeworkAssignment = async (req, res) => {
@@ -283,6 +284,44 @@ const achievementByStudentId = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const getPaymentByStudentId = async (req, res) => {
+  try {
+    const { student_id } = req.params;
+    const searchQuery = req.query.q || "";
+    const date = req.query.date || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+      student_id: student_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { payment_type: { [Op.like]: `%${searchQuery}%` } },
+        { amount: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if (date) {
+      whereClause.payment_date = date;
+    }
+    const { count, rows: payment } = await Payment.findAndCountAll({
+      offset,
+      distinct: true, // Add this line
+      limit,
+      where: whereClause,
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      payment,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 module.exports = {
   updateHomeworkAssignment,
   getHomeworkByStudentId,
@@ -293,4 +332,6 @@ module.exports = {
 
   allAchievementBySchoolId,
   achievementByStudentId,
+
+  getPaymentByStudentId,
 };

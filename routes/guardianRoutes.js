@@ -27,4 +27,9 @@ router.get(
   "/achievementByStudentId/:student_id",
   guardianController.achievementByStudentId
 );
+router.get(
+  "/getPaymentByStudentId/:student_id",
+  guardianController.getPaymentByStudentId
+);
+
 module.exports = router;

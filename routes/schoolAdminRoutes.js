@@ -139,4 +139,11 @@ router.put(
 );
 router.delete("/events/:id", schoolAdminController.deleteEvent);
 router.patch("/events/:id", schoolAdminController.restoreEvent);
+//payment
+router.post("/payments", schoolAdminController.createPayment);
+router.get("/payments", schoolAdminController.getAllPayments);
+router.get("/payments/:id", schoolAdminController.getPaymentById);
+router.put("/payments/:id", schoolAdminController.updatePayment);
+router.delete("/payments/:id", schoolAdminController.deletePayment);
+router.patch("/payments/:id", schoolAdminController.restorePayment);
 module.exports = router;
