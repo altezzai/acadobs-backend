@@ -146,4 +146,24 @@ router.get("/payments/:id", schoolAdminController.getPaymentById);
 router.put("/payments/:id", schoolAdminController.updatePayment);
 router.delete("/payments/:id", schoolAdminController.deletePayment);
 router.patch("/payments/:id", schoolAdminController.restorePayment);
+
+//leave request
+router.post(
+  "/leaveRequest",
+  dpUpload.single("attachment"),
+  schoolAdminController.createLeaveRequest
+);
+router.get("/leaveRequest", schoolAdminController.getAllLeaveRequests);
+router.get("/leaveRequest/:id", schoolAdminController.getLeaveRequestById);
+router.delete("/leaveRequest/:id", schoolAdminController.deleteLeaveRequest);
+router.patch("/leaveRequest/:id", schoolAdminController.restoreLeaveRequest);
+router.put(
+  "/leaveRequest/:id",
+  dpUpload.single("attachment"),
+  schoolAdminController.updateLeaveRequest
+);
+router.patch(
+  "/leaveRequestpermission/:id",
+  schoolAdminController.leaveRequestPermission
+);
 module.exports = router;

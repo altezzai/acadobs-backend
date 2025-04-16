@@ -16,6 +16,7 @@ const DutyAssignment = require("./dutyassignment");
 const Achievement = require("./achievement");
 const StudentAchievement = require("./studentachievement");
 const Payment = require("./payment");
+const LeaveRequest = require("./leaverequest");
 // Relations
 
 // Associations
@@ -55,6 +56,11 @@ Student.belongsTo(User, { foreignKey: "guardian_id" });
 
 Payment.belongsTo(School, { foreignKey: "school_id" });
 Payment.belongsTo(Student, { foreignKey: "student_id" });
+
+LeaveRequest.belongsTo(School, { foreignKey: "school_id" });
+LeaveRequest.belongsTo(User, { foreignKey: "user_id" });
+// LeaveRequest.belongsTo(User, { foreignKey: "approved_by" });
+LeaveRequest.belongsTo(Student, { foreignKey: "student_id" });
 
 module.exports = {
   Homework,

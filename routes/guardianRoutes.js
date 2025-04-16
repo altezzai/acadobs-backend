@@ -32,4 +32,21 @@ router.get(
   guardianController.getPaymentByStudentId
 );
 
+router.post(
+  "/leaveRequest",
+  dpUpload.single("attachment"),
+  guardianController.createLeaveRequest
+);
+router.get("/leaveRequest", guardianController.getAllLeaveRequests);
+router.get("/leaveRequest/:id", guardianController.getLeaveRequestById);
+router.get(
+  "/leaveRequestByStudentId/:student_id",
+  guardianController.getLeaveRequestByStudentId
+);
+router.put(
+  "/leaveRequest/:id",
+  dpUpload.single("attachment"),
+  guardianController.updateLeaveRequest
+);
+router.delete("/leaveRequest/:id", guardianController.deleteLeaveRequest);
 module.exports = router;

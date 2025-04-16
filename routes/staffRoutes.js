@@ -84,4 +84,29 @@ router.put(
   dpUpload.single("proof_document"),
   staffController.updateStudentAchievement
 );
+//Leave Request
+router.post(
+  "/leaveRequest",
+  dpUpload.single("attachment"),
+  staffController.createLeaveRequest
+);
+router.get("/leaveRequest", staffController.getAllLeaveRequests);
+router.get("/leaveRequest/:id", staffController.getLeaveRequestById);
+router.put(
+  "/leaveRequest/:id",
+  dpUpload.single("attachment"),
+  staffController.updateLeaveRequest
+);
+router.delete("/leaveRequest/:id", staffController.deleteLeaveRequest);
+router.patch("/leaveRequest/:id", staffController.restoreLeaveRequest);
+router.post(
+  "/createStudentLeaveRequest",
+  dpUpload.single("attachment"),
+  staffController.createStudentLeaveRequest
+);
+router.patch(
+  "/leaveRequestpermission/:id",
+  staffController.leaveRequestPermission
+);
+
 module.exports = router;

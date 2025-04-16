@@ -2,7 +2,10 @@ const path = require("path");
 const fs = require("fs");
 const bcrypt = require("bcrypt");
 const { Op } = require("sequelize");
-const { compressAndSaveFile } = require("../utils/fileHandler");
+const {
+  compressAndSaveFile,
+  deletefilewithfoldername,
+} = require("../utils/fileHandler");
 const HomeworkAssignment = require("../models/homeworkassignment");
 const Student = require("../models/student");
 const Homework = require("../models/homework");
@@ -17,6 +20,7 @@ const Guardian = require("../models/guardian");
 const Achievement = require("../models/achievement");
 const StudentAchievement = require("../models/studentachievement");
 const Payment = require("../models/payment");
+const LeaveRequest = require("../models/leaverequest");
 const { Class } = require("../models");
 
 const updateHomeworkAssignment = async (req, res) => {
@@ -322,6 +326,283 @@ const getPaymentByStudentId = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const createLeaveRequest = async (req, res) => {
+  try {
+    const {
+      school_id,
+      user_id,
+      student_id,
+      from_date,
+      to_date,
+      leave_type,
+      reason,
+      leave_duration,
+    } = req.body;
+    if (
+      !school_id ||
+      !user_id ||
+      !student_id ||
+      !from_date ||
+      !to_date ||
+      !leave_type ||
+      !reason
+    ) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const existingRequest = await LeaveRequest.findOne({
+      where: {
+        school_id: school_id,
+        user_id: user_id,
+        student_id: student_id,
+        from_date: from_date,
+        to_date: to_date,
+      },
+    });
+
+    if (existingRequest) {
+      return res.status(400).json({ error: "Leave request already exists" });
+    }
+
+    let fileName = null;
+    if (req.file) {
+      const uploadPath = "uploads/leave_requests/";
+      fileName = await compressAndSaveFile(req.file, uploadPath);
+    }
+    const data = await LeaveRequest.create({
+      school_id: school_id,
+      user_id: user_id,
+      student_id: student_id,
+      role: "student",
+      from_date: from_date,
+      to_date: to_date,
+      leave_type: leave_type,
+      reason: reason,
+      attachment: fileName ? fileName : null,
+      leave_duration,
+    });
+    res.status(201).json(data);
+  } catch (error) {
+    console.error("Create Error:", error);
+    res.status(500).json({ error: "Failed to create leave request" });
+  }
+};
+
+const getAllLeaveRequests = async (req, res) => {
+  try {
+    const { school_id, user_id } = req.query;
+    if (!school_id || !user_id) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const searchQuery = req.query.q || "";
+    const date = req.query.date || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+      school_id: school_id,
+      user_id: user_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [{ reason: { [Op.like]: `%${searchQuery}%` } }];
+    }
+    if (date) {
+      whereClause[Op.or] = [
+        { from_date: { [Op.like]: `%${date}%` } },
+        { to_date: { [Op.like]: `%${date}%` } },
+      ];
+    }
+    const { count, rows: leaves } = await LeaveRequest.findAndCountAll({
+      offset,
+      distinct: true, // Add this line
+      limit,
+      where: whereClause,
+      attributes: [
+        "id",
+        "from_date",
+        "to_date",
+        "leave_type",
+        "leave_duration",
+        "reason",
+        "attachment",
+        "leave_duration",
+        "status",
+        "admin_remarks",
+      ],
+      order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone"],
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      leaves,
+    });
+  } catch (error) {
+    console.error("Fetch Error:", error);
+    res.status(500).json({ error: "Failed to fetch leave requests" });
+  }
+};
+
+const getLeaveRequestById = async (req, res) => {
+  try {
+    const Id = req.params.id;
+    const { school_id, user_id } = req.query;
+    if (!school_id || !user_id) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const data = await LeaveRequest.findOne({
+      where: {
+        id: Id,
+        user_id,
+        school_id,
+        trash: false,
+      },
+    });
+    if (!data) return res.status(404).json({ error: "Not found" });
+    res.status(200).json(data);
+  } catch (error) {
+    console.error("Fetch One Error:", error);
+    res.status(500).json({ error: "Failed to fetch leave request" });
+  }
+};
+const getLeaveRequestByStudentId = async (req, res) => {
+  try {
+    const student_id = req.params.student_id;
+    const { school_id, user_id } = req.query;
+    if (!school_id || !user_id) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const searchQuery = req.query.q || "";
+    const date = req.query.date || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+      school_id: school_id,
+      user_id: user_id,
+      student_id: student_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { reason: { [Op.like]: `%${searchQuery}%` } },
+        { leave_type: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if (date) {
+      whereClause[Op.or] = [
+        { from_date: { [Op.like]: `%${date}%` } },
+        { to_date: { [Op.like]: `%${date}%` } },
+      ];
+    }
+    const { count, rows: leaves } = await LeaveRequest.findAndCountAll({
+      offset,
+      distinct: true, // Add this line
+      limit,
+      where: whereClause,
+      attributes: [
+        "id",
+        "from_date",
+        "to_date",
+        "leave_type",
+        "leave_duration",
+        "reason",
+        "attachment",
+        "leave_duration",
+        "status",
+        "admin_remarks",
+      ],
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone"],
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      leaves,
+    });
+  } catch (error) {
+    console.error("Fetch Error:", error);
+    res.status(500).json({ error: "Failed to fetch leave requests" });
+  }
+};
+const updateLeaveRequest = async (req, res) => {
+  try {
+    const Id = req.params.id;
+    const {
+      school_id,
+      user_id,
+      student_id,
+      from_date,
+      to_date,
+      leave_type,
+      reason,
+      leave_duration,
+    } = req.body;
+    const data = await LeaveRequest.findByPk(Id);
+    if (!data) return res.status(404).json({ error: "Not found" });
+    const existingRequest = await LeaveRequest.findOne({
+      where: {
+        school_id: school_id,
+        user_id: user_id,
+        student_id: student_id,
+        from_date: from_date,
+        to_date: to_date,
+        id: { [Op.ne]: Id },
+      },
+    });
+    if (existingRequest) {
+      return res.status(400).json({ error: "Leave request already exists" });
+    }
+    let fileName = data.attachment;
+    if (req.file) {
+      const uploadPath = "uploads/leave_requests/";
+      await deletefilewithfoldername(fileName, uploadPath);
+      fileName = await compressAndSaveFile(req.file, uploadPath);
+    }
+    await data.update({
+      student_id: student_id,
+      from_date: from_date,
+      to_date: to_date,
+      leave_type: leave_type,
+      reason: reason,
+      attachment: fileName ? fileName : null,
+      leave_duration,
+    });
+
+    res.status(200).json(data);
+  } catch (error) {
+    console.error("Update Error:", error);
+    res.status(500).json({ error: "Failed to update leave request" });
+  }
+};
+
+const deleteLeaveRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const leave = await LeaveRequest.findByPk(id);
+    if (!leave) return res.status(404).json({ error: "Not found" });
+
+    await leave.update({ trash: true });
+    res.status(200).json("Successfully deleted");
+  } catch (error) {
+    console.error("Delete Error:", error);
+    res.status(500).json({ error: "Failed to delete leave request" });
+  }
+};
+
 module.exports = {
   updateHomeworkAssignment,
   getHomeworkByStudentId,
@@ -334,4 +615,11 @@ module.exports = {
   achievementByStudentId,
 
   getPaymentByStudentId,
+
+  createLeaveRequest,
+  getAllLeaveRequests,
+  getLeaveRequestById,
+  getLeaveRequestByStudentId,
+  updateLeaveRequest,
+  deleteLeaveRequest,
 };
