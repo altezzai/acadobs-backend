@@ -2,6 +2,7 @@ const path = require("path");
 const fs = require("fs");
 const bcrypt = require("bcrypt");
 const { Op, where } = require("sequelize");
+const moment = require("moment");
 const {
   compressAndSaveFile,
   compressAndSaveMultiFile,
@@ -30,6 +31,7 @@ const {
   Mark,
 } = require("../models");
 const e = require("express");
+const { Console } = require("console");
 const createExamWithMarks = async (req, res) => {
   try {
     const {
@@ -475,16 +477,42 @@ const createAttendance = async (req, res) => {
       date,
       students,
     } = req.body;
+
     if (
       !teacher_id ||
       !school_id ||
       !class_id ||
       !period ||
       !date ||
-      !students
+      !students ||
+      !Array.isArray(students)
     ) {
-      return res.status(400).json({ error: "Missing required fields" });
+      return res.status(400).json({ error: "Missing or invalid fields" });
     }
+
+    // Get all students on approved leave for the date
+    const leaveStudents = await LeaveRequest.findAll({
+      where: {
+        school_id,
+        role: "student",
+        status: "approved",
+        from_date: { [Op.lte]: date },
+        to_date: { [Op.gte]: date },
+        trash: false,
+      },
+      attributes: ["student_id"],
+    });
+
+    const leaveStudentIds = leaveStudents.map((leave) => leave.student_id);
+
+    // Filter out students on leave
+    const filteredStudents = students.filter(
+      (student) => !leaveStudentIds.includes(student.student_id)
+    );
+
+    console.log("Filtered Students:", filteredStudents);
+    let attendance;
+
     const existingAttendance = await Attendance.findOne({
       where: {
         school_id,
@@ -495,21 +523,25 @@ const createAttendance = async (req, res) => {
     });
 
     if (existingAttendance) {
-      return res
-        .status(400)
-        .json({ error: "Attendance already exists for the given date" });
+      console.log("Existing Attendance:", existingAttendance);
+      await existingAttendance.update({
+        teacher_id,
+        subject_id,
+      });
+      console.log("Updated Attendance:", existingAttendance);
+      attendance = existingAttendance;
+    } else {
+      // Create new attendance
+      attendance = await Attendance.create({
+        teacher_id,
+        school_id,
+        class_id,
+        subject_id,
+        period,
+        date,
+      });
     }
-
-    const attendance = await Attendance.create({
-      teacher_id,
-      school_id,
-      class_id,
-      subject_id,
-      period,
-      date,
-    });
-
-    const records = students.map((student) => ({
+    const records = filteredStudents.map((student) => ({
       attendance_id: attendance.id,
       student_id: student.student_id,
       status: student.status,
@@ -518,10 +550,14 @@ const createAttendance = async (req, res) => {
 
     await AttendanceMarked.bulkCreate(records);
 
-    res.status(201).json({ message: "Attendance created", attendance });
+    res.status(201).json({
+      message: existingAttendance ? "Attendance updated" : "Attendance created",
+      attendance_id: attendance.id,
+      inserted_count: records.length,
+    });
   } catch (err) {
-    console.error("Create Attendance Error", err);
-    res.status(500).json({ error: "Failed to create attendance" });
+    console.error("Create Attendance Error:", err);
+    res.status(500).json({ error: "Failed to create/update attendance" });
   }
 };
 
@@ -638,6 +674,31 @@ const bulkUpdateMarkedAttendanceByAttendanceId = async (req, res) => {
       { where: { attendance_id: id } }
     );
     res.json({ message: "Updated" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const checkAttendanceByclassIdAndDate = async (req, res) => {
+  try {
+    const { school_id, class_id } = req.query;
+    const period = req.query.period || 1;
+    const date = req.query.date || moment().format("YYYY-MM-DD");
+    if (!school_id || !class_id || !date || !period) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const attendance = await Attendance.findOne({
+      where: { school_id, class_id, date, period, trash: false },
+      attributes: ["id", "period", "date", "class_id", "subject_id"],
+      include: [
+        {
+          model: AttendanceMarked,
+          attributes: ["id", "status", "remarks"],
+          include: [{ model: Student, attributes: ["id", "full_name"] }],
+        },
+      ],
+    });
+    res.json({ status: "checked", attendance });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1436,6 +1497,60 @@ const leaveRequestPermission = async (req, res) => {
     leaveRequest.admin_remarks = admin_remarks;
     if (status === "approved") {
       leaveRequest.status = "approved";
+
+      const student_id = leaveRequest.student_id;
+      const school_id = leaveRequest.school_id;
+      const fromDate = moment(leaveRequest.from_date);
+      const toDate = moment(leaveRequest.to_date);
+      const student = await Student.findOne({
+        where: { id: student_id },
+      });
+      // Loop through each date in range
+      const dates = [];
+      let current = moment(fromDate);
+      while (current.isSameOrBefore(toDate, "day")) {
+        dates.push(current.format("YYYY-MM-DD"));
+        current.add(1, "days");
+      }
+
+      for (const date of dates) {
+        // Find or create the attendance row (assuming one period per day or 'leave' for full day)
+        let attendance = await Attendance.findOrCreate({
+          where: {
+            school_id,
+            date,
+            class_id: student.class_id, // you might need to join with student to fetch class_id
+            teacher_id: userId, // can be optional or replaced by admin ID
+          },
+          defaults: {
+            period: 1,
+            trash: false,
+          },
+        });
+
+        const attendanceRecord = await AttendanceMarked.findOne({
+          where: {
+            attendance_id: attendance[0].id,
+            student_id,
+          },
+        });
+
+        if (attendanceRecord) {
+          // update existing
+          await attendanceRecord.update({
+            status: "leave",
+            remarks: "Leave approved",
+          });
+        } else {
+          // create new
+          await AttendanceMarked.create({
+            attendance_id: attendance[0].id,
+            student_id,
+            status: "leave",
+            remarks: "Leave approved",
+          });
+        }
+      }
     } else if (status === "rejected") {
       leaveRequest.status = "rejected";
     } else {
@@ -1480,7 +1595,8 @@ module.exports = {
   permanentDeleteAttendance,
   getAttendanceById,
   getAttendanceByTeacher,
-  bulkUpdateMarkedAttendanceByAttendanceId, //do not checked
+  bulkUpdateMarkedAttendanceByAttendanceId,
+  checkAttendanceByclassIdAndDate, //do not checked
 
   getAllDuties,
   getAssignedDutyById,

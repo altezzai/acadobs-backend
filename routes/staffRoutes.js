@@ -57,6 +57,11 @@ router.put(
   "/bulkUpdateMarkedAttendanceByAttendanceId/:id",
   staffController.bulkUpdateMarkedAttendanceByAttendanceId
 );
+router.get(
+  "/checkAttendanceByclassIdAndDate",
+  staffController.checkAttendanceByclassIdAndDate
+);
+//duty
 router.get("/duties", staffController.getAllDuties);
 router.get("/duties/:id", staffController.getAssignedDutyById);
 
