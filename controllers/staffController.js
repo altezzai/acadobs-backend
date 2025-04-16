@@ -564,6 +564,28 @@ const getAllAttendance = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const getAttendanceById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const attendance = await Attendance.findOne({
+      where: { id, trash: false },
+      include: [
+        {
+          model: AttendanceMarked,
+          attributes: ["id", "status", "remarks"],
+          include: [
+            { model: Student, attributes: ["id", "full_name", "image"] },
+          ],
+        },
+      ],
+    });
+    if (!attendance) return res.status(404).json({ error: "Not found" });
+    res.json(attendance);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 const updateAttendance = async (req, res) => {
   try {
     const { id } = req.params;
@@ -598,6 +620,27 @@ const updateAttendanceMarked = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const bulkUpdateMarkedAttendanceByAttendanceId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data } = req.body;
+
+    const records = data.map((student) => ({
+      student_id: student.student_id,
+      status: student.status,
+      remarks: student.remarks || null,
+    }));
+
+    await AttendanceMarked.bulkCreate(
+      { records },
+      { where: { attendance_id: id } }
+    );
+    res.json({ message: "Updated" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 const deleteAttendance = async (req, res) => {
   try {
     const { id } = req.params;
@@ -635,27 +678,6 @@ const permanentDeleteAttendance = async (req, res) => {
     await AttendanceMarked.destroy({ where: { attendance_id: id } });
     await Attendance.destroy({ where: { id } });
     res.json({ message: "Peremently Deleted" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-const getAttendanceById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const attendance = await Attendance.findOne({
-      where: { id, trash: false },
-      include: [
-        {
-          model: AttendanceMarked,
-          attributes: ["id", "status", "remarks"],
-          include: [
-            { model: Student, attributes: ["id", "full_name", "image"] },
-          ],
-        },
-      ],
-    });
-    if (!attendance) return res.status(404).json({ error: "Not found" });
-    res.json(attendance);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1094,6 +1116,7 @@ module.exports = {
   permanentDeleteAttendance,
   getAttendanceById,
   getAttendanceByTeacher,
+  bulkUpdateMarkedAttendanceByAttendanceId, //do not checked
 
   getAllDuties,
   getAssignedDutyById,

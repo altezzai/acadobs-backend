@@ -462,19 +462,7 @@ const restoredStaff = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-const restoredStaffUser = async (req, res) => {
-  try {
-    const { staff_id } = req.params;
-    const user = await User.findByPk();
-    if (user && !user.trash)
-      return res.status(404).json({ error: "user not found" });
 
-    await user.update({ trash: false });
-    res.status(200).json({ message: "successfully restored user " });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
 const createGuardian = async (req, res) => {
   try {
     const {
@@ -949,7 +937,7 @@ const createDutyWithAssignments = async (req, res) => {
 
     const bulkAssignments = assignments.map((item) => ({
       ...item,
-      staff_id: 2,
+      // staff_id: 2,
       duty_id: duty.id,
     }));
 

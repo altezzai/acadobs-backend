@@ -53,6 +53,10 @@ router.delete(
   "/permanentDeleteAttendance/:id",
   staffController.permanentDeleteAttendance
 );
+router.put(
+  "/bulkUpdateMarkedAttendanceByAttendanceId/:id",
+  staffController.bulkUpdateMarkedAttendanceByAttendanceId
+);
 router.get("/duties", staffController.getAllDuties);
 router.get("/duties/:id", staffController.getAssignedDutyById);
 
