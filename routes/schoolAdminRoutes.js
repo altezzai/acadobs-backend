@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const schoolAdminController = require("../controllers/schoolAdminController");
-const { dpUpload } = require("../middlewares/upload");
+const { dpUpload, nUpload } = require("../middlewares/upload");
 const multer = require("multer");
 
 const storage = multer.diskStorage({
@@ -166,4 +166,28 @@ router.patch(
   "/leaveRequestpermission/:id",
   schoolAdminController.leaveRequestPermission
 );
+//news
+router.post(
+  "/news",
+  dpUpload.fields([
+    { name: "file", maxCount: 1 },
+    { name: "images", maxCount: 10 },
+  ]),
+  schoolAdminController.createNews
+);
+
+router.get("/news", schoolAdminController.getAllNews);
+router.get("/news/:id", schoolAdminController.getNewsById);
+router.put(
+  "/news/:id",
+  dpUpload.fields([
+    { name: "file", maxCount: 1 },
+    { name: "images", maxCount: 10 },
+  ]),
+  schoolAdminController.updateNews
+);
+router.delete("/news/:id", schoolAdminController.deleteNews);
+router.patch("/news/:id", schoolAdminController.restoreNews);
+router.delete("/deleteNewsImage/:id", schoolAdminController.deleteNewsImage);
+
 module.exports = router;

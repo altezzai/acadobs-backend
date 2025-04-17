@@ -65,9 +65,22 @@ const deletefilewithfoldername = async (filename, foldername) => {
     console.error("Error cleaning up " + foldername + " files:", err);
   }
 };
+const compressImage = async (filePath, outputDir) => {
+  const filename = path.basename(filePath);
+  const compressedPath = path.join(outputDir, `compressed-${filename}`);
 
+  await sharp(filePath)
+    .resize({ width: 1080 }) // Resize width max to 1080px
+    .jpeg({ quality: 70 }) // Compress quality
+    .toFile(compressedPath);
+
+  // fs.unlinkSync(filePath); // remove original uncompressed image
+
+  return `compressed-${filename}`;
+};
 module.exports = {
   compressAndSaveFile,
   compressAndSaveMultiFile,
   deletefilewithfoldername,
+  compressImage,
 };

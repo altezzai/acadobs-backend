@@ -1,11 +1,12 @@
 const path = require("path");
 const fs = require("fs");
 const bcrypt = require("bcrypt");
-const { Op, where } = require("sequelize");
+const { Op, where, DATEONLY } = require("sequelize");
 const {
   compressAndSaveFile,
   deletefilewithfoldername,
   compressAndSaveMultiFile,
+  compressImage,
 } = require("../utils/fileHandler");
 const Staff = require("../models/staff");
 const Class = require("../models/class");
@@ -20,7 +21,10 @@ const StudentAchievement = require("../models/studentachievement");
 const Event = require("../models/event");
 const Payment = require("../models/payment");
 const LeaveRequest = require("../models/leaverequest");
+const News = require("../models/news");
+const NewsImage = require("../models/newsimage");
 const { schoolSequelize } = require("../config/connection");
+const { create } = require("domain");
 
 // CREATE
 const createClass = async (req, res) => {
@@ -1443,13 +1447,14 @@ const createEvent = async (req, res) => {
       fileName = await compressAndSaveFile(req.file, uploadPath);
     }
 
-    const event = await Event.create({
+    const event = await News.create({
       school_id,
       title,
-      description,
+      content: description,
       date,
-      url,
-      venue,
+      user_id: 1,
+      // url,
+      // venue,
       file: fileName ? fileName : null,
     });
 
@@ -1997,6 +2002,176 @@ const restoreLeaveRequest = async (req, res) => {
     res.status(500).json({ error: "Failed to restore leave request" });
   }
 };
+const createNews = async (req, res) => {
+  try {
+    const { school_id, title, content, date } = req.body;
+
+    if (!school_id || !title || !date) {
+      return res.status(400).json({ error: "required fields are missing" });
+    }
+    const existingNews = await News.findOne({
+      where: { school_id, title },
+    });
+    if (existingNews) {
+      return res
+        .status(400)
+        .json({ error: "news with the same title already exists" });
+    }
+    console.log(req.file);
+    let fileName = null;
+    if (req.files?.file?.[0]) {
+      fileName = req.files.file[0];
+      const uploadPath = "uploads/news_files/";
+      fileName = await compressAndSaveFile(fileName, uploadPath);
+    }
+
+    const news = await News.create({
+      school_id,
+      title,
+      content,
+      date,
+      user_id: 1,
+
+      file: fileName ? fileName : null,
+    });
+
+    if (req.files?.images) {
+      const imageRecords = [];
+
+      for (const img of req.files.images) {
+        const compressedName = await compressAndSaveFile(
+          img,
+          "uploads/news_images/"
+        );
+        imageRecords.push({
+          news_id: news.id,
+          image_url: compressedName,
+        });
+      }
+
+      await NewsImage.bulkCreate(imageRecords);
+    }
+    // if (images && Array.isArray(images)) {
+    //   const imageRecords = images.map((img) => ({
+    //     news_id: news.id,
+    //     image_url: img.url,
+    //   }));
+    //   await NewsImage.bulkCreate(imageRecords);
+    // }
+    res.status(201).json(news);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getAllNews = async (req, res) => {
+  const news = await News.findAll({
+    where: { trash: false },
+    include: [
+      {
+        model: NewsImage,
+        where: { trash: false },
+        attributes: ["id", "image_url", "caption"],
+      },
+    ],
+  });
+  res.json(news);
+};
+const getNewsById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const news = await News.findOne({
+      where: { id: id, trash: false },
+      include: [
+        {
+          model: NewsImage,
+          where: { trash: false },
+          attributes: ["id", "image_url", "caption"],
+        },
+      ],
+    });
+    if (!news) return res.status(404).json({ error: "Not found" });
+    res.json(news);
+  } catch (error) {
+    console.error("Fetch Error:", error);
+    res.status(500).json({ error: "Failed to fetch news" });
+  }
+};
+
+const updateNews = async (req, res) => {
+  const { id } = req.params;
+  const { title, content, file } = req.body;
+  const news = await News.findByPk(id);
+  if (!news) {
+    return res.status(404).json({ error: "Not found" });
+  }
+  const existingNews = await News.findOne({
+    where: { title, id: { [Op.ne]: id } },
+  });
+  if (existingNews) {
+    return res
+      .status(409)
+      .json({ error: "News with the same title already exists" });
+  }
+  let fileName = news.file;
+  if (req.file) {
+    const uploadPath = "uploads/news_files/";
+    fileName = await compressAndSaveFile(req.file, uploadPath);
+  }
+  await news.update({ title, content, file: fileName });
+
+  if (req.files?.images) {
+    const imageRecords = [];
+
+    for (const img of req.files.images) {
+      const compressedName = await compressAndSaveFile(
+        img,
+        "uploads/news_images/"
+      );
+      imageRecords.push({
+        news_id: news.id,
+        image_url: compressedName,
+      });
+    }
+
+    await NewsImage.bulkCreate(imageRecords);
+  }
+  res.json({ message: "Updated", news });
+};
+
+const deleteNews = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const news = await News.findByPk(id);
+    if (!news) return res.status(404).json({ error: "Not found" });
+    await news.update({ trash: true });
+    res.json({ message: "Soft deleted" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+const restoreNews = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const news = await News.findOne({ where: { id, trash: true } });
+    if (!news) return res.status(404).json({ error: "Not found" });
+    await news.update({ trash: false });
+    res.json({ message: "Restored" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+const deleteNewsImage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const newsImage = await NewsImage.findOne({ where: { id, trash: false } });
+    if (!newsImage) return res.status(404).json({ error: "Not found" });
+    await newsImage.update({ trash: true });
+    res.json({ message: "Soft deleted" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 module.exports = {
   createClass,
   getAllClasses,
@@ -2069,4 +2244,12 @@ module.exports = {
   leaveRequestPermission,
   deleteLeaveRequest,
   restoreLeaveRequest,
+
+  createNews,
+  getAllNews,
+  getNewsById,
+  updateNews,
+  deleteNews,
+  restoreNews,
+  deleteNewsImage,
 };
