@@ -25,6 +25,7 @@ router.delete("/classes/:id", schoolAdminController.deleteClass); // Soft delete
 // Subject routes
 router.post("/subjects", schoolAdminController.createSubject);
 router.get("/subjects", schoolAdminController.getSubjects);
+router.get("/subjects/:id", schoolAdminController.getSubjectById);
 router.put("/subjects/:id", schoolAdminController.updateSubject);
 router.delete("/subjects/:id", schoolAdminController.deleteSubject);
 

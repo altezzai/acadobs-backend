@@ -30,6 +30,9 @@ const { create } = require("domain");
 const createClass = async (req, res) => {
   try {
     const { year, division, classname, school_id } = req.body;
+    if (!year || !division || !classname || !school_id) {
+      return res.status(400).json({ error: "Required fields are missing" });
+    }
     const existingClass = await Class.findOne({
       where: {
         year,
@@ -135,7 +138,18 @@ const deleteClass = async (req, res) => {
 const createSubject = async (req, res) => {
   try {
     const { subject_name, class_range, school_id } = req.body;
-
+    if (!subject_name || !class_range || !school_id) {
+      return res.status(400).json({ error: "Required fields are missing" });
+    }
+    if (
+      class_range !== "1-4" &&
+      class_range !== "5-7" &&
+      class_range !== "8-10" &&
+      class_range !== "11-12" &&
+      class_range !== "other"
+    ) {
+      return res.status(400).json({ error: "Invalid class range" });
+    }
     const exists = await Subject.findOne({
       where: { subject_name, class_range, school_id, trash: false },
     });
@@ -189,7 +203,16 @@ const getSubjects = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
+const getSubjectById = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const subject = await Subject.findByPk(id);
+    if (!subject) return res.status(404).json({ message: "Subject not found" });
+    res.status(200).json(subject);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 // Update Subject
 const updateSubject = async (req, res) => {
   try {
@@ -2181,6 +2204,7 @@ module.exports = {
 
   createSubject,
   getSubjects,
+  getSubjectById,
   updateSubject,
   deleteSubject,
 
