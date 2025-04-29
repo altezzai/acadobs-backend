@@ -14,6 +14,8 @@ app.use(express.json());
 
 // Import routes
 // app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/uploads", express.static("uploads"));
+
 app.use("/api/s1/superadmin", SuperadminRoutes);
 app.use("/api/s1/schooladmin", SchooladminRoutes);
 app.use("/api/s1/staff", StaffRoutes);
