@@ -92,10 +92,12 @@ const getAllSchools = async (req, res) => {
 const updateSchool = async (req, res) => {
   try {
     const { id } = req.params;
-
     const { name, email, phone, address, status } = req.body;
+
     const school = await School.findByPk(id);
     if (!school) return res.status(404).json({ error: "School not found" });
+
+    let fileName = null;
 
     if (req.file) {
       const uploadPath = "uploads/school_logos/";
