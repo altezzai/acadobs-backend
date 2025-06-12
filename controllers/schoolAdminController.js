@@ -107,6 +107,23 @@ const getClassById = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+//i want get year and division of class by class id
+const getClassesByYear = async (req, res) => {
+  try {
+    const year = req.params.year;
+    const classData = await Class.findAll({
+      where: {
+        year: year,
+      },
+      attributes: ["id", "division", "classname"],
+    });
+
+    if (!classData) return res.status(404).json({ message: "Class not found" });
+    res.status(200).json(classData);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 // UPDATE
 const updateClass = async (req, res) => {
@@ -2201,6 +2218,7 @@ module.exports = {
   getClassById,
   updateClass,
   deleteClass,
+  getClassesByYear,
 
   createSubject,
   getSubjects,

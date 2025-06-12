@@ -18,9 +18,10 @@ const upload = multer({ storage });
 // Class routes
 router.post("/classes", schoolAdminController.createClass); // Create a new class
 router.get("/classes", schoolAdminController.getAllClasses); // Get all classes
-router.get("/classes/:id", schoolAdminController.getClassById); // Get single class by ID
+router.get("/classes/:id", schoolAdminController.getClassById);
 router.put("/classes/:id", schoolAdminController.updateClass); // Update a class
 router.delete("/classes/:id", schoolAdminController.deleteClass); // Soft delete a class
+router.get("/getClassesByYear/:year", schoolAdminController.getClassesByYear); // Get classes by year
 
 // Subject routes
 router.post("/subjects", schoolAdminController.createSubject);
