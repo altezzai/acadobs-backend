@@ -991,8 +991,8 @@ const createDutyWithAssignments = async (req, res) => {
 
   try {
     const { school_id, title, description, deadline, assignments } = req.body;
-    if (!school_id || !title || !description || !assignments) {
-      return res.status(400).json({ error: "Missing required fields" });
+    if (!school_id || !title || !description || !deadline || !assignments) {
+      return res.status(400).json({ error: "Missing required fields " });
     }
 
     const existingDuty = await Duty.findOne({
