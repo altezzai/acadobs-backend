@@ -80,6 +80,11 @@ router.put(
   schoolAdminController.updateStudent
 );
 router.delete("/students/:id", schoolAdminController.deleteStudent);
+router.get(
+  "/getStudentsByClassId/:class_id",
+  schoolAdminController.getStudentsByClassId
+);
+
 //duty
 router.post(
   "/duties",
@@ -191,5 +196,21 @@ router.put(
 router.delete("/news/:id", schoolAdminController.deleteNews);
 router.patch("/news/:id", schoolAdminController.restoreNews);
 router.delete("/deleteNewsImage/:id", schoolAdminController.deleteNewsImage);
+
+//notice
+router.post(
+  "/notices",
+  nUpload.single("file"),
+  schoolAdminController.createNotice
+);
+router.get("/notices", schoolAdminController.getAllNotices);
+router.get("/notices/:id", schoolAdminController.getNoticeById);
+router.put(
+  "/notices/:id",
+  nUpload.single("file"),
+  schoolAdminController.updateNotice
+);
+router.delete("/notices/:id", schoolAdminController.deleteNotice);
+// router.patch("/notices/:id", schoolAdminController.restoreNotice);
 
 module.exports = router;

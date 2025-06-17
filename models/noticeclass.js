@@ -1,0 +1,16 @@
+const { DataTypes } = require("sequelize");
+const { schoolSequelize } = require("../config/connection");
+const NoticeClass = schoolSequelize.define(
+  "NoticeClass",
+  {
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    notice_id: { type: DataTypes.INTEGER, allowNull: false },
+    class_id: { type: DataTypes.INTEGER, allowNull: false },
+  },
+  {
+    tableName: "notice_classes",
+    timestamps: false,
+  }
+);
+
+module.exports = NoticeClass;

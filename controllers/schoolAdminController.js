@@ -23,6 +23,9 @@ const Payment = require("../models/payment");
 const LeaveRequest = require("../models/leaverequest");
 const News = require("../models/news");
 const NewsImage = require("../models/newsimage");
+const Notice = require("../models/notice");
+const NoticeClass = require("../models/noticeclass");
+
 const { schoolSequelize } = require("../config/connection");
 const { create } = require("domain");
 
@@ -741,14 +744,7 @@ const createStudent = async (req, res) => {
       mother_name,
     } = req.body;
 
-    if (
-      !guardian_name ||
-      !guardian_email ||
-      !guardian_contact ||
-      !full_name ||
-      !reg_no ||
-      !class_id
-    ) {
+    if (!guardian_email || !full_name || !reg_no || !class_id) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
     // const file = req.file;
@@ -781,6 +777,17 @@ const createStudent = async (req, res) => {
 
       guardianUserId = existingGuardian.user_id;
     } else {
+      if (
+        !guardian_name ||
+        !guardian_email ||
+        !guardian_contact ||
+        !guardian_relation
+      ) {
+        return res
+          .status(400)
+          .json({ error: "Required fields are missing for guardian data" });
+      }
+
       const guardianData = {
         guardian_email,
         guardian_name,
@@ -943,6 +950,39 @@ const deleteStudent = async (req, res) => {
   } catch (err) {
     console.error("Error deleting student:", err);
     res.status(500).json({ error: "Failed to delete student" });
+  }
+};
+//gete student by class id
+const getStudentsByClassId = async (req, res) => {
+  try {
+    const { class_id } = req.params;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: students } = await Student.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: {
+        class_id,
+        full_name: { [Op.like]: `%${searchQuery}%` },
+        trash: false,
+      },
+      include: [{ model: User, attributes: ["name", "email", "phone", "dp"] }],
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      students,
+    });
+  } catch (err) {
+    console.error("Error fetching students by class ID:", err);
+    res.status(500).json({ error: "Failed to fetch students by class ID" });
   }
 };
 const createDutyWithAssignments = async (req, res) => {
@@ -2105,17 +2145,44 @@ const createNews = async (req, res) => {
 };
 
 const getAllNews = async (req, res) => {
-  const news = await News.findAll({
-    where: { trash: false },
-    include: [
-      {
-        model: NewsImage,
-        where: { trash: false },
-        attributes: ["id", "image_url", "caption"],
-      },
-    ],
-  });
-  res.json(news);
+  try {
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: news } = await News.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        {
+          model: NewsImage,
+          where: { trash: false },
+          attributes: ["id", "image_url", "caption"],
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      news,
+    });
+  } catch (error) {
+    console.error("Fetch Error:", error);
+    res.status(500).json({ error: "Failed to fetch news" });
+  }
 };
 const getNewsById = async (req, res) => {
   try {
@@ -2212,6 +2279,178 @@ const deleteNewsImage = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+const createNotice = async (req, res) => {
+  try {
+    const { school_id, title, content, type, class_ids, date } = req.body;
+    let fileName = null;
+    if (!school_id || !title || !content || !type) {
+      return res.status(400).json({ error: "required fields are missing" });
+    }
+    const existingNotice = await Notice.findOne({
+      where: { school_id, title, type, date },
+    });
+    if (existingNotice) {
+      return res
+        .status(400)
+        .json({ error: "Notice with the same title,date already exists" });
+    }
+
+    if (req.file) {
+      const uploadPath = "uploads/notices/";
+      const { fileName: savedFile } = await compressAndSaveFile(
+        req.file,
+        uploadPath
+      );
+      fileName = savedFile;
+    }
+
+    const notice = await Notice.create({
+      school_id,
+      title,
+      content,
+      file: fileName,
+      type,
+      date: date ? date : new Date(),
+    });
+
+    if (type === "classes" && Array.isArray(class_ids)) {
+      const mappings = class_ids.map((cid) => ({
+        notice_id: notice.notice_id,
+        class_id: cid,
+      }));
+      await NoticeClass.bulkCreate(mappings);
+    }
+
+    res.status(201).json({ message: "Notice created", notice });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const getAllNotices = async (req, res) => {
+  try {
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { content: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: notices } = await Notice.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        {
+          model: NoticeClass,
+          include: [{ model: Class, attributes: ["id", "classname"] }],
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      notices,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+//get notice by id
+const getNoticeById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const notice = await Notice.findOne({
+      where: { notice_id: id, trash: false },
+      include: [
+        {
+          model: NoticeClass,
+          include: [{ model: Class, attributes: ["id", "classname"] }],
+        },
+      ],
+    });
+    if (!notice) return res.status(404).json({ error: "Notice not found" });
+    res.json(notice);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const updateNotice = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, content, type, class_ids, date } = req.body;
+    if (!title || !content || !type) {
+      return res.status(400).json({ error: "required fields are missing" });
+    }
+
+    const notice = await Notice.findByPk(id);
+    const existingNotice = await Notice.findOne({
+      where: {
+        school_id: notice.school_id,
+        title,
+        type,
+        date,
+        notice_id: { [Op.ne]: id },
+      },
+    }); // Exclude the current notice
+    if (existingNotice) {
+      return res
+        .status(409)
+        .json({ error: "Notice with the same title already exists" });
+    }
+    if (!notice) return res.status(404).json({ error: "Notice not found" });
+
+    let fileName = notice.file || null;
+    if (req.file) {
+      const uploadPath = "uploads/notices/";
+      if (fileName) {
+        await deletefilewithfoldername(fileName, uploadPath);
+      }
+      await deletefilewithfoldername(fileName, uploadPath);
+      fileName = await compressAndSaveFile(req.file, uploadPath);
+    }
+
+    await notice.update({ title, content, type, file: fileName });
+
+    if (type === "classes") {
+      await NoticeClass.destroy({ where: { notice_id: id } });
+      const mappings = class_ids.map((cid) => ({
+        notice_id: id,
+        class_id: cid,
+      }));
+      await NoticeClass.bulkCreate(mappings);
+    }
+
+    res.json({ message: "Notice updated" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const deleteNotice = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await Notice.update(
+      { trash: true },
+      { where: { notice_id: id } }
+    );
+    if (!rows) return res.status(404).json({ error: "Not found" });
+    res.json({ message: "Notice soft-deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 module.exports = {
   createClass,
   getAllClasses,
@@ -2246,6 +2485,7 @@ module.exports = {
   getStudentById,
   updateStudent,
   deleteStudent,
+  getStudentsByClassId,
 
   createDutyWithAssignments,
   getDutyById,
@@ -2294,4 +2534,10 @@ module.exports = {
   deleteNews,
   restoreNews,
   deleteNewsImage,
+
+  createNotice,
+  getAllNotices,
+  getNoticeById,
+  updateNotice,
+  deleteNotice,
 };

@@ -19,6 +19,8 @@ const Payment = require("./payment");
 const LeaveRequest = require("./leaverequest");
 const News = require("./news");
 const NewsImage = require("./newsimage");
+const Notice = require("./notice");
+const NoticeClass = require("./noticeclass");
 // Relations
 
 // Associations
@@ -68,6 +70,12 @@ News.belongsTo(School, { foreignKey: "school_id" });
 News.belongsTo(User, { foreignKey: "user_id" });
 News.hasMany(NewsImage, { foreignKey: "news_id" });
 NewsImage.belongsTo(News, { foreignKey: "news_id" });
+
+// Notice associations
+Notice.belongsTo(School, { foreignKey: "school_id" });
+Notice.hasMany(NoticeClass, { foreignKey: "notice_id" });
+NoticeClass.belongsTo(Notice, { foreignKey: "notice_id" });
+NoticeClass.belongsTo(Class, { foreignKey: "class_id" });
 
 module.exports = {
   Homework,
