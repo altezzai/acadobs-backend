@@ -36,8 +36,8 @@ const { Console } = require("console");
 const { get } = require("http");
 const createExamWithMarks = async (req, res) => {
   try {
+    const school_id = req.user.school_id || "";
     const {
-      school_id,
       class_id,
       subject_id,
       internal_name,
@@ -200,8 +200,8 @@ const getInternalMarkByRecordedBy = async (req, res) => {
 
 const createHomeworkWithAssignments = async (req, res) => {
   try {
+    const school_id = req.user.school_id || "";
     const {
-      school_id,
       teacher_id,
       class_id,
       subject_id,
@@ -521,15 +521,9 @@ const getHomeworkByTeacher = async (req, res) => {
 };
 const createAttendance = async (req, res) => {
   try {
-    const {
-      teacher_id,
-      school_id,
-      class_id,
-      subject_id,
-      period,
-      date,
-      students,
-    } = req.body;
+    const school_id = req.user.school_id || "";
+    const { teacher_id, class_id, subject_id, period, date, students } =
+      req.body;
 
     if (
       !teacher_id ||
@@ -733,7 +727,8 @@ const bulkUpdateMarkedAttendanceByAttendanceId = async (req, res) => {
 };
 const checkAttendanceByclassIdAndDate = async (req, res) => {
   try {
-    const { school_id, class_id } = req.query;
+    const school_id = req.user.school_id || "";
+    const { class_id } = req.query;
     const period = req.query.period || 1;
     const date = req.query.date || moment().format("YYYY-MM-DD");
     if (!school_id || !class_id || !date || !period) {
@@ -759,9 +754,8 @@ const checkAttendanceByclassIdAndDate = async (req, res) => {
 
 const getAllClassesAttendanceStatus = async (req, res) => {
   try {
-    const school_id = req.query.school_id || "";
+    const school_id = req.user.school_id || "";
     const date = req.query.date || moment().format("YYYY-MM-DD");
-
     const attendanceData = await Attendance.findAll({
       where: { school_id, date: date, trash: false },
       attributes: ["id", "period", "date", "class_id", "subject_id"],

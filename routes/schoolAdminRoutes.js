@@ -118,10 +118,7 @@ router.post(
   dpUpload.any(),
   schoolAdminController.createAchievementWithStudents
 );
-router.get(
-  "/getAllAchievementsBySchoolId/:id",
-  schoolAdminController.getAllAchievementsBySchoolId
-);
+router.get("/getAllAchievements", schoolAdminController.getAllAchievements);
 router.get("/achievements/:id", schoolAdminController.getAchievementById);
 router.put("/achievements/:id", schoolAdminController.updateAchievement);
 router.delete("/achievements/:id", schoolAdminController.deleteAchievement);
