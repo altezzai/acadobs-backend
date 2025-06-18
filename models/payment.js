@@ -38,6 +38,7 @@ const Payment = schoolSequelize.define(
       ),
       allowNull: false,
     },
+    recorded_by: { type: DataTypes.INTEGER, allowNull: true },
     remarks: { type: DataTypes.TEXT },
     trash: { type: DataTypes.BOOLEAN, defaultValue: false },
   },

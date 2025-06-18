@@ -11,7 +11,7 @@ const Student = require("../models/student");
 const Homework = require("../models/homework");
 const Attendance = require("../models/attendance");
 const AttendanceMarked = require("../models/attendancemarked");
-const InternalExam = require("../models/internal_exams");
+const InternalExam = require("../models/internal_marks");
 const Mark = require("../models/marks");
 const Subject = require("../models/subject");
 const School = require("../models/school");
@@ -21,6 +21,8 @@ const Achievement = require("../models/achievement");
 const StudentAchievement = require("../models/studentachievement");
 const Payment = require("../models/payment");
 const LeaveRequest = require("../models/leaverequest");
+const Notice = require("../models/notice");
+const NoticeClass = require("../models/noticeclass");
 const { Class } = require("../models");
 
 const updateHomeworkAssignment = async (req, res) => {
@@ -283,6 +285,64 @@ const achievementByStudentId = async (req, res) => {
       totalPages,
       currentPage: page,
       achievement,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getNoticeByStudentId = async (req, res) => {
+  try {
+    const { student_id } = req.params;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const student = await Student.findOne({
+      where: { id: student_id, trash: false },
+      attributes: ["class_id", "school_id"],
+    });
+    if (!student) return res.status(404).json({ error: "student not found" });
+    const classId = student.class_id;
+    const SchoolId = student.school_id;
+    const whereClause = {
+      trash: false,
+      school_id: SchoolId,
+      [Op.or]: [{ type: "all" }, { type: "classes" }],
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { content: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const notices = await Notice.findAll({
+      where: whereClause,
+      offset,
+      limit,
+      include: [
+        {
+          model: NoticeClass,
+          attributes: ["class_id"],
+          where: { class_id: classId },
+          include: [
+            {
+              model: Class,
+              attributes: ["classname"],
+            },
+          ],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+      distinct: true, // avoid duplicates when a notice maps to multiple classes
+    });
+    const count = notices.length;
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      notices,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -614,6 +674,7 @@ module.exports = {
   allAchievementBySchoolId,
   achievementByStudentId,
 
+  getNoticeByStudentId,
   getPaymentByStudentId,
 
   createLeaveRequest,

@@ -1,10 +1,6 @@
 "use strict";
 const { DataTypes } = require("sequelize");
 const { schoolSequelize } = require("../config/connection");
-const School = require("./school");
-const Class = require("./class");
-const Subject = require("./subject");
-const Mark = require("./marks");
 
 const InternalExam = schoolSequelize.define(
   "InternalExam",
@@ -16,14 +12,13 @@ const InternalExam = schoolSequelize.define(
     internal_name: DataTypes.STRING,
     max_marks: DataTypes.DECIMAL(5, 2),
     date: DataTypes.DATEONLY,
+    recorded_by: DataTypes.INTEGER,
     trash: { type: DataTypes.BOOLEAN, defaultValue: false },
   },
   {
-    tableName: "internal_exams",
+    tableName: "internal_marks",
     timestamps: false,
   }
 );
-
-// Associations will be declared later
 
 module.exports = InternalExam;

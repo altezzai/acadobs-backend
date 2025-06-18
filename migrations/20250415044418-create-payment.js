@@ -36,6 +36,7 @@ module.exports = {
         allowNull: false,
       },
       remarks: { type: Sequelize.TEXT },
+      recorded_by: { type: Sequelize.INTEGER, allowNull: true },
       trash: { type: Sequelize.BOOLEAN, defaultValue: false },
       createdAt: {
         type: Sequelize.DATE,

@@ -9,7 +9,7 @@ const {
   deletefilewithfoldername,
 } = require("../utils/fileHandler");
 // const Mark = require("../models/marks");
-// const InternalExam = require("../models/internal_exams");
+// const InternalExam = require("../models/internal_marks");
 const School = require("../models/school");
 const Class = require("../models/class");
 const Subject = require("../models/subject");
@@ -29,9 +29,11 @@ const {
   HomeworkAssignment,
   InternalExam,
   Mark,
+  InternalMark,
 } = require("../models");
 const e = require("express");
 const { Console } = require("console");
+const { get } = require("http");
 const createExamWithMarks = async (req, res) => {
   try {
     const {
@@ -41,41 +43,46 @@ const createExamWithMarks = async (req, res) => {
       internal_name,
       max_marks,
       date,
-      marks, // array of { student_id, marks_obtained }
+      recorded_by,
+      marks,
     } = req.body;
-
-    const exam = await InternalExam.create({
+    console.log("Request body:", req.body);
+    const internal = await InternalMark.create({
       school_id,
       class_id,
       subject_id,
       internal_name,
       max_marks,
       date,
+      recorded_by,
     });
+    console.log("Internal exam created:", internal);
 
     const marksData = marks.map((m) => ({
-      internal_id: exam.id,
+      internal_id: internal.id,
       student_id: m.student_id,
       marks_obtained: m.marks_obtained,
     }));
 
     await Mark.bulkCreate(marksData);
 
-    res.status(201).json({ message: "Internal exam and marks created", exam });
+    res
+      .status(201)
+      .json({ message: "Internal internal and marks created", internal });
   } catch (error) {
-    console.error("Error creating exam and marks:", error);
+    console.error("Error creating internal mark and marks:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-const getAllExams = async (req, res) => {
+const getAllmarks = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const { count, rows: exams } = await InternalExam.findAndCountAll({
+    const { count, rows: marks } = await InternalExam.findAndCountAll({
       offset,
       distinct: true,
       limit,
@@ -102,12 +109,12 @@ const getAllExams = async (req, res) => {
       totalcontent: count,
       totalPages,
       currentPage: page,
-      exams,
+      marks,
     });
-    // res.status(200).json(exams);
+    // res.status(200).json(marks);
   } catch (err) {
-    console.error("Error fetching exams:", err);
-    res.status(500).json({ error: "Failed to fetch exams" });
+    console.error("Error fetching marks:", err);
+    res.status(500).json({ error: "Failed to fetch marks" });
   }
 };
 
@@ -142,6 +149,52 @@ const deleteExam = async (req, res) => {
     res.status(200).json({ message: "Exam soft-deleted" });
   } catch (err) {
     res.status(500).json({ error: "Delete failed" });
+  }
+};
+//get internal exam by recorded_by
+const getInternalMarkByRecordedBy = async (req, res) => {
+  try {
+    const { recorded_by } = req.query;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: exams } = await InternalMark.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+
+      where: {
+        recorded_by,
+        trash: false,
+        [Op.or]: [
+          { internal_name: { [Op.like]: `%${searchQuery}%` } },
+          { date: { [Op.like]: `%${searchQuery}%` } },
+        ],
+      },
+      attributes: ["id", "internal_name", "max_marks", "date"],
+      include: [
+        {
+          model: Mark,
+          attributes: ["id", "marks_obtained"],
+          // include: [{ model: Student, attributes: ["id", "full_name"] }],
+        },
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      exams,
+    });
+  } catch (err) {
+    console.error("Error fetching exams:", err);
+    res.status(500).json({ error: "Failed to fetch exams" });
   }
 };
 
@@ -700,6 +753,84 @@ const checkAttendanceByclassIdAndDate = async (req, res) => {
     });
     res.json({ status: "checked", attendance });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const getAllClassesAttendanceStatus = async (req, res) => {
+  try {
+    const school_id = req.query.school_id || "";
+    const date = req.query.date || moment().format("YYYY-MM-DD");
+
+    const attendanceData = await Attendance.findAll({
+      where: { school_id, date: date, trash: false },
+      attributes: ["id", "period", "date", "class_id", "subject_id"],
+      include: [
+        {
+          model: AttendanceMarked,
+          attributes: ["id", "status", "remarks"],
+          include: [{ model: Student, attributes: ["id", "full_name"] }],
+        },
+        { model: Class, attributes: ["id", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+      ],
+    });
+
+    if (!attendanceData || attendanceData.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "No attendance found for this date" });
+    }
+
+    // Grouping by class_id and then period
+    const grouped = {};
+
+    attendanceData.forEach((att) => {
+      const classId = att.class_id;
+      const className = att.Class?.classname;
+      const subjectName = att.Subject?.subject_name;
+      const period = att.period;
+
+      if (!grouped[classId]) {
+        grouped[classId] = {
+          class_id: classId,
+          class_name: className,
+          date: att.date,
+          periods: {},
+        };
+      }
+
+      if (!grouped[classId].periods[period]) {
+        grouped[classId].periods[period] = {
+          subject: subjectName,
+          total_present: 0,
+          total_absent: 0,
+          total_leave: 0,
+          total_late: 0,
+
+          // attendance_records: [],
+        };
+      }
+
+      const currentPeriod = grouped[classId].periods[period];
+
+      att.AttendanceMarkeds.forEach((mark) => {
+        if (mark.status === "present") currentPeriod.total_present += 1;
+        if (mark.status === "absent") currentPeriod.total_absent += 1;
+        if (mark.status === "leave") currentPeriod.total_leave += 1;
+        if (mark.status === "late") currentPeriod.total_late += 1;
+
+        // currentPeriod.attendance_records.push({
+        //   student_name: mark.Student.full_name,
+        //   status: mark.status,
+        //   remarks: mark.remarks,
+        // });
+      });
+    });
+
+    res.json({ status: "checked", attendance: Object.values(grouped) });
+  } catch (err) {
+    console.error("Error fetching attendance:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -1569,10 +1700,11 @@ const leaveRequestPermission = async (req, res) => {
 
 module.exports = {
   createExamWithMarks,
-  getAllExams,
+  getAllmarks,
   updateExam,
   updateMark,
   deleteExam,
+  getInternalMarkByRecordedBy,
 
   createHomeworkWithAssignments,
   getAllHomework,
@@ -1597,6 +1729,7 @@ module.exports = {
   getAttendanceByTeacher,
   bulkUpdateMarkedAttendanceByAttendanceId,
   checkAttendanceByclassIdAndDate, //do not checked
+  getAllClassesAttendanceStatus,
 
   getAllDuties,
   getAssignedDutyById,

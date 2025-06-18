@@ -3,11 +3,15 @@ const router = express.Router();
 const staffController = require("../controllers/staffController");
 const { dpUpload } = require("../middlewares/upload");
 // Internal Exam
-router.post("/internalExams", staffController.createExamWithMarks);
-router.get("/internalExams", staffController.getAllExams);
-router.put("/internalExams/:id", staffController.updateExam);
-router.delete("/internalExams/:id", staffController.deleteExam);
+router.post("/internalmarks", staffController.createExamWithMarks);
+router.get("/internalmarks", staffController.getAllmarks);
+router.put("/internalmarks/:id", staffController.updateExam);
+router.delete("/internalmarks/:id", staffController.deleteExam);
 router.put("/updateMark/:mark_id", staffController.updateMark);
+router.get(
+  "/getInternalMarkByRecordedBy",
+  staffController.getInternalMarkByRecordedBy
+);
 // Homework
 router.post(
   "/homeworks",
@@ -60,6 +64,10 @@ router.put(
 router.get(
   "/checkAttendanceByclassIdAndDate",
   staffController.checkAttendanceByclassIdAndDate
+);
+router.get(
+  "/getAllClassesAttendanceStatus",
+  staffController.getAllClassesAttendanceStatus
 );
 //duty
 router.get("/duties", staffController.getAllDuties);

@@ -14,11 +14,11 @@ module.exports = {
       type: { type: Sequelize.ENUM("all", "classes"), allowNull: false },
       date: { type: Sequelize.DATEONLY, defaultValue: Sequelize.NOW },
       trash: { type: Sequelize.BOOLEAN, defaultValue: false },
-      created_at: {
+      createdAt: {
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
       },
-      updated_at: {
+      updatedAt: {
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal(
           "CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"

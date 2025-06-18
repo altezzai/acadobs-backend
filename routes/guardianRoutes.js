@@ -28,6 +28,10 @@ router.get(
   guardianController.achievementByStudentId
 );
 router.get(
+  "/getNoticeByStudentId/:student_id",
+  guardianController.getNoticeByStudentId
+);
+router.get(
   "/getPaymentByStudentId/:student_id",
   guardianController.getPaymentByStudentId
 );

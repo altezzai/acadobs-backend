@@ -2,7 +2,7 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("internal_exams", {
+    await queryInterface.createTable("internal_marks", {
       id: {
         type: Sequelize.INTEGER,
         autoIncrement: true,
@@ -31,6 +31,10 @@ module.exports = {
         type: Sequelize.DATEONLY,
         allowNull: true,
       },
+      recorded_by: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+      },
       trash: {
         type: Sequelize.BOOLEAN,
         defaultValue: false,
@@ -47,6 +51,6 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.dropTable("internal_exams");
+    await queryInterface.dropTable("internal_marks");
   },
 };

@@ -2451,6 +2451,19 @@ const deleteNotice = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const restoreNotice = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await Notice.update(
+      { trash: false },
+      { where: { notice_id: id } }
+    );
+    if (!rows) return res.status(404).json({ error: "Not found" });
+    res.json({ message: "Notice restored" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 module.exports = {
   createClass,
   getAllClasses,
@@ -2540,4 +2553,5 @@ module.exports = {
   getNoticeById,
   updateNotice,
   deleteNotice,
+  restoreNotice,
 };

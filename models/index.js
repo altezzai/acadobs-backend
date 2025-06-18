@@ -4,7 +4,7 @@ const Student = require("./student");
 const Class = require("./class");
 const Subject = require("./subject");
 const School = require("./school");
-const InternalExam = require("./internal_exams");
+const InternalMark = require("./internal_marks");
 const Mark = require("./marks");
 const User = require("./user");
 const Guardian = require("./guardian");
@@ -58,6 +58,14 @@ Student.belongsTo(Class, { foreignKey: "class_id" });
 Student.belongsTo(School, { foreignKey: "school_id" });
 Student.belongsTo(User, { foreignKey: "guardian_id" });
 
+InternalMark.belongsTo(School, { foreignKey: "school_id" });
+InternalMark.belongsTo(Class, { foreignKey: "class_id" });
+InternalMark.belongsTo(Subject, { foreignKey: "subject_id" });
+InternalMark.belongsTo(User, { foreignKey: "recorded_by" });
+InternalMark.hasMany(Mark, { foreignKey: "internal_id" });
+Mark.belongsTo(InternalMark, { foreignKey: "internal_id" });
+Mark.belongsTo(Student, { foreignKey: "student_id" });
+
 Payment.belongsTo(School, { foreignKey: "school_id" });
 Payment.belongsTo(Student, { foreignKey: "student_id" });
 
@@ -84,7 +92,7 @@ module.exports = {
   Class,
   Subject,
   School,
-  InternalExam,
+  InternalMark,
   Mark,
   User,
   Guardian,
