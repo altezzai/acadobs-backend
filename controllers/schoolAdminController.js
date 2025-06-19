@@ -725,10 +725,12 @@ const createStudent = async (req, res) => {
     const school_id = req.user.school_id || "";
     const {
       reg_no,
+      roll_number,
       full_name,
       date_of_birth,
       gender,
       class_id,
+
       admission_date,
       status,
 
@@ -820,6 +822,7 @@ const createStudent = async (req, res) => {
       school_id,
       guardian_id: guardianUserId,
       reg_no,
+      roll_number,
       full_name,
       date_of_birth,
       gender,
@@ -889,6 +892,7 @@ const updateStudent = async (req, res) => {
     const {
       school_id,
       reg_no,
+      roll_number,
       full_name,
       date_of_birth,
       gender,
@@ -925,6 +929,7 @@ const updateStudent = async (req, res) => {
     await student.update({
       school_id,
       reg_no,
+      roll_number,
       full_name,
       date_of_birth,
       gender,
