@@ -1005,54 +1005,75 @@ const deleteStudent = async (req, res) => {
 //   }
 // };
 const createDutyWithAssignments = async (req, res) => {
-  let uploadPath = null;
-  const transaction = await schoolSequelize.transaction();
+  const t = await schoolSequelize.transaction();
+  let uploadDir = null;
 
   try {
     const { school_id, title, description, deadline, assignments } = req.body;
+
     if (!school_id || !title || !description || !deadline || !assignments) {
-      return res.status(400).json({ error: "Missing required fields " });
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const existingDuty = await Duty.findOne({
+    const duplicate = await Duty.findOne({
       where: { title, school_id, deadline },
     });
-    if (existingDuty) {
-      return res
-        .status(400)
-        .json({ error: "Duty with the same title already exists" });
+    if (duplicate) {
+      return res.status(400).json({ error: "Duty already exists" });
     }
-    let fileName = null;
 
+    let storedFileName = null;
     if (req.file) {
-      uploadPath = "uploads/duties/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
+      uploadDir = "uploads/duties/";
+      storedFileName = await compressAndSaveFile(req.file, uploadDir);
     }
+
     const duty = await Duty.create(
       {
         school_id,
         title,
         description,
         deadline,
-        file: fileName ? fileName : null,
+        file: storedFileName,
       },
-      { transaction }
+      { transaction: t }
     );
 
-    const bulkAssignments = assignments.map((item) => ({
-      ...item,
-      // staff_id: 2,
+    const parsedAssignments =
+      typeof assignments === "string" ? JSON.parse(assignments) : assignments;
+
+    if (!Array.isArray(parsedAssignments) || parsedAssignments.length === 0) {
+      throw new Error("Assignments must be a non‑empty array");
+    }
+
+    const bulkAssignments = parsedAssignments.map((a) => ({
+      staff_id: a.staff_id,
       duty_id: duty.id,
+      remarks: a.remarks || null,
+      status: a.status || "pending",
     }));
 
-    await DutyAssignment.bulkCreate({ bulkAssignments }, { transaction });
-    await transaction.commit();
-    res.status(201).json({ duty, assignments });
+    // 3️⃣ bulk insert assignments
+    const createdAssignments = await DutyAssignment.bulkCreate(
+      bulkAssignments,
+      {
+        validate: true, // surfacing validation errors
+        transaction: t,
+      }
+    );
+
+    await t.commit();
+
+    res.status(201).json({
+      message: "Duty and assignments created",
+      duty,
+      assignments: createdAssignments,
+    });
   } catch (err) {
-    await deletefilewithfoldername(req.file, uploadPath);
-    await transaction.rollback();
-    console.error(err);
-    res.status(500).json({ error: "Failed to create duty with assignments" });
+    if (uploadDir) await deletefilewithfoldername(req.file, uploadDir);
+    await t.rollback();
+    console.error("createDutyWithAssignments →", err);
+    res.status(500).json({ error: err.message });
   }
 };
 
