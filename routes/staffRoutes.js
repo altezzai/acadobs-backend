@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const staffController = require("../controllers/staffController");
+const commonController = require("../controllers/commonController");
 const { dpUpload } = require("../middlewares/upload");
 // Internal Exam
 router.post("/internalmarks", staffController.createExamWithMarks);
@@ -120,6 +121,13 @@ router.post(
 router.patch(
   "/leaveRequestpermission/:id",
   staffController.leaveRequestPermission
+);
+
+//common Controller
+
+router.get(
+  "/getStudentsByClassId/:class_id",
+  commonController.getStudentsByClassId
 );
 
 module.exports = router;

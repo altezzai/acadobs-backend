@@ -50,7 +50,7 @@ const socketAuth = (socket, next) => {
 const auth = (req, res, next) => {
   req.user = {
     user_id: 1,
-    school_id: 1,
+    school_id: 7,
     dp: "default.png",
     name: "default user1",
     role: "user",

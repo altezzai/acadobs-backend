@@ -27,7 +27,6 @@ const { schoolSequelize } = require("../config/connection");
 const {
   Homework,
   HomeworkAssignment,
-  InternalExam,
   Mark,
   InternalMark,
 } = require("../models");

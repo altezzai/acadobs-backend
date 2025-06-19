@@ -10,6 +10,7 @@ const Student = schoolSequelize.define(
     school_id: { type: DataTypes.INTEGER, allowNull: false },
     guardian_id: { type: DataTypes.INTEGER, allowNull: false },
     reg_no: { type: DataTypes.STRING, unique: true },
+    roll_number: { type: DataTypes.INTEGER, allowNull: true },
     full_name: { type: DataTypes.STRING, allowNull: false },
     date_of_birth: { type: DataTypes.DATE },
     gender: { type: DataTypes.ENUM("male", "female", "other") },

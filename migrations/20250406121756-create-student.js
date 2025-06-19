@@ -30,6 +30,7 @@ module.exports = {
         onDelete: "CASCADE",
       },
       reg_no: { type: Sequelize.STRING, unique: true },
+      roll_number: { type: Sequelize.INTEGER, allowNull: false },
       full_name: { type: Sequelize.STRING, allowNull: false },
       date_of_birth: { type: Sequelize.DATE },
       gender: { type: Sequelize.ENUM("male", "female", "other") },

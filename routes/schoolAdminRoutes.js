@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const schoolAdminController = require("../controllers/schoolAdminController");
+const commonController = require("../controllers/commonController");
 const { dpUpload, nUpload } = require("../middlewares/upload");
 const multer = require("multer");
 
@@ -80,9 +81,10 @@ router.put(
   schoolAdminController.updateStudent
 );
 router.delete("/students/:id", schoolAdminController.deleteStudent);
+//common controller
 router.get(
   "/getStudentsByClassId/:class_id",
-  schoolAdminController.getStudentsByClassId
+  commonController.getStudentsByClassId
 );
 
 //duty
@@ -208,6 +210,6 @@ router.put(
   schoolAdminController.updateNotice
 );
 router.delete("/notices/:id", schoolAdminController.deleteNotice);
-// router.patch("/notices/:id", schoolAdminController.restoreNotice);
+router.patch("/notices/:id", schoolAdminController.restoreNotice);
 
 module.exports = router;
