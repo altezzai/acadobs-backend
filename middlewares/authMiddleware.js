@@ -43,7 +43,6 @@ const socketAuth = (socket, next) => {
   socket.user = {
     user_id: 1,
   };
-
   next();
 };
 

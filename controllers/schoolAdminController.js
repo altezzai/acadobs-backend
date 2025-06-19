@@ -350,6 +350,7 @@ const createStaff = async (req, res) => {
 const getAllStaff = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
+    const school_id = req.user.school_id || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -359,13 +360,16 @@ const getAllStaff = async (req, res) => {
       distinct: true,
       limit,
       where: {
-        name: { [Op.like]: `%${searchQuery}%` },
+        school_id: school_id,
         trash: false,
       },
       include: [
         {
           model: User,
-          attributes: ["id", "name", "email", "phone", "dp"],
+          where: {
+            name: { [Op.like]: `%${searchQuery}%` },
+          },
+          attributes: ["id", "name", "email", "phone", "dp", "role"],
         },
       ],
     });
