@@ -934,7 +934,14 @@ const getAllDuties = async (req, res) => {
         {
           model: Duty,
           where: whereClause,
-          attributes: ["id", "title", "description", "deadline", "file"],
+          attributes: [
+            "id",
+            "title",
+            "description",
+            "deadline",
+            "file",
+            "start_date",
+          ],
         },
       ],
     });
@@ -960,7 +967,14 @@ const getAssignedDutyById = async (req, res) => {
         {
           model: Duty,
 
-          attributes: ["id", "title", "description", "deadline", "file"],
+          attributes: [
+            "id",
+            "title",
+            "description",
+            "deadline",
+            "file",
+            "start_date",
+          ],
         },
       ],
     });
