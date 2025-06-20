@@ -354,15 +354,19 @@ const getAllStaff = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-
+    const role = req.query.role || ""; // 'all' or 'active'
+    let whereCondition = {
+      school_id: school_id,
+      trash: false,
+    };
+    if (role) {
+      whereCondition.role = role;
+    }
     const { count, rows: staff } = await Staff.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: {
-        school_id: school_id,
-        trash: false,
-      },
+      where: whereCondition,
       include: [
         {
           model: User,

@@ -10,6 +10,7 @@ module.exports = {
       },
       title: { type: Sequelize.STRING, allowNull: false },
       description: { type: Sequelize.TEXT },
+      start_date: { type: Sequelize.DATEONLY },
       deadline: { type: Sequelize.DATEONLY },
       file: { type: Sequelize.STRING },
       trash: { type: Sequelize.BOOLEAN, defaultValue: false },
