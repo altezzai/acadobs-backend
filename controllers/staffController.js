@@ -922,6 +922,14 @@ const getAttendanceByTeacher = async (req, res) => {
             { model: Student, attributes: ["id", "full_name", "image"] },
           ],
         },
+        {
+          model: Class,
+          attributes: ["id", "classname"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name"],
+        },
       ],
     });
     const totalPages = Math.ceil(count / limit);
