@@ -29,6 +29,11 @@ module.exports = {
         type: Sequelize.STRING(255),
         allowNull: true,
       },
+      period_count: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        defaultValue: 2,
+      },
       status: {
         type: Sequelize.ENUM("active", "inactive"),
         defaultValue: "active",

@@ -10,7 +10,8 @@ const { Op } = require("sequelize");
 
 const createSchool = async (req, res) => {
   try {
-    const { name, email, phone, address, admin_password } = req.body;
+    const { name, email, phone, address, admin_password, period_count } =
+      req.body;
     if (!name || !email || !phone || !admin_password) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
@@ -36,6 +37,7 @@ const createSchool = async (req, res) => {
       email,
       phone,
       address,
+      period_count,
       logo: fileName,
     });
 
@@ -92,7 +94,7 @@ const getAllSchools = async (req, res) => {
 const updateSchool = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, phone, address, status } = req.body;
+    const { name, email, phone, address, status, period_count } = req.body;
 
     const school = await School.findByPk(id);
     if (!school) return res.status(404).json({ error: "School not found" });
@@ -108,6 +110,7 @@ const updateSchool = async (req, res) => {
       email,
       phone,
       address,
+      period_count,
       logo: fileName ? fileName : school.logo,
       status,
     });

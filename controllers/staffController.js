@@ -45,7 +45,21 @@ const createExamWithMarks = async (req, res) => {
       recorded_by,
       marks,
     } = req.body;
-    console.log("Request body:", req.body);
+    if (!school_id || !class_id || !subject_id || !internal_name || !date) {
+      return res.status(400).json({ error: "Missing or invalid fields" });
+    }
+    const existingInternal = await InternalMark.findOne({
+      where: {
+        school_id,
+        class_id,
+        subject_id,
+        internal_name,
+        date,
+      },
+    });
+    if (existingInternal) {
+      return res.status(400).json({ error: "Internal mark already exists" });
+    }
     const internal = await InternalMark.create({
       school_id,
       class_id,
@@ -55,7 +69,6 @@ const createExamWithMarks = async (req, res) => {
       date,
       recorded_by,
     });
-    console.log("Internal exam created:", internal);
 
     const marksData = marks.map((m) => ({
       internal_id: internal.id,
@@ -206,10 +219,19 @@ const createHomeworkWithAssignments = async (req, res) => {
       subject_id,
       description,
       due_date,
+      title,
+      type,
       assignments,
     } = req.body;
 
-    if (!school_id || !teacher_id || !class_id || !subject_id || !description) {
+    if (
+      !school_id ||
+      !teacher_id ||
+      !class_id ||
+      !subject_id ||
+      !title ||
+      !due_date
+    ) {
       return res.status(400).json({ error: "Missing required fields" });
     }
     let fileName = null;
@@ -225,8 +247,8 @@ const createHomeworkWithAssignments = async (req, res) => {
         teacher_id,
         class_id,
         subject_id,
-        description,
         due_date,
+        title,
       },
     });
 
@@ -244,6 +266,8 @@ const createHomeworkWithAssignments = async (req, res) => {
       subject_id,
       description,
       due_date,
+      title,
+      type,
       file: fileName ? fileName : null,
     });
 

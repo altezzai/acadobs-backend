@@ -48,6 +48,11 @@ module.exports = {
         defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
       },
     });
+    await queryInterface.addConstraint("internal_marks", {
+      fields: ["school_id", "class_id", "subject_id", "internal_name", "date"],
+      type: "unique",
+      name: "unique_internal_marks_combination",
+    });
   },
 
   async down(queryInterface) {

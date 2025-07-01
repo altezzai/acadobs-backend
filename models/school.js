@@ -19,6 +19,11 @@ const School = schoolSequelize.define(
     phone: DataTypes.STRING,
     address: DataTypes.TEXT,
     logo: DataTypes.STRING,
+    period_count: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 2,
+    },
     status: {
       type: DataTypes.ENUM("active", "inactive"),
       defaultValue: "active",

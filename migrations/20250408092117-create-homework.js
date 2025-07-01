@@ -39,9 +39,14 @@ module.exports = {
           key: "id",
         },
       },
-      description: { type: Sequelize.TEXT, allowNull: false },
+      title: { type: Sequelize.STRING },
+      description: { type: Sequelize.TEXT, allowNull: true },
       due_date: { type: Sequelize.DATEONLY, allowNull: true },
       file: Sequelize.STRING,
+      type: {
+        type: Sequelize.ENUM("online", "offline"),
+        allowNull: true,
+      },
       trash: { type: Sequelize.BOOLEAN, defaultValue: false },
       createdAt: {
         type: Sequelize.DATE,
@@ -51,6 +56,18 @@ module.exports = {
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
       },
+    });
+    await queryInterface.addConstraint("homeworks", {
+      fields: [
+        "school_id",
+        "teacher_id",
+        "class_id",
+        "subject_id",
+        "due_date",
+        "title",
+      ],
+      type: "unique",
+      name: "unique_homework_combination",
     });
   },
   async down(queryInterface) {
