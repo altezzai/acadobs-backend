@@ -900,12 +900,20 @@ const getAttendanceByTeacher = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const date = req.query.date || "";
+    const whereClause = {
+      trash: false,
+      teacher_id,
+    };
+    if (date) {
+      whereClause.date = date;
+    }
 
     const { count, rows: attendance } = await Attendance.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: { teacher_id },
+      where: whereClause,
       include: [
         {
           model: AttendanceMarked,
