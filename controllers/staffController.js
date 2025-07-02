@@ -839,6 +839,7 @@ const getAllClassesAttendanceStatus = async (req, res) => {
           total_absent: 0,
           total_leave: 0,
           total_late: 0,
+          total_students: 0,
 
           // attendance_records: [],
         };
@@ -851,12 +852,7 @@ const getAllClassesAttendanceStatus = async (req, res) => {
         if (mark.status === "absent") currentPeriod.total_absent += 1;
         if (mark.status === "leave") currentPeriod.total_leave += 1;
         if (mark.status === "late") currentPeriod.total_late += 1;
-
-        // currentPeriod.attendance_records.push({
-        //   student_name: mark.Student.full_name,
-        //   status: mark.status,
-        //   remarks: mark.remarks,
-        // });
+        currentPeriod.total_students += 1;
       });
     });
 
@@ -934,7 +930,10 @@ const getAttendanceByTeacher = async (req, res) => {
           model: AttendanceMarked,
           attributes: ["id", "status", "remarks"],
           include: [
-            { model: Student, attributes: ["id", "full_name", "image"] },
+            {
+              model: Student,
+              attributes: ["id", "full_name", "image", "roll_number"],
+            },
           ],
         },
         {
