@@ -63,8 +63,8 @@ router.put(
   staffController.bulkUpdateMarkedAttendanceByAttendanceId
 );
 router.get(
-  "/checkAttendanceByclassIdAndDate",
-  staffController.checkAttendanceByclassIdAndDate
+  "/getAttendanceByclassIdAndDate",
+  staffController.getAttendanceByclassIdAndDate
 );
 router.get(
   "/getAllClassesAttendanceStatus",

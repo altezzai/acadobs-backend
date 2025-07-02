@@ -748,10 +748,10 @@ const bulkUpdateMarkedAttendanceByAttendanceId = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-const checkAttendanceByclassIdAndDate = async (req, res) => {
+const getAttendanceByclassIdAndDate = async (req, res) => {
   try {
     const school_id = req.user.school_id || "";
-    const { class_id } = req.query;
+    const class_id = req.query.class_id;
     const period = req.query.period || 1;
     const date = req.query.date || moment().format("YYYY-MM-DD");
     if (!school_id || !class_id || !date || !period) {
@@ -763,13 +763,28 @@ const checkAttendanceByclassIdAndDate = async (req, res) => {
       attributes: ["id", "period", "date", "class_id", "subject_id"],
       include: [
         {
-          model: AttendanceMarked,
-          attributes: ["id", "status", "remarks"],
-          include: [{ model: Student, attributes: ["id", "full_name"] }],
+          model: User,
+          attributes: ["id", "name", "role"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name"],
         },
       ],
     });
-    res.json({ status: "checked", attendance });
+    if (attendance) {
+      res.json({ status: "recorded", attendance });
+    } else {
+      //get all students of class
+      const students = await Student.findAll({
+        where: { class_id, school_id, trash: false },
+        attributes: ["id", "full_name", "roll_number"],
+      });
+      res.json({
+        status: "not_recorded",
+        students,
+      });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1775,7 +1790,7 @@ module.exports = {
   getAttendanceById,
   getAttendanceByTeacher,
   bulkUpdateMarkedAttendanceByAttendanceId,
-  checkAttendanceByclassIdAndDate, //do not checked
+  getAttendanceByclassIdAndDate, //do not checked
   getAllClassesAttendanceStatus,
 
   getAllDuties,
