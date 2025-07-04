@@ -54,6 +54,10 @@ router.get("/getAttendanceById/:id", staffController.getAttendanceById);
 router.get("/getAttendanceByTeacher/", staffController.getAttendanceByTeacher);
 router.delete("/attendance/:id", staffController.deleteAttendance);
 router.patch("/attendance/:id", staffController.restoreAttendance);
+router.put(
+  "updateAttendanceMarkedById/:id",
+  staffController.updateAttendanceMarkedById
+);
 router.delete(
   "/permanentDeleteAttendance/:id",
   staffController.permanentDeleteAttendance

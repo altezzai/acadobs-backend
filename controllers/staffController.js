@@ -697,28 +697,18 @@ const getAttendanceById = async (req, res) => {
 const updateAttendance = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      teacher_id,
-      // school_id,
-      class_id,
-      subject_id,
-      period,
-      date,
-    } = req.body;
+    const { subject_id, period, date } = req.body;
     const attendance = await Attendance.findOne({
       where: { id, trash: false },
     });
     if (!attendance) return res.status(404).json({ error: "Not found" });
-    await Attendance.update(
-      { teacher_id, class_id, subject_id, period, date },
-      { where: { id } }
-    );
+    await Attendance.update({ subject_id, period, date }, { where: { id } });
     res.json({ message: "Updated", attendance });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
-const updateAttendanceMarked = async (req, res) => {
+const updateAttendanceMarkedById = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, remarks } = req.body;
@@ -1782,7 +1772,7 @@ module.exports = {
   createAttendance,
   getAllAttendance,
   updateAttendance,
-  updateAttendanceMarked,
+  updateAttendanceMarkedById,
   deleteAttendance,
   restoreAttendance,
   permanentDeleteAttendance,
