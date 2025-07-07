@@ -50,7 +50,7 @@ router.get("/getHomeworkByTeacher/", staffController.getHomeworkByTeacher);
 router.post("/attendance", staffController.createAttendance);
 router.get("/attendance", staffController.getAllAttendance);
 router.put("/attendance/:id", staffController.updateAttendance);
-router.get("/getAttendanceById/:id", staffController.getAttendanceById);
+router.get("/attendance/:id", staffController.getAttendanceById);
 router.get("/getAttendanceByTeacher/", staffController.getAttendanceByTeacher);
 router.delete("/attendance/:id", staffController.deleteAttendance);
 router.patch("/attendance/:id", staffController.restoreAttendance);

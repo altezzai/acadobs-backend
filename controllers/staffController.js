@@ -682,8 +682,19 @@ const getAttendanceById = async (req, res) => {
           model: AttendanceMarked,
           attributes: ["id", "status", "remarks"],
           include: [
-            { model: Student, attributes: ["id", "full_name", "image"] },
+            {
+              model: Student,
+              attributes: ["id", "full_name", "image", "roll_number"],
+            },
           ],
+        },
+        {
+          model: Class,
+          attributes: ["id", "classname"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name"],
         },
       ],
     });
@@ -915,17 +926,8 @@ const getAttendanceByTeacher = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
+      attributes: ["id", "period", "date"],
       include: [
-        {
-          model: AttendanceMarked,
-          attributes: ["id", "status", "remarks"],
-          include: [
-            {
-              model: Student,
-              attributes: ["id", "full_name", "image", "roll_number"],
-            },
-          ],
-        },
         {
           model: Class,
           attributes: ["id", "classname"],
