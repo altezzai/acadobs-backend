@@ -51,6 +51,10 @@ router.post("/attendance", staffController.createAttendance);
 router.get("/attendance", staffController.getAllAttendance);
 router.put("/attendance/:id", staffController.updateAttendance);
 router.get("/attendance/:id", staffController.getAttendanceById);
+router.get(
+  "/getTrashedAttendanceByTeacher/",
+  staffController.getTrashedAttendanceByTeacher
+);
 router.get("/getAttendanceByTeacher/", staffController.getAttendanceByTeacher);
 router.delete("/attendance/:id", staffController.deleteAttendance);
 router.patch("/attendance/:id", staffController.restoreAttendance);
@@ -63,8 +67,8 @@ router.delete(
   staffController.permanentDeleteAttendance
 );
 router.put(
-  "/bulkUpdateMarkedAttendanceByAttendanceId/:id",
-  staffController.bulkUpdateMarkedAttendanceByAttendanceId
+  "/bulkUpdateAttendanceById/:attendance_id",
+  staffController.bulkUpdateAttendanceById
 );
 router.get(
   "/getAttendanceByclassIdAndDate",

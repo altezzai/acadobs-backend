@@ -729,26 +729,41 @@ const updateAttendanceMarkedById = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-const bulkUpdateMarkedAttendanceByAttendanceId = async (req, res) => {
+// Bulk update attendance marked
+const bulkUpdateAttendanceById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { attendance_id } = req.params;
     const { data } = req.body;
+    if (!attendance_id || !Array.isArray(data)) {
+      return res
+        .status(400)
+        .json({ error: "attendance_id and data array are required" });
+    }
 
-    const records = data.map((student) => ({
-      student_id: student.student_id,
-      status: student.status,
-      remarks: student.remarks || null,
-    }));
+    const updatePromises = data.map(async (item) => {
+      return AttendanceMarked.update(
+        {
+          status: item.status,
+          remarks: item.remarks,
+        },
+        {
+          where: {
+            id: item.id,
+            attendance_id: attendance_id,
+          },
+        }
+      );
+    });
 
-    await AttendanceMarked.bulkCreate(
-      { records },
-      { where: { attendance_id: id } }
-    );
-    res.json({ message: "Updated" });
+    await Promise.all(updatePromises);
+    console.log("updatePromises:", updatePromises);
+
+    res.status(200).json({ message: "Attendance marked updated successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
 const getAttendanceByclassIdAndDate = async (req, res) => {
   try {
     const school_id = req.user.school_id || "";
@@ -760,8 +775,16 @@ const getAttendanceByclassIdAndDate = async (req, res) => {
     }
 
     const attendance = await Attendance.findOne({
-      where: { school_id, class_id, date, period, trash: false },
-      attributes: ["id", "period", "date", "class_id", "subject_id"],
+      where: { school_id, class_id, date, period },
+      attributes: [
+        "id",
+        "period",
+        "date",
+        "class_id",
+        "subject_id",
+        "teacher_id",
+        "trash",
+      ],
       include: [
         {
           model: User,
@@ -774,7 +797,7 @@ const getAttendanceByclassIdAndDate = async (req, res) => {
       ],
     });
     if (attendance) {
-      res.json({ status: "recorded", attendance });
+      res.json({ status: "recorded", attendance, trash: attendance.trash });
     } else {
       //get all students of class
       const students = await Student.findAll({
@@ -895,6 +918,8 @@ const restoreAttendance = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+//get trashed attendance
+
 const permanentDeleteAttendance = async (req, res) => {
   try {
     const { id } = req.params;
@@ -905,7 +930,46 @@ const permanentDeleteAttendance = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const getTrashedAttendanceByTeacher = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const teacher_id = req.query.teacher_id || "";
+    const whereClause = {
+      trash: true,
+    };
+    if (teacher_id) {
+      whereClause.teacher_id = teacher_id;
+    }
 
+    const { count, rows: attendance } = await Attendance.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        {
+          model: Class,
+          attributes: ["id", "classname"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name"],
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      attendance,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 const getAttendanceByTeacher = async (req, res) => {
   try {
     const { teacher_id } = req.query;
@@ -1779,8 +1843,9 @@ module.exports = {
   restoreAttendance,
   permanentDeleteAttendance,
   getAttendanceById,
+  getTrashedAttendanceByTeacher,
   getAttendanceByTeacher,
-  bulkUpdateMarkedAttendanceByAttendanceId,
+  bulkUpdateAttendanceById,
   getAttendanceByclassIdAndDate, //do not checked
   getAllClassesAttendanceStatus,
 
