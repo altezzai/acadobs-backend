@@ -738,7 +738,7 @@ const createStudent = async (req, res) => {
       date_of_birth,
       gender,
       class_id,
-
+      address,
       admission_date,
       status,
 
@@ -836,6 +836,7 @@ const createStudent = async (req, res) => {
       gender,
       class_id,
       admission_date,
+      address,
       status,
       image: fileName ? fileName : null,
     });
@@ -865,6 +866,7 @@ const getAllStudents = async (req, res) => {
       },
 
       include: [{ model: User, attributes: ["name", "email", "phone", "dp"] }],
+      order: [["createdAt", "DESC"]],
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -905,6 +907,7 @@ const updateStudent = async (req, res) => {
       date_of_birth,
       gender,
       class_id,
+      address,
       admission_date,
       status,
     } = req.body;
@@ -942,6 +945,7 @@ const updateStudent = async (req, res) => {
       date_of_birth,
       gender,
       class_id,
+      address,
       admission_date,
       status,
       image: studentImageFilename,

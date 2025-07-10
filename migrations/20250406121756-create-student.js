@@ -35,6 +35,7 @@ module.exports = {
       date_of_birth: { type: Sequelize.DATE },
       gender: { type: Sequelize.ENUM("male", "female", "other") },
       admission_date: { type: Sequelize.DATE },
+      address: { type: Sequelize.STRING },
       status: {
         type: Sequelize.ENUM("active", "inactive"),
         defaultValue: "active",

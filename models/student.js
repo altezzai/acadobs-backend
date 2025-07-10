@@ -16,6 +16,7 @@ const Student = schoolSequelize.define(
     gender: { type: DataTypes.ENUM("male", "female", "other") },
     class_id: { type: DataTypes.INTEGER },
     admission_date: { type: DataTypes.DATE },
+    address: { type: DataTypes.STRING },
     status: {
       type: DataTypes.ENUM("active", "inactive"),
       defaultValue: "active",
