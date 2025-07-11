@@ -708,10 +708,24 @@ const getAttendanceById = async (req, res) => {
 const updateAttendance = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id || "";
     const { subject_id, period, date } = req.body;
+
     const attendance = await Attendance.findOne({
       where: { id, trash: false },
     });
+    const existingAttendance = await Attendance.findOne({
+      where: {
+        school_id,
+        class_id: attendance.class_id,
+        period,
+        date,
+      },
+    });
+    if (existingAttendance && existingAttendance.id != id) {
+      return res.status(400).json({ error: "Attendance already exists" });
+    }
+
     if (!attendance) return res.status(404).json({ error: "Not found" });
     await Attendance.update({ subject_id, period, date }, { where: { id } });
     res.json({ message: "Updated", attendance });
