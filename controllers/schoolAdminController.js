@@ -885,7 +885,13 @@ const getStudentById = async (req, res) => {
     const student = await Student.findOne({
       where: { id, school_id, trash: false },
 
-      include: [{ model: User, attributes: ["name", "email", "phone", "dp"] }],
+      include: [
+        { model: User, attributes: ["name", "email", "phone", "dp"] },
+        {
+          model: Class,
+          attributes: ["id", "year", "division", "classname"],
+        },
+      ],
     });
 
     if (!student) return res.status(404).json({ error: "Student not found" });

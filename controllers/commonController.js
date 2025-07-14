@@ -2,6 +2,7 @@ const { Op, where, DATEONLY } = require("sequelize");
 const User = require("../models/user");
 const Student = require("../models/student");
 const { schoolSequelize } = require("../config/connection");
+const { Class } = require("../models");
 
 const getStudentsByClassId = async (req, res) => {
   try {
@@ -23,6 +24,9 @@ const getStudentsByClassId = async (req, res) => {
         trash: false,
       },
       attributes: ["id", "full_name", "roll_number", "class_id", "image"],
+      include: [
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+      ],
       order: [["roll_number", "ASC"]],
       //   include: [{ model: User, attributes: ["name", "email", "phone", "dp"] }],
     });

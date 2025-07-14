@@ -680,6 +680,8 @@ const getAttendanceById = async (req, res) => {
       include: [
         {
           model: AttendanceMarked,
+          separate: true, // Important for ordering nested include
+          order: [[{ model: Student }, "roll_number", "ASC"]],
           attributes: ["id", "status", "remarks"],
           include: [
             {
@@ -698,7 +700,10 @@ const getAttendanceById = async (req, res) => {
         },
       ],
     });
-    if (!attendance) return res.status(404).json({ error: "Not found" });
+
+    if (!attendance) {
+      return res.status(404).json({ error: "Not found" });
+    }
     res.json(attendance);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -810,6 +815,7 @@ const getAttendanceByclassIdAndDate = async (req, res) => {
         },
       ],
     });
+
     if (attendance) {
       res.json({ status: "recorded", attendance, trash: attendance.trash });
     } else {
@@ -817,6 +823,7 @@ const getAttendanceByclassIdAndDate = async (req, res) => {
       const students = await Student.findAll({
         where: { class_id, school_id, trash: false },
         attributes: ["id", "full_name", "roll_number"],
+        order: [["roll_number", "ASC"]], // Order by roll_number
       });
       res.json({
         status: "not_recorded",
