@@ -1597,7 +1597,7 @@ const createEvent = async (req, res) => {
       fileName = await compressAndSaveFile(req.file, uploadPath);
     }
 
-    const event = await News.create({
+    const event = await Event.create({
       school_id,
       title,
       content: description,
