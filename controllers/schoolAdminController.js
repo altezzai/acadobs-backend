@@ -1579,7 +1579,6 @@ const createEvent = async (req, res) => {
   try {
     const school_id = req.user.school_id || "";
     const { title, description, date, url, venue } = req.body;
-
     if (!school_id || !title || !date) {
       return res.status(400).json({ error: "All fields are required" });
     }
@@ -1600,11 +1599,11 @@ const createEvent = async (req, res) => {
     const event = await Event.create({
       school_id,
       title,
-      content: description,
+      description,
       date,
       user_id: 1,
-      // url,
-      // venue,
+      url,
+      venue,
       file: fileName ? fileName : null,
     });
 
@@ -2394,11 +2393,7 @@ const createNotice = async (req, res) => {
 
     if (req.file) {
       const uploadPath = "uploads/notices/";
-      const { fileName: savedFile } = await compressAndSaveFile(
-        req.file,
-        uploadPath
-      );
-      fileName = savedFile;
+      fileName = await compressAndSaveFile(req.file, uploadPath);
     }
 
     const notice = await Notice.create({
