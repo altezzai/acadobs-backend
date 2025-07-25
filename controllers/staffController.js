@@ -518,18 +518,18 @@ const getHomeworkByTeacher = async (req, res) => {
         description: { [Op.like]: `%${searchQuery}%` },
         trash: false,
       },
-      include: [
-        {
-          model: HomeworkAssignment,
-          attributes: ["id", "status", "points", "solved_file"],
-          include: [
-            {
-              model: Student,
-              attributes: ["id", "reg_no", "full_name", "image"],
-            },
-          ],
-        },
-      ],
+      // include: [
+      //   {
+      //     model: HomeworkAssignment,
+      //     attributes: ["id", "status", "points", "solved_file"],
+      //     include: [
+      //       {
+      //         model: Student,
+      //         attributes: ["id", "reg_no", "full_name", "image"],
+      //       },
+      //     ],
+      //   },
+      // ],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
