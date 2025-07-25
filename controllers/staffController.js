@@ -1149,8 +1149,8 @@ const updateAssignedDuty = async (req, res) => {
 };
 const createAchievementWithStudents = async (req, res) => {
   try {
+    const school_id = req.user.school_id || "";
     const {
-      school_id,
       title,
       description,
       category,
@@ -1422,15 +1422,9 @@ const updateStudentAchievement = async (req, res) => {
 };
 const createLeaveRequest = async (req, res) => {
   try {
-    const {
-      school_id,
-      user_id,
-      from_date,
-      to_date,
-      leave_type,
-      reason,
-      leave_duration,
-    } = req.body;
+    const school_id = req.user.school_id || "";
+    const { user_id, from_date, to_date, leave_type, reason, leave_duration } =
+      req.body;
     if (
       !school_id ||
       !user_id ||
@@ -1551,15 +1545,9 @@ const getLeaveRequestById = async (req, res) => {
 const updateLeaveRequest = async (req, res) => {
   try {
     const Id = req.params.id;
-    const {
-      school_id,
-      user_id,
-      from_date,
-      to_date,
-      leave_type,
-      reason,
-      leave_duration,
-    } = req.body;
+    const school_id = req.user.school_id || "";
+    const { user_id, from_date, to_date, leave_type, reason, leave_duration } =
+      req.body;
 
     const data = await LeaveRequest.findByPk(Id);
     if (!data) return res.status(404).json({ error: "Not found" });
@@ -1637,117 +1625,118 @@ const restoreLeaveRequest = async (req, res) => {
     res.status(500).json({ error: "Failed to restore leave request" });
   }
 };
-const createStudentLeaveRequest = async (req, res) => {
-  try {
-    const {
-      school_id,
-      user_id,
-      student_id,
-      from_date,
-      to_date,
-      leave_type,
-      reason,
-      leave_duration,
-    } = req.body;
-    if (
-      !school_id ||
-      !user_id ||
-      !student_id ||
-      !from_date ||
-      !to_date ||
-      !leave_type ||
-      !reason
-    ) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-    const existingRequest = await LeaveRequest.findOne({
-      where: {
-        school_id: school_id,
-        user_id: user_id,
-        student_id: student_id,
-        from_date: from_date,
-        to_date: to_date,
-      },
-    });
+// const createStudentLeaveRequest = async (req, res) => {
+//   try {
+//     const school_id = req.user.school_id || "";
+//     const {
 
-    if (existingRequest) {
-      return res.status(400).json({ error: "Leave request already exists" });
-    }
+//       user_id,
+//       student_id,
+//       from_date,
+//       to_date,
+//       leave_type,
+//       reason,
+//       leave_duration,
+//     } = req.body;
+//     if (
+//       !school_id ||
+//       !user_id ||
+//       !student_id ||
+//       !from_date ||
+//       !to_date ||
+//       !leave_type ||
+//       !reason
+//     ) {
+//       return res.status(400).json({ error: "Missing required fields" });
+//     }
+//     const existingRequest = await LeaveRequest.findOne({
+//       where: {
+//         school_id: school_id,
+//         user_id: user_id,
+//         student_id: student_id,
+//         from_date: from_date,
+//         to_date: to_date,
+//       },
+//     });
 
-    let fileName = null;
-    if (req.file) {
-      const uploadPath = "uploads/leave_requests/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-    }
-    const data = await LeaveRequest.create({
-      school_id: school_id,
-      user_id: user_id,
-      student_id: student_id,
-      role: "student",
-      from_date: from_date,
-      to_date: to_date,
-      leave_type: leave_type,
-      reason: reason,
-      attachment: fileName ? fileName : null,
-      leave_duration,
-    });
-    res.status(201).json(data);
-  } catch (error) {
-    console.error("Create Error:", error);
-    res.status(500).json({ error: "Failed to create leave request" });
-  }
-};
-const updateStudentLeaveRequest = async (req, res) => {
-  try {
-    const Id = req.params.id;
-    const {
-      school_id,
-      user_id,
-      student_id,
-      from_date,
-      to_date,
-      leave_type,
-      reason,
-      leave_duration,
-    } = req.body;
+//     if (existingRequest) {
+//       return res.status(400).json({ error: "Leave request already exists" });
+//     }
 
-    const data = await LeaveRequest.findByPk(Id);
-    if (!data) return res.status(404).json({ error: "Not found" });
-    const existingRequest = await LeaveRequest.findOne({
-      where: {
-        school_id: school_id,
-        user_id: user_id,
-        student_id: student_id,
-        from_date: from_date,
-        to_date: to_date,
-        id: { [Op.ne]: Id },
-      },
-    });
-    if (existingRequest) {
-      return res.status(400).json({ error: "Leave request already exists" });
-    }
-    let fileName = data.attachment;
-    if (req.file) {
-      const uploadPath = "uploads/leave_requests/";
-      await deletefilewithfoldername(fileName, uploadPath);
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-    }
-    await data.update({
-      student_id: student_id,
-      from_date: from_date,
-      to_date: to_date,
-      leave_type: leave_type,
-      reason: reason,
-      attachment: fileName ? fileName : null,
-      leave_duration,
-    });
+//     let fileName = null;
+//     if (req.file) {
+//       const uploadPath = "uploads/leave_requests/";
+//       fileName = await compressAndSaveFile(req.file, uploadPath);
+//     }
+//     const data = await LeaveRequest.create({
+//       school_id: school_id,
+//       user_id: user_id,
+//       student_id: student_id,
+//       role: "student",
+//       from_date: from_date,
+//       to_date: to_date,
+//       leave_type: leave_type,
+//       reason: reason,
+//       attachment: fileName ? fileName : null,
+//       leave_duration,
+//     });
+//     res.status(201).json(data);
+//   } catch (error) {
+//     console.error("Create Error:", error);
+//     res.status(500).json({ error: "Failed to create leave request" });
+//   }
+// };
+// const updateStudentLeaveRequest = async (req, res) => {
+//   try {
+//     const Id = req.params.id;
+//     const {
+//       school_id,
+//       user_id,
+//       student_id,
+//       from_date,
+//       to_date,
+//       leave_type,
+//       reason,
+//       leave_duration,
+//     } = req.body;
 
-    res.status(200).json(data);
-  } catch (error) {
-    console.error("Update Error:", error);
-    res.status(500).json({ error: "Failed to update leave request" });
-  }
-};
+//     const data = await LeaveRequest.findByPk(Id);
+//     if (!data) return res.status(404).json({ error: "Not found" });
+//     const existingRequest = await LeaveRequest.findOne({
+//       where: {
+//         school_id: school_id,
+//         user_id: user_id,
+//         student_id: student_id,
+//         from_date: from_date,
+//         to_date: to_date,
+//         id: { [Op.ne]: Id },
+//       },
+//     });
+//     if (existingRequest) {
+//       return res.status(400).json({ error: "Leave request already exists" });
+//     }
+//     let fileName = data.attachment;
+//     if (req.file) {
+//       const uploadPath = "uploads/leave_requests/";
+//       await deletefilewithfoldername(fileName, uploadPath);
+//       fileName = await compressAndSaveFile(req.file, uploadPath);
+//     }
+//     await data.update({
+//       student_id: student_id,
+//       from_date: from_date,
+//       to_date: to_date,
+//       leave_type: leave_type,
+//       reason: reason,
+//       attachment: fileName ? fileName : null,
+//       leave_duration,
+//     });
+
+//     res.status(200).json(data);
+//   } catch (error) {
+//     console.error("Update Error:", error);
+//     res.status(500).json({ error: "Failed to update leave request" });
+//   }
+// };
 const leaveRequestPermission = async (req, res) => {
   try {
     const Id = req.params.id;
@@ -1888,7 +1877,7 @@ module.exports = {
   updateLeaveRequest,
   deleteLeaveRequest,
   restoreLeaveRequest,
-  createStudentLeaveRequest,
-  updateStudentLeaveRequest,
+  // createStudentLeaveRequest,
+  // updateStudentLeaveRequest,
   leaveRequestPermission,
 };

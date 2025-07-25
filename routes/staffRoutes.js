@@ -121,11 +121,11 @@ router.put(
 );
 router.delete("/leaveRequest/:id", staffController.deleteLeaveRequest);
 router.patch("/leaveRequest/:id", staffController.restoreLeaveRequest);
-router.post(
-  "/createStudentLeaveRequest",
-  dpUpload.single("attachment"),
-  staffController.createStudentLeaveRequest
-);
+// router.post(
+//   "/createStudentLeaveRequest",
+//   dpUpload.single("attachment"),
+//   staffController.createStudentLeaveRequest
+// );
 router.patch(
   "/leaveRequestpermission/:id",
   staffController.leaveRequestPermission
