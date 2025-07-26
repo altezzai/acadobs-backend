@@ -756,10 +756,17 @@ const createStudent = async (req, res) => {
       mother_name,
     } = req.body;
 
-    if (!guardian_email || !full_name || !reg_no || !class_id) {
+    if ((!guardian_email || !full_name || !reg_no || !class_id, !roll_number)) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
-    // const file = req.file;
+    const existingRollNumber = await Student.findOne({
+      where: { roll_number, school_id, class_id, trash: false },
+    });
+    if (existingRollNumber) {
+      return res.status(400).json({
+        error: "Roll number already exists in student table for this class",
+      });
+    }
     const existingUser = await User.findOne({
       where: { email: guardian_email },
     });

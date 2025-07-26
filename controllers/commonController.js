@@ -9,14 +9,8 @@ const getStudentsByClassId = async (req, res) => {
     const { class_id } = req.params;
     const school_id = req.user.school_id || "";
     const searchQuery = req.query.q || "";
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
 
     const { count, rows: students } = await Student.findAndCountAll({
-      offset,
-      distinct: true,
-      limit,
       where: {
         class_id,
         school_id,
@@ -28,14 +22,10 @@ const getStudentsByClassId = async (req, res) => {
         { model: Class, attributes: ["id", "year", "division", "classname"] },
       ],
       order: [["roll_number", "ASC"]],
-      //   include: [{ model: User, attributes: ["name", "email", "phone", "dp"] }],
     });
 
-    const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
-      totalPages,
-      currentPage: page,
       students,
     });
   } catch (err) {
