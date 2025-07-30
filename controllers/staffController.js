@@ -86,7 +86,33 @@ const createExamWithMarks = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
+//get internal marks by id
+const getInternalMarksById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const internal = await InternalMark.findOne({
+      where: { id },
+      include: [
+        {
+          model: Mark,
+          attributes: ["id", "marks_obtained"],
+          include: [
+            { model: Student, attributes: ["id", "full_name", "roll_number"] },
+          ],
+        },
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+      ],
+    });
+    if (!internal) {
+      return res.status(404).json({ error: "Internal mark not found" });
+    }
+    res.status(200).json(internal);
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 const getAllmarks = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
@@ -94,7 +120,7 @@ const getAllmarks = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const { count, rows: marks } = await InternalExam.findAndCountAll({
+    const { count, rows: marks } = await InternalMark.findAndCountAll({
       offset,
       distinct: true,
       limit,
@@ -106,11 +132,6 @@ const getAllmarks = async (req, res) => {
         ],
       },
       include: [
-        {
-          model: Mark,
-          attributes: ["id", "marks_obtained"],
-          include: [{ model: Student, attributes: ["id", "full_name"] }],
-        },
         { model: School, attributes: ["id", "name"] },
         { model: Class, attributes: ["id", "year", "division", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
@@ -133,7 +154,7 @@ const getAllmarks = async (req, res) => {
 const updateExam = async (req, res) => {
   try {
     const { id } = req.params;
-    const updated = await InternalExam.update(req.body, {
+    const updated = await InternalMark.update(req.body, {
       where: { id: id },
     });
     res.status(200).json({ message: "Exam detail updated", updated });
@@ -157,7 +178,7 @@ const updateMark = async (req, res) => {
 const deleteExam = async (req, res) => {
   try {
     const { id } = req.params;
-    await InternalExam.update({ trash: true }, { where: { id: id } });
+    await InternalMark.update({ trash: true }, { where: { id: id } });
     res.status(200).json({ message: "Exam soft-deleted" });
   } catch (err) {
     res.status(500).json({ error: "Delete failed" });
@@ -187,11 +208,6 @@ const getInternalMarkByRecordedBy = async (req, res) => {
       },
       attributes: ["id", "internal_name", "max_marks", "date"],
       include: [
-        {
-          model: Mark,
-          attributes: ["id", "marks_obtained"],
-          // include: [{ model: Student, attributes: ["id", "full_name"] }],
-        },
         { model: School, attributes: ["id", "name"] },
         { model: Class, attributes: ["id", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
@@ -1828,6 +1844,7 @@ const leaveRequestPermission = async (req, res) => {
 module.exports = {
   createExamWithMarks,
   getAllmarks,
+  getInternalMarksById,
   updateExam,
   updateMark,
   deleteExam,

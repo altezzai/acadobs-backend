@@ -6,6 +6,7 @@ const { dpUpload } = require("../middlewares/upload");
 // Internal Exam
 router.post("/internalmarks", staffController.createExamWithMarks);
 router.get("/internalmarks", staffController.getAllmarks);
+router.get("/internalmarks/:id", staffController.getInternalMarksById);
 router.put("/internalmarks/:id", staffController.updateExam);
 router.delete("/internalmarks/:id", staffController.deleteExam);
 router.put("/updateMark/:mark_id", staffController.updateMark);
