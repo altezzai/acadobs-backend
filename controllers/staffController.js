@@ -96,7 +96,7 @@ const getInternalMarksById = async (req, res) => {
       include: [
         {
           model: Mark,
-          attributes: ["id", "marks_obtained"],
+          attributes: ["id", "marks_obtained", "status"],
           include: [
             { model: Student, attributes: ["id", "full_name", "roll_number"] },
           ],
