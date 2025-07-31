@@ -13,6 +13,10 @@ const Mark = schoolSequelize.define(
     internal_id: DataTypes.INTEGER,
     student_id: DataTypes.INTEGER,
     marks_obtained: DataTypes.DECIMAL(5, 2),
+    status: {
+      type: DataTypes.ENUM("absent", "present"),
+      defaultValue: "absent",
+    },
   },
   {
     tableName: "marks",

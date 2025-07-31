@@ -20,6 +20,10 @@ module.exports = {
         type: Sequelize.DECIMAL(5, 2),
         allowNull: false,
       },
+      status: {
+        type: Sequelize.ENUM("absent", "present"),
+        defaultValue: "absent",
+      },
       createdAt: {
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),

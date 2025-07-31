@@ -74,6 +74,7 @@ const createExamWithMarks = async (req, res) => {
       internal_id: internal.id,
       student_id: m.student_id,
       marks_obtained: m.marks_obtained,
+      status: m.status,
     }));
 
     await Mark.bulkCreate(marksData);
@@ -374,7 +375,8 @@ const getHomeworkById = async (req, res) => {
 const updateHomework = async (req, res) => {
   try {
     const { id } = req.params;
-    const { description, due_date } = req.body;
+    const { title, description, due_date } = req.body;
+
     let fileName = null;
     if (req.file) {
       const uploadPath = "uploads/homeworks/";
@@ -383,13 +385,32 @@ const updateHomework = async (req, res) => {
 
     const homework = await Homework.findByPk(id);
     if (!homework) return res.status(404).json({ error: "Not found" });
+    const existingHomework = await Homework.findOne({
+      where: {
+        id: { [Op.ne]: id },
+        school_id: homework.school_id,
+        teacher_id: homework.teacher_id,
+        class_id: homework.class_id,
+        subject_id: homework.subject_id,
+        title,
+        due_date,
+        trash: false,
+      },
+    });
+    if (existingHomework) {
+      return res.status(200).json({
+        message: "Homework already exists in the same class",
+        homework: existingHomework,
+      });
+    }
 
     await homework.update({
+      title,
       description,
       due_date,
       file: fileName ? fileName : homework.file,
     });
-    res.status(200).json({ message: "Updated successfully", homework });
+    res.status(200).json({ message: "Updated successfully d", homework });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
