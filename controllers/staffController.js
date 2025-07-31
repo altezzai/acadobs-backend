@@ -358,7 +358,7 @@ const getHomeworkById = async (req, res) => {
           include: [
             {
               model: Student,
-              attributes: ["id", "reg_no", "full_name", "image"],
+              attributes: ["id", "reg_no", "full_name", "image", "roll_number"],
             },
           ],
         },
