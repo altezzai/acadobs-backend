@@ -488,15 +488,15 @@ const restoreHomework = async (req, res) => {
 };
 const bulkUpdateHomeworkAssignments = async (req, res) => {
   try {
-    const { homework_id, updates } = req.body;
+    const { homework_id, assignments } = req.body;
 
-    if (!homework_id || !Array.isArray(updates)) {
+    if (!homework_id || !Array.isArray(assignments)) {
       return res
         .status(400)
-        .json({ error: "homework_id and updates array are required" });
+        .json({ error: "homework_id and assignments array are required" });
     }
 
-    const updatePromises = updates.map(async (item) => {
+    const updatePromises = assignments.map(async (item) => {
       return HomeworkAssignment.update(
         {
           status: item.status,
