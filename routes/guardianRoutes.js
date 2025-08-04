@@ -53,4 +53,8 @@ router.put(
   guardianController.updateLeaveRequest
 );
 router.delete("/leaveRequest/:id", guardianController.deleteLeaveRequest);
+
+router.get("/getLatestEvents", guardianController.getLatestEvents);
+router.get("/getLatestNews", guardianController.getLatestNews);
+router.get("/getSchoolsByUser", guardianController.getSchoolsByUser);
 module.exports = router;

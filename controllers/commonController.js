@@ -33,7 +33,19 @@ const getStudentsByClassId = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch students by class ID" });
   }
 };
+const getschoolIdByStudentId = async (student_id) => {
+  try {
+    const student = await Student.findByPk(student_id);
+    if (!student) console.log("student not found ---");
+    const school_id = student.school_id;
+    return school_id;
+    // res.status(200).json({ school_id });
+  } catch (err) {
+    return "error in getting school id";
+  }
+};
 
 module.exports = {
   getStudentsByClassId,
+  getschoolIdByStudentId,
 };

@@ -131,7 +131,9 @@ router.patch(
   "/leaveRequestpermission/:id",
   staffController.leaveRequestPermission
 );
-
+router.get("/getLatestEvents", staffController.getLatestEvents);
+router.get("/getLatestNews", staffController.getLatestNews);
+router.get("/getLatestNotices", staffController.getLatestNotices);
 //common Controller
 
 router.get(

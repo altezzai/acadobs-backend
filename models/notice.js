@@ -12,7 +12,10 @@ const Notice = schoolSequelize.define(
     title: { type: DataTypes.STRING, allowNull: false },
     content: { type: DataTypes.TEXT, allowNull: false },
     file: { type: DataTypes.STRING },
-    type: { type: DataTypes.ENUM("all", "classes"), allowNull: false },
+    type: {
+      type: DataTypes.ENUM("all", "classes", "staffs"),
+      allowNull: false,
+    },
     date: { type: DataTypes.DATEONLY, defaultValue: DataTypes.NOW },
     trash: { type: DataTypes.BOOLEAN, defaultValue: false },
     createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },

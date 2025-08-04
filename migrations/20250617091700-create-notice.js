@@ -11,7 +11,10 @@ module.exports = {
       title: { type: Sequelize.STRING, allowNull: false },
       content: { type: Sequelize.TEXT, allowNull: false },
       file: { type: Sequelize.STRING },
-      type: { type: Sequelize.ENUM("all", "classes"), allowNull: false },
+      type: {
+        type: Sequelize.ENUM("all", "classes", "staffs"),
+        allowNull: false,
+      },
       date: { type: Sequelize.DATEONLY, defaultValue: Sequelize.NOW },
       trash: { type: Sequelize.BOOLEAN, defaultValue: false },
       createdAt: {

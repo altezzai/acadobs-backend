@@ -23,7 +23,10 @@ const Payment = require("../models/payment");
 const LeaveRequest = require("../models/leaverequest");
 const Notice = require("../models/notice");
 const NoticeClass = require("../models/noticeclass");
+const News = require("../models/news");
+const Event = require("../models/event");
 const { Class } = require("../models");
+const { getschoolIdByStudentId } = require("../controllers/commonController");
 
 const updateHomeworkAssignment = async (req, res) => {
   try {
@@ -662,6 +665,67 @@ const deleteLeaveRequest = async (req, res) => {
     res.status(500).json({ error: "Failed to delete leave request" });
   }
 };
+const getLatestEvents = async (req, res) => {
+  try {
+    const school_id = req.query.school_id;
+    const limit = parseInt(req.query.limit) || 3;
+    if (!school_id) {
+      return res.status(400).json({ error: "School ID is required" });
+    }
+    const events = await Event.findAll({
+      where: { school_id: school_id },
+      order: [["createdAt", "DESC"]],
+      limit: limit,
+    });
+    res.status(200).json(events);
+  } catch (error) {
+    console.error("Error fetching events:", error);
+    res.status(500).json({ error: "Failed to fetch events" });
+  }
+};
+const getLatestNews = async (req, res) => {
+  try {
+    const school_id = req.query.school_id;
+    const limit = parseInt(req.query.limit) || 3;
+    if (!school_id) {
+      return res.status(400).json({ error: "School ID is required" });
+    }
+    const news = await News.findAll({
+      where: { school_id: school_id },
+      order: [["createdAt", "DESC"]],
+      limit: limit,
+    });
+    res.status(200).json(news);
+  } catch (error) {
+    console.error("Error fetching news:", error);
+    res.status(500).json({ error: "Failed to fetch news" });
+  }
+};
+//get schools id from guardian id used stundent id
+const getSchoolsByUser = async (req, res) => {
+  try {
+    const user_id = req.user.user_id;
+    const schools = await Student.findAll({
+      where: { guardian_id: user_id, trash: false },
+      attributes: ["school_id"],
+      include: [
+        {
+          model: School,
+          attributes: ["id", "name", "address", "phone", "email"],
+        },
+      ],
+      group: ["school_id"],
+    });
+    if (!schools || schools.length === 0) {
+      console.log("No schools found for the given user ID");
+      return null;
+    }
+    res.status(200).json(schools);
+  } catch (error) {
+    console.error("Error fetching schools:", error);
+    return null;
+  }
+};
 
 module.exports = {
   updateHomeworkAssignment,
@@ -683,4 +747,8 @@ module.exports = {
   getLeaveRequestByStudentId,
   updateLeaveRequest,
   deleteLeaveRequest,
+
+  getLatestEvents,
+  getLatestNews,
+  getSchoolsByUser,
 };

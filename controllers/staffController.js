@@ -22,6 +22,9 @@ const User = require("../models/user");
 const Achievement = require("../models/achievement");
 const StudentAchievement = require("../models/studentachievement");
 const LeaveRequest = require("../models/leaverequest");
+const Event = require("../models/event");
+const News = require("../models/news");
+const Notice = require("../models/notice");
 const { schoolSequelize } = require("../config/connection");
 
 const {
@@ -1862,6 +1865,56 @@ const leaveRequestPermission = async (req, res) => {
   }
 };
 
+const getLatestEvents = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const limit = parseInt(req.query.limit) || 3;
+    const events = await Event.findAll({
+      where: { school_id: school_id },
+      order: [["createdAt", "DESC"]],
+      limit: limit,
+    });
+    res.status(200).json(events);
+  } catch (error) {
+    console.error("Error fetching events:", error);
+    res.status(500).json({ error: "Failed to fetch events" });
+  }
+};
+const getLatestNews = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const limit = parseInt(req.query.limit) || 3;
+    const news = await News.findAll({
+      where: { school_id: school_id },
+      order: [["createdAt", "DESC"]],
+      limit: limit,
+    });
+    res.status(200).json(news);
+  } catch (error) {
+    console.error("Error fetching news:", error);
+    res.status(500).json({ error: "Failed to fetch news" });
+  }
+};
+
+const getLatestNotices = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const limit = parseInt(req.query.limit) || 3;
+    const notices = await Notice.findAll({
+      where: {
+        school_id: school_id,
+        [Op.or]: [{ type: "all" }, { type: "staffs" }],
+      },
+      order: [["createdAt", "DESC"]],
+      limit: limit,
+    });
+    res.status(200).json(notices);
+  } catch (error) {
+    console.error("Error fetching notices:", error);
+    res.status(500).json({ error: "Failed to fetch notices" });
+  }
+};
+
 module.exports = {
   createExamWithMarks,
   getAllmarks,
@@ -1918,4 +1971,8 @@ module.exports = {
   // createStudentLeaveRequest,
   // updateStudentLeaveRequest,
   leaveRequestPermission,
+
+  getLatestEvents,
+  getLatestNews,
+  getLatestNotices,
 };
