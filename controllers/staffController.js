@@ -188,7 +188,40 @@ const deleteExam = async (req, res) => {
     res.status(500).json({ error: "Delete failed" });
   }
 };
-//get internal exam by recorded_by
+//update bulk marks
+const bulkUpdateMarks = async (req, res) => {
+  try {
+    const { internal_id, marks } = req.body;
+
+    if (!internal_id || !Array.isArray(marks)) {
+      return res
+        .status(400)
+        .json({ error: "internal_id and marks array are required" });
+    }
+
+    const updatePromises = marks.map(async (item) => {
+      return Mark.update(
+        {
+          marks_obtained: item.marks_obtained,
+          status: item.status,
+        },
+        {
+          where: {
+            internal_id,
+            student_id: item.student_id,
+          },
+        }
+      );
+    });
+
+    await Promise.all(updatePromises);
+
+    res.status(200).json({ message: "Marks updated successfully" });
+  } catch (error) {
+    console.error("Bulk update failed:", error);
+    res.status(500).json({ error: "Bulk update failed" });
+  }
+};
 const getInternalMarkByRecordedBy = async (req, res) => {
   try {
     const { recorded_by } = req.query;
@@ -558,18 +591,6 @@ const getHomeworkByTeacher = async (req, res) => {
         description: { [Op.like]: `%${searchQuery}%` },
         trash: false,
       },
-      // include: [
-      //   {
-      //     model: HomeworkAssignment,
-      //     attributes: ["id", "status", "points", "solved_file"],
-      //     include: [
-      //       {
-      //         model: Student,
-      //         attributes: ["id", "reg_no", "full_name", "image"],
-      //       },
-      //     ],
-      //   },
-      // ],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -1868,13 +1889,23 @@ const leaveRequestPermission = async (req, res) => {
 const getLatestEvents = async (req, res) => {
   try {
     const school_id = req.user.school_id;
+    const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 3;
-    const events = await Event.findAll({
+    const offset = (page - 1) * limit;
+    const { count, rows: events } = await Event.findAndCountAll({
       where: { school_id: school_id },
       order: [["createdAt", "DESC"]],
       limit: limit,
+      offset,
+      distinct: true,
     });
-    res.status(200).json(events);
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      events,
+    });
   } catch (error) {
     console.error("Error fetching events:", error);
     res.status(500).json({ error: "Failed to fetch events" });
@@ -1923,6 +1954,7 @@ module.exports = {
   updateMark,
   deleteExam,
   getInternalMarkByRecordedBy,
+  bulkUpdateMarks,
 
   createHomeworkWithAssignments,
   getAllHomework,

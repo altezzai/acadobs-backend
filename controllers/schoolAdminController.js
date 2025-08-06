@@ -412,15 +412,8 @@ const getStaffById = async (req, res) => {
 const updateStaff = async (req, res) => {
   try {
     const { staff_id } = req.params;
-    const {
-      school_id,
-      user_id,
-      role,
-      qualification,
-      address,
-      class_id,
-      subjects,
-    } = req.body;
+    const { school_id, role, qualification, address, class_id, subjects } =
+      req.body;
 
     const staff = await Staff.findByPk(staff_id);
     if (!staff || staff.trash)
@@ -428,7 +421,6 @@ const updateStaff = async (req, res) => {
 
     await staff.update({
       school_id,
-      user_id,
       role,
       qualification,
       address,

@@ -10,6 +10,8 @@ router.get("/internalmarks/:id", staffController.getInternalMarksById);
 router.put("/internalmarks/:id", staffController.updateExam);
 router.delete("/internalmarks/:id", staffController.deleteExam);
 router.put("/updateMark/:mark_id", staffController.updateMark);
+router.put("/bulkUpdateMarks", staffController.bulkUpdateMarks);
+
 router.get(
   "/getInternalMarkByRecordedBy",
   staffController.getInternalMarkByRecordedBy

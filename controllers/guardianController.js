@@ -665,6 +665,59 @@ const deleteLeaveRequest = async (req, res) => {
     res.status(500).json({ error: "Failed to delete leave request" });
   }
 };
+const getStudentsUnderGuardianBySchoolId = async (req, res) => {
+  try {
+    const school_id = req.params.school_id;
+    const user_id = req.user.user_id;
+    if (!school_id || !user_id) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const students = await Student.findAll({
+      where: { school_id: school_id, guardian_id: user_id, trash: false },
+      attributes: ["id", "full_name", "reg_no", "image"],
+      include: [
+        {
+          model: Class,
+          attributes: ["id", "classname", "year", "division"],
+        },
+      ],
+    });
+    if (!students || students.length === 0) {
+      return res.status(404).json({ error: "No students found" });
+    }
+    res.status(200).json(students);
+  } catch (error) {
+    console.error("Error fetching students:", error);
+    res.status(500).json({ error: "Failed to fetch students" });
+  }
+};
+const getSchoolsByUser = async (req, res) => {
+  try {
+    const user_id = req.user.user_id;
+    const schools = await Student.findAll({
+      where: { guardian_id: user_id, trash: false },
+      attributes: ["school_id"],
+      include: [
+        {
+          model: School,
+          attributes: ["id", "name", "address", "phone", "email"],
+        },
+      ],
+      group: ["school_id"],
+    });
+    if (!schools || schools.length === 0) {
+      console.log("No schools found for the given user ID");
+      return null;
+    }
+    res.status(200).json({
+      totalcontent: schools.length,
+      schools,
+    });
+  } catch (error) {
+    console.error("Error fetching schools:", error);
+    return null;
+  }
+};
 const getLatestEvents = async (req, res) => {
   try {
     const school_id = req.query.school_id;
@@ -701,31 +754,7 @@ const getLatestNews = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch news" });
   }
 };
-//get schools id from guardian id used stundent id
-const getSchoolsByUser = async (req, res) => {
-  try {
-    const user_id = req.user.user_id;
-    const schools = await Student.findAll({
-      where: { guardian_id: user_id, trash: false },
-      attributes: ["school_id"],
-      include: [
-        {
-          model: School,
-          attributes: ["id", "name", "address", "phone", "email"],
-        },
-      ],
-      group: ["school_id"],
-    });
-    if (!schools || schools.length === 0) {
-      console.log("No schools found for the given user ID");
-      return null;
-    }
-    res.status(200).json(schools);
-  } catch (error) {
-    console.error("Error fetching schools:", error);
-    return null;
-  }
-};
+//get students by schoolid and userid
 
 module.exports = {
   updateHomeworkAssignment,
@@ -748,7 +777,9 @@ module.exports = {
   updateLeaveRequest,
   deleteLeaveRequest,
 
+  getStudentsUnderGuardianBySchoolId,
+  getSchoolsByUser,
+
   getLatestEvents,
   getLatestNews,
-  getSchoolsByUser,
 };
