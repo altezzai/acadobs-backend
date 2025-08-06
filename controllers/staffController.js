@@ -1914,13 +1914,23 @@ const getLatestEvents = async (req, res) => {
 const getLatestNews = async (req, res) => {
   try {
     const school_id = req.user.school_id;
+    const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 3;
-    const news = await News.findAll({
+    const offset = (page - 1) * limit;
+    const { count, rows: news } = await News.findAndCountAll({
       where: { school_id: school_id },
       order: [["createdAt", "DESC"]],
       limit: limit,
+      offset,
+      distinct: true,
     });
-    res.status(200).json(news);
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      news,
+    });
   } catch (error) {
     console.error("Error fetching news:", error);
     res.status(500).json({ error: "Failed to fetch news" });
@@ -1930,16 +1940,26 @@ const getLatestNews = async (req, res) => {
 const getLatestNotices = async (req, res) => {
   try {
     const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 3;
-    const notices = await Notice.findAll({
+    const offset = (page - 1) * limit;
+    const { count, rows: notices } = await Notice.findAndCountAll({
       where: {
         school_id: school_id,
         [Op.or]: [{ type: "all" }, { type: "staffs" }],
       },
       order: [["createdAt", "DESC"]],
       limit: limit,
+      offset,
+      distinct: true,
     });
-    res.status(200).json(notices);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages: Math.ceil(notices.length / limit),
+      currentPage: page,
+      notices,
+    });
   } catch (error) {
     console.error("Error fetching notices:", error);
     res.status(500).json({ error: "Failed to fetch notices" });
