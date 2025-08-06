@@ -1954,9 +1954,10 @@ const getLatestNotices = async (req, res) => {
       offset,
       distinct: true,
     });
+    const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
-      totalPages: Math.ceil(notices.length / limit),
+      totalPages,
       currentPage: page,
       notices,
     });
