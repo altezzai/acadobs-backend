@@ -535,9 +535,6 @@ module.exports = {
 
   getSchoolIdByStudentId,
 
-  allAchievementBySchoolId,
-  achievementByStudentId,
-
   getNoticeByStudentId,
   getPaymentByStudentId,
 

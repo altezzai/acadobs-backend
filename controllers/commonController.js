@@ -1,6 +1,13 @@
 const { Op, where, DATEONLY } = require("sequelize");
 const User = require("../models/user");
 const Student = require("../models/student");
+const Guardian = require("../models/guardian");
+const HomeworkAssignment = require("../models/homeworkassignment");
+const Homework = require("../models/homework");
+const AttendanceMarked = require("../models/attendancemarked");
+const Attendance = require("../models/attendance");
+const Achievement = require("../models/achievement");
+const StudentAchievement = require("../models/studentachievement");
 const { schoolSequelize } = require("../config/connection");
 const { Class } = require("../models");
 
