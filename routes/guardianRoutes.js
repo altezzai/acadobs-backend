@@ -1,32 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const guardianController = require("../controllers/guardianController");
+const commonController = require("../controllers/commonController");
 const { dpUpload } = require("../middlewares/upload");
 router.put(
   "/updateHomeworkAssignment/:id",
   dpUpload.single("file"),
   guardianController.updateHomeworkAssignment
 );
-router.get(
-  "/getHomeworkByStudentId/:student_id",
-  guardianController.getHomeworkByStudentId
-);
-router.get(
-  "/getAttendanceByStudentId/:student_id",
-  guardianController.getAttendanceByStudentId
-);
-router.get(
-  "/getStudentAttendanceByDate/:student_id",
-  guardianController.getStudentAttendanceByDate
-);
-router.get(
-  "/allAchievementBySchoolId/:school_id",
-  guardianController.allAchievementBySchoolId
-);
-router.get(
-  "/achievementByStudentId/:student_id",
-  guardianController.achievementByStudentId
-);
+
 router.get(
   "/getNoticeByStudentId/:student_id",
   guardianController.getNoticeByStudentId
@@ -62,4 +44,27 @@ router.get(
 
 router.get("/getLatestEvents", guardianController.getLatestEvents);
 router.get("/getLatestNews", guardianController.getLatestNews);
+
+//common controller
+router.get("/students/:id", commonController.getStudentById);
+router.get(
+  "/getHomeworkByStudentId/:student_id",
+  commonController.getHomeworkByStudentId
+);
+router.get(
+  "/getAttendanceByStudentId/:student_id",
+  commonController.getAttendanceByStudentId
+);
+router.get(
+  "/getStudentAttendanceByDate/:student_id",
+  commonController.getStudentAttendanceByDate
+);
+router.get(
+  "/allAchievementBySchoolId/:school_id",
+  commonController.allAchievementBySchoolId
+);
+router.get(
+  "/achievementByStudentId/:student_id",
+  commonController.achievementByStudentId
+);
 module.exports = router;

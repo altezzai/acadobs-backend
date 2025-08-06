@@ -142,5 +142,28 @@ router.get(
   "/getStudentsByClassId/:class_id",
   commonController.getStudentsByClassId
 );
+router.get("/getClassesByYear/:year", commonController.getClassesByYear);
+//common controller for student
+router.get("/students/:id", commonController.getStudentById);
+router.get(
+  "/getHomeworkByStudentId/:student_id",
+  commonController.getHomeworkByStudentId
+);
+router.get(
+  "/getAttendanceByStudentId/:student_id",
+  commonController.getAttendanceByStudentId
+);
+router.get(
+  "/getStudentAttendanceByDate/:student_id",
+  commonController.getStudentAttendanceByDate
+);
+router.get(
+  "/allAchievementBySchoolId/:school_id",
+  commonController.allAchievementBySchoolId
+);
+router.get(
+  "/achievementByStudentId/:student_id",
+  commonController.achievementByStudentId
+);
 
 module.exports = router;
