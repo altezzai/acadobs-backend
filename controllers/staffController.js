@@ -1,15 +1,12 @@
-const path = require("path");
-const fs = require("fs");
-const bcrypt = require("bcrypt");
-const { Op, where } = require("sequelize");
+const { Op } = require("sequelize");
 const moment = require("moment");
 const {
   compressAndSaveFile,
   compressAndSaveMultiFile,
   deletefilewithfoldername,
 } = require("../utils/fileHandler");
-// const Mark = require("../models/marks");
-// const InternalExam = require("../models/internal_marks");
+const Mark = require("../models/marks");
+const InternalMark = require("../models/internal_marks");
 const School = require("../models/school");
 const Class = require("../models/class");
 const Subject = require("../models/subject");
@@ -25,17 +22,8 @@ const LeaveRequest = require("../models/leaverequest");
 const Event = require("../models/event");
 const News = require("../models/news");
 const Notice = require("../models/notice");
-const { schoolSequelize } = require("../config/connection");
+const { Homework, HomeworkAssignment } = require("../models");
 
-const {
-  Homework,
-  HomeworkAssignment,
-  Mark,
-  InternalMark,
-} = require("../models");
-const e = require("express");
-const { Console } = require("console");
-const { get } = require("http");
 const createExamWithMarks = async (req, res) => {
   try {
     const school_id = req.user.school_id || "";
@@ -90,7 +78,7 @@ const createExamWithMarks = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-//get internal marks by id
+
 const getInternalMarksById = async (req, res) => {
   try {
     const { id } = req.params;

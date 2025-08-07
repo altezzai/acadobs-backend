@@ -32,7 +32,7 @@ const { create } = require("domain");
 // CREATE
 const createClass = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const { year, division, classname } = req.body;
     if (!year || !division || !classname || !school_id) {
       return res.status(400).json({ error: "Required fields are missing" });
@@ -158,7 +158,7 @@ const deleteClass = async (req, res) => {
 // Create Subject
 const createSubject = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const { subject_name, class_range } = req.body;
     if (!subject_name || !class_range || !school_id) {
       return res.status(400).json({ error: "Required fields are missing" });
@@ -287,7 +287,7 @@ const deleteSubject = async (req, res) => {
 
 const createStaff = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const {
       name,
       email,
@@ -301,7 +301,6 @@ const createStaff = async (req, res) => {
     if (!name || !email || !phone) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
-    // const file = req.file;
     const existingUser = await User.findOne({
       where: { email: email },
     });
@@ -350,7 +349,7 @@ const createStaff = async (req, res) => {
 const getAllStaff = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -412,8 +411,8 @@ const getStaffById = async (req, res) => {
 const updateStaff = async (req, res) => {
   try {
     const { staff_id } = req.params;
-    const { school_id, role, qualification, address, class_id, subjects } =
-      req.body;
+    const school_id = req.user.school_id;
+    const { role, qualification, address, class_id, subjects } = req.body;
 
     const staff = await Staff.findByPk(staff_id);
     if (!staff || staff.trash)
@@ -436,7 +435,8 @@ const updateStaff = async (req, res) => {
 const updateStaffUser = async (req, res) => {
   try {
     const { user_id } = req.params;
-    const { school_id, name, email, phone, role } = req.body;
+    const school_id = req.user.school_id;
+    const { name, email, phone, role } = req.body;
     if (!name || !email || !phone) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
@@ -515,6 +515,7 @@ const restoredStaff = async (req, res) => {
 
 const createGuardian = async (req, res) => {
   try {
+    const school_id = req.user.school_id;
     const {
       guardian_relation,
       guardian_name,
@@ -527,7 +528,6 @@ const createGuardian = async (req, res) => {
       guardian2_contact,
       father_name,
       mother_name,
-      //   school_id,
     } = req.body;
     if (!guardian_name || !guardian_email || !guardian_contact) {
       return res.status(400).json({ error: "Required fields are missing" });
@@ -557,7 +557,7 @@ const createGuardian = async (req, res) => {
       email: guardian_email,
       phone: guardian_contact,
       dp: fileName,
-      school_id: 1,
+      school_id: school_id,
       status: "active",
       password: hashedPassword,
     });
@@ -584,6 +584,7 @@ const createGuardian = async (req, res) => {
   }
 };
 const createGuardianService = async (guardianData, fileBuffer) => {
+  const school_id = req.user.school_id;
   const {
     guardian_relation,
     guardian_name,
@@ -596,7 +597,6 @@ const createGuardianService = async (guardianData, fileBuffer) => {
     guardian2_contact,
     father_name,
     mother_name,
-    school_id = 1, // default fallback
   } = guardianData;
 
   if (!guardian_name || !guardian_email || !guardian_contact) {
@@ -665,7 +665,7 @@ const getAllGuardians = async (req, res) => {
       },
       include: [{ model: User, attributes: ["name", "email", "phone", "dp"] }],
     });
-    // res.status(200).json(guardians);
+
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
@@ -722,7 +722,7 @@ const deleteGuardian = async (req, res) => {
 
 const createStudent = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const {
       reg_no,
       roll_number,
@@ -772,7 +772,7 @@ const createStudent = async (req, res) => {
         .json({ error: "Reg number already exists in student table" });
     }
     let guardianUserId;
-    const guardianDpFile = req.files?.dp?.[0]; // guardian image
+    const guardianDpFile = req.files?.dp?.[0];
     const studentImageFile = req.files?.image?.[0];
 
     if (existingUser) {
@@ -848,7 +848,7 @@ const createStudent = async (req, res) => {
 };
 const getAllStudents = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -880,7 +880,7 @@ const getAllStudents = async (req, res) => {
 const getStudentById = async (req, res) => {
   try {
     const { id } = req.params;
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const student = await Student.findOne({
       where: { id, school_id, trash: false },
 
@@ -904,8 +904,8 @@ const getStudentById = async (req, res) => {
 const updateStudent = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const {
-      school_id,
       reg_no,
       roll_number,
       full_name,
@@ -964,7 +964,7 @@ const updateStudent = async (req, res) => {
 };
 const deleteStudent = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const { id } = req.params;
     const student = await Student.findOne({
       where: { id, school_id, trash: false },
@@ -982,41 +982,7 @@ const deleteStudent = async (req, res) => {
     res.status(500).json({ error: "Failed to delete student" });
   }
 };
-//gete student by class id
-// const getStudentsByClassId = async (req, res) => {
-//   try {
-//     const { class_id } = req.params;
-//     const school_id = req.user.school_id || "";
-//     const searchQuery = req.query.q || "";
-//     const page = parseInt(req.query.page) || 1;
-//     const limit = parseInt(req.query.limit) || 10;
-//     const offset = (page - 1) * limit;
 
-//     const { count, rows: students } = await Student.findAndCountAll({
-//       offset,
-//       distinct: true,
-//       limit,
-//       where: {
-//         class_id,
-//         school_id,
-//         full_name: { [Op.like]: `%${searchQuery}%` },
-//         trash: false,
-//       },
-//       include: [{ model: User, attributes: ["name", "email", "phone", "dp"] }],
-//     });
-
-//     const totalPages = Math.ceil(count / limit);
-//     res.status(200).json({
-//       totalcontent: count,
-//       totalPages,
-//       currentPage: page,
-//       students,
-//     });
-//   } catch (err) {
-//     console.error("Error fetching students by class ID:", err);
-//     res.status(500).json({ error: "Failed to fetch students by class ID" });
-//   }
-// };
 const createDutyWithAssignments = async (req, res) => {
   const t = await schoolSequelize.transaction();
   let uploadDir = null;
@@ -1066,11 +1032,10 @@ const createDutyWithAssignments = async (req, res) => {
       status: a.status || "pending",
     }));
 
-    // 3️⃣ bulk insert assignments
     const createdAssignments = await DutyAssignment.bulkCreate(
       bulkAssignments,
       {
-        validate: true, // surfacing validation errors
+        validate: true,
         transaction: t,
       }
     );
@@ -1092,7 +1057,7 @@ const createDutyWithAssignments = async (req, res) => {
 
 const getAllDuties = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
     const deadline = req.query.deadline || "";
     const page = parseInt(req.query.page) || 1;
@@ -1169,7 +1134,7 @@ const getDutyById = async (req, res) => {
 };
 const updateDuty = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const { title, description, deadline, file } = req.body;
     const duty = await Duty.findOne({
       where: { id: req.params.id, school_id },
@@ -1261,7 +1226,7 @@ const bulkUpdateDutyAssignments = async (req, res) => {
 const deleteDuty = async (req, res) => {
   try {
     const { id } = req.params;
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const duty = await Duty.findOne({
       where: { id, school_id, trash: false },
     });
@@ -1295,7 +1260,7 @@ const restoreDuty = async (req, res) => {
 const permanentDeleteDuty = async (req, res) => {
   try {
     const { id } = req.params;
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     await DutyAssignment.destroy({ where: { duty_id: id, school_id } });
     await Duty.destroy({ where: { id } });
     res.json({ message: "Peremently Deleted Duty" });
@@ -1305,7 +1270,7 @@ const permanentDeleteDuty = async (req, res) => {
 };
 const createAchievementWithStudents = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const {
       title,
       description,
@@ -1350,7 +1315,6 @@ const createAchievementWithStudents = async (req, res) => {
 
     const uploadPath = "uploads/achievement_proofs/";
 
-    // Handle and compress each student's file
     const studentAchievements = await Promise.all(
       parsedStudents.map(async (student, index) => {
         let compressedFileName = null;
@@ -1385,7 +1349,7 @@ const createAchievementWithStudents = async (req, res) => {
 };
 const getAllAchievements = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -1439,7 +1403,7 @@ const getAllAchievements = async (req, res) => {
 
 const getAchievementById = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const achievement = await Achievement.findOne({
       where: { id: req.params.id, school_id, trash: false },
       attributes: ["id", "title", "description", "category", "level", "date"],
@@ -1505,7 +1469,7 @@ const updateAchievement = async (req, res) => {
 
 const deleteAchievement = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     await Achievement.update(
       { trash: true },
       { where: { id: req.params.id, school_id } }
@@ -1528,7 +1492,7 @@ const restoreAchievement = async (req, res) => {
 };
 const updateStudentAchievement = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const { status, proof_document, remarks } = req.body;
     if (
       status !== "1st prize" &&
@@ -1576,7 +1540,7 @@ const updateStudentAchievement = async (req, res) => {
 
 const createEvent = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const { title, description, date, url, venue } = req.body;
     if (!school_id || !title || !date) {
       return res.status(400).json({ error: "All fields are required" });
@@ -1600,7 +1564,7 @@ const createEvent = async (req, res) => {
       title,
       description,
       date,
-      user_id: 1,
+      user_id: req.user.user_id,
       url,
       venue,
       file: fileName ? fileName : null,
@@ -1614,7 +1578,7 @@ const createEvent = async (req, res) => {
 
 const getAllEvents = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
     const date = req.query.date || "";
     const page = parseInt(req.query.page) || 1;
@@ -1635,12 +1599,11 @@ const getAllEvents = async (req, res) => {
     }
     const { count, rows: events } = await Event.findAndCountAll({
       offset,
-      distinct: true, // Add this line
+      distinct: true,
       limit,
       where: whereClause,
     });
 
-    // const events = await Event.findAll({ where: { trash: false } });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
@@ -1655,7 +1618,7 @@ const getAllEvents = async (req, res) => {
 
 const getEventById = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const event = await Event.findOne({
       where: { id: req.params.id, school_id },
     });
@@ -1669,7 +1632,7 @@ const getEventById = async (req, res) => {
 
 const updateEvent = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const { title, description, date, url, venue } = req.body;
     const Id = req.params.id;
     const existingEvent = await Event.findOne({
@@ -1709,7 +1672,7 @@ const updateEvent = async (req, res) => {
 
 const deleteEvent = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     await Event.update(
       { trash: true },
       { where: { id: req.params.id, school_id } }
@@ -1730,7 +1693,7 @@ const restoreEvent = async (req, res) => {
 
 const createPayment = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const { student_id, amount, payment_date, payment_type, transaction_id } =
       req.body;
 
@@ -1767,7 +1730,7 @@ const createPayment = async (req, res) => {
 
 const getAllPayments = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
     const date = req.query.date || "";
     const page = parseInt(req.query.page) || 1;
@@ -1788,7 +1751,7 @@ const getAllPayments = async (req, res) => {
     }
     const { count, rows: payment } = await Payment.findAndCountAll({
       offset,
-      distinct: true, // Add this line
+      distinct: true,
       limit,
       where: whereClause,
       include: [
@@ -1812,7 +1775,7 @@ const getAllPayments = async (req, res) => {
 
 const getPaymentById = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const payment = await Payment.findOne({
       where: { id: req.params.id, school_id, trash: false },
       include: [
@@ -1832,7 +1795,7 @@ const getPaymentById = async (req, res) => {
 
 const updatePayment = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const { student_id, amount, payment_date, payment_type, transaction_id } =
       req.body;
     const Id = req.params.id;
@@ -1872,7 +1835,7 @@ const updatePayment = async (req, res) => {
 
 const deletePayment = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     await Payment.update(
       { trash: true },
       { where: { id: req.params.id, school_id } }
@@ -1892,7 +1855,7 @@ const restorePayment = async (req, res) => {
 };
 const createLeaveRequest = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const {
       user_id,
       student_id,
@@ -1958,7 +1921,7 @@ const createLeaveRequest = async (req, res) => {
 
 const getAllLeaveRequests = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     if (!school_id) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -1982,7 +1945,7 @@ const getAllLeaveRequests = async (req, res) => {
     }
     const { count, rows: leaves } = await LeaveRequest.findAndCountAll({
       offset,
-      distinct: true, // Add this line
+      distinct: true,
       limit,
       where: whereClause,
       attributes: [
@@ -2021,7 +1984,7 @@ const getAllLeaveRequests = async (req, res) => {
 const getLeaveRequestById = async (req, res) => {
   try {
     const Id = req.params.id;
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     if (!school_id) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -2042,8 +2005,7 @@ const getLeaveRequestById = async (req, res) => {
 const updateLeaveRequest = async (req, res) => {
   try {
     const Id = req.params.id;
-    const school_id = req.user.school_id || "";
-    const userId = req.query.user_id;
+    const school_id = req.user.school_id;
     const {
       user_id,
       student_id,
@@ -2052,8 +2014,6 @@ const updateLeaveRequest = async (req, res) => {
       leave_type,
       reason,
       leave_duration,
-      status,
-      admin_remarks,
     } = req.body;
 
     const data = await LeaveRequest.findByPk(Id);
@@ -2099,7 +2059,7 @@ const updateLeaveRequest = async (req, res) => {
 const leaveRequestPermission = async (req, res) => {
   try {
     const Id = req.params.id;
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const status = req.query.status;
     const userId = req.query.user_id;
     const admin_remarks = req.query.admin_remarks;
@@ -2133,7 +2093,7 @@ const leaveRequestPermission = async (req, res) => {
 const deleteLeaveRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
 
     const leave = await LeaveRequest.findOne({
       where: {
@@ -2169,7 +2129,7 @@ const restoreLeaveRequest = async (req, res) => {
 };
 const createNews = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const { title, content, date } = req.body;
 
     if (!school_id || !title || !date) {
@@ -2196,7 +2156,7 @@ const createNews = async (req, res) => {
       title,
       content,
       date,
-      user_id: 1,
+      user_id: req.user.user_id,
 
       file: fileName ? fileName : null,
     });
@@ -2217,13 +2177,6 @@ const createNews = async (req, res) => {
 
       await NewsImage.bulkCreate(imageRecords);
     }
-    // if (images && Array.isArray(images)) {
-    //   const imageRecords = images.map((img) => ({
-    //     news_id: news.id,
-    //     image_url: img.url,
-    //   }));
-    //   await NewsImage.bulkCreate(imageRecords);
-    // }
     res.status(201).json(news);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -2273,7 +2226,7 @@ const getAllNews = async (req, res) => {
 const getNewsById = async (req, res) => {
   try {
     const { id } = req.params;
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const news = await News.findOne({
       where: { id: id, trash: false, school_id: school_id },
       include: [
@@ -2294,7 +2247,7 @@ const getNewsById = async (req, res) => {
 
 const updateNews = async (req, res) => {
   const { id } = req.params;
-  const school_id = req.user.school_id || "";
+  const school_id = req.user.school_id;
   const { title, content, file } = req.body;
   const news = await News.findOne({
     where: { id: id, school_id: school_id, trash: false },
@@ -2339,7 +2292,7 @@ const updateNews = async (req, res) => {
 const deleteNews = async (req, res) => {
   try {
     const { id } = req.params;
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const news = await News.findOne({
       where: { id: id, school_id: school_id, trash: false },
     });
@@ -2375,7 +2328,7 @@ const deleteNewsImage = async (req, res) => {
 
 const createNotice = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const { title, content, type, class_ids, date } = req.body;
     let fileName = null;
     if (!school_id || !title || !content || !type) {
@@ -2421,7 +2374,7 @@ const createNotice = async (req, res) => {
 const getAllNotices = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -2458,11 +2411,10 @@ const getAllNotices = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-//get notice by id
 const getNoticeById = async (req, res) => {
   try {
     const { id } = req.params;
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const notice = await Notice.findOne({
       where: { notice_id: id, trash: false, school_id: school_id },
       include: [
@@ -2482,7 +2434,7 @@ const getNoticeById = async (req, res) => {
 const updateNotice = async (req, res) => {
   try {
     const { id } = req.params;
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const { title, content, type, class_ids, date } = req.body;
     if (!title || !content || !type) {
       return res.status(400).json({ error: "required fields are missing" });
@@ -2499,7 +2451,7 @@ const updateNotice = async (req, res) => {
         date,
         notice_id: { [Op.ne]: id },
       },
-    }); // Exclude the current notice
+    });
     if (existingNotice) {
       return res
         .status(409)

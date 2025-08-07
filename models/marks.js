@@ -24,18 +24,4 @@ const Mark = schoolSequelize.define(
   }
 );
 
-// Mark.belongsTo(Student, {
-//   foreignKey: "student_id",
-// });
-// Mark.associate = (models) => {
-//   Mark.belongsTo(models.InternalExam, {
-//     foreignKey: "internal_id",
-//     as: "exam",
-//   });
-//   Mark.belongsTo(models.Student, {
-//     foreignKey: "student_id",
-//     as: "student",
-//   });
-// };
-
 module.exports = Mark;

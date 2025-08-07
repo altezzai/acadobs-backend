@@ -8,17 +8,8 @@ const {
 } = require("../utils/fileHandler");
 const HomeworkAssignment = require("../models/homeworkassignment");
 const Student = require("../models/student");
-const Homework = require("../models/homework");
-const Attendance = require("../models/attendance");
-const AttendanceMarked = require("../models/attendancemarked");
-const InternalExam = require("../models/internal_marks");
-const Mark = require("../models/marks");
-const Subject = require("../models/subject");
 const School = require("../models/school");
 const User = require("../models/user");
-const Guardian = require("../models/guardian");
-const Achievement = require("../models/achievement");
-const StudentAchievement = require("../models/studentachievement");
 const Payment = require("../models/payment");
 const LeaveRequest = require("../models/leaverequest");
 const Notice = require("../models/notice");
@@ -26,6 +17,7 @@ const NoticeClass = require("../models/noticeclass");
 const News = require("../models/news");
 const Event = require("../models/event");
 const { Class } = require("../models");
+
 const { getschoolIdByStudentId } = require("../controllers/commonController");
 
 const updateHomeworkAssignment = async (req, res) => {
@@ -111,7 +103,7 @@ const getNoticeByStudentId = async (req, res) => {
         },
       ],
       order: [["createdAt", "DESC"]],
-      distinct: true, // avoid duplicates when a notice maps to multiple classes
+      distinct: true,
     });
     const count = notices.length;
     const totalPages = Math.ceil(count / limit);
@@ -341,7 +333,7 @@ const getLeaveRequestByStudentId = async (req, res) => {
     }
     const { count, rows: leaves } = await LeaveRequest.findAndCountAll({
       offset,
-      distinct: true, // Add this line
+      distinct: true,
       limit,
       where: whereClause,
       attributes: [
@@ -548,8 +540,6 @@ const getLatestNews = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch news" });
   }
 };
-
-//get students by schoolid and userid
 
 module.exports = {
   updateHomeworkAssignment,

@@ -61,7 +61,7 @@ const User = schoolSequelize.define(
   },
   {
     tableName: "users",
-    timestamps: true, // enables createdAt and updatedAt
+    timestamps: true,
   }
 );
 

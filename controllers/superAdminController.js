@@ -1,5 +1,3 @@
-const path = require("path");
-const fs = require("fs");
 const bcrypt = require("bcrypt");
 const School = require("../models/school");
 const User = require("../models/user");
@@ -25,7 +23,6 @@ const createSchool = async (req, res) => {
         .status(400)
         .json({ error: "SchoolAdmin email already exists in user table" });
     }
-    // const logo = req.file ? `/uploads/${req.file.filename}` : null;
     let fileName = null;
 
     if (req.file) {
@@ -171,7 +168,6 @@ const createClass = async (req, res) => {
   }
 };
 
-// READ ALL
 const getAllClasses = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
@@ -205,7 +201,6 @@ const getAllClasses = async (req, res) => {
   }
 };
 
-// READ ONE
 const getClassById = async (req, res) => {
   try {
     const id = req.params.id;
@@ -217,7 +212,6 @@ const getClassById = async (req, res) => {
   }
 };
 
-// UPDATE
 const updateClass = async (req, res) => {
   try {
     const id = req.params.id;
@@ -248,7 +242,6 @@ const updateClass = async (req, res) => {
   }
 };
 
-// DELETE (soft delete)
 const deleteClass = async (req, res) => {
   try {
     const id = req.params.id;
@@ -259,7 +252,6 @@ const deleteClass = async (req, res) => {
   }
 };
 
-// Create Subject
 const createSubject = async (req, res) => {
   try {
     const { subject_name, class_range } = req.body;
@@ -295,13 +287,10 @@ const createSubject = async (req, res) => {
   }
 };
 
-// Read All Subjects
 const getSubjects = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
     const range = req.query.range || "";
-
-    // const subjects = await Subject.findAll({
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -337,7 +326,6 @@ const getSubjectById = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-// Update Subject
 const updateSubject = async (req, res) => {
   try {
     const { id } = req.params;
@@ -370,7 +358,6 @@ const updateSubject = async (req, res) => {
   }
 };
 
-// Delete Subject (Soft Delete)
 const deleteSubject = async (req, res) => {
   try {
     const { id } = req.params;
