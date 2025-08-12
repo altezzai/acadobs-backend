@@ -16,6 +16,8 @@ const News = schoolSequelize.define(
     user_id: { type: DataTypes.INTEGER, allowNull: true },
     file: { type: DataTypes.STRING },
     trash: { type: DataTypes.BOOLEAN, defaultValue: false },
+    createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   },
   {
     tableName: "news",
