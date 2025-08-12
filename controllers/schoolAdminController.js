@@ -2130,6 +2130,7 @@ const restoreLeaveRequest = async (req, res) => {
 const createNews = async (req, res) => {
   try {
     const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
     const { title, content, date } = req.body;
 
     if (!school_id || !title || !date) {
@@ -2156,7 +2157,7 @@ const createNews = async (req, res) => {
       title,
       content,
       date,
-      user_id: req.user.user_id,
+      user_id,
 
       file: fileName ? fileName : null,
     });
