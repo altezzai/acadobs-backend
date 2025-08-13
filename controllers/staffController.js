@@ -1198,16 +1198,10 @@ const updateAssignedDuty = async (req, res) => {
 };
 const createAchievementWithStudents = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
-    const {
-      title,
-      description,
-      category,
-      date,
-      awarding_body,
-      recorded_by,
-      students,
-    } = req.body;
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+    const { title, description, category, date, awarding_body, students } =
+      req.body;
 
     let parsedStudents;
     if (typeof students === "string") {
@@ -1363,6 +1357,8 @@ const getAchievementById = async (req, res) => {
 const updateAchievement = async (req, res) => {
   try {
     const staffId = req.query.staff_id;
+    const recorded_by = req.user.user_id;
+
     if (!staffId) {
       return res.status(400).json({ error: "Staff ID is required" });
     }
@@ -1373,15 +1369,8 @@ const updateAchievement = async (req, res) => {
     if (!achievement) {
       return res.status(404).json({ error: "Achievement not found" });
     }
-    const {
-      title,
-      description,
-      category,
-      level,
-      date,
-      awarding_body,
-      recorded_by,
-    } = req.body;
+    const { title, description, category, level, date, awarding_body } =
+      req.body;
 
     await achievement.update({
       title,
