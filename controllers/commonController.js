@@ -7,6 +7,9 @@ const AttendanceMarked = require("../models/attendancemarked");
 const Attendance = require("../models/attendance");
 const Achievement = require("../models/achievement");
 const StudentAchievement = require("../models/studentachievement");
+const InternalMark = require("../models/internal_marks");
+const Subject = require("../models/subject");
+const Marks = require("../models/marks");
 
 const { Class } = require("../models");
 
@@ -127,7 +130,7 @@ const getHomeworkByStudentId = async (req, res) => {
 
             trash: false,
           },
-          attributes: ["id", "description", "due_date", "file"],
+          attributes: ["id", "description", "due_date", "file", "title"],
           include: [
             {
               model: User,
@@ -331,6 +334,51 @@ const achievementByStudentId = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+//get internalmark by student id
+const getInternalMarkByStudentId = async (req, res) => {
+  try {
+    const { student_id } = req.params;
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    // Assuming you have a model for InternalMark
+    const { count, rows: Mark } = await Marks.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: { student_id: student_id },
+
+      include: [
+        {
+          model: InternalMark,
+          where: {
+            trash: false,
+            school_id: school_id,
+          },
+          include: [
+            {
+              model: Subject,
+              attributes: ["id", "subject_name"],
+            },
+          ],
+        },
+      ],
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      Mark,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 module.exports = {
   getStudentsByClassId,
@@ -340,8 +388,12 @@ module.exports = {
   getClassesByYear,
 
   getHomeworkByStudentId,
+
   getAttendanceByStudentId,
   getStudentAttendanceByDate,
+
   allAchievementBySchoolId,
   achievementByStudentId,
+
+  getInternalMarkByStudentId,
 };

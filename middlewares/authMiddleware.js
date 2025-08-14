@@ -48,7 +48,7 @@ const socketAuth = (socket, next) => {
 
 const auth = (req, res, next) => {
   req.user = {
-    user_id: 1,
+    user_id: 2,
     school_id: 1,
     dp: "default.png",
     name: "default user1",

@@ -218,7 +218,8 @@ const createLeaveRequest = async (req, res) => {
 
 const getAllLeaveRequests = async (req, res) => {
   try {
-    const { school_id, user_id } = req.query;
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
     if (!school_id || !user_id) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -282,7 +283,8 @@ const getAllLeaveRequests = async (req, res) => {
 const getLeaveRequestById = async (req, res) => {
   try {
     const Id = req.params.id;
-    const { school_id, user_id } = req.query;
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
     if (!school_id || !user_id) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -304,7 +306,8 @@ const getLeaveRequestById = async (req, res) => {
 const getLeaveRequestByStudentId = async (req, res) => {
   try {
     const student_id = req.params.student_id;
-    const { school_id, user_id } = req.query;
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
     if (!school_id || !user_id) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -370,9 +373,9 @@ const getLeaveRequestByStudentId = async (req, res) => {
 const updateLeaveRequest = async (req, res) => {
   try {
     const Id = req.params.id;
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
     const {
-      school_id,
-      user_id,
       student_id,
       from_date,
       to_date,
@@ -486,7 +489,7 @@ const getSchoolsByUser = async (req, res) => {
 };
 const getLatestEvents = async (req, res) => {
   try {
-    const school_id = req.query.school_id;
+    const school_id = req.user.school_id;
     if (!school_id) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -514,7 +517,7 @@ const getLatestEvents = async (req, res) => {
 };
 const getLatestNews = async (req, res) => {
   try {
-    const school_id = req.query.school_id;
+    const school_id = req.user.school_id;
     if (!school_id) {
       return res.status(400).json({ error: "Missing required fields" });
     }

@@ -165,5 +165,9 @@ router.get(
   "/achievementByStudentId/:student_id",
   commonController.achievementByStudentId
 );
+router.get(
+  "/getInternalMarkByStudentId/:student_id",
+  commonController.getInternalMarkByStudentId
+);
 
 module.exports = router;
