@@ -1460,17 +1460,10 @@ const updateStudentAchievement = async (req, res) => {
 };
 const createLeaveRequest = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
-    const { user_id, from_date, to_date, leave_type, reason, leave_duration } =
-      req.body;
-    if (
-      !school_id ||
-      !user_id ||
-      !from_date ||
-      !to_date ||
-      !leave_type ||
-      !reason
-    ) {
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
+    const { from_date, to_date, leave_type, reason, leave_duration } = req.body;
+    if (!from_date || !to_date || !leave_type || !reason) {
       return res.status(400).json({ error: "Missing required fields" });
     }
     const existingRequest = await LeaveRequest.findOne({
@@ -1561,7 +1554,7 @@ const getAllLeaveRequests = async (req, res) => {
 const getLeaveRequestById = async (req, res) => {
   try {
     const Id = req.params.id;
-    const { user_id } = req.query;
+    const user_id = req.user.user_id;
     if (!user_id) {
       return res.status(400).json({ error: "Missing required fields" });
     }

@@ -157,9 +157,9 @@ const getPaymentByStudentId = async (req, res) => {
 };
 const createLeaveRequest = async (req, res) => {
   try {
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
     const {
-      school_id,
-      user_id,
       student_id,
       from_date,
       to_date,
@@ -167,15 +167,7 @@ const createLeaveRequest = async (req, res) => {
       reason,
       leave_duration,
     } = req.body;
-    if (
-      !school_id ||
-      !user_id ||
-      !student_id ||
-      !from_date ||
-      !to_date ||
-      !leave_type ||
-      !reason
-    ) {
+    if (!student_id || !from_date || !to_date || !leave_type || !reason) {
       return res.status(400).json({ error: "Missing required fields" });
     }
     const existingRequest = await LeaveRequest.findOne({
