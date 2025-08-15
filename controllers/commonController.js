@@ -10,6 +10,7 @@ const StudentAchievement = require("../models/studentachievement");
 const InternalMark = require("../models/internal_marks");
 const Subject = require("../models/subject");
 const Marks = require("../models/marks");
+const LeaveRequest = require("../models/leaverequest");
 
 const { Class } = require("../models");
 
@@ -379,7 +380,71 @@ const getInternalMarkByStudentId = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
+const getLeaveRequestByStudentId = async (req, res) => {
+  try {
+    const student_id = req.params.student_id;
+    const school_id = req.user.school_id;
+    if (!school_id) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const searchQuery = req.query.q || "";
+    const date = req.query.date || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+      school_id: school_id,
+      student_id: student_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { reason: { [Op.like]: `%${searchQuery}%` } },
+        { leave_type: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if (date) {
+      whereClause[Op.or] = [
+        { from_date: { [Op.like]: `%${date}%` } },
+        { to_date: { [Op.like]: `%${date}%` } },
+      ];
+    }
+    const { count, rows: leaves } = await LeaveRequest.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      attributes: [
+        "id",
+        "from_date",
+        "to_date",
+        "leave_type",
+        "leave_duration",
+        "reason",
+        "attachment",
+        "leave_duration",
+        "status",
+        "admin_remarks",
+      ],
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone"],
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      leaves,
+    });
+  } catch (error) {
+    console.error("Fetch Error:", error);
+    res.status(500).json({ error: "Failed to fetch leave requests" });
+  }
+};
 module.exports = {
   getStudentsByClassId,
   getschoolIdByStudentId,
@@ -396,4 +461,6 @@ module.exports = {
   achievementByStudentId,
 
   getInternalMarkByStudentId,
+
+  getLeaveRequestByStudentId,
 };

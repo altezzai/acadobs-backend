@@ -169,5 +169,8 @@ router.get(
   "/getInternalMarkByStudentId/:student_id",
   commonController.getInternalMarkByStudentId
 );
-
+router.get(
+  "/getLeaveRequestByStudentId/:student_id",
+  commonController.getLeaveRequestByStudentId
+);
 module.exports = router;

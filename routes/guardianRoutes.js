@@ -25,10 +25,7 @@ router.post(
 );
 router.get("/leaveRequest", guardianController.getAllLeaveRequests);
 router.get("/leaveRequest/:id", guardianController.getLeaveRequestById);
-router.get(
-  "/leaveRequestByStudentId/:student_id",
-  guardianController.getLeaveRequestByStudentId
-);
+
 router.put(
   "/leaveRequest/:id",
   dpUpload.single("attachment"),
@@ -70,5 +67,9 @@ router.get(
 router.get(
   "/getInternalMarkByStudentId/:student_id",
   commonController.getInternalMarkByStudentId
+);
+router.get(
+  "/getLeaveRequestByStudentId/:student_id",
+  commonController.getLeaveRequestByStudentId
 );
 module.exports = router;
