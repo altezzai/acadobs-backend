@@ -489,7 +489,6 @@ module.exports = {
   createLeaveRequest,
   getAllLeaveRequests,
   getLeaveRequestById,
-  getLeaveRequestByStudentId,
   updateLeaveRequest,
   deleteLeaveRequest,
 
