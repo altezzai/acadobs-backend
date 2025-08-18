@@ -101,7 +101,6 @@ router.get(
   staffController.getAllAchievementsByStaffId
 );
 router.get("/achievements/:id", staffController.getAchievementById);
-router.get("/achievements", staffController.getAllAchievements);
 router.put("/achievements/:id", staffController.updateAchievement);
 router.delete("/achievements/:id", staffController.deleteAchievement);
 router.patch("/achievements/:id", staffController.restoreAchievement);
