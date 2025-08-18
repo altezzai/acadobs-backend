@@ -1282,6 +1282,16 @@ const createAchievementWithStudents = async (req, res) => {
       students,
     } = req.body;
 
+    if (
+      students === undefined ||
+      students.length === 0 ||
+      students[0].student_id === undefined
+    ) {
+      return res
+        .status(400)
+        .json({ error: "At least one student id is required" });
+    }
+
     let parsedStudents;
     if (typeof students === "string") {
       parsedStudents = JSON.parse(students);
