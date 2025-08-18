@@ -234,9 +234,9 @@ const getStudentAttendanceByDate = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-const allAchievementBySchoolId = async (req, res) => {
+const allAchievements = async (req, res) => {
   try {
-    const { school_id } = req.params;
+    const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -457,7 +457,7 @@ module.exports = {
   getAttendanceByStudentId,
   getStudentAttendanceByDate,
 
-  allAchievementBySchoolId,
+  allAchievements,
   achievementByStudentId,
 
   getInternalMarkByStudentId,

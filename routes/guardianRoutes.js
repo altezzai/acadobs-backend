@@ -56,10 +56,7 @@ router.get(
   "/getStudentAttendanceByDate/:student_id",
   commonController.getStudentAttendanceByDate
 );
-router.get(
-  "/allAchievementBySchoolId/:school_id",
-  commonController.allAchievementBySchoolId
-);
+router.get("/allAchievements", commonController.allAchievements);
 router.get(
   "/achievementByStudentId/:student_id",
   commonController.achievementByStudentId

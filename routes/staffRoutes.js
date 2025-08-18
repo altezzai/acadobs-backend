@@ -101,6 +101,7 @@ router.get(
   staffController.getAllAchievementsByStaffId
 );
 router.get("/achievements/:id", staffController.getAchievementById);
+router.get("/achievements", staffController.getAllAchievements);
 router.put("/achievements/:id", staffController.updateAchievement);
 router.delete("/achievements/:id", staffController.deleteAchievement);
 router.patch("/achievements/:id", staffController.restoreAchievement);
@@ -157,10 +158,7 @@ router.get(
   "/getStudentAttendanceByDate/:student_id",
   commonController.getStudentAttendanceByDate
 );
-router.get(
-  "/allAchievementBySchoolId/:school_id",
-  commonController.allAchievementBySchoolId
-);
+router.get("/allAchievements", commonController.allAchievements);
 router.get(
   "/achievementByStudentId/:student_id",
   commonController.achievementByStudentId
