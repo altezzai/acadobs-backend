@@ -11,6 +11,7 @@ const InternalMark = require("../models/internal_marks");
 const Subject = require("../models/subject");
 const Marks = require("../models/marks");
 const LeaveRequest = require("../models/leaverequest");
+const School = require("../models/school");
 
 const { Class } = require("../models");
 
@@ -193,12 +194,14 @@ const getAttendanceByStudentId = async (req, res) => {
 const getStudentAttendanceByDate = async (req, res) => {
   try {
     const student_id = req.params.student_id;
+    const id = await getschoolIdByStudentId(student_id);
     const date = req.query.date || new Date();
-    // const attendance = await AttendanceMarked.findAll({
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-
+    const school = await School.findByPk(id, {
+      attributes: ["period_count"],
+    });
     const { count, rows: attendance } = await AttendanceMarked.findAndCountAll({
       offset,
       distinct: true,
@@ -225,6 +228,7 @@ const getStudentAttendanceByDate = async (req, res) => {
     // res.status(200).json(attendance);
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
+      period_count: school["period_count"],
       totalcontent: count,
       totalPages,
       currentPage: page,
