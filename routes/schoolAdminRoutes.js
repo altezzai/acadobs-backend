@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const schoolAdminController = require("../controllers/schoolAdminController");
 const commonController = require("../controllers/commonController");
-const { dpUpload, nUpload } = require("../middlewares/upload");
+const { upload, nUpload } = require("../middlewares/upload");
 const multer = require("multer");
 
 const storage = multer.diskStorage({
@@ -15,7 +15,6 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
 // Class routes
 router.post("/classes", schoolAdminController.createClass); // Create a new class
 router.get("/classes", schoolAdminController.getAllClasses); // Get all classes
@@ -33,22 +32,18 @@ router.put("/subjects/:id", schoolAdminController.updateSubject);
 router.delete("/subjects/:id", schoolAdminController.deleteSubject);
 
 //staff routes
-router.post(
-  "/staffs",
-  dpUpload.single("dp"),
-  schoolAdminController.createStaff
-);
+router.post("/staffs", upload.single("dp"), schoolAdminController.createStaff);
 router.get("/staffs", schoolAdminController.getAllStaff);
 router.get("/staffs", schoolAdminController.getAllStaff);
 router.get("/staffs/:staff_id", schoolAdminController.getStaffById);
 router.put(
   "/staffs/:staff_id",
-  dpUpload.single("dp"),
+  upload.single("dp"),
   schoolAdminController.updateStaff
 );
 router.put(
   "/updateStaffUser/:user_id",
-  dpUpload.single("dp"),
+  upload.single("dp"),
   schoolAdminController.updateStaffUser
 );
 router.delete("/staffs/:staff_id", schoolAdminController.deleteStaff);
@@ -57,7 +52,7 @@ router.patch("/staffs/:staff_id", schoolAdminController.restoredStaff);
 // Guardian routes
 router.post(
   "/guardian",
-  dpUpload.single("dp"),
+  upload.single("dp"),
   schoolAdminController.createGuardian
 );
 router.get("/guardian", schoolAdminController.getAllGuardians);
@@ -68,7 +63,7 @@ router.delete("/guardian/:id", schoolAdminController.deleteGuardian);
 // Student routes
 router.post(
   "/students",
-  dpUpload.fields([
+  upload.fields([
     { name: "dp", maxCount: 1 }, // guardian image
     { name: "image", maxCount: 1 }, // student image
   ]),
@@ -78,7 +73,7 @@ router.get("/students", schoolAdminController.getAllStudents);
 router.get("/students/:id", schoolAdminController.getStudentById);
 router.put(
   "/students/:id",
-  dpUpload.single("image"),
+  upload.single("image"),
   schoolAdminController.updateStudent
 );
 router.delete("/students/:id", schoolAdminController.deleteStudent);
@@ -91,14 +86,14 @@ router.get(
 //duty
 router.post(
   "/duties",
-  dpUpload.single("file"),
+  upload.single("file"),
   schoolAdminController.createDutyWithAssignments
 );
 router.get("/duties", schoolAdminController.getAllDuties);
 router.get("/duties/:id", schoolAdminController.getDutyById);
 router.put(
   "/duties/:id",
-  dpUpload.single("file"),
+  upload.single("file"),
   schoolAdminController.updateDuty
 );
 router.delete("/duties/:id", schoolAdminController.deleteDuty);
@@ -109,7 +104,7 @@ router.delete(
 );
 router.put(
   "/updateDutyAssigned/:id",
-  dpUpload.single("solved_file"),
+  upload.single("solved_file"),
   schoolAdminController.updateDutyAssigned
 );
 router.put(
@@ -118,7 +113,7 @@ router.put(
 );
 router.post(
   "/achievements",
-  dpUpload.any(),
+  upload.any(),
   schoolAdminController.createAchievementWithStudents
 );
 router.get("/getAllAchievements", schoolAdminController.getAllAchievements);
@@ -128,20 +123,20 @@ router.delete("/achievements/:id", schoolAdminController.deleteAchievement);
 router.patch("/achievements/:id", schoolAdminController.restoreAchievement);
 router.put(
   "/updateStudentAchievement/:id",
-  dpUpload.single("proof_document"),
+  upload.single("proof_document"),
   schoolAdminController.updateStudentAchievement
 );
 //events
 router.post(
   "/events",
-  dpUpload.single("file"),
+  upload.single("file"),
   schoolAdminController.createEvent
 );
 router.get("/events", schoolAdminController.getAllEvents);
 router.get("/events/:id", schoolAdminController.getEventById);
 router.put(
   "/events/:id",
-  dpUpload.single("file"),
+  upload.single("file"),
   schoolAdminController.updateEvent
 );
 router.delete("/events/:id", schoolAdminController.deleteEvent);
@@ -157,7 +152,7 @@ router.patch("/payments/:id", schoolAdminController.restorePayment);
 //leave request
 router.post(
   "/leaveRequest",
-  dpUpload.single("attachment"),
+  upload.single("attachment"),
   schoolAdminController.createLeaveRequest
 );
 router.get("/leaveRequest", schoolAdminController.getAllLeaveRequests);
@@ -166,7 +161,7 @@ router.delete("/leaveRequest/:id", schoolAdminController.deleteLeaveRequest);
 router.patch("/leaveRequest/:id", schoolAdminController.restoreLeaveRequest);
 router.put(
   "/leaveRequest/:id",
-  dpUpload.single("attachment"),
+  upload.single("attachment"),
   schoolAdminController.updateLeaveRequest
 );
 router.patch(
@@ -176,7 +171,7 @@ router.patch(
 //news
 router.post(
   "/news",
-  dpUpload.fields([
+  upload.fields([
     { name: "file", maxCount: 1 },
     { name: "images", maxCount: 10 },
   ]),
@@ -187,7 +182,7 @@ router.get("/news", schoolAdminController.getAllNews);
 router.get("/news/:id", schoolAdminController.getNewsById);
 router.put(
   "/news/:id",
-  dpUpload.fields([
+  upload.fields([
     { name: "file", maxCount: 1 },
     { name: "images", maxCount: 10 },
   ]),

@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const staffController = require("../controllers/staffController");
 const commonController = require("../controllers/commonController");
-const { dpUpload } = require("../middlewares/upload");
+const { upload } = require("../middlewares/upload");
 // Internal Exam
 router.post("/internalmarks", staffController.createExamWithMarks);
 router.get("/internalmarks", staffController.getAllmarks);
@@ -19,14 +19,14 @@ router.get(
 // Homework
 router.post(
   "/homeworks",
-  dpUpload.single("file"),
+  upload.single("file"),
   staffController.createHomeworkWithAssignments
 );
 router.get("/homeworks", staffController.getAllHomework);
 router.get("/homeworks/:id", staffController.getHomeworkById);
 router.put(
   "/homeworks/:id",
-  dpUpload.single("file"),
+  upload.single("file"),
   staffController.updateHomework
 );
 router.delete("/homeworks/:id", staffController.deleteHomework);
@@ -37,7 +37,7 @@ router.delete(
 );
 router.put(
   "/updateHomeworkAssignment/:id",
-  dpUpload.single("file"),
+  upload.single("file"),
   staffController.updateHomeworkAssignment
 );
 router.put(
@@ -87,13 +87,13 @@ router.get("/duties/:id", staffController.getAssignedDutyById);
 
 router.put(
   "/updateAssignedDuty/:id",
-  dpUpload.single("solved_file"),
+  upload.single("solved_file"),
   staffController.updateAssignedDuty
 );
 
 router.post(
   "/achievements",
-  dpUpload.any(),
+  upload.any(),
   staffController.createAchievementWithStudents
 );
 router.get(
@@ -106,33 +106,42 @@ router.delete("/achievements/:id", staffController.deleteAchievement);
 router.patch("/achievements/:id", staffController.restoreAchievement);
 router.put(
   "/updateStudentAchievement/:id",
-  dpUpload.single("proof_document"),
+  upload.single("proof_document"),
   staffController.updateStudentAchievement
 );
 //Leave Request
 router.post(
   "/leaveRequest",
-  dpUpload.single("attachment"),
+  upload.single("attachment"),
   staffController.createLeaveRequest
 );
 router.get("/leaveRequest", staffController.getAllLeaveRequests);
 router.get("/leaveRequest/:id", staffController.getLeaveRequestById);
 router.put(
   "/leaveRequest/:id",
-  dpUpload.single("attachment"),
+  upload.single("attachment"),
   staffController.updateLeaveRequest
 );
 router.delete("/leaveRequest/:id", staffController.deleteLeaveRequest);
 router.patch("/leaveRequest/:id", staffController.restoreLeaveRequest);
-// router.post(
-//   "/createStudentLeaveRequest",
-//   dpUpload.single("attachment"),
-//   staffController.createStudentLeaveRequest
-// );
 router.patch(
   "/leaveRequestpermission/:id",
   staffController.leaveRequestPermission
 );
+router.post(
+  "/parentNotes",
+  upload.single("note_attachment"),
+  staffController.createparentNote
+);
+router.get("/parentNotes", staffController.getAllOwnCreatedParentNotes);
+router.get("/parentNotes/:id", staffController.getParentNoteById);
+router.put(
+  "/parentNotes/:id",
+  upload.single("note_attachment"),
+  staffController.updateParentNote
+);
+router.delete("/parentNotes/:id", staffController.deleteParentNote);
+
 router.get("/getLatestEvents", staffController.getLatestEvents);
 router.get("/getLatestNews", staffController.getLatestNews);
 router.get("/getLatestNotices", staffController.getLatestNotices);

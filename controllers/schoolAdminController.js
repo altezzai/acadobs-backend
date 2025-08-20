@@ -583,8 +583,7 @@ const createGuardian = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-const createGuardianService = async (guardianData, fileBuffer) => {
-  const school_id = req.user.school_id;
+const createGuardianService = async (guardianData, fileBuffer, req) => {
   const {
     guardian_relation,
     guardian_name,
@@ -597,6 +596,7 @@ const createGuardianService = async (guardianData, fileBuffer) => {
     guardian2_contact,
     father_name,
     mother_name,
+    school_id,
   } = guardianData;
 
   if (!guardian_name || !guardian_email || !guardian_contact) {
@@ -811,6 +811,7 @@ const createStudent = async (req, res) => {
         guardian2_job,
         father_name,
         mother_name,
+        school_id,
       };
 
       const newGuardian = await createGuardianService(

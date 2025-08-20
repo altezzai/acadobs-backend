@@ -2,10 +2,10 @@ const express = require("express");
 const router = express.Router();
 const guardianController = require("../controllers/guardianController");
 const commonController = require("../controllers/commonController");
-const { dpUpload } = require("../middlewares/upload");
+const { upload } = require("../middlewares/upload");
 router.put(
   "/updateHomeworkAssignment/:id",
-  dpUpload.single("file"),
+  upload.single("file"),
   guardianController.updateHomeworkAssignment
 );
 
@@ -20,7 +20,7 @@ router.get(
 
 router.post(
   "/leaveRequest",
-  dpUpload.single("attachment"),
+  upload.single("attachment"),
   guardianController.createLeaveRequest
 );
 router.get("/leaveRequest", guardianController.getAllLeaveRequests);
@@ -28,7 +28,7 @@ router.get("/leaveRequest/:id", guardianController.getLeaveRequestById);
 
 router.put(
   "/leaveRequest/:id",
-  dpUpload.single("attachment"),
+  upload.single("attachment"),
   guardianController.updateLeaveRequest
 );
 router.delete("/leaveRequest/:id", guardianController.deleteLeaveRequest);

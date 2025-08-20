@@ -41,6 +41,8 @@ const Payment = schoolSequelize.define(
     recorded_by: { type: DataTypes.INTEGER, allowNull: true },
     remarks: { type: DataTypes.TEXT },
     trash: { type: DataTypes.BOOLEAN, defaultValue: false },
+    createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   },
   {
     tableName: "payments",

@@ -1,5 +1,4 @@
 "use strict";
-
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable("internal_marks", {
@@ -18,7 +17,7 @@ module.exports = {
       },
       subject_id: {
         type: Sequelize.INTEGER,
-        allowNull: true,
+        allowNull: false, // Changed to false
       },
       internal_name: {
         type: Sequelize.STRING,
@@ -29,7 +28,7 @@ module.exports = {
       },
       date: {
         type: Sequelize.DATEONLY,
-        allowNull: true,
+        allowNull: false, // Changed to false
       },
       recorded_by: {
         type: Sequelize.INTEGER,
@@ -48,13 +47,13 @@ module.exports = {
         defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
       },
     });
+
     await queryInterface.addConstraint("internal_marks", {
       fields: ["school_id", "class_id", "subject_id", "internal_name", "date"],
       type: "unique",
       name: "unique_internal_marks_combination",
     });
   },
-
   async down(queryInterface) {
     await queryInterface.dropTable("internal_marks");
   },

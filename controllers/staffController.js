@@ -22,6 +22,7 @@ const LeaveRequest = require("../models/leaverequest");
 const Event = require("../models/event");
 const News = require("../models/news");
 const Notice = require("../models/notice");
+const ParentNote = require("../models/parent_note");
 const { Homework, HomeworkAssignment } = require("../models");
 
 const createExamWithMarks = async (req, res) => {
@@ -1864,6 +1865,149 @@ const leaveRequestPermission = async (req, res) => {
     res.status(500).json({ error: "Failed to approve leave request" });
   }
 };
+//parent note section
+
+const createparentNote = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+
+    const { note_title, note_content } = req.body;
+    let fileName = null;
+    if (req.file) {
+      const uploadPath = "uploads/parent_notes/";
+      fileName = await compressAndSaveFile(req.file, uploadPath);
+    }
+
+    const note = await ParentNote.create({
+      school_id,
+      note_title,
+      note_content,
+      note_attachment: fileName,
+      recorded_by,
+    });
+
+    res.status(201).json(note);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getAllOwnCreatedParentNotes = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const searchQuery = req.query.q || "";
+    const whereClause = {
+      school_id,
+      recorded_by,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { note_title: { [Op.like]: `%${searchQuery}%` } },
+        { note_content: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: notes } = await ParentNote.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      notes,
+    });
+  } catch (err) {
+    console.error("Error fetching parent notes:", err);
+    res.status(500).json({ error: "Failed to fetch parent notes" });
+  }
+};
+const getParentNoteById = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+
+    const note = await ParentNote.findOne({
+      where: { id, school_id, recorded_by },
+    });
+
+    if (!note) {
+      return res.status(404).json({ error: "Parent note not found" });
+    }
+
+    res.status(200).json(note);
+  } catch (err) {
+    console.error("Error fetching parent note:", err);
+    res.status(500).json({ error: "Failed to fetch parent note" });
+  }
+};
+const updateParentNote = async (req, res) => {
+  try {
+    const noteId = req.params.id;
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+
+    const note = await ParentNote.findOne({
+      where: { id: noteId, school_id, recorded_by },
+    });
+
+    if (!note) {
+      return res.status(404).json({ error: "Parent note not found" });
+    }
+
+    const { note_title, note_content } = req.body;
+    let fileName = note.note_attachment;
+    if (req.file) {
+      const uploadPath = "uploads/parent_notes/";
+      fileName = await compressAndSaveFile(req.file, uploadPath);
+      // Delete old file if it exists
+      if (note.note_attachment) {
+        await deletefilewithfoldername(note.note_attachment, uploadPath);
+      }
+    }
+
+    await note.update({
+      note_title,
+      note_content,
+      note_attachment: fileName,
+    });
+
+    res.status(200).json(note);
+  } catch (err) {
+    console.error("Error updating parent note:", err);
+    res.status(500).json({ error: "Failed to update parent note" });
+  }
+};
+
+const deleteParentNote = async (req, res) => {
+  try {
+    const noteId = req.params.id;
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+
+    const note = await ParentNote.findOne({
+      where: { id: noteId, school_id, recorded_by },
+    });
+
+    if (!note) {
+      return res.status(404).json({ error: "Parent note not found" });
+    }
+    await note.update({ trash: true });
+    res.status(200).json({ message: "Parent note deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting parent note:", err);
+    res.status(500).json({ error: "Failed to delete parent note" });
+  }
+};
 
 const getLatestEvents = async (req, res) => {
   try {
@@ -2003,6 +2147,12 @@ module.exports = {
   // createStudentLeaveRequest,
   // updateStudentLeaveRequest,
   leaveRequestPermission,
+
+  createparentNote,
+  getAllOwnCreatedParentNotes,
+  getParentNoteById,
+  updateParentNote,
+  deleteParentNote,
 
   getLatestEvents,
   getLatestNews,
