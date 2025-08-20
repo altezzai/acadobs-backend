@@ -24,7 +24,7 @@ const Attendance = schoolSequelize.define(
   },
   {
     tableName: "attendance",
-    timestamps: false,
+    timestamps: true,
   }
 );
 

@@ -12,7 +12,7 @@ const NewsImage = schoolSequelize.define(
   },
   {
     tableName: "news_images",
-    timestamps: false,
+    timestamps: true,
   }
 );
 module.exports = NewsImage;

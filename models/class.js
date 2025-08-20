@@ -41,7 +41,7 @@ const Class = schoolSequelize.define(
   },
   {
     tableName: "classes",
-    timestamps: false,
+    timestamps: true,
     indexes: [
       {
         unique: true,

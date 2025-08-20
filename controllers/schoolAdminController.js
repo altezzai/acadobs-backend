@@ -1732,7 +1732,14 @@ const createPayment = async (req, res) => {
         .json({ error: "Payment with the same details already exists" });
     }
 
-    const payment = await Payment.create(req.body);
+    const payment = await Payment.create({
+      school_id,
+      student_id,
+      amount,
+      payment_date,
+      payment_type,
+      transaction_id,
+    });
     res.status(201).json(payment);
   } catch (err) {
     res.status(500).json({ error: err.message });

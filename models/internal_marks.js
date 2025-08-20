@@ -17,7 +17,7 @@ const InternalExam = schoolSequelize.define(
   },
   {
     tableName: "internal_marks",
-    timestamps: false,
+    timestamps: true,
   }
 );
 

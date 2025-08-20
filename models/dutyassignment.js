@@ -20,7 +20,7 @@ const DutyAssignment = schoolSequelize.define(
   },
   {
     tableName: "duty_assignments",
-    timestamps: false,
+    timestamps: true,
   }
 );
 

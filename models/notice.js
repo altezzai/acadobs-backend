@@ -23,7 +23,7 @@ const Notice = schoolSequelize.define(
   },
   {
     tableName: "notices",
-    timestamps: false,
+    timestamps: true,
   }
 );
 

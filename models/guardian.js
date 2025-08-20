@@ -84,7 +84,7 @@ const Guardian = schoolSequelize.define(
   },
   {
     tableName: "guardians",
-    timestamps: false,
+    timestamps: true,
   }
 );
 Guardian.belongsTo(User, { foreignKey: "user_id" });
