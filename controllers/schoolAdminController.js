@@ -1705,10 +1705,23 @@ const restoreEvent = async (req, res) => {
 const createPayment = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const { student_id, amount, payment_date, payment_type, transaction_id } =
-      req.body;
+    const {
+      student_id,
+      amount,
+      payment_date,
+      payment_type,
+      transaction_id,
+      payment_method,
+      payment_status,
+    } = req.body;
 
-    if (!school_id || !amount || !payment_date || !payment_type) {
+    if (
+      !school_id ||
+      !amount ||
+      !payment_date ||
+      !payment_type ||
+      !payment_method
+    ) {
       return res.status(400).json({ error: "All fields are required" });
     }
     const existingTransaction_id = await Payment.findOne({
@@ -1739,6 +1752,9 @@ const createPayment = async (req, res) => {
       payment_date,
       payment_type,
       transaction_id,
+      payment_method,
+      payment_status,
+      recorded_by: req.user.user_id,
     });
     res.status(201).json(payment);
   } catch (err) {
@@ -1814,8 +1830,14 @@ const getPaymentById = async (req, res) => {
 const updatePayment = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const { student_id, amount, payment_date, payment_type, transaction_id } =
-      req.body;
+    const {
+      student_id,
+      amount,
+      payment_date,
+      payment_type,
+      transaction_id,
+      payment_status,
+    } = req.body;
     const Id = req.params.id;
     const payment = await Payment.findOne({
       where: { id: Id, school_id },
@@ -1836,6 +1858,7 @@ const updatePayment = async (req, res) => {
         amount,
         payment_date,
         payment_type,
+
         id: { [Op.ne]: Id },
       },
     });
@@ -1844,7 +1867,14 @@ const updatePayment = async (req, res) => {
         .status(400)
         .json({ error: "Payment with the same details already exists" });
     }
-    await payment.update(req.body);
+    await payment.update({
+      student_id,
+      amount,
+      payment_date,
+      payment_type,
+      transaction_id,
+      payment_status,
+    });
     res.status(200).json({ message: "Payment updated", payment });
   } catch (err) {
     res.status(500).json({ error: err.message });
