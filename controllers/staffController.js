@@ -1514,7 +1514,7 @@ const createLeaveRequest = async (req, res) => {
 
 const getAllLeaveRequests = async (req, res) => {
   try {
-    const { user_id } = req.query;
+    const user_id = req.user.user_id;
     if (!user_id) {
       return res.status(400).json({ error: "Missing required fields" });
     }

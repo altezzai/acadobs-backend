@@ -1,20 +1,25 @@
 const { Op } = require("sequelize");
 const Message = require("../models/messages");
-const { User } = require("../models"); // import models
+const { User } = require("../models");
 
-const sendMessage = async (data, callback) => {
+// import models
+
+const sendMessage = async (io, socket, data) => {
   try {
-    const sender_id = socket.user_id; // Get sender_id from socket userId
+    const sender_id = socket.user.user_id; // must be set in socket auth middleware
     const {
       receiver_id,
       student_id,
       message,
-
       mediaUrl,
       replyToId,
       type,
       type_id,
     } = data;
+
+    if (!receiver_id) {
+      throw new Error("receiver_id is required");
+    }
 
     const newMessage = await Message.create({
       sender_id,
@@ -28,119 +33,135 @@ const sendMessage = async (data, callback) => {
       status: "sent",
     });
 
-    // Emit message to receiver in real-time
-    io.to(receiver_id.toString()).emit("newMessage", newMessage);
+    // Send back to sender
+    socket.emit("newMessage", newMessage);
 
-    if (callback) callback({ success: true, message: newMessage });
+    // Send to receiver (join users to rooms when they connect!)
+    io.to(`user_${receiver_id}`).emit("newMessage", newMessage);
   } catch (error) {
-    console.error("sendMessage error:", error);
-    if (callback) callback({ success: false, error: "Failed to send message" });
+    console.error("❌ Error sending message:", error);
+    socket.emit("error", {
+      message: error.message || "Failed to send message!",
+    });
   }
 };
 
 /**
  * ❌ Delete Message
  */
-const deleteMessage = async (data, callback) => {
+const deleteMessage = async (io, socket, data) => {
   try {
-    const { id, sender_id } = data;
+    const userId = socket.user.user_id;
+    const id = data.messageId;
 
-    const msg = await Message.findOne({ where: { id, sender_id } });
-    if (!msg)
-      return callback({
-        success: false,
-        error: "Message not found or not allowed",
+    const msg = await Message.findOne({ where: { id, sender_id: userId } });
+    if (!msg) {
+      return socket.emit("error", {
+        message: "Message not found or unauthorized",
       });
+    }
 
     await msg.destroy();
-
-    io.to(msg.receiver_id.toString()).emit("deleteMessage", { id });
-
-    callback({ success: true, id });
+    socket.emit("messageDeleted", { messageId: id, status: "deleted" });
+    io.to(`user_${msg.receiver_id}`).emit("messageDeleted", { messageId: id });
   } catch (error) {
-    console.error("deleteMessage error:", error);
-    callback({ success: false, error: "Failed to delete message" });
+    console.error(error);
+    socket.emit("error", { message: "Failed to delete message" });
   }
 };
 
 /**
  * 📥 Get All Messages between two users
  */
-const getMessages = async (data, callback) => {
+const getMessages = async (io, socket, data) => {
   try {
-    const user1 = socket.user_id; // Get user1 from socket userId
-    const { user2 } = data;
+    const user1 = socket.user.user_id; // Get user1 from socket userId
+    const { opponentId } = data;
 
-    const messages = await Message.findAll({
+    const messageData = await Message.findAll({
       where: {
         [Op.or]: [
-          { sender_id: user1, receiver_id: user2 },
-          { sender_id: user2, receiver_id: user1 },
+          { sender_id: user1, receiver_id: opponentId },
+          { sender_id: opponentId, receiver_id: user1 },
         ],
       },
-      order: [["created_at", "ASC"]],
+      order: [["createdAt", "ASC"]],
     });
 
-    callback({ success: true, messages });
+    socket.emit("messages", messageData);
   } catch (error) {
-    console.error("getMessages error:", error);
-    callback({ success: false, error: "Failed to fetch messages" });
+    console.error(error);
+    socket.emit("error", {
+      message: "Failed to retrieve messages from getMessages",
+    });
   }
 };
 
 /**
  * 👀 Get First Unseen Message
  */
-const getFirstUnseenMessage = async (data, callback) => {
+const getFirstUnseenMessage = async (io, socket, data) => {
   try {
-    const userId = socket.user_id; // Get userId from socket userId
-    const { opponentId } = data;
+    const userId = socket.user.user_id; // Get the current user ID
+    const { opponentId } = data; // Get opponent ID from request
 
-    const message = await Message.findOne({
+    if (!opponentId) {
+      return socket.emit("error", { message: "Opponent ID is required" });
+    }
+    const messages = await Message.findOne({
       where: {
         [Op.or]: [
           { sender_id: userId, receiver_id: opponentId },
           { sender_id: opponentId, receiver_id: userId },
+          { status: "sent" }, // Unseen messages sent to me
         ],
-        status: "sent",
       },
-      order: [["created_at", "ASC"]],
+      order: [["createdAt", "ASC"]], // Sort by sent_date in ascending order
     });
 
-    if (message) {
-      // Mark as received
-      await message.update({ status: "received" });
-    }
-
-    callback({ success: true, message });
+    socket.emit("getFirstunseen", messages);
   } catch (error) {
-    console.error("getFirstUnseenMessage error:", error);
-    callback({ success: false, error: "Failed to fetch unseen message" });
+    console.error(error);
+    socket.emit("error", { message: "Failed to retrieve new messages" });
   }
 };
 
 /**
  * 🧑‍🤝‍🧑 Get Users List with Latest Message
  */
-const getUsersListandLatestMessage = async (data, callback) => {
+const getUsersListandLatestMessage = async (io, socket, data) => {
   try {
-    const userId = socket.user_id;
+    const userId = socket.user.user_id;
+    console.log("Fetching users list for userId:", userId);
+    const { page = 1, limit = 10, search } = data || {};
+    const offset = (page - 1) * limit;
+    const whereCondition = {
+      [Op.or]: [{ sender_id: userId }, { receiver_id: userId }],
+    };
+    if (search) {
+      whereCondition[Op.or].push({
+        message: {
+          [Op.like]: `%${search}%`,
+        },
+      });
+    }
 
-    const latestMessages = await Message.findAll({
+    const { count, rows: latestMessages } = await Message.findAndCountAll({
+      limit,
+      offset,
+      distinct: true,
+      where: whereCondition,
       attributes: [
         "id",
         "sender_id",
+        "student_id",
         "receiver_id",
         "message",
         "status",
-        "created_at",
+        "createdAt",
       ],
-      where: {
-        [Op.or]: [{ sender_id: userId }, { receiver_id: userId }],
-      },
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
     });
-
     // Distinct users with latest message
     const userMap = {};
     latestMessages.forEach((msg) => {
@@ -153,17 +174,25 @@ const getUsersListandLatestMessage = async (data, callback) => {
 
     // Fetch user details
     const userIds = Object.keys(userMap);
-    const users = await User.findAll({ where: { id: userIds } });
+    const users = await User.findAll({
+      where: { id: userIds },
+      attributes: ["id", "name", "dp"],
+    });
 
     const result = users.map((user) => ({
       user,
       latestMessage: userMap[user.id],
     }));
 
-    callback({ success: true, list: result });
+    socket.emit("usersList", {
+      total: count,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      data: result,
+    });
   } catch (error) {
-    console.error("getUsersListandLatestMessage error:", error);
-    callback({ success: false, error: "Failed to fetch users list" });
+    console.error(error);
+    socket.emit("error", { message: "Failed to fetch conversations" });
   }
 };
 

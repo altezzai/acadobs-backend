@@ -4,8 +4,8 @@ const messageStatusHandlers = require("./messageStatusHandlers");
 module.exports = (io, socket) => {
   console.log(`User connected: ${socket.user.user_id}`);
 
-  socket.on("getUserConversations", (data) =>
-    messageHandlers.getUserConversations(io, socket, data)
+  socket.on("getUsersListandLatestMessage", (data) =>
+    messageHandlers.getUsersListandLatestMessage(io, socket, data)
   );
 
   // 🟢 Message Handlers

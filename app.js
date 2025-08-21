@@ -8,7 +8,7 @@ const cors = require("cors");
 const morgan = require("morgan");
 const app = express();
 require("dotenv").config();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 4444;
 const { auth, socketAuth } = require("./middlewares/authMiddleware");
 const limiter = require("./middlewares/rateLimitMiddleware");
 
