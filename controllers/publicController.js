@@ -29,7 +29,15 @@ const login = async (req, res) => {
       secretKey,
       { expiresIn: "4h" }
     );
-    res.status(200).json({ message: "Login successful", token });
+    const userData = {
+      user_id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      school_id: user.school_id,
+      dp: user.dp,
+    };
+    res.status(200).json({ message: "Login successful", token, userData });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
