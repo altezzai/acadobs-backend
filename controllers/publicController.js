@@ -27,7 +27,7 @@ const login = async (req, res) => {
         dp: user.dp,
       },
       secretKey,
-      { expiresIn: "4h" }
+      { expiresIn: "360h" }
     );
     const userData = {
       user_id: user.id,
@@ -42,9 +42,7 @@ const login = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-const validatePassword = async (password) => {
-  return true; // Placeholder, always returns true
-};
+
 module.exports = {
   login,
 };

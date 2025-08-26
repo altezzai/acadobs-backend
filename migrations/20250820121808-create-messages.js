@@ -8,6 +8,14 @@ module.exports = {
         autoIncrement: true,
         primaryKey: true,
       },
+      chat_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: "chats",
+          key: "id",
+        },
+      },
       sender_id: {
         type: Sequelize.INTEGER,
         allowNull: false,

@@ -1,6 +1,8 @@
 const { Op } = require("sequelize");
 const Message = require("../models/messages");
 const { User } = require("../models");
+const Chat = require("../models/chat");
+const Sequelize = require("sequelize");
 
 // import models
 
@@ -21,7 +23,28 @@ const sendMessage = async (io, socket, data) => {
       throw new Error("receiver_id is required");
     }
 
+    let chat = await Chat.findOne({
+      where: {
+        [Op.or]: [
+          { user1_id: sender_id, user2_id: receiver_id },
+          { user1_id: receiver_id, user2_id: sender_id },
+        ],
+      },
+    });
+
+    if (!chat) {
+      chat = await Chat.create({
+        user1_id: sender_id,
+        user2_id: receiver_id,
+        last_message: message ? message : mediaUrl ? "media" : null,
+      });
+    } else {
+      await chat.update({
+        last_message: message || (mediaUrl ? "media" : chat.last_message),
+      });
+    }
     const newMessage = await Message.create({
+      chat_id: chat.id,
       sender_id,
       receiver_id,
       student_id,
@@ -70,9 +93,6 @@ const deleteMessage = async (io, socket, data) => {
   }
 };
 
-/**
- * 📥 Get All Messages between two users
- */
 const getMessages = async (io, socket, data) => {
   try {
     const user1 = socket.user.user_id; // Get user1 from socket userId
@@ -131,64 +151,76 @@ const getFirstUnseenMessage = async (io, socket, data) => {
  */
 const getUsersListandLatestMessage = async (io, socket, data) => {
   try {
-    const userId = socket.user.user_id;
-    console.log("Fetching users list for userId:", userId);
+    const user_id = socket.user.user_id;
     const { page = 1, limit = 10, search } = data || {};
     const offset = (page - 1) * limit;
-    const whereCondition = {
-      [Op.or]: [{ sender_id: userId }, { receiver_id: userId }],
-    };
-    if (search) {
-      whereCondition[Op.or].push({
-        message: {
-          [Op.like]: `%${search}%`,
-        },
-      });
-    }
 
-    const { count, rows: latestMessages } = await Message.findAndCountAll({
+    // Build where condition for searching opponent username
+    let whereCondition = {
+      [Op.or]: [{ user1_id: user_id }, { user2_id: user_id }],
+    };
+
+    const { count, rows: conversations } = await Chat.findAndCountAll({
       limit,
       offset,
       distinct: true,
       where: whereCondition,
+      include: [
+        {
+          model: User,
+          as: "user1",
+          attributes: ["id", "name", "dp"],
+        },
+        {
+          model: User,
+          as: "user2",
+          attributes: ["id", "name", "dp"],
+        },
+      ],
       attributes: [
         "id",
-        "sender_id",
-        "student_id",
-        "receiver_id",
-        "message",
-        "status",
-        "createdAt",
+        "user1_id",
+        "user2_id",
+        "last_message",
+        "updatedAt",
+        [
+          Sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM messages
+              WHERE messages.chat_id = Chat.id
+              AND messages.sender_id != ${user_id}
+              AND messages.status IN ('sent', 'received')
+            )`),
+          "unread_count",
+        ],
       ],
-      order: [["createdAt", "DESC"]],
+      order: [["updatedAt", "DESC"]],
     });
-    // Distinct users with latest message
-    const userMap = {};
-    latestMessages.forEach((msg) => {
-      const otherUser =
-        msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
-      if (!userMap[otherUser]) {
-        userMap[otherUser] = msg;
+
+    // 🔑 Extract only opponent user info
+    const formattedConversations = conversations.map((chat) => {
+      let opponent;
+
+      if (chat.user1_id === user_id) {
+        opponent = chat.user2; // my opponent is user2
+      } else {
+        opponent = chat.user1; // my opponent is user1
       }
-    });
 
-    // Fetch user details
-    const userIds = Object.keys(userMap);
-    const users = await User.findAll({
-      where: { id: userIds },
-      attributes: ["id", "name", "dp"],
+      return {
+        chat_id: chat.id,
+        last_message: chat.last_message,
+        updatedAt: chat.updatedAt,
+        unread_count: chat.dataValues.unread_count,
+        opponent: opponent, // opponent details only
+      };
     });
-
-    const result = users.map((user) => ({
-      user,
-      latestMessage: userMap[user.id],
-    }));
 
     socket.emit("usersList", {
       total: count,
       page: parseInt(page),
       limit: parseInt(limit),
-      data: result,
+      conversations: formattedConversations,
     });
   } catch (error) {
     console.error(error);

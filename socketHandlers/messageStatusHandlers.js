@@ -7,20 +7,20 @@ const messageStatusHandlers = {
   async messageReceived(io, socket, data) {
     try {
       const userId = socket.user.user_id;
-      const { opponentId } = data;
+      const { chat_id } = data;
 
       const [updatedCount] = await Message.update(
         { status: "received" },
         {
           where: {
-            sender_id: opponentId,
+            chat_id,
             status: "sent",
             receiver_id: userId,
           },
         }
       );
       console.log(
-        `Message status updated to received for user ${userId} from opponent ${opponentId}`
+        `Message status updated to received for user ${userId} from chat ${chat_id}`
       );
       if (updatedCount === 0) {
         return socket.emit("error", { message: "Message not found" });
@@ -28,7 +28,7 @@ const messageStatusHandlers = {
 
       // Emit event back to sender
       io.emit("messageStatusUpdated", {
-        opponentId,
+        chat_id,
         status: "received",
       });
 
@@ -45,12 +45,12 @@ const messageStatusHandlers = {
   async messageRead(io, socket, data) {
     try {
       const userId = socket.user.user_id;
-      const { opponentId } = data;
+      const { chat_id } = data;
       const [updatedCount] = await Message.update(
         { status: "read" },
         {
           where: {
-            sender_id: opponentId,
+            chat_id,
             receiver_id: userId,
             status: { [Op.ne]: "read" },
           },
@@ -62,11 +62,11 @@ const messageStatusHandlers = {
 
       // Emit event back to sender
       io.emit("messageStatusUpdated", {
-        opponentId,
+        chat_id,
         status: "read",
       });
 
-      console.log(`👀 Message ${opponentId} marked as read by user ${userId}`);
+      console.log(`👀 Message ${chat_id} marked as read by user ${userId}`);
     } catch (error) {
       console.error("❌ Error in messageRead:", error);
     }

@@ -6,6 +6,7 @@ const Message = schoolSequelize.define(
   "Message",
   {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    chat_id: { type: DataTypes.INTEGER, allowNull: false },
     sender_id: { type: DataTypes.INTEGER, allowNull: false },
     receiver_id: { type: DataTypes.INTEGER, allowNull: false },
     student_id: { type: DataTypes.INTEGER, allowNull: true },
