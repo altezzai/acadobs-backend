@@ -1837,6 +1837,7 @@ const updatePayment = async (req, res) => {
       payment_type,
       transaction_id,
       payment_status,
+      payment_method,
     } = req.body;
     const Id = req.params.id;
     const payment = await Payment.findOne({
@@ -1874,6 +1875,7 @@ const updatePayment = async (req, res) => {
       payment_type,
       transaction_id,
       payment_status,
+      payment_method,
     });
     res.status(200).json({ message: "Payment updated", payment });
   } catch (err) {

@@ -1,61 +1,58 @@
 const jwt = require("jsonwebtoken");
-
 const secretKey = process.env.JWT_SECRET;
 
-// const auth = (req, res, next) => {
-//   const authHeader = req.headers["authorization"];
-//   const token = authHeader && authHeader.split(" ")[1];
-//   if (token == null) return res.status(401).send({ message: "Unauthorized" });
+const auth = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (token == null) return res.status(401).send({ message: "Unauthorized" });
 
-//   jwt.verify(token, secretKey, (err, user) => {
-//     if (err) return res.status(403).send({ message: "Forbidden" });
-//     req.user = user;
-//     next();
-//   });
-// };
+  jwt.verify(token, secretKey, (err, user) => {
+    if (err) return res.status(403).send({ message: "Forbidden" });
+    req.user = user;
+    next();
+  });
+};
+const socketAuth = (socket, next) => {
+  try {
+    const token =
+      socket.handshake.auth.token ||
+      socket.handshake.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+      return next(new Error("Authentication error: Access Token Required"));
+    }
+
+    jwt.verify(token, secretKey, (err, decoded) => {
+      if (err) {
+        return next(
+          new Error("Authentication error: Invalid or Expired Token")
+        );
+      }
+      socket.user = decoded;
+      next();
+    });
+  } catch (err) {
+    next(new Error("Authentication error"));
+  }
+};
 
 // const socketAuth = (socket, next) => {
-//   try {
-//     const token =
-//       socket.handshake.auth.token ||
-//       socket.handshake.headers.authorization?.split(" ")[1];
-
-//     if (!token) {
-//       return next(new Error("Authentication error: Access Token Required"));
-//     }
-
-//     jwt.verify(token, secretKey, (err, decoded) => {
-//       if (err) {
-//         return next(
-//           new Error("Authentication error: Invalid or Expired Token")
-//         );
-//       }
-
-//       socket.user = decoded;
-//       next();
-//     });
-//   } catch (err) {
-//     next(new Error("Authentication error"));
-//   }
+//   socket.user = {
+//     user_id: 1,
+//   };
+//   next();
 // };
 
-const socketAuth = (socket, next) => {
-  socket.user = {
-    user_id: 1,
-  };
-  next();
-};
+// const auth = (req, res, next) => {
+//   req.user = {
+//     user_id: 2,
+//     school_id: 1,
+//     dp: "default.png",
+//     name: "default user1",
+//     role: "user",
+//   };
 
-const auth = (req, res, next) => {
-  req.user = {
-    user_id: 2,
-    school_id: 1,
-    dp: "default.png",
-    name: "default user1",
-    role: "user",
-  };
-
-  next();
-};
+//   next();
+// };
 
 module.exports = { socketAuth, auth };

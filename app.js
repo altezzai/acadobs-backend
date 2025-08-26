@@ -11,7 +11,6 @@ require("dotenv").config();
 const PORT = process.env.PORT || 4444;
 const { auth, socketAuth } = require("./middlewares/authMiddleware");
 const limiter = require("./middlewares/rateLimitMiddleware");
-
 const server = http.createServer(app); // Wrap Express with HTTP server
 const io = new Server(server, {
   cors: {
@@ -23,6 +22,7 @@ const SuperadminRoutes = require("./routes/superAdminRoutes");
 const SchooladminRoutes = require("./routes/schoolAdminRoutes");
 const StaffRoutes = require("./routes/staffRoutes");
 const GuardianRoutes = require("./routes/guardianRoutes");
+const PublicRoutes = require("./routes/publicRoutes");
 
 // Apply Middleware
 app.use(helmet());
@@ -38,10 +38,13 @@ app.use(limiter);
 
 app.use("/uploads", express.static("uploads"));
 
-app.use("/api/s1/superadmin", auth, SuperadminRoutes);
-app.use("/api/s1/schooladmin", auth, SchooladminRoutes);
-app.use("/api/s1/staff", auth, StaffRoutes);
-app.use("/api/s1/guardian", auth, GuardianRoutes);
+const versionPath = "/api/s1/";
+
+app.use(`${versionPath}superadmin`, auth, SuperadminRoutes);
+app.use(`${versionPath}schooladmin`, auth, SchooladminRoutes);
+app.use(`${versionPath}staff`, auth, StaffRoutes);
+app.use(`${versionPath}guardian`, auth, GuardianRoutes);
+app.use(`${versionPath}public`, PublicRoutes);
 
 // Add other routes similarly...
 const socketHandlers = require("./socketHandlers/socket");
@@ -74,5 +77,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}/api/s1/...`);
+  console.log(`Server is running on port ${PORT}${versionPath} ...`);
 });
