@@ -1081,7 +1081,7 @@ const deleteStudent = async (req, res) => {
 };
 
 const createDutyWithAssignments = async (req, res) => {
-  const t = await schoolSequelize.transaction();
+  const transaction = await schoolSequelize.transaction();
   let uploadDir = null;
 
   try {
@@ -1114,7 +1114,7 @@ const createDutyWithAssignments = async (req, res) => {
         deadline,
         file: storedFileName,
       },
-      { transaction: t }
+      { transaction }
     );
 
     const parsedAssignments =
@@ -1135,11 +1135,11 @@ const createDutyWithAssignments = async (req, res) => {
       bulkAssignments,
       {
         validate: true,
-        transaction: t,
+        transaction,
       }
     );
 
-    await t.commit();
+    await transaction.commit();
 
     res.status(201).json({
       message: "Duty and assignments created",
@@ -1148,7 +1148,7 @@ const createDutyWithAssignments = async (req, res) => {
     });
   } catch (err) {
     if (uploadDir) await deletefilewithfoldername(req.file, uploadDir);
-    await t.rollback();
+    await transaction.rollback();
     console.error("createDutyWithAssignments →", err);
     res.status(500).json({ error: err.message });
   }
@@ -1342,6 +1342,7 @@ const bulkUpdateDutyAssignments = async (req, res) => {
           {
             duty_id,
             staff_id: item.staff_id,
+
             status: item.status || "pending",
             remarks: item.remarks || null,
           },
