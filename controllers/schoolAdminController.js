@@ -308,7 +308,15 @@ const createStaff = async (req, res) => {
     if (existingUser) {
       return res
         .status(400)
-        .json({ error: "SchoolAdmin email already exists in user table" });
+        .json({ error: "Staff's email already exists in user table" });
+    }
+    const existingPhone = await User.findOne({
+      where: { phone: phone },
+    });
+    if (existingPhone) {
+      return res
+        .status(400)
+        .json({ error: "Staff's phone already exists in user table" });
     }
 
     let fileName = null;
@@ -459,7 +467,6 @@ const updateStaffUser = async (req, res) => {
     const user = await User.findOne({
       where: { id: user_id },
     });
-    console.log(user);
     const hashedPassword = await bcrypt.hash(phone, 10);
     await user.update({
       name: name,
@@ -536,11 +543,19 @@ const createGuardian = async (req, res) => {
     const existingUser = await User.findOne({
       where: { email: guardian_email },
     });
+    const existingPhone = await User.findOne({
+      where: { phone: guardian_contact },
+    });
 
     if (existingUser) {
       return res
         .status(400)
-        .json({ error: "SchoolAdmin email already exists in user table" });
+        .json({ error: "guardian email already exists in user table" });
+    }
+    if (existingPhone) {
+      return res
+        .status(400)
+        .json({ error: "guardian phone already exists in user table" });
     }
     let fileName = null;
 
@@ -605,6 +620,9 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
 
   const existingUser = await User.findOne({
     where: { email: guardian_email },
+  });
+  const existingPhone = await User.findOne({
+    where: { phone: guardian_contact },
   });
 
   if (existingUser) {
@@ -695,12 +713,80 @@ const getGuardianById = async (req, res) => {
 const updateGuardian = async (req, res) => {
   try {
     const { id } = req.params;
-    const data = req.body;
-
+    const school_id = req.user.school_id;
+    const {
+      guardian_relation,
+      guardian_name,
+      guardian_contact,
+      guardian_email,
+      guardian_job,
+      guardian2_relation,
+      guardian2_name,
+      guardian2_job,
+      guardian2_contact,
+      father_name,
+      mother_name,
+    } = req.body;
     const guardian = await Guardian.findByPk(id);
     if (!guardian) return res.status(404).json({ error: "Guardian not found" });
 
-    await guardian.update(data);
+    if (guardian_email) {
+      const existingUser = await User.findOne({
+        where: {
+          email: guardian_email,
+          id: { [Op.ne]: guardian.user_id },
+        },
+      });
+      if (existingUser) {
+        return res
+          .status(400)
+          .json({ error: "Guardian email already exists in user table" });
+      }
+    }
+    if (guardian_contact) {
+      const existingPhone = await User.findOne({
+        where: {
+          phone: guardian_contact,
+          school_id,
+          id: { [Op.ne]: guardian.user_id },
+        },
+      });
+      if (existingPhone) {
+        return res
+          .status(400)
+          .json({ error: "Guardian phone already exists in user table" });
+      }
+    }
+
+    await guardian.update({
+      guardian_relation,
+      guardian_name,
+      guardian_contact,
+      guardian_email,
+      guardian_job,
+      guardian2_relation,
+      guardian2_name,
+      guardian2_job,
+      guardian2_contact,
+      father_name,
+      mother_name,
+    });
+    if (req.file) {
+      const uploadPath = "uploads/dp/";
+      fileName = await compressAndSaveFile(req.file, uploadPath);
+    }
+    const user = await User.findOne({
+      where: { id: guardian.user_id },
+    });
+    if (!user) return res.status(404).json({ error: "user not found" });
+
+    await user.update({
+      name: guardian.guardian_name,
+      email: guardian.guardian_email,
+      phone: guardian.guardian_contact,
+      dp: fileName,
+    });
+    //
     res.status(200).json(guardian);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -737,7 +823,6 @@ const createStudent = async (req, res) => {
       // Guardian Data (all inside req.body)
       guardian_email,
       guardian_name,
-      guardian_contact,
       guardian_relation,
       guardian_job,
       guardian2_name,
@@ -747,6 +832,7 @@ const createStudent = async (req, res) => {
       father_name,
       mother_name,
     } = req.body;
+    const guardian_contact = req.body.guardian_contact || null;
 
     if ((!guardian_email || !full_name || !reg_no || !class_id, !roll_number)) {
       return res.status(400).json({ error: "Required fields are missing" });
@@ -770,6 +856,16 @@ const createStudent = async (req, res) => {
       return res
         .status(400)
         .json({ error: "Reg number already exists in student table" });
+    }
+    if (guardian_contact) {
+      const existingPhone = await User.findOne({
+        where: { phone: guardian_contact },
+      });
+      if (existingPhone) {
+        return res.status(400).json({
+          error: "Guardian phone number already exists in user table",
+        });
+      }
     }
     let guardianUserId;
     const guardianDpFile = req.files?.dp?.[0];
@@ -989,7 +1085,8 @@ const createDutyWithAssignments = async (req, res) => {
   let uploadDir = null;
 
   try {
-    const { school_id, title, description, deadline, assignments } = req.body;
+    const school_id = req.user.school_id;
+    const { title, description, deadline, assignments, start_date } = req.body;
 
     if (!school_id || !title || !description || !deadline || !assignments) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -1013,6 +1110,7 @@ const createDutyWithAssignments = async (req, res) => {
         school_id,
         title,
         description,
+        start_date: start_date || new Date(),
         deadline,
         file: storedFileName,
       },
@@ -1136,7 +1234,7 @@ const getDutyById = async (req, res) => {
 const updateDuty = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const { title, description, deadline, file } = req.body;
+    const { title, description, deadline, start_date } = req.body;
     const duty = await Duty.findOne({
       where: { id: req.params.id, school_id },
     });
@@ -1159,6 +1257,7 @@ const updateDuty = async (req, res) => {
       title,
       description,
       deadline,
+      start_date,
       file: fileName ? fileName : duty.file,
     });
     res.json(duty);
@@ -1192,6 +1291,7 @@ const updateDutyAssigned = async (req, res) => {
   }
 };
 const bulkUpdateDutyAssignments = async (req, res) => {
+  const transaction = await schoolSequelize.transaction();
   try {
     const { duty_id, updates } = req.body;
 
@@ -1201,29 +1301,64 @@ const bulkUpdateDutyAssignments = async (req, res) => {
         .json({ error: "duty_id and updates array are required" });
     }
 
-    const updatePromises = updates.map(async (item) => {
-      return DutyAssignment.update(
-        {
-          status: item.status,
-          remarks: item.remarks,
+    const newStaffIds = updates.map((u) => u.staff_id);
+
+    const existingAssignments = await DutyAssignment.findAll({
+      where: { duty_id },
+      transaction,
+    });
+    const existingStaffIds = existingAssignments.map((a) => a.staff_id);
+
+    const staffIdsToDelete = existingStaffIds.filter(
+      (id) => !newStaffIds.includes(id)
+    );
+    if (staffIdsToDelete.length > 0) {
+      await DutyAssignment.destroy({
+        where: {
+          duty_id,
+          staff_id: staffIdsToDelete,
         },
-        {
-          where: {
+        transaction,
+      });
+    }
+
+    for (const item of updates) {
+      if (existingStaffIds.includes(item.staff_id)) {
+        await DutyAssignment.update(
+          {
+            status: item.status,
+            remarks: item.remarks,
+          },
+          {
+            where: {
+              duty_id,
+              staff_id: item.staff_id,
+            },
+            transaction,
+          }
+        );
+      } else {
+        await DutyAssignment.create(
+          {
             duty_id,
             staff_id: item.staff_id,
+            status: item.status || "pending",
+            remarks: item.remarks || null,
           },
-        }
-      );
-    });
+          { transaction }
+        );
+      }
+    }
 
-    await Promise.all(updatePromises);
-
-    res.status(200).json({ message: "Duty assignments updated successfully" });
+    await transaction.commit();
+    res.status(200).json({ message: "Duty assignments synced successfully" });
   } catch (error) {
+    await transaction.rollback();
     console.error("Bulk update failed:", error);
     res.status(500).json({ error: "Bulk update failed" });
   }
 };
+
 const deleteDuty = async (req, res) => {
   try {
     const { id } = req.params;

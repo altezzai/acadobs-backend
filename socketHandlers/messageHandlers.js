@@ -8,7 +8,7 @@ const Sequelize = require("sequelize");
 
 const sendMessage = async (io, socket, data) => {
   try {
-    const sender_id = socket.user.user_id; // must be set in socket auth middleware
+    const sender_id = socket.user.user_id;
     const {
       receiver_id,
       student_id,
@@ -56,10 +56,8 @@ const sendMessage = async (io, socket, data) => {
       status: "sent",
     });
 
-    // Send back to sender
     socket.emit("newMessage", newMessage);
 
-    // Send to receiver (join users to rooms when they connect!)
     io.to(`user_${receiver_id}`).emit("newMessage", newMessage);
   } catch (error) {
     console.error("❌ Error sending message:", error);
@@ -69,9 +67,6 @@ const sendMessage = async (io, socket, data) => {
   }
 };
 
-/**
- * ❌ Delete Message
- */
 const deleteMessage = async (io, socket, data) => {
   try {
     const userId = socket.user.user_id;
