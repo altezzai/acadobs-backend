@@ -2317,14 +2317,45 @@ const restoreLeaveRequest = async (req, res) => {
 const getAllStaffLeaveRequests = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    if (!school_id) {
-      return res.status(400).json({ error: "Missing required fields" });
+    const searchQuery = req.query.q || "";
+    const date = req.query.date || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+      school_id: school_id,
+      role: "staff",
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [{ reason: { [Op.like]: `%${searchQuery}%` } }];
+    }
+    if (date) {
+      whereClause[Op.or] = [
+        { from_date: { [Op.like]: `%${date}%` } },
+        { to_date: { [Op.like]: `%${date}%` } },
+      ];
     }
     const { count, rows: leaveRequests } = await LeaveRequest.findAndCountAll({
-      where: { school_id: school_id, role: "staff", trash: false },
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone", "dp"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
     });
-
-    res.status(200).json(leaveRequests);
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      leaveRequests,
+    });
   } catch (error) {
     console.error("Fetch All Error:", error);
     res.status(500).json({ error: "Failed to fetch leave requests" });
@@ -2334,14 +2365,49 @@ const getAllStaffLeaveRequests = async (req, res) => {
 const getAllStudentLeaveRequests = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    if (!school_id) {
-      return res.status(400).json({ error: "Missing required fields" });
+    const searchQuery = req.query.q || "";
+    const date = req.query.date || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+      school_id: school_id,
+      role: "student",
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [{ reason: { [Op.like]: `%${searchQuery}%` } }];
     }
-    const leaveRequests = await LeaveRequest.findAll({
-      where: { school_id: school_id, role: "student", trash: false },
+    if (date) {
+      whereClause[Op.or] = [
+        { from_date: { [Op.like]: `%${date}%` } },
+        { to_date: { [Op.like]: `%${date}%` } },
+      ];
+    }
+    const { count, rows: leaveRequests } = await LeaveRequest.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        {
+          model: Student,
+          attributes: ["id", "full_name", "reg_no", "image"],
+        },
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone", "dp"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
     });
-
-    res.status(200).json(leaveRequests);
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      leaveRequests,
+    });
   } catch (error) {
     console.error("Fetch All Error:", error);
     res.status(500).json({ error: "Failed to fetch leave requests" });
