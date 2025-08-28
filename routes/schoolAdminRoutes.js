@@ -172,6 +172,14 @@ router.patch(
   "/leaveRequestpermission/:id",
   schoolAdminController.leaveRequestPermission
 );
+router.get(
+  "/getAllStaffLeaveRequests",
+  schoolAdminController.getAllStaffLeaveRequests
+);
+router.get(
+  "/getAllStudentLeaveRequests",
+  schoolAdminController.getAllStudentLeaveRequests
+);
 //news
 router.post(
   "/news",

@@ -3,7 +3,6 @@ const Message = require("../models/messages");
 const { Op } = require("sequelize");
 
 const messageStatusHandlers = {
-  // ✅ When receiver confirms they received the message
   async messageReceived(io, socket, data) {
     try {
       const userId = socket.user.user_id;
@@ -26,7 +25,6 @@ const messageStatusHandlers = {
         return socket.emit("error", { message: "Message not found" });
       }
 
-      // Emit event back to sender
       io.emit("messageStatusUpdated", {
         chat_id,
         status: "received",
@@ -41,7 +39,6 @@ const messageStatusHandlers = {
     }
   },
 
-  // ✅ When receiver reads the message
   async messageRead(io, socket, data) {
     try {
       const userId = socket.user.user_id;
@@ -60,7 +57,6 @@ const messageStatusHandlers = {
         return socket.emit("error", { message: "Message not found" });
       }
 
-      // Emit event back to sender
       io.emit("messageStatusUpdated", {
         chat_id,
         status: "read",
@@ -68,7 +64,7 @@ const messageStatusHandlers = {
 
       console.log(`👀 Message ${chat_id} marked as read by user ${userId}`);
     } catch (error) {
-      console.error("❌ Error in messageRead:", error);
+      console.error(" Error in messageRead:", error);
     }
   },
 };

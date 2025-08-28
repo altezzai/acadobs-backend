@@ -90,7 +90,7 @@ const deleteMessage = async (io, socket, data) => {
 
 const getMessages = async (io, socket, data) => {
   try {
-    const user1 = socket.user.user_id; // Get user1 from socket userId
+    const user1 = socket.user.user_id;
     const { opponentId } = data;
 
     const messageData = await Message.findAll({
@@ -112,13 +112,10 @@ const getMessages = async (io, socket, data) => {
   }
 };
 
-/**
- * 👀 Get First Unseen Message
- */
 const getFirstUnseenMessage = async (io, socket, data) => {
   try {
-    const userId = socket.user.user_id; // Get the current user ID
-    const { opponentId } = data; // Get opponent ID from request
+    const userId = socket.user.user_id;
+    const { opponentId } = data;
 
     if (!opponentId) {
       return socket.emit("error", { message: "Opponent ID is required" });
@@ -128,10 +125,10 @@ const getFirstUnseenMessage = async (io, socket, data) => {
         [Op.or]: [
           { sender_id: userId, receiver_id: opponentId },
           { sender_id: opponentId, receiver_id: userId },
-          { status: "sent" }, // Unseen messages sent to me
+          { status: "sent" },
         ],
       },
-      order: [["createdAt", "ASC"]], // Sort by sent_date in ascending order
+      order: [["createdAt", "ASC"]],
     });
 
     socket.emit("getFirstunseen", messages);
@@ -141,16 +138,12 @@ const getFirstUnseenMessage = async (io, socket, data) => {
   }
 };
 
-/**
- * 🧑‍🤝‍🧑 Get Users List with Latest Message
- */
 const getUsersListandLatestMessage = async (io, socket, data) => {
   try {
     const user_id = socket.user.user_id;
     const { page = 1, limit = 10, search } = data || {};
     const offset = (page - 1) * limit;
 
-    // Build where condition for searching opponent username
     let whereCondition = {
       [Op.or]: [{ user1_id: user_id }, { user2_id: user_id }],
     };
@@ -192,14 +185,13 @@ const getUsersListandLatestMessage = async (io, socket, data) => {
       order: [["updatedAt", "DESC"]],
     });
 
-    // 🔑 Extract only opponent user info
     const formattedConversations = conversations.map((chat) => {
       let opponent;
 
       if (chat.user1_id === user_id) {
-        opponent = chat.user2; // my opponent is user2
+        opponent = chat.user2;
       } else {
-        opponent = chat.user1; // my opponent is user1
+        opponent = chat.user1;
       }
 
       return {
@@ -207,7 +199,7 @@ const getUsersListandLatestMessage = async (io, socket, data) => {
         last_message: chat.last_message,
         updatedAt: chat.updatedAt,
         unread_count: chat.dataValues.unread_count,
-        opponent: opponent, // opponent details only
+        opponent: opponent,
       };
     });
 

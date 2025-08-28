@@ -8,7 +8,7 @@ module.exports = (io, socket) => {
     messageHandlers.getUsersListandLatestMessage(io, socket, data)
   );
 
-  // 🟢 Message Handlers
+  //  Message Handlers
   socket.on("sendMessage", (data) =>
     messageHandlers.sendMessage(io, socket, data)
   );
@@ -22,19 +22,19 @@ module.exports = (io, socket) => {
     messageHandlers.getFirstUnseenMessage(io, socket, data)
   );
 
-  // 🟢 Message Status Handlers
+  //  Message Status Handlers
   socket.on("messageReceived", (data) =>
     messageStatusHandlers.messageReceived(io, socket, data)
   );
   socket.on("messageRead", (data) =>
     messageStatusHandlers.messageRead(io, socket, data)
   );
-  // 🟢 Personal Handlers
+  //  Personal Handlers
   socket.on("toggleBlock", (data) =>
     personalHandlers.toggleBlock(io, socket, data)
   );
 
-  // 🟢 Disconnect Event
+  //  Disconnect Event
   socket.on("disconnect", () => {
     console.log(`User disconnected: ${socket.user.user_id}`);
   });

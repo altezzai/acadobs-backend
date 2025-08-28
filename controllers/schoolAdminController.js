@@ -2313,6 +2313,40 @@ const restoreLeaveRequest = async (req, res) => {
     res.status(500).json({ error: "Failed to restore leave request" });
   }
 };
+//get all staff leave request
+const getAllStaffLeaveRequests = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    if (!school_id) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const { count, rows: leaveRequests } = await LeaveRequest.findAndCountAll({
+      where: { school_id: school_id, role: "staff", trash: false },
+    });
+
+    res.status(200).json(leaveRequests);
+  } catch (error) {
+    console.error("Fetch All Error:", error);
+    res.status(500).json({ error: "Failed to fetch leave requests" });
+  }
+};
+
+const getAllStudentLeaveRequests = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    if (!school_id) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const leaveRequests = await LeaveRequest.findAll({
+      where: { school_id: school_id, role: "student", trash: false },
+    });
+
+    res.status(200).json(leaveRequests);
+  } catch (error) {
+    console.error("Fetch All Error:", error);
+    res.status(500).json({ error: "Failed to fetch leave requests" });
+  }
+};
 const createNews = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -2330,7 +2364,6 @@ const createNews = async (req, res) => {
         .status(400)
         .json({ error: "news with the same title already exists" });
     }
-    console.log(req.file);
     let fileName = null;
     if (req.files?.file?.[0]) {
       fileName = req.files.file[0];
@@ -2774,6 +2807,8 @@ module.exports = {
   leaveRequestPermission,
   deleteLeaveRequest,
   restoreLeaveRequest,
+  getAllStaffLeaveRequests,
+  getAllStudentLeaveRequests,
 
   createNews,
   getAllNews,
