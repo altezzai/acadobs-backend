@@ -2685,6 +2685,7 @@ const getAllNotices = async (req, res) => {
           include: [{ model: Class, attributes: ["id", "classname"] }],
         },
       ],
+      order: [["date", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
