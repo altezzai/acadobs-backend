@@ -9,6 +9,8 @@ const NewsImage = schoolSequelize.define(
     image_url: { type: DataTypes.STRING, allowNull: false },
     caption: { type: DataTypes.STRING },
     trash: { type: DataTypes.BOOLEAN, defaultValue: false },
+    createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   },
   {
     tableName: "news_images",

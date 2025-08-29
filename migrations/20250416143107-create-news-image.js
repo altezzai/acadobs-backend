@@ -14,7 +14,8 @@ module.exports = {
       image_url: { type: Sequelize.STRING, allowNull: false },
       caption: { type: Sequelize.STRING },
       trash: { type: Sequelize.BOOLEAN, defaultValue: false },
-      created_at: { type: Sequelize.DATE, defaultValue: Sequelize.NOW },
+      createdAt: { type: Sequelize.DATE, defaultValue: Sequelize.NOW },
+      updatedAt: { type: Sequelize.DATE, defaultValue: Sequelize.NOW },
     });
   },
   down: async (queryInterface) => {
