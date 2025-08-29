@@ -2494,6 +2494,7 @@ const getAllNews = async (req, res) => {
           model: NewsImage,
           where: { trash: false },
           attributes: ["id", "image_url", "caption"],
+          required: false,
         },
       ],
     });
@@ -2520,6 +2521,7 @@ const getNewsById = async (req, res) => {
           model: NewsImage,
           where: { trash: false },
           attributes: ["id", "image_url", "caption"],
+          required: false,
         },
       ],
     });
@@ -2684,6 +2686,7 @@ const getAllNotices = async (req, res) => {
         {
           model: NoticeClass,
           include: [{ model: Class, attributes: ["id", "classname"] }],
+          required: false,
         },
       ],
       order: [["createdAt", "DESC"]],
@@ -2709,6 +2712,7 @@ const getNoticeById = async (req, res) => {
         {
           model: NoticeClass,
           include: [{ model: Class, attributes: ["id", "classname"] }],
+          required: false,
         },
       ],
     });

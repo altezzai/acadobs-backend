@@ -1311,6 +1311,7 @@ const getAllAchievementsByStaffId = async (req, res) => {
         {
           model: StudentAchievement,
           attributes: ["student_id", "status", "proof_document", "remarks"],
+          required: false,
           include: [
             {
               model: Student,
@@ -1325,6 +1326,7 @@ const getAllAchievementsByStaffId = async (req, res) => {
           ],
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
 
     const totalPages = Math.ceil(count / limit);

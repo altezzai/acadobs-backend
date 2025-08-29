@@ -94,6 +94,7 @@ const getNoticeByStudentId = async (req, res) => {
           model: NoticeClass,
           attributes: ["class_id"],
           where: { class_id: classId },
+          required: false,
           include: [
             {
               model: Class,
