@@ -2615,7 +2615,8 @@ const deleteNewsImage = async (req, res) => {
 const createNotice = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const { title, content, type, class_ids, date } = req.body;
+    const { title, content, type, class_ids } = req.body;
+    const date = req.body.date ? req.body.date : new Date();
     let fileName = null;
     if (!school_id || !title || !content || !type) {
       return res.status(400).json({ error: "required fields are missing" });
@@ -2640,7 +2641,7 @@ const createNotice = async (req, res) => {
       content,
       file: fileName,
       type,
-      date: date ? date : new Date(),
+      date,
     });
 
     if (type === "classes" && Array.isArray(class_ids)) {
@@ -2685,7 +2686,7 @@ const getAllNotices = async (req, res) => {
           include: [{ model: Class, attributes: ["id", "classname"] }],
         },
       ],
-      order: [["date", "DESC"]],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({

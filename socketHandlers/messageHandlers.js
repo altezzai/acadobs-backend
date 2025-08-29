@@ -3,6 +3,9 @@ const Message = require("../models/messages");
 const { User } = require("../models");
 const Chat = require("../models/chat");
 const Sequelize = require("sequelize");
+const {
+  getGuarduianIdbyStudentId,
+} = require("../controllers/commonController");
 
 // import models
 
@@ -66,7 +69,55 @@ const sendMessage = async (io, socket, data) => {
     });
   }
 };
+const sendMessageWithParentNote = async (io, socket, data) => {
+  try {
+    const sender_id = socket.user.user_id;
+    const { receiver_id, student_id, parentnote_id } = data;
 
+    const message = "Parent Note.";
+    if (!student_id || !parentnote_id || !receiver_id) {
+      throw new Error("required fields is missing");
+    }
+
+    let chat = await Chat.findOne({
+      where: {
+        [Op.or]: [
+          { user1_id: sender_id, user2_id: receiver_id },
+          { user1_id: receiver_id, user2_id: sender_id },
+        ],
+      },
+    });
+
+    if (!chat) {
+      chat = await Chat.create({
+        user1_id: sender_id,
+        user2_id: receiver_id,
+        last_message: message ? message : mediaUrl ? "media" : null,
+      });
+    } else {
+      await chat.update({
+        last_message: message || (mediaUrl ? "media" : chat.last_message),
+      });
+    }
+    const newMessage = await Message.create({
+      chat_id: chat.id,
+      sender_id,
+      receiver_id,
+      student_id,
+      type: "parent_notes",
+      type_id: parentnote_id,
+      status: "sent",
+    });
+    socket.emit("parentNoteMsg", newMessage);
+
+    return "success";
+  } catch (error) {
+    console.error("❌ Error sending message:", error);
+    socket.emit("error", {
+      message: error.message || "Failed to send message!",
+    });
+  }
+};
 const deleteMessage = async (io, socket, data) => {
   try {
     const userId = socket.user.user_id;
@@ -221,4 +272,5 @@ module.exports = {
   getMessages,
   getFirstUnseenMessage,
   getUsersListandLatestMessage,
+  sendMessageWithParentNote,
 };

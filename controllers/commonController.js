@@ -107,6 +107,18 @@ const getStudentById = async (req, res) => {
     res.status(500).json({ error: "Failed to get student" });
   }
 };
+const getGuarduianIdbyStudentId = async (student_id) => {
+  try {
+    const student = await Student.findByPk(student_id);
+    if (!student) {
+      return "student not found";
+    }
+    const guardian_id = student.guardian_id;
+    return guardian_id;
+  } catch (err) {
+    return "error in getting guardian id";
+  }
+};
 // by student id
 const getHomeworkByStudentId = async (req, res) => {
   try {
@@ -449,10 +461,12 @@ const getLeaveRequestByStudentId = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch leave requests" });
   }
 };
+
 module.exports = {
   getStudentsByClassId,
   getschoolIdByStudentId,
   getStudentById,
+  getGuarduianIdbyStudentId,
 
   getClassesByYear,
 

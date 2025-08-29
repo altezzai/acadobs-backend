@@ -131,7 +131,7 @@ router.patch(
 router.post(
   "/parentNotes",
   upload.single("note_attachment"),
-  staffController.createparentNote
+  staffController.createParentNote
 );
 router.get("/parentNotes", staffController.getAllOwnCreatedParentNotes);
 router.get("/parentNotes/:id", staffController.getParentNoteById);

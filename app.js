@@ -37,7 +37,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(limiter);
 
 app.use("/uploads", express.static("uploads"));
-
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
 const versionPath = "/api/s1/";
 
 app.use(`${versionPath}superadmin`, auth, SuperadminRoutes);

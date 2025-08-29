@@ -24,6 +24,10 @@ const News = require("../models/news");
 const Notice = require("../models/notice");
 const ParentNote = require("../models/parent_note");
 const { Homework, HomeworkAssignment } = require("../models");
+const { getGuarduianIdbyStudentId } = require("./commonController");
+const {
+  sendMessageWithParentNote,
+} = require("../socketHandlers/messageHandlers");
 
 const createExamWithMarks = async (req, res) => {
   try {
@@ -1867,18 +1871,19 @@ const leaveRequestPermission = async (req, res) => {
 };
 //parent note section
 
-const createparentNote = async (req, res) => {
+const createParentNote = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const recorded_by = req.user.user_id;
 
-    const { note_title, note_content } = req.body;
+    const { note_title, note_content, studentIds } = req.body; // pass selected student ids
     let fileName = null;
     if (req.file) {
       const uploadPath = "uploads/parent_notes/";
       fileName = await compressAndSaveFile(req.file, uploadPath);
     }
 
+    // ✅ Create the parent note
     const note = await ParentNote.create({
       school_id,
       note_title,
@@ -1886,6 +1891,34 @@ const createparentNote = async (req, res) => {
       note_attachment: fileName,
       recorded_by,
     });
+    if (studentIds && Array.isArray(studentIds)) {
+      for (const student_id of studentIds) {
+        const guardianId = await getGuarduianIdbyStudentId(student_id);
+        if (guardianId) {
+          // build message payload
+          const messageData = {
+            receiver_id: guardianId,
+            student_id,
+            parentnote_id: note.id,
+          };
+
+          await sendMessageWithParentNote(
+            req.io,
+            { user: req.user, emit: () => {} },
+            messageData
+          );
+
+          // OR directly emit here
+          // req.io.to(`user_${guardianId}`).emit("parentNoteMsg", {
+          //   type: "parent_notes",
+          //   type_id: note.note_id,
+          //   message: note_title,
+          //   student_id,
+          //   createdAt: new Date(),
+          // });
+        }
+      }
+    }
 
     res.status(201).json(note);
   } catch (err) {
@@ -2148,7 +2181,7 @@ module.exports = {
   // updateStudentLeaveRequest,
   leaveRequestPermission,
 
-  createparentNote,
+  createParentNote,
   getAllOwnCreatedParentNotes,
   getParentNoteById,
   updateParentNote,
