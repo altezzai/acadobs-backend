@@ -142,10 +142,10 @@ router.put(
 );
 router.delete("/parentNotes/:id", staffController.deleteParentNote);
 
-router.get("/getLatestEvents", staffController.getLatestEvents);
-router.get("/getLatestNews", staffController.getLatestNews);
 router.get("/getLatestNotices", staffController.getLatestNotices);
 //common Controller
+router.get("/getLatestEvents", commonController.getLatestEvents);
+router.get("/getLatestNews", commonController.getLatestNews);
 
 router.get(
   "/getStudentsByClassId/:class_id",

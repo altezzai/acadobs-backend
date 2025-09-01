@@ -219,5 +219,36 @@ router.put(
 );
 router.delete("/notices/:id", schoolAdminController.deleteNotice);
 router.patch("/notices/:id", schoolAdminController.restoreNotice);
+router.get("/getLatestNotices", schoolAdminController.getLatestNotices);
+//common Controller
+router.get("/getLatestEvents", commonController.getLatestEvents);
+router.get("/getLatestNews", commonController.getLatestNews);
+router.get("/students/:id", commonController.getStudentById);
+
+router.get(
+  "/getHomeworkByStudentId/:student_id",
+  commonController.getHomeworkByStudentId
+);
+router.get(
+  "/getAttendanceByStudentId/:student_id",
+  commonController.getAttendanceByStudentId
+);
+router.get(
+  "/getStudentAttendanceByDate/:student_id",
+  commonController.getStudentAttendanceByDate
+);
+router.get("/allAchievements", commonController.allAchievements);
+router.get(
+  "/achievementByStudentId/:student_id",
+  commonController.achievementByStudentId
+);
+router.get(
+  "/getInternalMarkByStudentId/:student_id",
+  commonController.getInternalMarkByStudentId
+);
+router.get(
+  "/getLeaveRequestByStudentId/:student_id",
+  commonController.getLeaveRequestByStudentId
+);
 
 module.exports = router;

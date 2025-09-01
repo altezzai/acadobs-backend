@@ -12,6 +12,8 @@ const Subject = require("../models/subject");
 const Marks = require("../models/marks");
 const LeaveRequest = require("../models/leaverequest");
 const School = require("../models/school");
+const Event = require("../models/event");
+const News = require("../models/news");
 
 const { Class } = require("../models");
 
@@ -461,7 +463,56 @@ const getLeaveRequestByStudentId = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch leave requests" });
   }
 };
-
+const getLatestEvents = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 3;
+    const offset = (page - 1) * limit;
+    const { count, rows: events } = await Event.findAndCountAll({
+      where: { school_id: school_id },
+      order: [["createdAt", "DESC"]],
+      limit: limit,
+      offset,
+      distinct: true,
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      events,
+    });
+  } catch (error) {
+    console.error("Error fetching events:", error);
+    res.status(500).json({ error: "Failed to fetch events" });
+  }
+};
+const getLatestNews = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 3;
+    const offset = (page - 1) * limit;
+    const { count, rows: news } = await News.findAndCountAll({
+      where: { school_id: school_id },
+      order: [["createdAt", "DESC"]],
+      limit: limit,
+      offset,
+      distinct: true,
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      news,
+    });
+  } catch (error) {
+    console.error("Error fetching news:", error);
+    res.status(500).json({ error: "Failed to fetch news" });
+  }
+};
 module.exports = {
   getStudentsByClassId,
   getschoolIdByStudentId,
@@ -481,4 +532,7 @@ module.exports = {
   getInternalMarkByStudentId,
 
   getLeaveRequestByStudentId,
+
+  getLatestEvents,
+  getLatestNews,
 };

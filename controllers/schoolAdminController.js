@@ -2804,6 +2804,34 @@ const restoreNotice = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const getLatestNotices = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 3;
+    const offset = (page - 1) * limit;
+    const { count, rows: notices } = await Notice.findAndCountAll({
+      where: {
+        school_id: school_id,
+      },
+      order: [["createdAt", "DESC"]],
+      limit: limit,
+      offset,
+      distinct: true,
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      notices,
+    });
+  } catch (error) {
+    console.error("Error fetching notices:", error);
+    res.status(500).json({ error: "Failed to fetch notices" });
+  }
+};
 module.exports = {
   createClass,
   getAllClasses,
@@ -2896,4 +2924,5 @@ module.exports = {
   updateNotice,
   deleteNotice,
   restoreNotice,
+  getLatestNotices,
 };
