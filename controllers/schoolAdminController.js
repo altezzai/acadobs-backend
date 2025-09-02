@@ -360,7 +360,7 @@ const createStaff = async (req, res) => {
         staff_id: newStaff.id,
         subject_id: subjId,
       }));
-      const staffSubjects = await StaffSubject.bulkCreate(staffSubjectsData, {
+      await StaffSubject.bulkCreate(staffSubjectsData, {
         transaction,
       });
     }
@@ -402,6 +402,7 @@ const getAllStaff = async (req, res) => {
           attributes: ["id", "name", "email", "phone", "dp", "role"],
         },
       ],
+
       order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
@@ -423,6 +424,25 @@ const getStaffById = async (req, res) => {
         id: staff_id,
         trash: false,
       },
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone", "dp"],
+        },
+        {
+          model: Class,
+          attributes: ["id", "year", "division", "classname"],
+        },
+        {
+          model: StaffSubject,
+          include: [
+            {
+              model: Subject,
+              attributes: ["id", "subject_name"],
+            },
+          ],
+        },
+      ],
     });
     if (!staff) return res.status(404).json({ error: "Staff not found" });
     const user = await User.findOne({
@@ -437,26 +457,68 @@ const getStaffById = async (req, res) => {
 };
 
 const updateStaff = async (req, res) => {
+  const transaction = await Staff.sequelize.transaction();
+
   try {
     const { staff_id } = req.params;
     const school_id = req.user.school_id;
     const { role, qualification, address, class_id, subjects } = req.body;
 
-    const staff = await Staff.findByPk(staff_id);
-    if (!staff || staff.trash)
-      return res.status(404).json({ error: "Staff not found" });
-
-    await staff.update({
-      school_id,
-      role,
-      qualification,
-      address,
-      class_id,
-      subjects,
+    const staff = await Staff.findOne({
+      where: { id: staff_id, school_id },
     });
+    if (!staff || staff.trash) {
+      await transaction.rollback();
+      return res.status(404).json({ error: "Staff not found" });
+    }
 
-    res.status(200).json(staff);
+    await staff.update(
+      { role, qualification, address, class_id },
+      { transaction }
+    );
+
+    if (subjects && Array.isArray(subjects)) {
+      const existingSubjects = await StaffSubject.findAll({
+        where: { staff_id },
+        attributes: ["subject_id"],
+        raw: true,
+        transaction,
+      });
+
+      const existingSubjectIds = existingSubjects.map((s) => s.subject_id);
+      const newSubjectIds = subjects.map((s) => Number(s));
+
+      const toAdd = newSubjectIds.filter(
+        (id) => !existingSubjectIds.includes(id)
+      );
+      const toRemove = existingSubjectIds.filter(
+        (id) => !newSubjectIds.includes(id)
+      );
+      if (toAdd.length > 0) {
+        const insertData = toAdd.map((id) => ({
+          school_id,
+          staff_id,
+          subject_id: id,
+        }));
+        await StaffSubject.bulkCreate(insertData, { transaction });
+      }
+
+      if (toRemove.length > 0) {
+        await StaffSubject.destroy({
+          where: {
+            staff_id,
+            subject_id: toRemove,
+          },
+          transaction,
+        });
+      }
+    }
+
+    await transaction.commit();
+
+    res.status(200).json({ message: "Staff updated successfully", staff });
   } catch (error) {
+    await transaction.rollback();
     res.status(500).json({ error: error.message });
   }
 };
@@ -477,6 +539,14 @@ const updateStaffUser = async (req, res) => {
       return res
         .status(400)
         .json({ error: "SchoolAdmin email already exists in user table" });
+    }
+    const existingPhone = await User.findOne({
+      where: { phone: phone, school_id, id: { [Op.ne]: user_id } },
+    });
+    if (existingPhone) {
+      return res
+        .status(400)
+        .json({ error: "SchoolAdmin phone already exists in user table" });
     }
     let fileName = null;
 

@@ -42,7 +42,13 @@ module.exports = {
         type: Sequelize.DATE,
       },
     });
+    await queryInterface.addConstraint("Staff_Subjects", {
+      fields: ["school_id", "staff_id", "subject_id"],
+      type: "unique",
+      name: "unique_staff_subject_combination",
+    });
   },
+
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable("Staff_Subjects");
   },

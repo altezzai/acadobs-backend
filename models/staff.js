@@ -24,7 +24,6 @@ const Staff = schoolSequelize.define(
     qualification: DataTypes.STRING,
     address: DataTypes.TEXT,
     class_id: DataTypes.INTEGER,
-    subjects: DataTypes.TEXT,
     trash: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

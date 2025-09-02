@@ -38,7 +38,6 @@ module.exports = {
         },
         onDelete: "SET NULL",
       },
-      subjects: Sequelize.TEXT,
       trash: {
         type: Sequelize.BOOLEAN,
         defaultValue: false,
