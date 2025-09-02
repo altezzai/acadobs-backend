@@ -9,6 +9,7 @@ const {
   compressImage,
 } = require("../utils/fileHandler");
 const Staff = require("../models/staff");
+const StaffSubject = require("../models/staffsubject");
 const Class = require("../models/class");
 const Subject = require("../models/subject");
 const User = require("../models/user");
@@ -286,6 +287,8 @@ const deleteSubject = async (req, res) => {
 };
 
 const createStaff = async (req, res) => {
+  const transaction = await schoolSequelize.transaction();
+
   try {
     const school_id = req.user.school_id;
     const {
@@ -327,29 +330,45 @@ const createStaff = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(phone, 10);
-    const user = await User.create({
-      name: name,
-      email: email,
-      phone: phone,
-      password: hashedPassword,
-      school_id: school_id,
-      dp: fileName,
-      role: role,
-      status: "active",
-    });
-
-    const newStaff = await Staff.create({
-      school_id,
-      user_id: user.id,
-      role,
-      qualification,
-      address,
-      class_id,
-      subjects,
-    });
-
+    const user = await User.create(
+      {
+        name: name,
+        email: email,
+        phone: phone,
+        password: hashedPassword,
+        school_id: school_id,
+        dp: fileName,
+        role: role,
+        status: "active",
+      },
+      { transaction }
+    );
+    const newStaff = await Staff.create(
+      {
+        school_id,
+        user_id: user.id,
+        role,
+        qualification,
+        address,
+        class_id,
+      },
+      { transaction }
+    );
+    if (subjects && Array.isArray(subjects)) {
+      const staffSubjectsData = subjects.map((subjId) => ({
+        school_id,
+        staff_id: newStaff.id,
+        subject_id: subjId,
+      }));
+      const staffSubjects = await StaffSubject.bulkCreate(staffSubjectsData, {
+        transaction,
+      });
+    }
     res.status(201).json(newStaff);
+
+    await transaction.commit();
   } catch (error) {
+    await transaction.rollback();
     res.status(500).json({ error: error.message });
   }
 };
@@ -383,6 +402,7 @@ const getAllStaff = async (req, res) => {
           attributes: ["id", "name", "email", "phone", "dp", "role"],
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -857,16 +877,7 @@ const createStudent = async (req, res) => {
         .status(400)
         .json({ error: "Reg number already exists in student table" });
     }
-    if (guardian_contact) {
-      const existingPhone = await User.findOne({
-        where: { phone: guardian_contact },
-      });
-      if (existingPhone) {
-        return res.status(400).json({
-          error: "Guardian phone number already exists in user table",
-        });
-      }
-    }
+
     let guardianUserId;
     const guardianDpFile = req.files?.dp?.[0];
     const studentImageFile = req.files?.image?.[0];
@@ -884,6 +895,16 @@ const createStudent = async (req, res) => {
 
       guardianUserId = existingGuardian.user_id;
     } else {
+      if (guardian_contact) {
+        const existingPhone = await User.findOne({
+          where: { phone: guardian_contact },
+        });
+        if (existingPhone) {
+          return res.status(400).json({
+            error: "Guardian phone number already exists in user table",
+          });
+        }
+      }
       if (
         !guardian_name ||
         !guardian_email ||
