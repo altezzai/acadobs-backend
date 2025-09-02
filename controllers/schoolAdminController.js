@@ -26,6 +26,7 @@ const News = require("../models/news");
 const NewsImage = require("../models/newsimage");
 const Notice = require("../models/notice");
 const NoticeClass = require("../models/noticeclass");
+const Timetable = require("../models/timetables");
 
 const { schoolSequelize } = require("../config/connection");
 const { create } = require("domain");
@@ -2923,6 +2924,141 @@ const getLatestNotices = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch notices" });
   }
 };
+const bulkUpsertTimetable = async (req, res) => {
+  try {
+    const { records } = req.body;
+    // records = [ { school_id, class_id, day_of_week, period_number, subject_id, staff_id }, ... ]
+
+    if (!records || !Array.isArray(records)) {
+      return res.status(400).json({ error: "Invalid records format" });
+    }
+
+    // Use bulkCreate with updateOnDuplicate
+    await Timetable.bulkCreate(records, {
+      updateOnDuplicate: ["subject_id", "staff_id", "updatedAt"],
+    });
+
+    return res.json({
+      success: true,
+      message: "Timetable updated successfully",
+    });
+  } catch (error) {
+    console.error("bulkUpsertTimetable error:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+const getAllTimetables = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const class_id = req.query.class_id;
+    const day_of_week = req.query.day_of_week;
+    const period_number = req.query.period_number;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const searchQuery = req.query.q || "";
+    const whereClause = {
+      school_id,
+    };
+    if (class_id) {
+      whereClause.class_id = class_id;
+    }
+    if (day_of_week) {
+      whereClause.day_of_week = day_of_week;
+    }
+    if (period_number) {
+      whereClause.period_number = period_number;
+    }
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { class_name: { [Op.like]: `%${searchQuery}%` } },
+        { subject_name: { [Op.like]: `%${searchQuery}%` } },
+        { name: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: timetable } = await Timetable.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        {
+          model: Class,
+          attributes: ["classname"],
+        },
+        {
+          model: Subject,
+          attributes: ["subject_name"],
+        },
+        {
+          model: User,
+          attributes: ["name"],
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      timetable,
+    });
+  } catch (error) {
+    console.error("Error fetching timetable:", error);
+    res.status(500).json({ error: "Failed to fetch timetable" });
+  }
+};
+const getTimetableById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const timetableEntry = await Timetable.findOne({
+      where: { id: id, school_id },
+      include: [
+        {
+          model: Class,
+          attributes: ["class_name"],
+        },
+        {
+          model: Subject,
+          attributes: ["subject_name"],
+        },
+        {
+          model: User,
+          attributes: ["name"],
+        },
+      ],
+    });
+    if (!timetableEntry) {
+      return res.status(404).json({ error: "Timetable entry not found" });
+    }
+    res.json(timetableEntry);
+  } catch (error) {
+    console.error("Error fetching timetable entry:", error);
+    res.status(500).json({ error: "Failed to fetch timetable entry" });
+  }
+};
+//delete timetable entry
+const deleteTimetableEntry = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+
+    const timetableEntry = await Timetable.findOne({
+      where: { id, school_id },
+    });
+    if (!timetableEntry) {
+      return res.status(404).json({ error: "Timetable entry not found" });
+    }
+    //destroy entry
+    await timetableEntry.destroy();
+    res.json({ message: "Timetable deleted" });
+  } catch (error) {
+    console.error("Delete Timetable Entry Error:", error);
+    res.status(500).json({ error: "Failed to delete timetable entry" });
+  }
+};
 module.exports = {
   createClass,
   getAllClasses,
@@ -3016,4 +3152,9 @@ module.exports = {
   deleteNotice,
   restoreNotice,
   getLatestNotices,
+
+  bulkUpsertTimetable,
+  getAllTimetables,
+  getTimetableById,
+  deleteTimetableEntry,
 };

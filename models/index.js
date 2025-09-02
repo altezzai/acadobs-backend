@@ -9,6 +9,7 @@ const Mark = require("./marks");
 const User = require("./user");
 const Guardian = require("./guardian");
 const Staff = require("./staff");
+const staffsubject = require("./staffsubject");
 const Attendance = require("./attendance");
 const AttendanceMarked = require("./attendancemarked");
 const Duty = require("./duty");
@@ -23,6 +24,7 @@ const Notice = require("./notice");
 const NoticeClass = require("./noticeclass");
 const Message = require("./messages");
 const Chat = require("./chat");
+const Timetable = require("./timetables");
 // Relations
 
 // Associations
@@ -45,6 +47,13 @@ AttendanceMarked.belongsTo(Attendance, { foreignKey: "attendance_id" });
 AttendanceMarked.belongsTo(Student, { foreignKey: "student_id" });
 
 Staff.belongsTo(User, { foreignKey: "user_id" });
+Staff.belongsTo(School, { foreignKey: "school_id" });
+Staff.belongsTo(Class, { foreignKey: "class_id" });
+Staff.hasMany(staffsubject, { foreignKey: "staff_id" });
+
+staffsubject.belongsTo(Staff, { foreignKey: "staff_id" });
+staffsubject.belongsTo(Subject, { foreignKey: "subject_id" });
+
 Guardian.belongsTo(User, { foreignKey: "user_id" });
 
 Duty.hasMany(DutyAssignment, { foreignKey: "duty_id" });
@@ -91,6 +100,11 @@ Message.belongsTo(Chat, { foreignKey: "chat_id" });
 Chat.hasMany(Message, { foreignKey: "chat_id" });
 Chat.belongsTo(User, { as: "user1", foreignKey: "user1_id" });
 Chat.belongsTo(User, { as: "user2", foreignKey: "user2_id" });
+
+Timetable.belongsTo(School, { foreignKey: "school_id" });
+Timetable.belongsTo(Class, { foreignKey: "class_id" });
+Timetable.belongsTo(Subject, { foreignKey: "subject_id" });
+Timetable.belongsTo(User, { foreignKey: "staff_id" });
 
 module.exports = {
   Homework,

@@ -220,6 +220,11 @@ router.put(
 router.delete("/notices/:id", schoolAdminController.deleteNotice);
 router.patch("/notices/:id", schoolAdminController.restoreNotice);
 router.get("/getLatestNotices", schoolAdminController.getLatestNotices);
+
+router.post("/timetables", schoolAdminController.bulkUpsertTimetable);
+router.get("/timetables", schoolAdminController.getAllTimetables);
+router.get("/timetables/:id", schoolAdminController.getTimetableById);
+router.delete("/timetables/:id", schoolAdminController.deleteTimetableEntry);
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);
