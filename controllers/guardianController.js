@@ -416,7 +416,7 @@ const getSchoolsByUser = async (req, res) => {
 };
 const getLatestEvents = async (req, res) => {
   try {
-    const school_id = req.user.school_id;
+    const school_id = req.query.school_id;
     if (!school_id) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -444,7 +444,7 @@ const getLatestEvents = async (req, res) => {
 };
 const getLatestNews = async (req, res) => {
   try {
-    const school_id = req.user.school_id;
+    const school_id = req.query.school_id;
     if (!school_id) {
       return res.status(400).json({ error: "Missing required fields" });
     }

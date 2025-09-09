@@ -96,10 +96,7 @@ router.post(
   upload.any(),
   staffController.createAchievementWithStudents
 );
-router.get(
-  "/achievementsByStaffId/:id",
-  staffController.getAllAchievementsByStaffId
-);
+router.get("/achievements", staffController.getAllAchievementsByStaffId);
 router.get("/achievements/:id", staffController.getAchievementById);
 router.put("/achievements/:id", staffController.updateAchievement);
 router.delete("/achievements/:id", staffController.deleteAchievement);

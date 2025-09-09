@@ -1285,7 +1285,7 @@ const createAchievementWithStudents = async (req, res) => {
 };
 const getAllAchievementsByStaffId = async (req, res) => {
   try {
-    const staffId = req.params.id;
+    const staffId = req.user.user_id;
 
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
@@ -1307,25 +1307,7 @@ const getAllAchievementsByStaffId = async (req, res) => {
       limit,
       where: whereClause,
       attributes: ["id", "title", "description", "category", "level", "date"],
-      include: [
-        {
-          model: StudentAchievement,
-          attributes: ["student_id", "status", "proof_document", "remarks"],
-          required: false,
-          include: [
-            {
-              model: Student,
-              attributes: ["id", "full_name", "reg_no", "image"],
-              include: [
-                {
-                  model: Class,
-                  attributes: ["id", "classname", "year", "division"],
-                },
-              ],
-            },
-          ],
-        },
-      ],
+
       order: [["createdAt", "DESC"]],
     });
 
@@ -1372,11 +1354,13 @@ const getAchievementById = async (req, res) => {
 
 const updateAchievement = async (req, res) => {
   try {
+    const id = req.params.id;
     const recorded_by = req.user.user_id;
     const achievement = await Achievement.findOne({
-      where: { id: req.params.id, recorded_by: recorded_by },
+      where: { id, recorded_by },
       attributes: ["id", "title", "description", "category", "level", "date"],
     });
+
     if (!achievement) {
       return res.status(404).json({ error: "Achievement not found" });
     }
@@ -1395,6 +1379,7 @@ const updateAchievement = async (req, res) => {
       .status(200)
       .json({ message: "Achievement updated successfully", achievement });
   } catch (error) {
+    console.error("Error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
