@@ -1372,14 +1372,9 @@ const getAchievementById = async (req, res) => {
 
 const updateAchievement = async (req, res) => {
   try {
-    const staffId = req.query.staff_id;
     const recorded_by = req.user.user_id;
-
-    if (!staffId) {
-      return res.status(400).json({ error: "Staff ID is required" });
-    }
     const achievement = await Achievement.findOne({
-      where: { id: req.params.id, recorded_by: staffId },
+      where: { id: req.params.id, recorded_by: recorded_by },
       attributes: ["id", "title", "description", "category", "level", "date"],
     });
     if (!achievement) {
@@ -1395,7 +1390,6 @@ const updateAchievement = async (req, res) => {
       level,
       date,
       awarding_body,
-      recorded_by,
     });
     res
       .status(200)
@@ -1425,10 +1419,8 @@ const restoreAchievement = async (req, res) => {
 };
 const updateStudentAchievement = async (req, res) => {
   try {
-    const staffId = req.query.staff_id;
-    if (!staffId) {
-      return res.status(400).json({ error: "Staff ID is required" });
-    }
+    const recorded_by = req.user.user_id;
+
     const { status, proof_document, remarks } = req.body;
     if (
       status !== "1st prize" &&
@@ -1445,7 +1437,7 @@ const updateStudentAchievement = async (req, res) => {
       include: [
         {
           model: Achievement,
-          where: { recorded_by: staffId },
+          where: { recorded_by },
           attributes: ["id", "title"],
         },
       ],
