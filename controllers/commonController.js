@@ -93,7 +93,7 @@ const getStudentById = async (req, res) => {
         "status",
       ],
       include: [
-        { model: User, attributes: ["name", "email", "phone", "dp"] },
+        { model: User, attributes: ["id", "name", "email", "phone", "dp"] },
         {
           model: Class,
           attributes: ["id", "year", "division", "classname"],

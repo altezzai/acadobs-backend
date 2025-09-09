@@ -16,6 +16,9 @@ const Notice = require("../models/notice");
 const NoticeClass = require("../models/noticeclass");
 const News = require("../models/news");
 const Event = require("../models/event");
+const Staff = require("../models/staff");
+const Staffsubject = require("../models/staffsubject");
+const Subject = require("../models/subject");
 const { Class } = require("../models");
 
 const { getschoolIdByStudentId } = require("../controllers/commonController");
@@ -470,7 +473,68 @@ const getLatestNews = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch news" });
   }
 };
-
+const getStaffsBySchoolId = async (req, res) => {
+  try {
+    const school_id = req.params.school_id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 3;
+    const offset = (page - 1) * limit;
+    if (!school_id) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const { count, rows: staffs } = await User.findAndCountAll({
+      where: { school_id: school_id, role: "teacher", trash: false },
+      attributes: ["id", "name", "email", "phone", "dp", "role", "createdAt"],
+      include: [
+        {
+          model: Staff,
+          attributes: [
+            "id",
+            "user_id",
+            "school_id",
+            "class_id",
+            "role",
+            "qualification",
+            "address",
+          ],
+          include: [
+            {
+              model: Staffsubject,
+              attributes: ["id", "staff_id", "subject_id"],
+              include: [
+                {
+                  model: Subject,
+                  attributes: ["id", "subject_name"],
+                },
+              ],
+            },
+            {
+              model: Class,
+              attributes: ["id", "classname", "year", "division"],
+            },
+          ],
+        },
+      ],
+      order: [["name", "ASC"]],
+      offset,
+      distinct: true, // Add this line
+      limit,
+    });
+    if (!staffs || staffs.length === 0) {
+      return res.status(404).json({ error: "No staffs found" });
+    }
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      staffs,
+    });
+  } catch (error) {
+    console.error("Error fetching staffs:", error);
+    res.status(500).json({ error: "Failed to fetch staffs" });
+  }
+};
 module.exports = {
   updateHomeworkAssignment,
 
@@ -490,4 +554,6 @@ module.exports = {
 
   getLatestEvents,
   getLatestNews,
+
+  getStaffsBySchoolId,
 };

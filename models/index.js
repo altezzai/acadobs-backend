@@ -50,9 +50,11 @@ Staff.belongsTo(User, { foreignKey: "user_id" });
 Staff.belongsTo(School, { foreignKey: "school_id" });
 Staff.belongsTo(Class, { foreignKey: "class_id" });
 Staff.hasMany(staffsubject, { foreignKey: "staff_id" });
+User.hasOne(Staff, { foreignKey: "user_id" });
 
 staffsubject.belongsTo(Staff, { foreignKey: "staff_id" });
 staffsubject.belongsTo(Subject, { foreignKey: "subject_id" });
+Subject.hasMany(staffsubject, { foreignKey: "subject_id" });
 
 Guardian.belongsTo(User, { foreignKey: "user_id" });
 

@@ -41,6 +41,10 @@ router.get(
 
 router.get("/getLatestEvents", guardianController.getLatestEvents);
 router.get("/getLatestNews", guardianController.getLatestNews);
+router.get(
+  "/getStaffsBySchoolId/:school_id",
+  guardianController.getStaffsBySchoolId
+);
 
 //common controller
 router.get("/students/:id", commonController.getStudentById);
