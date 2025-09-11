@@ -479,11 +479,17 @@ const getStaffsBySchoolId = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 3;
     const offset = (page - 1) * limit;
+    const searchQuery = req.query.q || "";
+    const role = req.query.role || "teacher";
     if (!school_id) {
       return res.status(400).json({ error: "Missing required fields" });
     }
+    let whereClause = { school_id: school_id, role: role, trash: false };
+    if (searchQuery) {
+      whereClause[Op.or] = [{ name: { [Op.like]: `%${searchQuery}%` } }];
+    }
     const { count, rows: staffs } = await User.findAndCountAll({
-      where: { school_id: school_id, role: "teacher", trash: false },
+      where: whereClause,
       attributes: ["id", "name", "email", "phone", "dp", "role", "createdAt"],
       include: [
         {
