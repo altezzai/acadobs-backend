@@ -2,7 +2,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("Staff_Subjects", {
+    await queryInterface.createTable("staff_subjects", {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -42,7 +42,7 @@ module.exports = {
         type: Sequelize.DATE,
       },
     });
-    await queryInterface.addConstraint("Staff_Subjects", {
+    await queryInterface.addConstraint("staff_subjects", {
       fields: ["school_id", "staff_id", "subject_id"],
       type: "unique",
       name: "unique_staff_subject_combination",
@@ -50,6 +50,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable("Staff_Subjects");
+    await queryInterface.dropTable("staff_subjects");
   },
 };
