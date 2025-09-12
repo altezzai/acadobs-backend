@@ -9,10 +9,7 @@ const HomeworkAssignment = schoolSequelize.define(
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     homework_id: DataTypes.INTEGER,
     student_id: DataTypes.INTEGER,
-    status: {
-      type: DataTypes.ENUM("pending", "submitted", "reviewed"),
-      defaultValue: "pending",
-    },
+    remarks: DataTypes.STRING,
     points: { type: DataTypes.INTEGER, defaultValue: 0 },
     solved_file: DataTypes.STRING,
   },

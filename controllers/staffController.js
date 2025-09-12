@@ -351,7 +351,7 @@ const getAllHomework = async (req, res) => {
       include: [
         {
           model: HomeworkAssignment,
-          attributes: ["id", "status", "points", "solved_file"],
+          attributes: ["id", "remarks", "points", "solved_file"],
 
           include: [
             {
@@ -382,7 +382,7 @@ const getHomeworkById = async (req, res) => {
       include: [
         {
           model: HomeworkAssignment,
-          attributes: ["id", "status", "points", "solved_file"],
+          attributes: ["id", "remarks", "points", "solved_file"],
 
           include: [
             {
@@ -447,7 +447,7 @@ const updateHomework = async (req, res) => {
 const updateHomeworkAssignment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, points } = req.body;
+    const { remarks, points } = req.body;
 
     const assignment = await HomeworkAssignment.findByPk(id);
     if (!assignment) return res.status(404).json({ error: "Not found" });
@@ -457,7 +457,7 @@ const updateHomeworkAssignment = async (req, res) => {
       fileName = await compressAndSaveFile(req.file, uploadPath);
     }
     await assignment.update({
-      status,
+      remarks,
       points,
       solved_file: fileName ? fileName : assignment.solved_file,
     });
@@ -528,7 +528,7 @@ const bulkUpdateHomeworkAssignments = async (req, res) => {
     const updatePromises = assignments.map(async (item) => {
       return HomeworkAssignment.update(
         {
-          status: item.status,
+          remarks: item.remarks,
           points: item.points,
         },
         {
@@ -569,7 +569,7 @@ const getHomeworkAssignmentById = async (req, res) => {
 };
 const getHomeworkByTeacher = async (req, res) => {
   try {
-    const { teacher_id } = req.query;
+    const teacher_id = req.user.user_id;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -581,7 +581,7 @@ const getHomeworkByTeacher = async (req, res) => {
       limit,
       where: {
         teacher_id,
-        description: { [Op.like]: `%${searchQuery}%` },
+        title: { [Op.like]: `%${searchQuery}%` },
         trash: false,
       },
     });

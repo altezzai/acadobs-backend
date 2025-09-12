@@ -12,10 +12,7 @@ module.exports = {
           key: "id",
         },
       },
-      status: {
-        type: Sequelize.ENUM("pending", "submitted", "reviewed"),
-        defaultValue: "pending",
-      },
+      remarks: Sequelize.STRING,
       points: { type: Sequelize.INTEGER, defaultValue: 0 },
       solved_file: Sequelize.STRING,
       createdAt: {
