@@ -19,10 +19,10 @@ const User = require("../models/user");
 const Achievement = require("../models/achievement");
 const StudentAchievement = require("../models/studentachievement");
 const LeaveRequest = require("../models/leaverequest");
-const Event = require("../models/event");
-const News = require("../models/news");
 const Notice = require("../models/notice");
 const ParentNote = require("../models/parent_note");
+const Timetable = require("../models/timetables");
+
 const { Homework, HomeworkAssignment } = require("../models");
 const { getGuarduianIdbyStudentId } = require("./commonController");
 const {
@@ -2050,6 +2050,68 @@ const getLatestNotices = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch notices" });
   }
 };
+const getTodayTimetableForStaff = async (req, res) => {
+  try {
+    const staff_id = req.user.user_id;
+    const now = new Date();
+    let today = now.getDay();
+    let message = "today's timetable";
+
+    // If time >= 19:00 (7PM), shift to tomorrow
+    if (now.getHours() >= 19) {
+      today = (today + 1) % 7;
+      message = "tomorrow's timetable";
+    }
+
+    const timetable = await Timetable.findAll({
+      where: {
+        staff_id,
+        day_of_week: today,
+      },
+      order: [["period_number", "ASC"]],
+      include: [
+        { model: Subject, attributes: ["id", "subject_name"] }, // optional
+        { model: Class, attributes: ["id", "classname"] }, // optional
+      ],
+    });
+
+    return res.json({
+      today,
+      timetable,
+      message: `Here is ${message}`,
+    });
+  } catch (error) {
+    console.error("getTodayTimetableForStaff error:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+const getAllDaysTimetableForStaff = async (req, res) => {
+  try {
+    const staff_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const timetable = await Timetable.findAll({
+      where: {
+        staff_id,
+        school_id,
+      },
+      order: [
+        ["day_of_week", "ASC"],
+        ["period_number", "ASC"],
+      ],
+      include: [
+        { model: Subject, attributes: ["id", "subject_name"] }, // optional
+        { model: Class, attributes: ["id", "classname"] }, // optional
+      ],
+    });
+
+    return res.json({
+      timetable,
+    });
+  } catch (error) {
+    console.error("getAllDaysTimetableForStaff error:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
 
 module.exports = {
   createExamWithMarks,
@@ -2116,4 +2178,7 @@ module.exports = {
   deleteParentNote,
 
   getLatestNotices,
+
+  getTodayTimetableForStaff,
+  getAllDaysTimetableForStaff,
 };

@@ -19,6 +19,7 @@ const Event = require("../models/event");
 const Staff = require("../models/staff");
 const Staffsubject = require("../models/staffsubject");
 const Subject = require("../models/subject");
+const Timetable = require("../models/timetables");
 const { Class } = require("../models");
 
 const { getschoolIdByStudentId } = require("../controllers/commonController");
@@ -417,62 +418,62 @@ const getSchoolsByUser = async (req, res) => {
     return null;
   }
 };
-const getLatestEvents = async (req, res) => {
-  try {
-    const school_id = req.query.school_id;
-    if (!school_id) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 3;
-    const offset = (page - 1) * limit;
-    const { count, rows: events } = await Event.findAndCountAll({
-      where: { school_id: school_id },
-      order: [["createdAt", "DESC"]],
-      limit: limit,
-      offset,
-      distinct: true,
-    });
-    const totalPages = Math.ceil(count / limit);
-    res.status(200).json({
-      totalcontent: count,
-      totalPages,
-      currentPage: page,
-      events,
-    });
-  } catch (error) {
-    console.error("Error fetching events:", error);
-    res.status(500).json({ error: "Failed to fetch events" });
-  }
-};
-const getLatestNews = async (req, res) => {
-  try {
-    const school_id = req.query.school_id;
-    if (!school_id) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 3;
-    const offset = (page - 1) * limit;
-    const { count, rows: news } = await News.findAndCountAll({
-      where: { school_id: school_id },
-      order: [["createdAt", "DESC"]],
-      limit: limit,
-      offset,
-      distinct: true,
-    });
-    const totalPages = Math.ceil(count / limit);
-    res.status(200).json({
-      totalcontent: count,
-      totalPages,
-      currentPage: page,
-      news,
-    });
-  } catch (error) {
-    console.error("Error fetching news:", error);
-    res.status(500).json({ error: "Failed to fetch news" });
-  }
-};
+// const getLatestEvents = async (req, res) => {
+//   try {
+//     const school_id = req.query.school_id;
+//     if (!school_id) {
+//       return res.status(400).json({ error: "Missing required fields" });
+//     }
+//     const page = parseInt(req.query.page) || 1;
+//     const limit = parseInt(req.query.limit) || 3;
+//     const offset = (page - 1) * limit;
+//     const { count, rows: events } = await Event.findAndCountAll({
+//       where: { school_id: school_id },
+//       order: [["createdAt", "DESC"]],
+//       limit: limit,
+//       offset,
+//       distinct: true,
+//     });
+//     const totalPages = Math.ceil(count / limit);
+//     res.status(200).json({
+//       totalcontent: count,
+//       totalPages,
+//       currentPage: page,
+//       events,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching events:", error);
+//     res.status(500).json({ error: "Failed to fetch events" });
+//   }
+// };
+// const getLatestNews = async (req, res) => {
+//   try {
+//     const school_id = req.query.school_id;
+//     if (!school_id) {
+//       return res.status(400).json({ error: "Missing required fields" });
+//     }
+//     const page = parseInt(req.query.page) || 1;
+//     const limit = parseInt(req.query.limit) || 3;
+//     const offset = (page - 1) * limit;
+//     const { count, rows: news } = await News.findAndCountAll({
+//       where: { school_id: school_id },
+//       order: [["createdAt", "DESC"]],
+//       limit: limit,
+//       offset,
+//       distinct: true,
+//     });
+//     const totalPages = Math.ceil(count / limit);
+//     res.status(200).json({
+//       totalcontent: count,
+//       totalPages,
+//       currentPage: page,
+//       news,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching news:", error);
+//     res.status(500).json({ error: "Failed to fetch news" });
+//   }
+// };
 const getStaffsBySchoolId = async (req, res) => {
   try {
     const school_id = req.params.school_id;
@@ -541,6 +542,82 @@ const getStaffsBySchoolId = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch staffs" });
   }
 };
+const getTodayTimetableByStudentId = async (req, res) => {
+  try {
+    const student_id = req.params.student_id;
+    const student = await Student.findByPk(student_id);
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    const class_id = student.class_id;
+    const school_id = student.school_id;
+
+    const now = new Date();
+    let today = now.getDay();
+    let message = "today's timetable";
+
+    // If time >= 19:00 (7PM), shift to tomorrow
+    if (now.getHours() >= 19) {
+      today = (today + 1) % 7;
+      message = "tomorrow's timetable";
+    }
+
+    const timetable = await Timetable.findAll({
+      where: {
+        class_id,
+        school_id,
+        day_of_week: today,
+      },
+      order: [["period_number", "ASC"]],
+      include: [
+        { model: Subject, attributes: ["id", "subject_name"] }, // optional
+        { model: Class, attributes: ["id", "classname"] }, // optional
+      ],
+    });
+
+    return res.json({
+      today,
+      timetable,
+      message: `Here is ${message}`,
+    });
+  } catch (error) {
+    console.error("getTodayTimetableForStaff error:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+const getAllDayTimetableByStudentId = async (req, res) => {
+  try {
+    const student_id = req.params.student_id;
+    const student = await Student.findByPk(student_id);
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+    const class_id = student.class_id;
+    const school_id = student.school_id;
+    const timetable = await Timetable.findAll({
+      where: {
+        class_id,
+        school_id,
+      },
+      order: [
+        ["day_of_week", "ASC"],
+        ["period_number", "ASC"],
+      ],
+      include: [
+        { model: Subject, attributes: ["id", "subject_name"] }, // optional
+        { model: Class, attributes: ["id", "classname"] }, // optional
+      ],
+    });
+    return res.json({
+      timetable,
+    });
+  } catch (error) {
+    console.error("getAllDayTimetableByStudentId error:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   updateHomeworkAssignment,
 
@@ -558,8 +635,11 @@ module.exports = {
   getStudentsUnderGuardianBySchoolId,
   getSchoolsByUser,
 
-  getLatestEvents,
-  getLatestNews,
+  // getLatestEvents,
+  // getLatestNews,
 
   getStaffsBySchoolId,
+
+  getTodayTimetableByStudentId,
+  getAllDayTimetableByStudentId,
 };

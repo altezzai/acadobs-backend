@@ -140,6 +140,14 @@ router.put(
 router.delete("/parentNotes/:id", staffController.deleteParentNote);
 
 router.get("/getLatestNotices", staffController.getLatestNotices);
+router.get(
+  "/getTodayTimetableForStaff",
+  staffController.getTodayTimetableForStaff
+);
+router.get(
+  "/getAllDayTimetableForStaff",
+  staffController.getAllDaysTimetableForStaff
+);
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);

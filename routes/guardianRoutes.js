@@ -39,14 +39,23 @@ router.get(
   guardianController.getStudentsUnderGuardianBySchoolId
 );
 
-router.get("/getLatestEvents", guardianController.getLatestEvents);
-router.get("/getLatestNews", guardianController.getLatestNews);
 router.get(
   "/getStaffsBySchoolId/:school_id",
   guardianController.getStaffsBySchoolId
 );
 
+router.get(
+  "/getTodayTimetableByStudentId/:student_id",
+  guardianController.getTodayTimetableByStudentId
+);
+router.get(
+  "/getAllDayTimetableByStudentId/:student_id",
+  guardianController.getAllDayTimetableByStudentId
+);
+
 //common controller
+router.get("/getLatestEvents", commonController.getLatestEvents);
+router.get("/getLatestNews", commonController.getLatestNews);
 router.get("/students/:id", commonController.getStudentById);
 router.get(
   "/getHomeworkByStudentId/:student_id",
