@@ -34,6 +34,11 @@ module.exports = {
         allowNull: true,
         defaultValue: 2,
       },
+      attendance_count: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        defaultValue: 2,
+      },
       status: {
         type: Sequelize.ENUM("active", "inactive"),
         defaultValue: "active",

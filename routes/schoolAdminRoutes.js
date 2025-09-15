@@ -225,6 +225,12 @@ router.post("/timetables", schoolAdminController.bulkUpsertTimetable);
 router.get("/timetables", schoolAdminController.getAllTimetables);
 router.get("/timetables/:id", schoolAdminController.getTimetableById);
 router.delete("/timetables/:id", schoolAdminController.deleteTimetableEntry);
+
+router.get(
+  "/getSchoolAttendanceSummary",
+  schoolAdminController.getSchoolAttendanceSummary
+);
+
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);

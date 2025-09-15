@@ -1,6 +1,7 @@
 "use strict";
 const { DataTypes } = require("sequelize");
 const { schoolSequelize } = require("../config/connection");
+const Attendance = require("./attendance");
 
 const School = schoolSequelize.define(
   "School",
@@ -20,6 +21,11 @@ const School = schoolSequelize.define(
     address: DataTypes.TEXT,
     logo: DataTypes.STRING,
     period_count: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 2,
+    },
+    attendance_count: {
       type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: 2,

@@ -27,9 +27,12 @@ const NewsImage = require("../models/newsimage");
 const Notice = require("../models/notice");
 const NoticeClass = require("../models/noticeclass");
 const Timetable = require("../models/timetables");
+const Attendance = require("../models/attendance");
+const AttendanceMarked = require("../models/attendancemarked");
 
 const { schoolSequelize } = require("../config/connection");
 const { create } = require("domain");
+const { School } = require("../models");
 
 // CREATE
 const createClass = async (req, res) => {
@@ -3059,6 +3062,83 @@ const deleteTimetableEntry = async (req, res) => {
     res.status(500).json({ error: "Failed to delete timetable entry" });
   }
 };
+const getSchoolAttendanceSummary = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const attendanceMarkingCount = await School.findOne({
+      where: { id: school_id },
+      attributes: ["attendance_count"],
+    });
+    //default today
+    const date = req.query.date || new Date().toISOString().split("T")[0];
+    if (!school_id || !date) {
+      return res.status(400).json({ error: "school_id and date are required" });
+    }
+
+    // Fetch attendance + markings
+    const records = await Attendance.findAll({
+      where: { school_id, date, trash: false },
+      attributes: ["id", "class_id", "period", "date"],
+      include: [
+        {
+          model: AttendanceMarked,
+          attributes: ["status"],
+        },
+        {
+          model: Class,
+          attributes: ["id", "classname"],
+        },
+      ],
+      order: [
+        ["class_id", "ASC"],
+        ["period", "ASC"],
+      ],
+    });
+
+    if (!records || records.length === 0) {
+      return res.status(404).json({ error: "No attendance found" });
+    }
+
+    // Group by class_id
+    const classSummary = {};
+    for (const rec of records) {
+      const classId = rec.class_id;
+      //i want total studnet count the class id used student table
+      const studentCount = await Student.count({
+        where: {
+          class_id: classId,
+          school_id,
+          trash: false,
+        },
+      });
+      if (!classSummary[classId]) {
+        classSummary[classId] = {
+          class_id: classId,
+          classname: rec.Class?.classname || "Unknown",
+          date: rec.date,
+          periods: [],
+          classTotals: studentCount,
+        };
+      }
+
+      const presentCount = rec.AttendanceMarkeds.filter(
+        (m) => m.status === "present"
+      ).length;
+      classSummary[classId].periods.push({
+        period: rec.period,
+        present: presentCount,
+      });
+    }
+    // i want add to attendanceMarkingCount
+    res.json({
+      attendanceMarkingCount: attendanceMarkingCount.attendance_count,
+      classSummary,
+    });
+  } catch (err) {
+    console.error("Error in getSchoolAttendanceSummary:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
 module.exports = {
   createClass,
   getAllClasses,
@@ -3157,4 +3237,6 @@ module.exports = {
   getAllTimetables,
   getTimetableById,
   deleteTimetableEntry,
+
+  getSchoolAttendanceSummary,
 };
