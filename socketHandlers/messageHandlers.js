@@ -1,7 +1,22 @@
 const { Op } = require("sequelize");
 const Message = require("../models/messages");
-const { User } = require("../models");
+const { User, Subject } = require("../models");
 const Chat = require("../models/chat");
+const ParentNote = require("../models/parent_note");
+const Homework = require("../models/homework");
+const HomeworkAssignment = require("../models/homeworkassignment");
+const Event = require("../models/event");
+const Notice = require("../models/notice");
+const News = require("../models/news");
+const Achievement = require("../models/achievement");
+const StudentAchievement = require("../models/studentachievement");
+const Attendance = require("../models/attendance");
+const AttendanceMarked = require("../models/attendancemarked");
+const InternalMark = require("../models/internal_marks");
+const Marks = require("../models/marks");
+const LeaveRequest = require("../models/leaverequest");
+const Payment = require("../models/payment");
+
 const Sequelize = require("sequelize");
 const {
   getGuarduianIdbyStudentId,
@@ -153,8 +168,154 @@ const getMessages = async (io, socket, data) => {
       },
       order: [["createdAt", "ASC"]],
     });
+    const enrichedMessages = await Promise.all(
+      messageData.map(async (msgInstance) => {
+        const msg = msgInstance.toJSON(); // ✅ Converts to plain object
+        let typeDetails = null;
 
-    socket.emit("messages", messageData);
+        switch (msg.type) {
+          case "homeworks":
+            typeDetails = await HomeworkAssignment.findByPk(msg.type_id, {
+              attributes: [
+                "id",
+                "homework_id",
+                "student_id",
+                "remarks",
+                "points",
+              ],
+              include: [
+                {
+                  model: Homework,
+                  attributes: ["id", "title", "description", "due_date"],
+                },
+              ],
+              raw: true,
+            });
+            break;
+
+          case "parent_notes":
+            typeDetails = await ParentNote.findByPk(msg.type_id, {
+              attributes: ["id", "note_title", "note_description", "createdAt"],
+              raw: true,
+            });
+            break;
+
+          case "internal_marks":
+            typeDetails = await Marks.findByPk(msg.type_id, {
+              attributes: [
+                "id",
+                "internal_id",
+                "student_id",
+                "marks_obtained",
+                "status",
+              ],
+              include: [
+                {
+                  model: InternalMark,
+                  attributes: ["internal_name", "max_marks", "date"],
+                  include: [
+                    { model: Subject, attributes: ["id", "subject_name"] },
+                  ],
+                },
+              ],
+              raw: true,
+            });
+            break;
+
+          case "attendance":
+            typeDetails = await AttendanceMarked.findByPk(msg.type_id, {
+              attributes: ["id", "student_id", "remarks", "status"],
+              include: [
+                { model: Attendance, attributes: ["id", "date", "period"] },
+              ],
+              raw: true,
+            });
+            break;
+
+          case "achievements":
+            typeDetails = await StudentAchievement.findByPk(msg.type_id, {
+              attributes: ["id", "student_id", "achievement_id", "status"],
+              include: [
+                {
+                  model: Achievement,
+                  attributes: [
+                    "id",
+                    "title",
+                    "description",
+                    "date",
+                    "level",
+                    "category",
+                  ],
+                },
+              ],
+              raw: true,
+            });
+            break;
+
+          case "leave_requests":
+            typeDetails = await LeaveRequest.findByPk(msg.type_id, {
+              attributes: [
+                "id",
+                "student_id",
+                "from_date",
+                "to_date",
+                "reason",
+                "status",
+              ],
+              raw: true,
+            });
+            break;
+
+          case "payments":
+            typeDetails = await Payment.findByPk(msg.type_id, {
+              attributes: [
+                "id",
+                "amount",
+                "payment_type",
+                "payment_date",
+                "payment_status",
+              ],
+              raw: true,
+            });
+            break;
+          case "events":
+            typeDetails = await Event.findByPk(msg.type_id, {
+              attributes: ["id", "title", "description", "date", "createdAt"],
+              raw: true,
+            });
+            break;
+          case "notices":
+            typeDetails = await Notice.findByPk(msg.type_id, {
+              attributes: [
+                "id",
+                "title",
+                "content",
+                "date",
+                "type",
+                "createdAt",
+              ],
+              raw: true,
+            });
+            break;
+          case "news":
+            typeDetails = await News.findByPk(msg.type_id, {
+              attributes: ["id", "title", "content", "date", "createdAt"],
+              raw: true,
+            });
+            break;
+
+          default:
+            typeDetails = null;
+        }
+
+        return {
+          ...msg,
+          typeDetails,
+        };
+      })
+    );
+
+    socket.emit("messages", enrichedMessages);
   } catch (error) {
     console.error(error);
     socket.emit("error", {

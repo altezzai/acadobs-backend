@@ -55,7 +55,8 @@ module.exports = {
           "leave_requests",
           "payments",
           "events",
-          "notices"
+          "notices",
+          "news"
         ),
         defaultValue: "msg",
       },

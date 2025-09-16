@@ -2,8 +2,8 @@
 const { DataTypes } = require("sequelize");
 const { schoolSequelize } = require("../config/connection");
 
-const InternalExam = schoolSequelize.define(
-  "InternalExam",
+const InternalMark = schoolSequelize.define(
+  "InternalMark",
   {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     school_id: DataTypes.INTEGER,
@@ -21,4 +21,4 @@ const InternalExam = schoolSequelize.define(
   }
 );
 
-module.exports = InternalExam;
+module.exports = InternalMark;

@@ -28,7 +28,8 @@ const Message = schoolSequelize.define(
         "leave_requests",
         "payments",
         "events",
-        "notices"
+        "notices",
+        "news"
       ),
       defaultValue: "msg",
     },

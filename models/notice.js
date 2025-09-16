@@ -3,7 +3,7 @@ const { schoolSequelize } = require("../config/connection");
 const Notice = schoolSequelize.define(
   "Notice",
   {
-    notice_id: {
+    id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,

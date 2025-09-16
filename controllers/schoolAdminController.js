@@ -2743,7 +2743,7 @@ const createNotice = async (req, res) => {
 
     if (type === "classes" && Array.isArray(class_ids)) {
       const mappings = class_ids.map((cid) => ({
-        notice_id: notice.notice_id,
+        id: notice.id,
         class_id: cid,
       }));
       await NoticeClass.bulkCreate(mappings);
@@ -2802,7 +2802,7 @@ const getNoticeById = async (req, res) => {
     const { id } = req.params;
     const school_id = req.user.school_id;
     const notice = await Notice.findOne({
-      where: { notice_id: id, trash: false, school_id: school_id },
+      where: { id: id, trash: false, school_id: school_id },
       include: [
         {
           model: NoticeClass,
@@ -2828,7 +2828,7 @@ const updateNotice = async (req, res) => {
     }
 
     const notice = await Notice.findOne({
-      where: { notice_id: id, school_id: school_id, trash: false },
+      where: { id: id, school_id: school_id, trash: false },
     });
     const existingNotice = await Notice.findOne({
       where: {
@@ -2836,7 +2836,7 @@ const updateNotice = async (req, res) => {
         title,
         type,
         date,
-        notice_id: { [Op.ne]: id },
+        id: { [Op.ne]: id },
       },
     });
     if (existingNotice) {
@@ -2859,9 +2859,9 @@ const updateNotice = async (req, res) => {
     await notice.update({ title, content, type, file: fileName });
 
     if (type === "classes") {
-      await NoticeClass.destroy({ where: { notice_id: id } });
+      await NoticeClass.destroy({ where: { id: id } });
       const mappings = class_ids.map((cid) => ({
-        notice_id: id,
+        id: id,
         class_id: cid,
       }));
       await NoticeClass.bulkCreate(mappings);
@@ -2876,10 +2876,7 @@ const updateNotice = async (req, res) => {
 const deleteNotice = async (req, res) => {
   try {
     const { id } = req.params;
-    const [rows] = await Notice.update(
-      { trash: true },
-      { where: { notice_id: id } }
-    );
+    const [rows] = await Notice.update({ trash: true }, { where: { id: id } });
     if (!rows) return res.status(404).json({ error: "Not found" });
     res.json({ message: "Notice soft-deleted" });
   } catch (err) {
@@ -2889,10 +2886,7 @@ const deleteNotice = async (req, res) => {
 const restoreNotice = async (req, res) => {
   try {
     const { id } = req.params;
-    const [rows] = await Notice.update(
-      { trash: false },
-      { where: { notice_id: id } }
-    );
+    const [rows] = await Notice.update({ trash: false }, { where: { id: id } });
     if (!rows) return res.status(404).json({ error: "Not found" });
     res.json({ message: "Notice restored" });
   } catch (err) {
