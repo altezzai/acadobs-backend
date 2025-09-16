@@ -3130,9 +3130,13 @@ const getSchoolAttendanceSummary = async (req, res) => {
       });
     }
     // i want add to attendanceMarkingCount
+    // res.json({
+    //   attendanceMarkingCount: attendanceMarkingCount.attendance_count,
+    //   classSummary,
+    // });
     res.json({
       attendanceMarkingCount: attendanceMarkingCount.attendance_count,
-      classSummary,
+      classSummary: Object.values(classSummary),
     });
   } catch (err) {
     console.error("Error in getSchoolAttendanceSummary:", err);
