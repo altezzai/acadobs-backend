@@ -3089,10 +3089,6 @@ const getSchoolAttendanceSummary = async (req, res) => {
       ],
     });
 
-    if (!records || records.length === 0) {
-      return res.status(404).json({ error: "No attendance found" });
-    }
-
     // Group by class_id
     const classSummary = {};
     for (const rec of records) {
@@ -3123,11 +3119,7 @@ const getSchoolAttendanceSummary = async (req, res) => {
         present: presentCount,
       });
     }
-    // i want add to attendanceMarkingCount
-    // res.json({
-    //   attendanceMarkingCount: attendanceMarkingCount.attendance_count,
-    //   classSummary,
-    // });
+
     res.json({
       attendanceMarkingCount: attendanceMarkingCount.attendance_count,
       classSummary: Object.values(classSummary),
