@@ -148,6 +148,10 @@ router.get(
   "/getAllDayTimetableForStaff",
   staffController.getAllDaysTimetableForStaff
 );
+router.get(
+  "/getSubstituteTimetableForStaff",
+  staffController.getSubstituteTimetableForStaff
+);
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);

@@ -25,6 +25,7 @@ const NoticeClass = require("./noticeclass");
 const Message = require("./messages");
 const Chat = require("./chat");
 const Timetable = require("./timetables");
+const TimetableSubstitution = require("./timetable_substitutions");
 // Relations
 
 // Associations
@@ -107,6 +108,11 @@ Timetable.belongsTo(School, { foreignKey: "school_id" });
 Timetable.belongsTo(Class, { foreignKey: "class_id" });
 Timetable.belongsTo(Subject, { foreignKey: "subject_id" });
 Timetable.belongsTo(User, { foreignKey: "staff_id" });
+Timetable.hasMany(TimetableSubstitution, { foreignKey: "timetable_id" });
+TimetableSubstitution.belongsTo(School, { foreignKey: "school_id" });
+TimetableSubstitution.belongsTo(Timetable, { foreignKey: "timetable_id" });
+TimetableSubstitution.belongsTo(User, { foreignKey: "sub_staff_id" });
+TimetableSubstitution.belongsTo(Subject, { foreignKey: "subject_id" });
 
 module.exports = {
   Homework,
@@ -122,6 +128,20 @@ module.exports = {
   Staff,
   Attendance,
   AttendanceMarked,
-  // Duty,
-  // DutyAssignment,
+  Achievement,
+  StudentAchievement,
+  Payment,
+  LeaveRequest,
+  News,
+  NewsImage,
+  Notice,
+  NoticeClass,
+  Message,
+  Chat,
+  Timetable,
+  TimetableSubstitution,
+  staffsubject,
+  Attendance,
+  Duty,
+  DutyAssignment,
 };

@@ -225,6 +225,35 @@ router.post("/timetables", schoolAdminController.bulkUpsertTimetable);
 router.get("/timetables", schoolAdminController.getAllTimetables);
 router.get("/timetables/:id", schoolAdminController.getTimetableById);
 router.delete("/timetables/:id", schoolAdminController.deleteTimetableEntry);
+router.get(
+  "/getFreeStaffForPeriod",
+  schoolAdminController.getFreeStaffForPeriod
+);
+//substitution routes
+router.post(
+  "/timetableSubstitutions",
+  schoolAdminController.createSubstitution
+);
+router.post(
+  "/bulkTimetableSubstitutions",
+  schoolAdminController.bulkCreateSubstitution
+);
+router.get(
+  "/timetableSubstitutions",
+  schoolAdminController.getAllSubstitutions
+);
+router.get(
+  "/timetableSubstitutions/:id",
+  schoolAdminController.getSubstitutionById
+);
+router.put(
+  "/timetableSubstitutions/:id",
+  schoolAdminController.updateSubstitution
+);
+router.delete(
+  "/timetableSubstitutions/:id",
+  schoolAdminController.deleteSubstitution
+);
 
 router.get(
   "/getSchoolAttendanceSummary",

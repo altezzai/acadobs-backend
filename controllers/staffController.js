@@ -22,6 +22,7 @@ const LeaveRequest = require("../models/leaverequest");
 const Notice = require("../models/notice");
 const ParentNote = require("../models/parent_note");
 const Timetable = require("../models/timetables");
+const TimetableSubstitution = require("../models/timetable_substitutions");
 
 const { Homework, HomeworkAssignment } = require("../models");
 const { getGuarduianIdbyStudentId } = require("./commonController");
@@ -2112,6 +2113,47 @@ const getAllDaysTimetableForStaff = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+//get datewise timetablesubstitute  for staff
+const getSubstituteTimetableForStaff = async (req, res) => {
+  try {
+    const staff_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const date = req.params.date || new Date().toISOString().split("T")[0];
+    let whereClause = {
+      sub_staff_id: staff_id,
+      school_id,
+      // date,
+    };
+
+    const timetable = await TimetableSubstitution.findAll({
+      where: whereClause,
+      order: [
+        ["date", "ASC"],
+        ["timetable_id", "ASC"],
+      ],
+      include: [
+        {
+          model: Timetable,
+          attributes: ["id", "day_of_week", "period_number"],
+          required: false,
+          include: [
+            {
+              model: Class,
+              attributes: ["id", "classname"],
+            },
+          ],
+        },
+        { model: Subject, attributes: ["id", "subject_name"] },
+      ],
+    });
+    return res.json({
+      timetable,
+    });
+  } catch (error) {
+    console.error("getSubstituteTimetableForStaff error:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
 
 module.exports = {
   createExamWithMarks,
@@ -2181,4 +2223,5 @@ module.exports = {
 
   getTodayTimetableForStaff,
   getAllDaysTimetableForStaff,
+  getSubstituteTimetableForStaff,
 };

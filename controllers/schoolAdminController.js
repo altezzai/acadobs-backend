@@ -27,12 +27,14 @@ const NewsImage = require("../models/newsimage");
 const Notice = require("../models/notice");
 const NoticeClass = require("../models/noticeclass");
 const Timetable = require("../models/timetables");
+const TimetableSubstitution = require("../models/timetable_substitutions");
 const Attendance = require("../models/attendance");
 const AttendanceMarked = require("../models/attendancemarked");
 
 const { schoolSequelize } = require("../config/connection");
 const { create } = require("domain");
 const { School } = require("../models");
+const { time } = require("console");
 
 // CREATE
 const createClass = async (req, res) => {
@@ -2508,6 +2510,50 @@ const getAllStudentLeaveRequests = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch leave requests" });
   }
 };
+//i want to get teachers leave request status approved
+const getApprovedStaffLeaveRequests = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+      school_id: school_id,
+      role: "staff",
+      status: "approved",
+    };
+    const { count, rows: leaveRequests } = await LeaveRequest.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone", "dp"],
+          // include: [
+          //   {
+          //     model: Timetable,
+          //     attributes: ["id", "class_id", "section_id", "subject_id"],
+          //   },
+          // ],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      leaveRequests,
+    });
+  } catch (error) {
+    console.error("Fetch All Error:", error);
+    res.status(500).json({ error: "Failed to fetch leave requests" });
+  }
+};
 const createNews = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -2967,13 +3013,13 @@ const getAllTimetables = async (req, res) => {
     if (period_number) {
       whereClause.period_number = period_number;
     }
-    if (searchQuery) {
-      whereClause[Op.or] = [
-        { class_name: { [Op.like]: `%${searchQuery}%` } },
-        { subject_name: { [Op.like]: `%${searchQuery}%` } },
-        { name: { [Op.like]: `%${searchQuery}%` } },
-      ];
-    }
+    // if (searchQuery) {
+    //   whereClause[Op.or] = [
+    //     { class_name: { [Op.like]: `%${searchQuery}%` } },
+    //     { subject_name: { [Op.like]: `%${searchQuery}%` } },
+    //     { name: { [Op.like]: `%${searchQuery}%` } },
+    //   ];
+    // }
     const { count, rows: timetable } = await Timetable.findAndCountAll({
       offset,
       distinct: true,
@@ -3056,6 +3102,335 @@ const deleteTimetableEntry = async (req, res) => {
     res.status(500).json({ error: "Failed to delete timetable entry" });
   }
 };
+const getFreeStaffForPeriod = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const now = new Date();
+    const day_of_week = req.query.day_of_week || now.getDay();
+    const period_number = req.query.period_number || 1;
+    const searchQuery = req.query.q || "";
+    const subject_id = req.query.subject_id || null;
+
+    if (!period_number) {
+      return res.status(400).json({
+        error: " period_number is required",
+      });
+    }
+    let whereClause = {
+      school_id,
+      role: "teacher",
+      trash: false,
+    };
+
+    if (searchQuery) {
+      whereClause[Op.or] = [{ name: { [Op.like]: `%${searchQuery}%` } }];
+    }
+    if (subject_id) {
+      whereClause["$Staff.StaffSubjects.subject_id$"] = subject_id;
+    }
+    // 1. Get all staff in the school
+    const allStaff = await User.findAll({
+      where: whereClause,
+      attributes: ["id", "name", "dp"],
+      include: [
+        {
+          model: Staff,
+          attributes: ["id", "class_id"],
+          include: [
+            {
+              model: StaffSubject,
+              attributes: ["subject_id"],
+              include: [{ model: Subject, attributes: ["subject_name"] }],
+            },
+          ],
+        },
+      ],
+    });
+
+    const assigned = await Timetable.findAll({
+      where: {
+        school_id,
+        day_of_week,
+        period_number,
+      },
+      attributes: ["staff_id"],
+    });
+
+    const assignedIds = assigned.map((a) => a.staff_id);
+    const freeStaff = allStaff.filter(
+      (staff) => !assignedIds.includes(staff.id)
+    );
+    return res.json({
+      school_id,
+      day_of_week,
+      period_number,
+      freeStaff,
+    });
+  } catch (error) {
+    console.error("getFreeStaffForPeriod error:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+const createSubstitution = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { timetable_id, sub_staff_id, date, subject_id, reason } = req.body;
+
+    if (!school_id || !timetable_id || !sub_staff_id || !date) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const timetable = await Timetable.findOne({
+      where: { id: timetable_id, school_id },
+    });
+    if (!timetable) {
+      return res.status(404).json({ error: "Timetable not found" });
+    }
+    // i want check the sub_staff_id is allready assigned to other class at the same period
+    const existingTimetable = await Timetable.findOne({
+      where: {
+        staff_id: sub_staff_id,
+        day_of_week: timetable.day_of_week,
+        period_number: timetable.period_number,
+        school_id,
+      },
+    });
+    if (existingTimetable) {
+      return res.status(400).json({
+        error:
+          "Substitute staff is already assigned to another class at this period",
+      });
+    }
+
+    // Check for existing substitution
+    const existingSub = await TimetableSubstitution.findOne({
+      where: {
+        school_id,
+        timetable_id,
+        date,
+      },
+    });
+    if (existingSub) {
+      return res.status(400).json({
+        error: "Substitution already exists for this date and timetableId",
+      });
+    }
+
+    const substitution = await TimetableSubstitution.create({
+      school_id,
+      timetable_id,
+      sub_staff_id,
+      date,
+      subject_id,
+      reason,
+    });
+
+    res.status(201).json(substitution);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const bulkCreateSubstitution = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { substitutions } = req.body;
+
+    if (
+      !school_id ||
+      !Array.isArray(substitutions) ||
+      substitutions.length === 0
+    ) {
+      return res.status(400).json({
+        error: "Missing required fields or empty substitutions array",
+      });
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (const sub of substitutions) {
+      const { timetable_id, sub_staff_id, date, subject_id, reason } = sub;
+
+      if (!timetable_id || !sub_staff_id || !date) {
+        errors.push({ sub, error: "Missing required fields" });
+        continue;
+      }
+
+      const timetable = await Timetable.findOne({
+        where: { id: timetable_id, school_id },
+      });
+      if (!timetable) {
+        errors.push({ sub, error: "Timetable not found" });
+        continue;
+      }
+
+      // Check if substitute is already assigned in same period
+      const existingTimetable = await Timetable.findOne({
+        where: {
+          staff_id: sub_staff_id,
+          day_of_week: timetable.day_of_week,
+          period_number: timetable.period_number,
+          school_id,
+        },
+      });
+      if (existingTimetable) {
+        errors.push({
+          sub,
+          error:
+            "Substitute staff is already assigned to another class at this period",
+        });
+        continue;
+      }
+
+      // Check if substitution already exists
+      const existingSub = await TimetableSubstitution.findOne({
+        where: {
+          school_id,
+          timetable_id,
+          date,
+        },
+      });
+      if (existingSub) {
+        errors.push({
+          sub,
+          error: "Substitution already exists for this date and timetableId",
+        });
+        continue;
+      }
+
+      results.push({
+        school_id,
+        timetable_id,
+        sub_staff_id,
+        date,
+        subject_id,
+        reason,
+      });
+    }
+
+    let createdSubs = [];
+    if (results.length > 0) {
+      createdSubs = await TimetableSubstitution.bulkCreate(results);
+    }
+
+    res.status(201).json({
+      success: true,
+      created: createdSubs,
+      failed: errors,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getAllSubstitutions = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const date = req.query;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const whereClause = {
+      school_id,
+    };
+    if (date) {
+      whereClause.date = date;
+    }
+
+    const { count, rows: subs } = await TimetableSubstitution.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: Timetable,
+          attributes: ["id", "day_of_week", "period_number"],
+          required: false,
+          include: [
+            {
+              model: Class,
+              attributes: ["id", "classname"],
+            },
+          ],
+        },
+        { model: User, attributes: ["id", "name"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+      ],
+      offset,
+      limit,
+      order: [["createdAt", "DESC"]],
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: subs.count,
+      totalPages,
+      currentPage: page,
+      subs: subs,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getSubstitutionById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const substitution = await TimetableSubstitution.findOne({
+      where: { id },
+      include: [
+        {
+          model: Timetable,
+          attributes: ["id", "day_of_week", "period_number"],
+          required: false,
+          include: [
+            {
+              model: Class,
+              attributes: ["id", "classname"],
+            },
+          ],
+        },
+        { model: User, attributes: ["id", "name"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+      ],
+    });
+    if (!substitution) {
+      return res.status(404).json({ error: "Substitution not found" });
+    }
+    res.json(substitution);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const updateSubstitution = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { sub_staff_id, subject_id, reason } = req.body;
+    if (!id || !sub_staff_id || !subject_id) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const updated = await TimetableSubstitution.update(
+      { sub_staff_id, subject_id, reason },
+      {
+        where: { id },
+      }
+    );
+    res.json({ message: "Substitution updated", updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+    console.log(err);
+  }
+};
+
+const deleteSubstitution = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await TimetableSubstitution.destroy({ where: { id } });
+    res.json({ message: "Substitution deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 const getSchoolAttendanceSummary = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -3129,6 +3504,7 @@ const getSchoolAttendanceSummary = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 module.exports = {
   createClass,
   getAllClasses,
@@ -3227,6 +3603,14 @@ module.exports = {
   getAllTimetables,
   getTimetableById,
   deleteTimetableEntry,
+  getFreeStaffForPeriod,
+
+  createSubstitution,
+  bulkCreateSubstitution,
+  getAllSubstitutions,
+  getSubstitutionById,
+  updateSubstitution,
+  deleteSubstitution,
 
   getSchoolAttendanceSummary,
 };
