@@ -569,6 +569,7 @@ const getTodayTimetableByStudentId = async (req, res) => {
         school_id,
         day_of_week: today,
       },
+
       order: [["period_number", "ASC"]],
       include: [
         { model: User, attributes: ["id", "name"] },
@@ -601,6 +602,14 @@ const getAllDayTimetableByStudentId = async (req, res) => {
         class_id,
         school_id,
       },
+      attributes: [
+        "id",
+        "day_of_week",
+        "period_number",
+        "subject_id",
+        "staff_id",
+        "createdAt",
+      ],
       order: [
         ["day_of_week", "ASC"],
         ["period_number", "ASC"],
@@ -611,8 +620,20 @@ const getAllDayTimetableByStudentId = async (req, res) => {
         { model: Class, attributes: ["id", "classname"] }, // optional
       ],
     });
+    const grouped = timetable.reduce((acc, entry) => {
+      const day = entry.day_of_week;
+      if (!acc[day]) {
+        acc[day] = [];
+      }
+      acc[day].push(entry);
+      return acc;
+    }, {});
+
     return res.json({
-      timetable,
+      student_id,
+      class_id,
+      school_id,
+      timetable: grouped,
     });
   } catch (error) {
     console.error("getAllDayTimetableByStudentId error:", error);
