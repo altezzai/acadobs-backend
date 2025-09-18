@@ -195,7 +195,7 @@ const getMessages = async (io, socket, data) => {
 
           case "parent_notes":
             typeDetails = await ParentNote.findByPk(msg.type_id, {
-              attributes: ["id", "note_title", "note_description", "createdAt"],
+              attributes: ["id", "note_title", "note_content", "createdAt"],
               raw: true,
             });
             break;
