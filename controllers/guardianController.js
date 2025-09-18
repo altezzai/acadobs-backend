@@ -629,11 +629,17 @@ const getAllDayTimetableByStudentId = async (req, res) => {
       return acc;
     }, {});
 
+    // Convert grouped object to array with "day_of_week" key
+    const formatted = Object.keys(grouped).map((day) => ({
+      day_of_week: parseInt(day),
+      periods: grouped[day],
+    }));
+
     return res.json({
       student_id,
       class_id,
       school_id,
-      timetable: grouped,
+      timetable: formatted,
     });
   } catch (error) {
     console.error("getAllDayTimetableByStudentId error:", error);
