@@ -571,6 +571,7 @@ const getTodayTimetableByStudentId = async (req, res) => {
       },
       order: [["period_number", "ASC"]],
       include: [
+        { model: User, attributes: ["id", "name"] },
         { model: Subject, attributes: ["id", "subject_name"] }, // optional
         { model: Class, attributes: ["id", "classname"] }, // optional
       ],
@@ -605,6 +606,7 @@ const getAllDayTimetableByStudentId = async (req, res) => {
         ["period_number", "ASC"],
       ],
       include: [
+        { model: User, attributes: ["id", "name"] },
         { model: Subject, attributes: ["id", "subject_name"] }, // optional
         { model: Class, attributes: ["id", "classname"] }, // optional
       ],
