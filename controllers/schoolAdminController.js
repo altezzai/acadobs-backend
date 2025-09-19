@@ -1040,6 +1040,175 @@ const createStudent = async (req, res) => {
     res.status(500).json({ error: "Failed to create student" });
   }
 };
+const bulkCreateStudents = async (req, res) => {
+  const transaction = await schoolSequelize.transaction();
+  try {
+    const school_id = req.user.school_id;
+    const studentsData = req.body.students; // expect array
+    if (!Array.isArray(studentsData) || studentsData.length === 0) {
+      return res.status(400).json({ error: "No students provided" });
+    }
+
+    const createdStudents = [];
+
+    for (const studentObj of studentsData) {
+      const {
+        reg_no,
+        roll_number,
+        full_name,
+        date_of_birth,
+        gender,
+        class_id,
+        address,
+        admission_date,
+        status,
+
+        // guardian
+        guardian_email,
+        guardian_name,
+        guardian_contact,
+        guardian_relation,
+        guardian_job,
+        guardian2_name,
+        guardian2_relation,
+        guardian2_contact,
+        guardian2_job,
+        father_name,
+        mother_name,
+      } = studentObj;
+
+      if (
+        !guardian_email ||
+        !full_name ||
+        !reg_no ||
+        !class_id ||
+        !roll_number
+      ) {
+        throw new Error("Required fields missing for student: " + full_name);
+      }
+
+      // ✅ Check duplicate roll_number in same class
+      const existingRoll = await Student.findOne({
+        where: { roll_number, school_id, class_id, trash: false },
+        transaction,
+      });
+      if (existingRoll) {
+        throw new Error(
+          `Roll number ${roll_number} already exists for class ${class_id}`
+        );
+      }
+
+      // ✅ Check duplicate reg_no
+      const existingReg = await Student.findOne({
+        where: { reg_no },
+        transaction,
+      });
+      if (existingReg) {
+        throw new Error(`Reg No ${reg_no} already exists`);
+      }
+
+      // ✅ Guardian handling
+      let guardianUserId;
+      const existingUser = await User.findOne({
+        where: { email: guardian_email },
+        transaction,
+      });
+
+      if (existingUser) {
+        const existingGuardian = await Guardian.findOne({
+          where: { user_id: existingUser.id },
+          transaction,
+        });
+        if (!existingGuardian) {
+          throw new Error(
+            `Guardian user exists but no guardian record found for email ${guardian_email}`
+          );
+        }
+        guardianUserId = existingGuardian.user_id;
+      } else {
+        if (guardian_contact) {
+          const existingPhone = await User.findOne({
+            where: { phone: guardian_contact },
+            transaction,
+          });
+          if (existingPhone) {
+            throw new Error(
+              `Guardian phone number ${guardian_contact} already exists`
+            );
+          }
+        }
+
+        if (!guardian_name || !guardian_contact || !guardian_relation) {
+          throw new Error(
+            `Required guardian fields missing for student: ${full_name}`
+          );
+        }
+
+        const guardianData = {
+          guardian_email,
+          guardian_name,
+          guardian_contact,
+          guardian_relation,
+          guardian_job,
+          guardian2_name,
+          guardian2_relation,
+          guardian2_contact,
+          guardian2_job,
+          father_name,
+          mother_name,
+          school_id,
+        };
+
+        // Guardian dp upload (if any) -> expect req.files keyed by something like `dp_${index}`
+        const guardianDpFile = req.files?.[`dp_${roll_number}`]?.[0];
+
+        const newGuardianId = await createGuardianService(
+          guardianData,
+          guardianDpFile,
+          transaction
+        );
+        guardianUserId = newGuardianId;
+      }
+
+      // ✅ Student image upload
+      // let fileName = null;
+      // const studentImageFile = req.files?.[`student_${roll_number}`]?.[0];
+      // if (studentImageFile) {
+      //   const uploadPath = "uploads/students_images/";
+      //   fileName = await compressAndSaveFile(studentImageFile, uploadPath);
+      // }
+
+      createdStudents.push({
+        school_id,
+        guardian_id: guardianUserId,
+        reg_no,
+        roll_number,
+        full_name,
+        date_of_birth,
+        gender,
+        class_id,
+        admission_date,
+        address,
+        status,
+        // image: fileName,
+      });
+    }
+
+    // ✅ Bulk insert all students in one go
+    const inserted = await Student.bulkCreate(createdStudents, { transaction });
+
+    await transaction.commit();
+    return res.status(201).json({
+      success: true,
+      count: inserted.length,
+      students: inserted,
+    });
+  } catch (err) {
+    await transaction.rollback();
+    console.error("Error bulk creating students:", err);
+    return res.status(500).json({ error: err.message });
+  }
+};
 const getAllStudents = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -3535,6 +3704,7 @@ module.exports = {
   deleteGuardian,
 
   createStudent,
+  bulkCreateStudents,
   getAllStudents,
   getStudentById,
   updateStudent,

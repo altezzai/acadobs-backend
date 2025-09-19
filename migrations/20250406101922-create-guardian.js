@@ -27,6 +27,7 @@ module.exports = {
           "other"
         ),
         allowNull: false,
+        defaultValue: "father",
       },
       guardian_name: Sequelize.STRING,
       guardian_contact: Sequelize.STRING,
@@ -35,16 +36,19 @@ module.exports = {
         unique: true,
       },
       guardian_job: Sequelize.STRING,
-      guardian2_relation: Sequelize.ENUM(
-        "father",
-        "mother",
-        "grandfather",
-        "grandmother",
-        "uncle",
-        "aunty",
-        "local_guardian",
-        "other"
-      ),
+      guardian2_relation: {
+        type: Sequelize.ENUM(
+          "father",
+          "mother",
+          "grandfather",
+          "grandmother",
+          "uncle",
+          "aunty",
+          "local_guardian",
+          "other"
+        ),
+        defaultValue: "mother",
+      },
       guardian2_name: Sequelize.STRING,
       guardian2_job: Sequelize.STRING,
       guardian2_contact: Sequelize.STRING,

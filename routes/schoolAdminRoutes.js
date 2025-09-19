@@ -73,6 +73,7 @@ router.post(
   ]),
   schoolAdminController.createStudent
 );
+router.post("/bulkCreateStudents", schoolAdminController.bulkCreateStudents);
 router.get("/students", schoolAdminController.getAllStudents);
 router.get("/students/:id", schoolAdminController.getStudentById);
 router.put(

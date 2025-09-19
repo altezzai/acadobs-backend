@@ -25,6 +25,7 @@ const Guardian = schoolSequelize.define(
         "other"
       ),
       allowNull: false,
+      defaultValue: "father",
     },
     guardian_name: {
       type: DataTypes.STRING,
@@ -53,6 +54,7 @@ const Guardian = schoolSequelize.define(
         "local_guardian",
         "other"
       ),
+      defaultValue: "mother",
     },
     guardian2_name: {
       type: DataTypes.STRING,
