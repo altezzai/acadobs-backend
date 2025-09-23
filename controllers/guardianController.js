@@ -1,7 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const bcrypt = require("bcrypt");
-const { Op } = require("sequelize");
+const { Op, where } = require("sequelize");
 const {
   compressAndSaveFile,
   deletefilewithfoldername,
@@ -21,6 +21,7 @@ const Subject = require("../models/subject");
 const Timetable = require("../models/timetables");
 const Invoice = require("../models/invoice");
 const InvoiceStudent = require("../models/invoice-students");
+const TimetableSubstitution = require("../models/timetable_substitutions");
 
 const { getschoolIdByStudentId } = require("../controllers/commonController");
 
@@ -554,13 +555,14 @@ const getTodayTimetableByStudentId = async (req, res) => {
     const class_id = student.class_id;
     const school_id = student.school_id;
 
-    const now = new Date();
-    let today = now.getDay();
+    let date = new Date();
+    let today = date.getDay();
     let message = "today's timetable";
 
     // If time >= 19:00 (7PM), shift to tomorrow
-    if (now.getHours() >= 19) {
+    if (date.getHours() >= 19) {
       today = (today + 1) % 7;
+      date.setDate(date.getDate() + 1); // Move to next day
       message = "tomorrow's timetable";
     }
 
@@ -578,11 +580,32 @@ const getTodayTimetableByStudentId = async (req, res) => {
         { model: Class, attributes: ["id", "classname"] }, // optional
       ],
     });
+    //the class id used TimetableSubstitution get the substitutions for today
+    const substitutions = await TimetableSubstitution.findAll({
+      where: { date },
+      include: [
+        {
+          model: Timetable,
+          where: { class_id: class_id },
+          attributes: ["id", "day_of_week", "class_id", "period_number"],
+          required: true,
+        },
+        {
+          model: User,
+          attributes: ["id", "name"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name"],
+        },
+      ],
+    });
 
     return res.json({
+      message: `Here is ${message}`,
       today,
       timetable,
-      message: `Here is ${message}`,
+      substitutions,
     });
   } catch (error) {
     console.error("getTodayTimetableForStaff error:", error);

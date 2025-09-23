@@ -2054,19 +2054,21 @@ const getLatestNotices = async (req, res) => {
 };
 const getTodayTimetableForStaff = async (req, res) => {
   try {
+    const school_id = req.user.school_id;
     const staff_id = req.user.user_id;
-    const now = new Date();
-    let today = now.getDay();
+    let date = new Date();
+    let today = date.getDay();
     let message = "today's timetable";
 
     // If time >= 19:00 (7PM), shift to tomorrow
-    if (now.getHours() >= 19) {
+    if (date.getHours() >= 19) {
       today = (today + 1) % 7;
+      date.setDate(date.getDate() + 1); // Move to next day
       message = "tomorrow's timetable";
     }
-
     const timetable = await Timetable.findAll({
       where: {
+        school_id,
         staff_id,
         day_of_week: today,
       },
@@ -2077,10 +2079,37 @@ const getTodayTimetableForStaff = async (req, res) => {
       ],
     });
 
+    const substitutions = await TimetableSubstitution.findAll({
+      where: {
+        sub_staff_id: staff_id,
+        school_id,
+        date,
+      },
+      order: [
+        ["date", "ASC"],
+        ["timetable_id", "ASC"],
+      ],
+      include: [
+        {
+          model: Timetable,
+          attributes: ["id", "day_of_week", "period_number"],
+          required: false,
+          include: [
+            {
+              model: Class,
+              attributes: ["id", "classname"],
+            },
+          ],
+        },
+        { model: Subject, attributes: ["id", "subject_name"] },
+      ],
+    });
+
     return res.json({
+      message: `Here is ${message}`,
       today,
       timetable,
-      message: `Here is ${message}`,
+      substitutions,
     });
   } catch (error) {
     console.error("getTodayTimetableForStaff error:", error);
@@ -2115,46 +2144,46 @@ const getAllDaysTimetableForStaff = async (req, res) => {
   }
 };
 //get datewise timetablesubstitute  for staff
-const getSubstituteTimetableForStaff = async (req, res) => {
-  try {
-    const staff_id = req.user.user_id;
-    const school_id = req.user.school_id;
-    const date = req.params.date || new Date().toISOString().split("T")[0];
-    let whereClause = {
-      sub_staff_id: staff_id,
-      school_id,
-      // date,
-    };
+// const getSubstituteTimetableForStaff = async (req, res) => {
+//   try {
+//     const staff_id = req.user.user_id;
+//     const school_id = req.user.school_id;
+//     const date = req.params.date || new Date().toISOString().split("T")[0];
+//     let whereClause = {
+//       sub_staff_id: staff_id,
+//       school_id,
+//       // date,
+//     };
 
-    const timetable = await TimetableSubstitution.findAll({
-      where: whereClause,
-      order: [
-        ["date", "ASC"],
-        ["timetable_id", "ASC"],
-      ],
-      include: [
-        {
-          model: Timetable,
-          attributes: ["id", "day_of_week", "period_number"],
-          required: false,
-          include: [
-            {
-              model: Class,
-              attributes: ["id", "classname"],
-            },
-          ],
-        },
-        { model: Subject, attributes: ["id", "subject_name"] },
-      ],
-    });
-    return res.json({
-      timetable,
-    });
-  } catch (error) {
-    console.error("getSubstituteTimetableForStaff error:", error);
-    return res.status(500).json({ error: error.message });
-  }
-};
+//     const timetable = await TimetableSubstitution.findAll({
+//       where: whereClause,
+//       order: [
+//         ["date", "ASC"],
+//         ["timetable_id", "ASC"],
+//       ],
+//       include: [
+//         {
+//           model: Timetable,
+//           attributes: ["id", "day_of_week", "period_number"],
+//           required: false,
+//           include: [
+//             {
+//               model: Class,
+//               attributes: ["id", "classname"],
+//             },
+//           ],
+//         },
+//         { model: Subject, attributes: ["id", "subject_name"] },
+//       ],
+//     });
+//     return res.json({
+//       timetable,
+//     });
+//   } catch (error) {
+//     console.error("getSubstituteTimetableForStaff error:", error);
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
 
 module.exports = {
   createExamWithMarks,
@@ -2224,5 +2253,5 @@ module.exports = {
 
   getTodayTimetableForStaff,
   getAllDaysTimetableForStaff,
-  getSubstituteTimetableForStaff,
+  // getSubstituteTimetableForStaff,
 };
