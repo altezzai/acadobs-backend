@@ -6,6 +6,7 @@ const {
   compressAndSaveFile,
   deletefilewithfoldername,
 } = require("../utils/fileHandler");
+const { Class } = require("../models");
 const HomeworkAssignment = require("../models/homeworkassignment");
 const Student = require("../models/student");
 const School = require("../models/school");
@@ -14,13 +15,12 @@ const Payment = require("../models/payment");
 const LeaveRequest = require("../models/leaverequest");
 const Notice = require("../models/notice");
 const NoticeClass = require("../models/noticeclass");
-const News = require("../models/news");
-const Event = require("../models/event");
 const Staff = require("../models/staff");
 const Staffsubject = require("../models/staffsubject");
 const Subject = require("../models/subject");
 const Timetable = require("../models/timetables");
-const { Class } = require("../models");
+const Invoice = require("../models/invoice");
+const InvoiceStudent = require("../models/invoice-students");
 
 const { getschoolIdByStudentId } = require("../controllers/commonController");
 
@@ -148,6 +148,19 @@ const getPaymentByStudentId = async (req, res) => {
       distinct: true, // Add this line
       limit,
       where: whereClause,
+      include: [
+        {
+          model: InvoiceStudent,
+          attributes: ["invoice_id"],
+          required: false,
+          include: [
+            {
+              model: Invoice,
+              attributes: ["title", "category", "due_date", "amount"],
+            },
+          ],
+        },
+      ],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -158,6 +171,49 @@ const getPaymentByStudentId = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+const getInvoiceByStudentId = async (req, res) => {
+  try {
+    const { student_id } = req.params;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    if (!student_id) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const whereClause = { trash: false };
+
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { amount: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+
+    const { rows: invoices, count } = await InvoiceStudent.findAndCountAll({
+      offset,
+      limit,
+      distinct: true,
+      where: { student_id: student_id },
+      include: [
+        {
+          model: Invoice,
+          where: whereClause,
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      invoices,
+    });
+  } catch (error) {
+    console.error("Error fetching invoices:", error);
+    res.status(500).json({ error: "Failed to fetch invoices" });
   }
 };
 const createLeaveRequest = async (req, res) => {
@@ -418,62 +474,7 @@ const getSchoolsByUser = async (req, res) => {
     return null;
   }
 };
-// const getLatestEvents = async (req, res) => {
-//   try {
-//     const school_id = req.query.school_id;
-//     if (!school_id) {
-//       return res.status(400).json({ error: "Missing required fields" });
-//     }
-//     const page = parseInt(req.query.page) || 1;
-//     const limit = parseInt(req.query.limit) || 3;
-//     const offset = (page - 1) * limit;
-//     const { count, rows: events } = await Event.findAndCountAll({
-//       where: { school_id: school_id },
-//       order: [["createdAt", "DESC"]],
-//       limit: limit,
-//       offset,
-//       distinct: true,
-//     });
-//     const totalPages = Math.ceil(count / limit);
-//     res.status(200).json({
-//       totalcontent: count,
-//       totalPages,
-//       currentPage: page,
-//       events,
-//     });
-//   } catch (error) {
-//     console.error("Error fetching events:", error);
-//     res.status(500).json({ error: "Failed to fetch events" });
-//   }
-// };
-// const getLatestNews = async (req, res) => {
-//   try {
-//     const school_id = req.query.school_id;
-//     if (!school_id) {
-//       return res.status(400).json({ error: "Missing required fields" });
-//     }
-//     const page = parseInt(req.query.page) || 1;
-//     const limit = parseInt(req.query.limit) || 3;
-//     const offset = (page - 1) * limit;
-//     const { count, rows: news } = await News.findAndCountAll({
-//       where: { school_id: school_id },
-//       order: [["createdAt", "DESC"]],
-//       limit: limit,
-//       offset,
-//       distinct: true,
-//     });
-//     const totalPages = Math.ceil(count / limit);
-//     res.status(200).json({
-//       totalcontent: count,
-//       totalPages,
-//       currentPage: page,
-//       news,
-//     });
-//   } catch (error) {
-//     console.error("Error fetching news:", error);
-//     res.status(500).json({ error: "Failed to fetch news" });
-//   }
-// };
+
 const getStaffsBySchoolId = async (req, res) => {
   try {
     const school_id = req.params.school_id;
@@ -654,6 +655,7 @@ module.exports = {
 
   getNoticeByStudentId,
   getPaymentByStudentId,
+  getInvoiceByStudentId,
 
   createLeaveRequest,
   getAllLeaveRequests,
@@ -663,10 +665,6 @@ module.exports = {
 
   getStudentsUnderGuardianBySchoolId,
   getSchoolsByUser,
-
-  // getLatestEvents,
-  // getLatestNews,
-
   getStaffsBySchoolId,
 
   getTodayTimetableByStudentId,

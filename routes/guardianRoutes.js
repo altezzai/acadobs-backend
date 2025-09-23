@@ -17,6 +17,10 @@ router.get(
   "/getPaymentByStudentId/:student_id",
   guardianController.getPaymentByStudentId
 );
+router.get(
+  "/getInvoiceByStudentId/:student_id",
+  guardianController.getInvoiceByStudentId
+);
 
 router.post(
   "/leaveRequest",

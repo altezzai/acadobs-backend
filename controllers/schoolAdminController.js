@@ -30,6 +30,8 @@ const Timetable = require("../models/timetables");
 const TimetableSubstitution = require("../models/timetable_substitutions");
 const Attendance = require("../models/attendance");
 const AttendanceMarked = require("../models/attendancemarked");
+const Invoice = require("../models/invoice");
+const InvoiceStudent = require("../models/invoice-students");
 
 const { schoolSequelize } = require("../config/connection");
 const { create } = require("domain");
@@ -2109,6 +2111,7 @@ const createPayment = async (req, res) => {
     const school_id = req.user.school_id;
     const {
       student_id,
+      invoice_student_id,
       amount,
       payment_date,
       payment_type,
@@ -2150,6 +2153,7 @@ const createPayment = async (req, res) => {
     const payment = await Payment.create({
       school_id,
       student_id,
+      invoice_student_id,
       amount,
       payment_date,
       payment_type,
@@ -2158,7 +2162,39 @@ const createPayment = async (req, res) => {
       payment_status,
       recorded_by: req.user.user_id,
     });
-    res.status(201).json(payment);
+    let invoice_status = "";
+    if (payment_status === "completed" && invoice_student_id) {
+      const invoiceStudent = await InvoiceStudent.findOne({
+        where: { id: invoice_student_id },
+        include: [{ model: Invoice, attributes: ["id", "amount"] }],
+      });
+      //the same invoice_student_id used payemnt amount also get and check
+      let totalPaid = 0;
+      if (invoice_student_id) {
+        totalPaid = await Payment.sum("amount", {
+          where: {
+            invoice_student_id: invoice_student_id,
+            payment_status: "completed",
+          },
+        });
+      }
+      const invoiceAmount = invoiceStudent?.Invoice?.amount || 0;
+
+      if (invoiceStudent && totalPaid >= invoiceAmount) {
+        await invoiceStudent.update({ status: "paid" });
+        invoice_status = "paid";
+      } else {
+        await invoiceStudent.update({ status: "partially_paid" });
+        invoice_status = "partially_paid";
+      }
+    }
+    res
+      .status(201)
+      .json({
+        message: "Payment created",
+        payment,
+        "invoice status": invoice_status,
+      });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2301,6 +2337,201 @@ const restorePayment = async (req, res) => {
   try {
     await Payment.update({ trash: false }, { where: { id: req.params.id } });
     res.status(200).json({ message: "Payment restored successfully" });
+  } catch (err) {
+    exi;
+    res.status(500).json({ error: err.message });
+  }
+};
+const createInvoice = async (req, res) => {
+  try {
+    const { title, description, amount, due_date, category, student_ids } =
+      req.body;
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+
+    if (!title || !amount || !category || !due_date) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const existingInvoice = await Invoice.findOne({
+      where: { school_id, title, category, due_date },
+    });
+    if (existingInvoice) {
+      return res.status(400).json({
+        error:
+          "An invoice with the same title, due date and category already exists",
+      });
+    }
+    const invoice = await Invoice.create({
+      school_id,
+      title,
+      description,
+      amount,
+      due_date,
+      category,
+      recorded_by,
+    });
+
+    if (Array.isArray(student_ids) && student_ids.length > 0) {
+      const invoiceStudents = student_ids.map((sid) => ({
+        invoice_id: invoice.id,
+        student_id: sid,
+        status: "pending",
+      }));
+      await InvoiceStudent.bulkCreate(invoiceStudents);
+    }
+
+    res.status(201).json(invoice);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const addInvoiceStudentsbyInvoiceId = async (req, res) => {
+  try {
+    const { id } = req.params; // invoice_id
+    const {
+      student_ids, // array of student_ids to attach
+    } = req.body;
+
+    const invoice = await Invoice.findByPk(id);
+    if (!invoice) {
+      return res.status(404).json({ error: "Invoice not found" });
+    }
+    if (student_ids && Array.isArray(student_ids)) {
+      const invoiceStudents = student_ids.map((student_id) => ({
+        invoice_id: id,
+        student_id,
+        status: "pending",
+      }));
+
+      await InvoiceStudent.bulkCreate(invoiceStudents);
+    }
+
+    res
+      .status(200)
+      .json({ success: true, message: "Invoice updated successfully" });
+  } catch (error) {
+    console.error("Error updating invoice:", error);
+    res.status(500).json({ error: "Failed to update invoice" });
+  }
+};
+const getAllInvoices = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const date = req.query.date || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+      school_id: school_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if (date) {
+      whereClause.due_date = date;
+    }
+    const { count, rows: invoices } = await Invoice.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+    });
+    const totalPages = Math.ceil(count / limit);
+
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      invoices,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getInvoiceById = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const invoice = await Invoice.findOne({
+      where: { id: req.params.id, school_id, trash: false },
+      include: [
+        {
+          model: InvoiceStudent,
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "reg_no"],
+              include: [
+                {
+                  model: Class,
+                  attributes: ["id", "classname", "year", "division"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    if (!invoice) return res.status(404).json({ error: "Invoice not found" });
+    res.status(200).json(invoice);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const updateInvoice = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, amount, due_date, category } = req.body;
+    const school_id = req.user.school_id;
+    const invoice = await Invoice.findOne({
+      where: { id, school_id, trash: false },
+    });
+    if (!invoice) return res.status(404).json({ error: "Invoice not found" });
+    await invoice.update({
+      title,
+      description,
+      amount,
+      due_date,
+      category,
+    });
+    res.status(200).json({ message: "Invoice updated", invoice });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const deleteInvoice = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    await Invoice.update(
+      { trash: true },
+      { where: { id: req.params.id, school_id } }
+    );
+    res.status(200).json({ message: "Invoice soft deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const restoreInvoice = async (req, res) => {
+  try {
+    await Invoice.update({ trash: false }, { where: { id: req.params.id } });
+    res.status(200).json({ message: "Invoice restored" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const permanentDeleteInvoiceStudent = async (req, res) => {
+  try {
+    const { id } = req.params; // invoice_student_id
+    const invoiceStudent = await InvoiceStudent.findByPk(id);
+    if (!invoiceStudent) {
+      return res.status(404).json({ error: "Not found" });
+    }
+    await invoiceStudent.destroy();
+    res.status(200).json({ message: "Invoice student deleted" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -3742,6 +3973,15 @@ module.exports = {
   updatePayment,
   deletePayment,
   restorePayment,
+
+  createInvoice,
+  addInvoiceStudentsbyInvoiceId,
+  getAllInvoices,
+  getInvoiceById,
+  updateInvoice,
+  deleteInvoice,
+  restoreInvoice,
+  permanentDeleteInvoiceStudent,
 
   createLeaveRequest,
   getAllLeaveRequests,

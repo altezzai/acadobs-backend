@@ -17,6 +17,8 @@ const DutyAssignment = require("./dutyassignment");
 const Achievement = require("./achievement");
 const StudentAchievement = require("./studentachievement");
 const Payment = require("./payment");
+const Invoice = require("./invoice");
+const InvoiceStudent = require("./invoice-students");
 const LeaveRequest = require("./leaverequest");
 const News = require("./news");
 const NewsImage = require("./newsimage");
@@ -26,6 +28,7 @@ const Message = require("./messages");
 const Chat = require("./chat");
 const Timetable = require("./timetables");
 const TimetableSubstitution = require("./timetable_substitutions");
+
 // Relations
 
 // Associations
@@ -82,6 +85,12 @@ Mark.belongsTo(Student, { foreignKey: "student_id" });
 
 Payment.belongsTo(School, { foreignKey: "school_id" });
 Payment.belongsTo(Student, { foreignKey: "student_id" });
+Payment.belongsTo(InvoiceStudent, { foreignKey: "invoice_student_id" });
+
+Invoice.belongsTo(School, { foreignKey: "school_id" });
+Invoice.hasMany(InvoiceStudent, { foreignKey: "invoice_id" });
+InvoiceStudent.belongsTo(Invoice, { foreignKey: "invoice_id" });
+InvoiceStudent.belongsTo(Student, { foreignKey: "student_id" });
 
 LeaveRequest.belongsTo(School, { foreignKey: "school_id" });
 LeaveRequest.belongsTo(User, { foreignKey: "user_id" });

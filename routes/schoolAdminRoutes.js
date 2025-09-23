@@ -153,6 +153,21 @@ router.get("/payments/:id", schoolAdminController.getPaymentById);
 router.put("/payments/:id", schoolAdminController.updatePayment);
 router.delete("/payments/:id", schoolAdminController.deletePayment);
 router.patch("/payments/:id", schoolAdminController.restorePayment);
+//invoice
+router.post("/invoices", schoolAdminController.createInvoice);
+router.post(
+  "/addInvoiceStudentsbyInvoiceId/:id",
+  schoolAdminController.addInvoiceStudentsbyInvoiceId
+);
+router.get("/invoices", schoolAdminController.getAllInvoices);
+router.get("/invoices/:id", schoolAdminController.getInvoiceById);
+router.put("/invoices/:id", schoolAdminController.updateInvoice);
+router.delete("/invoices/:id", schoolAdminController.deleteInvoice);
+router.patch("/invoices/:id", schoolAdminController.restoreInvoice);
+router.delete(
+  "/permanentDeleteInvoiceStudent/:id",
+  schoolAdminController.permanentDeleteInvoiceStudent
+);
 
 //leave request
 router.post(
