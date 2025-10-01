@@ -31,12 +31,12 @@ const TimetableSubstitution = require("../models/timetable_substitutions");
 const Attendance = require("../models/attendance");
 const AttendanceMarked = require("../models/attendancemarked");
 const Invoice = require("../models/invoice");
-const InvoiceStudent = require("../models/invoice-students");
-
-const { schoolSequelize } = require("../config/connection");
-const { create } = require("domain");
+const InvoiceStudent = require("../models/invoice_students");
 const { School } = require("../models");
-const { time } = require("console");
+const { schoolSequelize } = require("../config/connection");
+
+// const { create } = require("domain");
+// const { time } = require("console");
 
 // CREATE
 const createClass = async (req, res) => {
@@ -94,6 +94,7 @@ const getAllClasses = async (req, res) => {
         classname: { [Op.like]: `%${searchQuery}%` },
         year: { [Op.like]: `%${year}%` },
         division: { [Op.like]: `%${division}%` },
+        school_id: req.user.school_id,
         trash: false,
       },
     });
@@ -113,7 +114,12 @@ const getAllClasses = async (req, res) => {
 const getClassById = async (req, res) => {
   try {
     const id = req.params.id;
-    const classData = await Class.findByPk(id);
+    const classData = await Class.findOne({
+      where: {
+        id,
+        school_id: req.user.school_id,
+      },
+    });
     if (!classData) return res.status(404).json({ message: "Class not found" });
     res.status(200).json(classData);
   } catch (err) {
@@ -127,6 +133,7 @@ const getClassesByYear = async (req, res) => {
     const classData = await Class.findAll({
       where: {
         year: year,
+        school_id: req.user.school_id,
       },
       attributes: ["id", "division", "classname"],
     });
@@ -145,7 +152,7 @@ const updateClass = async (req, res) => {
     const { year, division, classname } = req.body;
     const updated = await Class.update(
       { year, division, classname },
-      { where: { id } }
+      { where: { id, school_id: req.user.school_id } }
     );
     res.status(200).json({ message: "Class updated", updated });
   } catch (err) {
@@ -2188,13 +2195,11 @@ const createPayment = async (req, res) => {
         invoice_status = "partially_paid";
       }
     }
-    res
-      .status(201)
-      .json({
-        message: "Payment created",
-        payment,
-        "invoice status": invoice_status,
-      });
+    res.status(201).json({
+      message: "Payment created",
+      payment,
+      "invoice status": invoice_status,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

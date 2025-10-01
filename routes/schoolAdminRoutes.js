@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const schoolAdminController = require("../controllers/schoolAdminController");
 const commonController = require("../controllers/commonController");
+const reportController = require("../controllers/reportController");
+
 const { upload, nUpload } = require("../middlewares/upload");
 const multer = require("multer");
 
@@ -306,5 +308,7 @@ router.get(
   "/getLeaveRequestByStudentId/:student_id",
   commonController.getLeaveRequestByStudentId
 );
-
+//REPORTS
+router.get("/invoiceReport", reportController.getInvoiceReport);
+router.get("/paymentReport", reportController.getPaymentReport);
 module.exports = router;

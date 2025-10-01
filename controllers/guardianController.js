@@ -20,7 +20,7 @@ const Staffsubject = require("../models/staffsubject");
 const Subject = require("../models/subject");
 const Timetable = require("../models/timetables");
 const Invoice = require("../models/invoice");
-const InvoiceStudent = require("../models/invoice-students");
+const InvoiceStudent = require("../models/invoice_students");
 const TimetableSubstitution = require("../models/timetable_substitutions");
 
 const { getschoolIdByStudentId } = require("../controllers/commonController");

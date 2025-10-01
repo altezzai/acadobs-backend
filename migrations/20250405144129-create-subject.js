@@ -25,6 +25,12 @@ module.exports = {
         onDelete: "CASCADE",
         allowNull: true,
       },
+      syllabus_type: {
+        type: Sequelize.ENUM("CBSE", "ICSE", "Kerala State", "IB", "Other"),
+        allowNull: true,
+        defaultValue: "CBSE",
+      },
+
       trash: {
         type: Sequelize.BOOLEAN,
         defaultValue: false,

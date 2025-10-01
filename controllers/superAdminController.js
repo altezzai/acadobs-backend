@@ -8,8 +8,15 @@ const { Op } = require("sequelize");
 
 const createSchool = async (req, res) => {
   try {
-    const { name, email, phone, address, admin_password, period_count } =
-      req.body;
+    const {
+      name,
+      email,
+      phone,
+      address,
+      admin_password,
+      period_count,
+      syllabus_type,
+    } = req.body;
     if (!name || !email || !phone || !admin_password) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
@@ -36,6 +43,7 @@ const createSchool = async (req, res) => {
       address,
       period_count,
       logo: fileName,
+      syllabus_type,
     });
 
     const hashedPassword = await bcrypt.hash(admin_password, 10);
@@ -91,7 +99,8 @@ const getAllSchools = async (req, res) => {
 const updateSchool = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, phone, address, status, period_count } = req.body;
+    const { name, email, phone, address, status, period_count, syllabus_type } =
+      req.body;
 
     const school = await School.findByPk(id);
     if (!school) return res.status(404).json({ error: "School not found" });
@@ -110,6 +119,7 @@ const updateSchool = async (req, res) => {
       period_count,
       logo: fileName ? fileName : school.logo,
       status,
+      syllabus_type,
     });
 
     res.status(200).json({ message: "School updated successfully", school });
@@ -135,7 +145,7 @@ const deleteSchool = async (req, res) => {
 };
 const createClass = async (req, res) => {
   try {
-    const { year, division, classname } = req.body;
+    const { year, division, classname, school_id } = req.body;
     if (!year || !division || !classname) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
@@ -145,6 +155,7 @@ const createClass = async (req, res) => {
         year,
         division,
         classname,
+        school_id,
 
         trash: false,
       },
@@ -160,6 +171,7 @@ const createClass = async (req, res) => {
       year,
       division,
       classname,
+      school_id,
     });
     res.status(201).json({ message: "Class created", class: newClass });
   } catch (err) {
@@ -173,6 +185,7 @@ const getAllClasses = async (req, res) => {
     const searchQuery = req.query.q || "";
     const year = req.query.year || "";
     const division = req.query.division || "";
+    const school_id = req.query.school_id || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -186,6 +199,7 @@ const getAllClasses = async (req, res) => {
         classname: { [Op.like]: `%${searchQuery}%` },
         year: { [Op.like]: `%${year}%` },
         division: { [Op.like]: `%${division}%` },
+        school_id: { [Op.like]: `%${school_id}%` },
         trash: false,
       },
     });
@@ -215,7 +229,7 @@ const getClassById = async (req, res) => {
 const updateClass = async (req, res) => {
   try {
     const id = req.params.id;
-    const { year, division, classname } = req.body;
+    const { year, division, classname, school_id } = req.body;
     const classData = await Class.findByPk(id);
     if (!classData) return res.status(404).json({ message: "Class not found" });
     const existingClass = await Class.findOne({
@@ -223,6 +237,7 @@ const updateClass = async (req, res) => {
         year,
         division,
         classname,
+        school_id,
 
         id: { [Op.ne]: id },
         trash: false,
@@ -235,7 +250,10 @@ const updateClass = async (req, res) => {
           "Class with same year, division, and name already exists in this school.",
       });
     }
-    await classData.update({ year, division, classname }, { where: { id } });
+    await classData.update(
+      { year, division, classname, school_id },
+      { where: { id } }
+    );
     res.status(200).json({ message: "Class updated", classData });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -254,7 +272,7 @@ const deleteClass = async (req, res) => {
 
 const createSubject = async (req, res) => {
   try {
-    const { subject_name, class_range } = req.body;
+    const { subject_name, class_range, syllabus_type } = req.body;
     if (!subject_name || !class_range) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
@@ -268,7 +286,7 @@ const createSubject = async (req, res) => {
       return res.status(400).json({ error: "Invalid class range" });
     }
     const exists = await Subject.findOne({
-      where: { subject_name, class_range, trash: false },
+      where: { subject_name, class_range, trash: false, syllabus_type },
     });
 
     if (exists) {
@@ -280,6 +298,7 @@ const createSubject = async (req, res) => {
     const subject = await Subject.create({
       subject_name,
       class_range,
+      syllabus_type,
     });
     res.status(201).json(subject);
   } catch (err) {
@@ -290,6 +309,7 @@ const createSubject = async (req, res) => {
 const getSubjects = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
+    const syllabus_type = req.query.syllabus_type || "";
     const range = req.query.range || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -302,6 +322,7 @@ const getSubjects = async (req, res) => {
       where: {
         subject_name: { [Op.like]: `%${searchQuery}%` },
         class_range: { [Op.like]: `%${range}%` },
+        syllabus_type: { [Op.like]: `%${syllabus_type}%` },
         trash: false,
       },
     });
@@ -329,12 +350,13 @@ const getSubjectById = async (req, res) => {
 const updateSubject = async (req, res) => {
   try {
     const { id } = req.params;
-    const { subject_name, class_range } = req.body;
+    const { subject_name, class_range, syllabus_type } = req.body;
 
     const exists = await Subject.findOne({
       where: {
         subject_name,
         class_range,
+        syllabus_type,
 
         id: { [require("sequelize").Op.ne]: id },
         trash: false,
@@ -351,7 +373,7 @@ const updateSubject = async (req, res) => {
     if (!subject || subject.trash)
       return res.status(404).json({ error: "Subject not found" });
 
-    await subject.update({ subject_name, class_range });
+    await subject.update({ subject_name, class_range, syllabus_type });
     res.status(200).json(subject);
   } catch (err) {
     res.status(500).json({ error: err.message });
