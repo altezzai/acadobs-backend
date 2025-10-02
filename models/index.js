@@ -28,6 +28,7 @@ const Message = require("./messages");
 const Chat = require("./chat");
 const Timetable = require("./timetables");
 const TimetableSubstitution = require("./timetable_substitutions");
+const StaffPermission = require("./staff_permissions");
 
 // Relations
 
@@ -55,6 +56,9 @@ Staff.belongsTo(School, { foreignKey: "school_id" });
 Staff.belongsTo(Class, { foreignKey: "class_id" });
 Staff.hasMany(staffsubject, { foreignKey: "staff_id" });
 User.hasOne(Staff, { foreignKey: "user_id" });
+
+StaffPermission.belongsTo(User, { foreignKey: "user_id" });
+User.hasOne(StaffPermission, { foreignKey: "user_id" });
 
 staffsubject.belongsTo(Staff, { foreignKey: "staff_id" });
 staffsubject.belongsTo(Subject, { foreignKey: "subject_id" });

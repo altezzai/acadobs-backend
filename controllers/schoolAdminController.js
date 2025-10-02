@@ -9,6 +9,7 @@ const {
   compressImage,
 } = require("../utils/fileHandler");
 const Staff = require("../models/staff");
+const StaffPermission = require("../models/staff_permissions");
 const StaffSubject = require("../models/staffsubject");
 const Class = require("../models/class");
 const Subject = require("../models/subject");
@@ -379,6 +380,39 @@ const createStaff = async (req, res) => {
         transaction,
       });
     }
+
+    if (!role || role === "teacher") {
+      await StaffPermission.create(
+        {
+          user_id: user.id,
+          leave_request: true,
+          attendance: true,
+          timetable: true,
+          marks: true,
+          students: true,
+          homeworks: true,
+          parent_notes: true,
+          achievements: true,
+          student_leave_request: true,
+          chats: true,
+        },
+        { transaction }
+      );
+    } else if (role === "staff") {
+      await StaffPermission.create(
+        {
+          user_id: user.id,
+          leave_request: true,
+          attendance: true,
+          student: true,
+          achievements: true,
+          payment: true,
+          report: true,
+        },
+        { transaction }
+      );
+    }
+
     res.status(201).json(newStaff);
 
     await transaction.commit();
@@ -624,6 +658,87 @@ const restoredStaff = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// READ all staff permissions
+const getAllStaffPermissions = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const permissions = await StaffPermission.findAll({
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone", "dp", "school_id"],
+          where: school_id,
+        },
+      ],
+    });
+    res.json({ success: true, data: permissions });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch staff permissions" });
+  }
+};
+
+// READ single staff permission
+const getStaffPermissionByUser = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const permission = await StaffPermission.findOne({ where: { user_id } });
+
+    if (!permission) {
+      return res.status(404).json({ error: "Permissions not found" });
+    }
+
+    res.json({ success: true, data: permission });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch staff permission" });
+  }
+};
+
+// UPDATE staff permission
+const updateStaffPermission = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const {
+      leave_request,
+      attendance,
+      timetable,
+      marks,
+      students,
+      homeworks,
+      parent_notes,
+      achievements,
+      student_leave_request,
+      chats,
+      reports,
+      payments,
+    } = req.body;
+
+    const permission = await StaffPermission.findOne({ where: { user_id } });
+    if (!permission) {
+      return res.status(404).json({ error: "Permissions not found" });
+    }
+
+    await permission.update({
+      leave_request,
+      attendance,
+      timetable,
+      marks,
+      students,
+      homeworks,
+      parent_notes,
+      achievements,
+      student_leave_request,
+      chats,
+      reports,
+      payments,
+    });
+    res.json({ success: true, data: permission });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update staff permission" });
+  }
+};
+
+// DELETE staff permission
 
 const createGuardian = async (req, res) => {
   try {
@@ -3939,6 +4054,10 @@ module.exports = {
   deleteStaff,
   restoredStaff,
   updateStaffUser,
+
+  getAllStaffPermissions,
+  updateStaffPermission,
+  getStaffPermissionByUser,
 
   createGuardian,
   getAllGuardians,

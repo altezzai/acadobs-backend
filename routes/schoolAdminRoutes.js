@@ -50,6 +50,16 @@ router.put(
 );
 router.delete("/staffs/:staff_id", schoolAdminController.deleteStaff);
 router.patch("/staffs/:staff_id", schoolAdminController.restoredStaff);
+//staff permissions
+router.get(
+  "/staffPermissions/:user_id",
+  schoolAdminController.getStaffPermissionByUser
+);
+router.get("/staffPermissions", schoolAdminController.getAllStaffPermissions);
+router.put(
+  "/staffPermissions/:user_id",
+  schoolAdminController.updateStaffPermission
+);
 
 // Guardian routes
 router.post(
