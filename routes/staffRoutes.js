@@ -121,10 +121,17 @@ router.put(
 );
 router.delete("/leaveRequest/:id", staffController.deleteLeaveRequest);
 router.patch("/leaveRequest/:id", staffController.restoreLeaveRequest);
+//student leave request for class teacher
+router.get(
+  "/getStudentLeaveRequestsForClassTeacher",
+  staffController.getStudentLeaveRequestsForClassTeacher
+);
 router.patch(
   "/leaveRequestpermission/:id",
   staffController.leaveRequestPermission
 );
+
+//parent notes
 router.post(
   "/parentNotes",
   upload.single("note_attachment"),
@@ -139,7 +146,7 @@ router.put(
 );
 router.delete("/parentNotes/:id", staffController.deleteParentNote);
 
-router.get("/getLatestNotices", staffController.getLatestNotices);
+//timetable
 router.get(
   "/getTodayTimetableForStaff",
   staffController.getTodayTimetableForStaff
@@ -152,6 +159,7 @@ router.get(
 //   "/getSubstituteTimetableForStaff",
 //   staffController.getSubstituteTimetableForStaff
 // );
+router.get("/getLatestNotices", staffController.getLatestNotices);
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);

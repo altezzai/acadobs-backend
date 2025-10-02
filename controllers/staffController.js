@@ -1852,16 +1852,14 @@ const leaveRequestPermission = async (req, res) => {
   }
 };
 //GET STUDENT LEAVE REQUESTS BY CLASS
-const getStudentLeaveRequestsByClass = async (req, res) => {
+const getStudentLeaveRequestsForClassTeacher = async (req, res) => {
   try {
     const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
     const staff = await Staff.findOne({ where: { user_id, school_id } });
     const class_id = staff ? staff.class_id : null;
-    console.log("class_id", class_id);
-    const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
     const date = req.query.date || "";
-
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -1870,9 +1868,7 @@ const getStudentLeaveRequestsByClass = async (req, res) => {
       school_id: school_id,
       role: "student",
     };
-    if (class_id) {
-      whereClause.class_id = class_id;
-    }
+
     if (searchQuery) {
       whereClause[Op.or] = [
         { title: { [Op.like]: `%${searchQuery}%` } },
@@ -1891,9 +1887,10 @@ const getStudentLeaveRequestsByClass = async (req, res) => {
         {
           model: Student,
           attributes: ["id", "full_name", "reg_no", "class_id"],
+          where: { class_id: class_id },
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -2299,6 +2296,7 @@ module.exports = {
   restoreLeaveRequest,
   // createStudentLeaveRequest,
   // updateStudentLeaveRequest,
+  getStudentLeaveRequestsForClassTeacher,
   leaveRequestPermission,
 
   createParentNote,
