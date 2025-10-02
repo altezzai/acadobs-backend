@@ -1236,7 +1236,13 @@ const getAllStudents = async (req, res) => {
         trash: false,
       },
 
-      include: [{ model: User, attributes: ["name", "email", "phone", "dp"] }],
+      include: [
+        { model: User, attributes: ["name", "email", "phone", "dp"] },
+        {
+          model: Class,
+          attributes: ["id", "year", "division", "classname"],
+        },
+      ],
       order: [["createdAt", "DESC"]],
     });
 
@@ -1288,14 +1294,16 @@ const updateStudent = async (req, res) => {
       admission_date,
       status,
     } = req.body;
-    const existingRegNo = await Student.findOne({
-      where: { reg_no, id: { [Op.ne]: id } },
-    });
+    if (reg_no) {
+      const existingRegNo = await Student.findOne({
+        where: { reg_no, id: { [Op.ne]: id } },
+      });
 
-    if (existingRegNo) {
-      return res
-        .status(400)
-        .json({ error: "Reg number already exists in student table" });
+      if (existingRegNo) {
+        return res
+          .status(400)
+          .json({ error: "Reg number already exists in student table" });
+      }
     }
     const student = await Student.findByPk(id);
     if (!student || student.trash)
@@ -1314,7 +1322,7 @@ const updateStudent = async (req, res) => {
       );
     }
 
-    await student.update({
+    const updated = await student.update({
       school_id,
       reg_no,
       roll_number,
@@ -1328,7 +1336,7 @@ const updateStudent = async (req, res) => {
       image: studentImageFilename,
     });
 
-    res.status(200).json({ message: "Student updated successfully" });
+    res.status(200).json({ message: "Student updated successfully", updated });
   } catch (err) {
     console.error("Error updating student:", err);
     res.status(500).json({ error: "Failed to update student" });

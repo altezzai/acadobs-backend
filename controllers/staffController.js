@@ -23,6 +23,7 @@ const Notice = require("../models/notice");
 const ParentNote = require("../models/parent_note");
 const Timetable = require("../models/timetables");
 const TimetableSubstitution = require("../models/timetable_substitutions");
+const Staff = require("../models/staff");
 
 const { Homework, HomeworkAssignment } = require("../models");
 const { getGuarduianIdbyStudentId } = require("./commonController");
@@ -1766,8 +1767,8 @@ const restoreLeaveRequest = async (req, res) => {
 const leaveRequestPermission = async (req, res) => {
   try {
     const Id = req.params.id;
+    const userId = req.user.user_id;
     const status = req.query.status;
-    const userId = req.query.user_id;
     const admin_remarks = req.query.admin_remarks;
     if (!userId || !status) {
       return res.status(400).json({ error: "User ID is required" });
@@ -1850,6 +1851,63 @@ const leaveRequestPermission = async (req, res) => {
     res.status(500).json({ error: "Failed to approve leave request" });
   }
 };
+//GET STUDENT LEAVE REQUESTS BY CLASS
+const getStudentLeaveRequestsByClass = async (req, res) => {
+  try {
+    const user_id = req.user.user_id;
+    const staff = await Staff.findOne({ where: { user_id, school_id } });
+    const class_id = staff ? staff.class_id : null;
+    console.log("class_id", class_id);
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const date = req.query.date || "";
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+      school_id: school_id,
+      role: "student",
+    };
+    if (class_id) {
+      whereClause.class_id = class_id;
+    }
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if (date) {
+      whereClause.date = date;
+    }
+    const { count, rows: leaveRequests } = await LeaveRequest.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        {
+          model: Student,
+          attributes: ["id", "full_name", "reg_no", "class_id"],
+        },
+      ],
+      order: [["created_at", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      leaveRequests,
+    });
+  } catch (error) {
+    console.error("Error fetching leave requests:", error);
+    res.status(500).json({ error: "Failed to fetch leave requests" });
+  }
+};
+
 //parent note section
 
 const createParentNote = async (req, res) => {
