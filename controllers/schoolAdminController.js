@@ -3497,13 +3497,16 @@ const getLatestNotices = async (req, res) => {
 };
 const bulkUpsertTimetable = async (req, res) => {
   try {
-    const { records } = req.body;
-    // records = [ { school_id, class_id, day_of_week, period_number, subject_id, staff_id }, ... ]
+    const school_id = req.user.school_id;
+    let { records } = req.body;
 
     if (!records || !Array.isArray(records)) {
       return res.status(400).json({ error: "Invalid records format" });
     }
-
+    records = records.map((record) => ({
+      ...record,
+      school_id,
+    }));
     // Use bulkCreate with updateOnDuplicate
     await Timetable.bulkCreate(records, {
       updateOnDuplicate: ["subject_id", "staff_id", "updatedAt"],
