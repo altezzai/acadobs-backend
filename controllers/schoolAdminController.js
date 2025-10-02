@@ -425,6 +425,7 @@ const createStaff = async (req, res) => {
 const getAllStaff = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
+    const subject = req.query.subject || "";
     const school_id = req.user.school_id;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -437,7 +438,7 @@ const getAllStaff = async (req, res) => {
     if (role) {
       whereCondition.role = role;
     }
-    const { count, rows: staff } = await Staff.findAndCountAll({
+    const staff = await Staff.findAll({
       offset,
       distinct: true,
       limit,
@@ -445,18 +446,36 @@ const getAllStaff = async (req, res) => {
       include: [
         {
           model: User,
-          where: {
-            name: { [Op.like]: `%${searchQuery}%` },
-          },
           attributes: ["id", "name", "email", "phone", "dp", "role"],
+          where: searchQuery
+            ? {
+                name: { [Op.like]: `%${searchQuery}%` },
+              }
+            : {},
+        },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+        {
+          model: StaffSubject,
+          include: [
+            {
+              model: Subject,
+              attributes: ["id", "subject_name"],
+              where: {
+                trash: false,
+                subject_name: {
+                  [Op.like]: `%${subject}%`,
+                },
+              },
+            },
+          ],
         },
       ],
 
       order: [["createdAt", "DESC"]],
     });
-    const totalPages = Math.ceil(count / limit);
+    const totalPages = Math.ceil(staff.length / limit);
     res.status(200).json({
-      totalcontent: count,
+      totalcontent: staff.length,
       totalPages,
       currentPage: page,
       staff,
@@ -3470,7 +3489,7 @@ const restoreNotice = async (req, res) => {
 const getLatestNotices = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const searchQuery = req.query.q || "";
+    // const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 3;
     const offset = (page - 1) * limit;
@@ -3511,7 +3530,6 @@ const bulkUpsertTimetable = async (req, res) => {
     await Timetable.bulkCreate(records, {
       updateOnDuplicate: ["subject_id", "staff_id", "updatedAt"],
     });
-
     return res.json({
       success: true,
       message: "Timetable updated successfully",
@@ -3531,7 +3549,7 @@ const getAllTimetables = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    const searchQuery = req.query.q || "";
+    // const searchQuery = req.query.q || "";
     const whereClause = {
       school_id,
     };
