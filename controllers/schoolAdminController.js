@@ -1,5 +1,6 @@
 const path = require("path");
 const fs = require("fs");
+const moment = require("moment");
 const bcrypt = require("bcrypt");
 const { Op, where, DATEONLY } = require("sequelize");
 const {
@@ -2940,21 +2941,93 @@ const leaveRequestPermission = async (req, res) => {
   try {
     const Id = req.params.id;
     const school_id = req.user.school_id;
+    const userId = req.user.user_id;
     const status = req.query.status;
-    const userId = req.query.user_id;
     const admin_remarks = req.query.admin_remarks;
+
     if (!userId || !status) {
-      return res.status(400).json({ error: "User ID is required" });
+      return res.status(400).json({ error: "User ID and status are required" });
     }
+
     const leaveRequest = await LeaveRequest.findOne({
-      where: { id: Id, trash: false, school_id: school_id },
+      where: { id: Id, trash: false, school_id },
     });
     if (!leaveRequest) return res.status(404).json({ error: "Not found" });
 
+    const SchoolDetails = await School.findOne({
+      where: { id: school_id },
+      attributes: ["attendance_count"],
+    });
+    const attendance_count = SchoolDetails.attendance_count;
+
     leaveRequest.approved_by = userId;
     leaveRequest.admin_remarks = admin_remarks;
+
     if (status === "approved") {
       leaveRequest.status = "approved";
+
+      const student_id = leaveRequest.student_id;
+      const fromDate = moment(leaveRequest.from_date);
+      const toDate = moment(leaveRequest.to_date);
+      const student = await Student.findOne({
+        where: { id: student_id },
+      });
+
+      // ✅ Determine period count based on leave type (half/full)
+      let periodCount;
+      if (leaveRequest.leave_duration === "half") {
+        periodCount = Math.ceil(attendance_count / 2); // odd numbers → ceiling
+      } else {
+        periodCount = attendance_count; // full leave = all periods
+      }
+      const dates = [];
+      let current = moment(fromDate);
+      while (current.isSameOrBefore(toDate, "day")) {
+        dates.push(current.format("YYYY-MM-DD"));
+        current.add(1, "days");
+      }
+
+      for (const date of dates) {
+        // ✅ Loop through each period
+        for (let period = 1; period <= periodCount; period++) {
+          let attendance = await Attendance.findOrCreate({
+            where: {
+              school_id,
+              date,
+              class_id: student.class_id,
+              period, // ✅ store period number individually
+            },
+          });
+          const attendanceRecord = await AttendanceMarked.findOne({
+            where: {
+              attendance_id: attendance[0].id,
+              student_id,
+            },
+          });
+
+          if (attendanceRecord) {
+            // update existing
+            await attendanceRecord.update({
+              status: "leave",
+              remarks:
+                leaveRequest.leave_type === "half"
+                  ? "Half-day Leave approved"
+                  : "Full-day Leave approved",
+            });
+          } else {
+            // create new
+            await AttendanceMarked.create({
+              attendance_id: attendance[0].id,
+              student_id,
+              status: "leave",
+              remarks:
+                leaveRequest.leave_type === "half"
+                  ? "Half-day Leave approved"
+                  : "Full-day Leave approved",
+            });
+          }
+        }
+      }
     } else if (status === "rejected") {
       leaveRequest.status = "rejected";
     } else {
