@@ -650,12 +650,10 @@ const createAttendance = async (req, res) => {
     });
 
     if (existingAttendance) {
-      console.log("Existing Attendance:", existingAttendance);
       await existingAttendance.update({
         teacher_id,
         subject_id,
       });
-      console.log("Updated Attendance:", existingAttendance);
       attendance = existingAttendance;
     } else {
       // Create new attendance
@@ -1790,7 +1788,6 @@ const leaveRequestPermission = async (req, res) => {
       const student = await Student.findOne({
         where: { id: student_id },
       });
-      // Loop through each date in range
       const dates = [];
       let current = moment(fromDate);
       while (current.isSameOrBefore(toDate, "day")) {
@@ -1799,13 +1796,12 @@ const leaveRequestPermission = async (req, res) => {
       }
 
       for (const date of dates) {
-        // Find or create the attendance row (assuming one period per day or 'leave' for full day)
         let attendance = await Attendance.findOrCreate({
           where: {
             school_id,
             date,
-            class_id: student.class_id, // you might need to join with student to fetch class_id
-            teacher_id: userId, // can be optional or replaced by admin ID
+            class_id: student.class_id,
+            // teacher_id: userId,
           },
           defaults: {
             period: 1,

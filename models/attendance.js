@@ -6,7 +6,7 @@ const Attendance = schoolSequelize.define(
   "Attendance",
   {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    teacher_id: { type: DataTypes.INTEGER, allowNull: false },
+    teacher_id: { type: DataTypes.INTEGER, allowNull: true },
     school_id: { type: DataTypes.INTEGER, allowNull: false },
     class_id: { type: DataTypes.INTEGER, allowNull: false },
     subject_id: { type: DataTypes.INTEGER, allowNull: true },

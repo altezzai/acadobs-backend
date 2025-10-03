@@ -80,24 +80,30 @@ const createClass = async (req, res) => {
 const getAllClasses = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
-    const year = req.query.year || "";
+    const year = req.query.year || null;
     const division = req.query.division || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    let whereCondition = {
+      school_id: req.user.school_id,
+      trash: false,
+    };
+    if (searchQuery) {
+      whereCondition.classname = { [Op.like]: `%${searchQuery}%` };
+    }
+    if (year) {
+      whereCondition.year = year;
+    }
+    if (division) {
+      whereCondition.division = division;
+    }
 
     const { count, rows: classes } = await Class.findAndCountAll({
       offset,
       distinct: true,
       limit,
-
-      where: {
-        classname: { [Op.like]: `%${searchQuery}%` },
-        year: { [Op.like]: `%${year}%` },
-        division: { [Op.like]: `%${division}%` },
-        school_id: req.user.school_id,
-        trash: false,
-      },
+      where: whereCondition,
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -3593,7 +3599,7 @@ const getAllTimetables = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    // const searchQuery = req.query.q || "";
+    const searchQuery = req.query.q || "";
     const whereClause = {
       school_id,
     };
@@ -3606,13 +3612,6 @@ const getAllTimetables = async (req, res) => {
     if (period_number) {
       whereClause.period_number = period_number;
     }
-    // if (searchQuery) {
-    //   whereClause[Op.or] = [
-    //     { class_name: { [Op.like]: `%${searchQuery}%` } },
-    //     { subject_name: { [Op.like]: `%${searchQuery}%` } },
-    //     { name: { [Op.like]: `%${searchQuery}%` } },
-    //   ];
-    // }
     const { count, rows: timetable } = await Timetable.findAndCountAll({
       offset,
       distinct: true,
@@ -3622,6 +3621,9 @@ const getAllTimetables = async (req, res) => {
         {
           model: Class,
           attributes: ["classname"],
+          where: searchQuery
+            ? { classname: { [Op.like]: `%${searchQuery}%` } }
+            : {},
         },
         {
           model: Subject,
@@ -3695,6 +3697,62 @@ const deleteTimetableEntry = async (req, res) => {
     res.status(500).json({ error: "Failed to delete timetable entry" });
   }
 };
+const getTimetablesWithMultipleClasses = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    let { class_ids, page, limit, q } = req.query;
+
+    page = parseInt(page) || 1;
+    limit = parseInt(limit) || 10;
+    const offset = (page - 1) * limit;
+    const searchQuery = q || "";
+
+    const whereClause = { school_id };
+
+    if (class_ids) {
+      const classIds = Array.isArray(class_ids)
+        ? class_ids
+        : class_ids.split(",").map((id) => parseInt(id.trim()));
+      whereClause.class_id = { [Op.in]: classIds };
+    }
+
+    const { count, rows: timetable } = await Timetable.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        {
+          model: Class,
+          attributes: ["classname"],
+          where: searchQuery
+            ? { classname: { [Op.like]: `%${searchQuery}%` } }
+            : {},
+        },
+        {
+          model: Subject,
+          attributes: ["subject_name"],
+        },
+        {
+          model: User,
+          attributes: ["name"],
+        },
+      ],
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      timetable,
+    });
+  } catch (error) {
+    console.error("Error fetching timetable:", error);
+    res.status(500).json({ error: "Failed to fetch timetable" });
+  }
+};
+
 const getFreeStaffForPeriod = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -4212,6 +4270,7 @@ module.exports = {
   getTimetableById,
   deleteTimetableEntry,
   getFreeStaffForPeriod,
+  getTimetablesWithMultipleClasses,
 
   createSubstitution,
   bulkCreateSubstitution,
