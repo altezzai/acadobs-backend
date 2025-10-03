@@ -425,7 +425,6 @@ const createStaff = async (req, res) => {
 const getAllStaff = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
-    const subject = req.query.subject || "";
     const school_id = req.user.school_id;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -454,21 +453,6 @@ const getAllStaff = async (req, res) => {
             : {},
         },
         { model: Class, attributes: ["id", "year", "division", "classname"] },
-        {
-          model: StaffSubject,
-          include: [
-            {
-              model: Subject,
-              attributes: ["id", "subject_name"],
-              where: {
-                trash: false,
-                subject_name: {
-                  [Op.like]: `%${subject}%`,
-                },
-              },
-            },
-          ],
-        },
       ],
 
       order: [["createdAt", "DESC"]],
@@ -673,6 +657,66 @@ const restoredStaff = async (req, res) => {
     await staff.update({ trash: false });
     await user.update({ trash: false });
     res.status(200).json({ message: "successfully restored staff " });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+const getAllTeachers = async (req, res) => {
+  try {
+    const searchQuery = req.query.q || "";
+    const subject = req.query.subject || "";
+    const school_id = req.user.school_id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    let whereCondition = {
+      school_id: school_id,
+      trash: false,
+      role: "teacher",
+    };
+
+    const staff = await Staff.findAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereCondition,
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone", "dp", "role"],
+          where: searchQuery
+            ? {
+                name: { [Op.like]: `%${searchQuery}%` },
+              }
+            : {},
+        },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+        {
+          model: StaffSubject,
+          include: [
+            {
+              model: Subject,
+              attributes: ["id", "subject_name"],
+              where: {
+                trash: false,
+                subject_name: {
+                  [Op.like]: `%${subject}%`,
+                },
+              },
+            },
+          ],
+        },
+      ],
+
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(staff.length / limit);
+    res.status(200).json({
+      totalcontent: staff.length,
+      totalPages,
+      currentPage: page,
+      staff,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -4075,6 +4119,7 @@ module.exports = {
   deleteStaff,
   restoredStaff,
   updateStaffUser,
+  getAllTeachers,
 
   getAllStaffPermissions,
   updateStaffPermission,

@@ -50,6 +50,7 @@ router.put(
 );
 router.delete("/staffs/:staff_id", schoolAdminController.deleteStaff);
 router.patch("/staffs/:staff_id", schoolAdminController.restoredStaff);
+router.get("/getAllTeachers", schoolAdminController.getAllTeachers);
 //staff permissions
 router.get(
   "/staffPermissions/:user_id",
