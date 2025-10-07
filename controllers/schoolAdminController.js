@@ -380,7 +380,7 @@ const createStaff = async (req, res) => {
     if (subjects && Array.isArray(subjects)) {
       const staffSubjectsData = subjects.map((subjId) => ({
         school_id,
-        staff_id: user.id,
+        staff_id: newStaff.id,
         subject_id: subjId,
       }));
       await StaffSubject.bulkCreate(staffSubjectsData, {
