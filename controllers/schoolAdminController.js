@@ -411,10 +411,10 @@ const createStaff = async (req, res) => {
           user_id: user.id,
           leave_request: true,
           attendance: true,
-          student: true,
+          students: true,
           achievements: true,
-          payment: true,
-          report: true,
+          payments: true,
+          reports: true,
         },
         { transaction }
       );
@@ -3770,6 +3770,7 @@ const deleteTimetableEntry = async (req, res) => {
     res.status(500).json({ error: "Failed to delete timetable entry" });
   }
 };
+
 const getTimetablesWithMultipleClasses = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -3784,20 +3785,28 @@ const getTimetablesWithMultipleClasses = async (req, res) => {
 
     if (class_ids) {
       const classIds = Array.isArray(class_ids)
-        ? class_ids
+        ? class_ids.map((id) => parseInt(id.trim()))
         : class_ids.split(",").map((id) => parseInt(id.trim()));
       whereClause.class_id = { [Op.in]: classIds };
     }
 
-    const { count, rows: timetable } = await Timetable.findAndCountAll({
+    const { count, rows } = await Timetable.findAndCountAll({
       offset,
-      distinct: true,
       limit,
+      distinct: true,
       where: whereClause,
+      attributes: [
+        "id",
+        "class_id",
+        "subject_id",
+        "staff_id",
+        "day_of_week",
+        "period_number",
+      ],
       include: [
         {
           model: Class,
-          attributes: ["classname"],
+          attributes: ["id", "classname"],
           where: searchQuery
             ? { classname: { [Op.like]: `%${searchQuery}%` } }
             : {},
@@ -3811,14 +3820,39 @@ const getTimetablesWithMultipleClasses = async (req, res) => {
           attributes: ["name"],
         },
       ],
+      order: [["class_id", "ASC"]],
     });
+
+    // Grouping timetables by class_id
+    const grouped = rows.reduce((acc, item) => {
+      const classId = item.class_id;
+      if (!acc[classId]) {
+        acc[classId] = {
+          class_id: classId,
+          classname: item.Class?.classname || "Unknown",
+          timetables: [],
+        };
+      }
+      acc[classId].timetables.push({
+        timetable_id: item.timetable_id,
+        subject: item.Subject?.subject_name,
+        subject_id: item.subject_id,
+        teacher: item.User?.name,
+        staff_id: item.staff_id,
+        day_of_week: item.day_of_week,
+        period_number: item.period_number,
+      });
+      return acc;
+    }, {});
+
+    const groupedResult = Object.values(grouped);
 
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
       totalPages,
       currentPage: page,
-      timetable,
+      classes: groupedResult,
     });
   } catch (error) {
     console.error("Error fetching timetable:", error);

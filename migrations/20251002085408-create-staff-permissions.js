@@ -53,11 +53,11 @@ module.exports = {
         type: Sequelize.BOOLEAN,
         defaultValue: false,
       },
-      payment: {
+      payments: {
         type: Sequelize.BOOLEAN,
         defaultValue: false,
       },
-      report: {
+      reports: {
         type: Sequelize.BOOLEAN,
         defaultValue: false,
       },
