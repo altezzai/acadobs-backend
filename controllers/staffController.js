@@ -840,7 +840,7 @@ const bulkUpdateAttendanceById = async (req, res) => {
 
 const getAttendanceByclassIdAndDate = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
     const class_id = req.query.class_id;
     const period = req.query.period || 1;
     const date = req.query.date || moment().format("YYYY-MM-DD");
@@ -868,17 +868,30 @@ const getAttendanceByclassIdAndDate = async (req, res) => {
           model: Subject,
           attributes: ["id", "subject_name"],
         },
+        {
+          model: AttendanceMarked,
+          separate: true,
+          attributes: ["id", "student_id", "status", "remarks"],
+          // order: [[{ model: Student }, "roll_number", "ASC"]],
+        },
       ],
     });
 
-    if (attendance) {
+    if (attendance && attendance.teacher_id) {
       res.json({ status: "recorded", attendance, trash: attendance.trash });
     } else {
-      //get all students of class
       const students = await Student.findAll({
         where: { class_id, school_id, trash: false },
         attributes: ["id", "full_name", "roll_number"],
-        order: [["roll_number", "ASC"]], // Order by roll_number
+        order: [["roll_number", "ASC"]],
+        include: [
+          {
+            model: AttendanceMarked,
+            where: { attendance_id: attendance ? attendance.id : 0 },
+            attributes: ["id", "status"],
+            required: false,
+          },
+        ], // Order by roll_number
       });
       res.json({
         status: "not_recorded",

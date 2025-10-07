@@ -504,12 +504,8 @@ const getStaffById = async (req, res) => {
       ],
     });
     if (!staff) return res.status(404).json({ error: "Staff not found" });
-    const user = await User.findOne({
-      where: { id: staff.user_id, trash: false },
-      attributes: ["id", "name", "email", "phone", "dp"],
-    });
-    if (!user) return res.status(404).json({ error: "user not found" });
-    res.status(200).json({ staff, user });
+
+    res.status(200).json(staff);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

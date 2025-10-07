@@ -50,6 +50,7 @@ Attendance.belongsTo(User, { foreignKey: "teacher_id" });
 
 AttendanceMarked.belongsTo(Attendance, { foreignKey: "attendance_id" });
 AttendanceMarked.belongsTo(Student, { foreignKey: "student_id" });
+Student.hasMany(AttendanceMarked, { foreignKey: "student_id" });
 
 Staff.belongsTo(User, { foreignKey: "user_id" });
 Staff.belongsTo(School, { foreignKey: "school_id" });
