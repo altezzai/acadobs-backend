@@ -3771,9 +3771,13 @@ const getTimetablesWithMultipleClasses = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     let { class_ids, page, limit, q } = req.query;
-
+    const SchoolDetails = await School.findOne({
+      where: { id: school_id },
+      attributes: ["period_count"],
+    });
+    const period_count = SchoolDetails.period_count || 7;
     page = parseInt(page) || 1;
-    limit = parseInt(limit) || 10;
+    limit = parseInt(limit) || 7 * period_count;
     const offset = (page - 1) * limit;
     const searchQuery = q || "";
 
@@ -3848,6 +3852,8 @@ const getTimetablesWithMultipleClasses = async (req, res) => {
       totalcontent: count,
       totalPages,
       currentPage: page,
+      limit,
+      period_count,
       classes: groupedResult,
     });
   } catch (error) {

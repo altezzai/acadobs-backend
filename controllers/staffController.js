@@ -578,22 +578,34 @@ const getHomeworkByTeacher = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const { count, rows: homework } = await Homework.findAndCountAll({
+    const { count, rows } = await Homework.findAndCountAll({
       offset,
-      distinct: true,
       limit,
+      distinct: true,
       where: {
         teacher_id,
-        title: { [Op.like]: `%${searchQuery}%` },
         trash: false,
+        title: { [Op.like]: `%${searchQuery}%` },
       },
+      attributes: ["id", "title", "description", "due_date", "createdAt"],
+      order: [["createdAt", "DESC"]],
     });
+
+    // Group by date (yyyy-mm-dd)
+    const groupedHomework = rows.reduce((acc, hw) => {
+      const dateKey = hw.createdAt.toISOString().split("T")[0]; // format date
+      if (!acc[dateKey]) acc[dateKey] = [];
+      acc[dateKey].push(hw);
+      return acc;
+    }, {});
+
     const totalPages = Math.ceil(count / limit);
+
     res.status(200).json({
       totalcontent: count,
       totalPages,
       currentPage: page,
-      homework,
+      groupedHomework,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
