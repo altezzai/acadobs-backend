@@ -524,7 +524,6 @@ const getSchoolDetails = async (req, res) => {
         "address",
         "phone",
         "email",
-        "website",
         "logo",
         "period_count",
         "attendance_count",
