@@ -20,6 +20,10 @@ const LeaveRequest = schoolSequelize.define(
       type: DataTypes.ENUM("half", "full"),
       defaultValue: "full",
     },
+    half_section: {
+      type: DataTypes.ENUM("fornoon", "afternoon"),
+      allowNull: true,
+    },
     from_date: { type: DataTypes.DATEONLY, allowNull: false },
     to_date: { type: DataTypes.DATEONLY, allowNull: false },
     status: {

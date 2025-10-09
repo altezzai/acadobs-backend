@@ -262,6 +262,10 @@ router.get(
   "/getTimetablesWithClassId/:class_id",
   schoolAdminController.getTimetablesWithClassId
 );
+router.get(
+  "/getTimetablesConflicts",
+  schoolAdminController.getTimetablesConflicts
+);
 //substitution routes
 router.post(
   "/timetableSubstitutions",

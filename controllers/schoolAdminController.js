@@ -3780,7 +3780,7 @@ const getTimetablesWithClassId = async (req, res) => {
     const period_count = schoolDetails?.period_count || 7;
 
     const timetables = await Timetable.findAll({
-      where: { school_id },
+      where: { school_id, class_id },
       attributes: [
         "id",
         "class_id",
@@ -3809,10 +3809,56 @@ const getTimetablesWithClassId = async (req, res) => {
       ],
     });
 
-    // Filter the timetables only for the requested class_id
-    const classTimetables = timetables.filter(
-      (t) => t.class_id === parseInt(class_id)
-    );
+    res.status(200).json({
+      totalcontent: timetables.length,
+      period_count,
+      timetables,
+    });
+  } catch (error) {
+    console.error("Error fetching timetable:", error);
+    res.status(500).json({ error: "Failed to fetch timetable" });
+  }
+};
+const getTimetablesConflicts = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+
+    const schoolDetails = await School.findOne({
+      where: { id: school_id },
+      attributes: ["period_count"],
+    });
+
+    const period_count = schoolDetails?.period_count || 7;
+
+    const timetables = await Timetable.findAll({
+      where: { school_id },
+      attributes: [
+        "id",
+        "class_id",
+        "subject_id",
+        "staff_id",
+        "day_of_week",
+        "period_number",
+      ],
+      include: [
+        {
+          model: Class,
+          attributes: ["id", "classname"],
+        },
+        {
+          model: Subject,
+          attributes: ["subject_name"],
+        },
+        {
+          model: User,
+          attributes: ["id", "name"],
+        },
+      ],
+      order: [
+        ["day_of_week", "ASC"],
+        ["period_number", "ASC"],
+      ],
+    });
 
     // ---- 🔍 Conflict Check Logic ----
     const conflictMap = {};
@@ -3846,10 +3892,8 @@ const getTimetablesWithClassId = async (req, res) => {
     }
 
     res.status(200).json({
-      totalcontent: classTimetables.length,
+      totalcontent: conflicts.length,
       period_count,
-      classTimetables,
-      conflict_count: conflicts.length,
       conflicts,
     });
   } catch (error) {
@@ -4375,6 +4419,7 @@ module.exports = {
   deleteTimetableEntry,
   getFreeStaffForPeriod,
   getTimetablesWithClassId,
+  getTimetablesConflicts,
 
   createSubstitution,
   bulkCreateSubstitution,

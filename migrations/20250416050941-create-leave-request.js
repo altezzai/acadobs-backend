@@ -40,6 +40,10 @@ module.exports = {
         type: Sequelize.ENUM("half", "full"),
         defaultValue: "full",
       },
+      half_section: {
+        type: Sequelize.ENUM("fornoon", "afternoon"),
+        allowNull: true,
+      },
       reason: { type: Sequelize.TEXT, allowNull: false },
       leave_type: {
         type: Sequelize.ENUM(

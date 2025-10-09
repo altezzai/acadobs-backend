@@ -228,6 +228,7 @@ const createLeaveRequest = async (req, res) => {
       leave_type,
       reason,
       leave_duration,
+      half_section,
     } = req.body;
     if (!student_id || !from_date || !to_date || !leave_type || !reason) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -262,6 +263,7 @@ const createLeaveRequest = async (req, res) => {
       reason: reason,
       attachment: fileName ? fileName : null,
       leave_duration,
+      half_section,
     });
     res.status(201).json(data);
   } catch (error) {
@@ -312,6 +314,7 @@ const getAllLeaveRequests = async (req, res) => {
         "leave_duration",
         "status",
         "admin_remarks",
+        "half_section",
       ],
       order: [["createdAt", "DESC"]],
       include: [
@@ -370,6 +373,7 @@ const updateLeaveRequest = async (req, res) => {
       leave_type,
       reason,
       leave_duration,
+      half_section,
     } = req.body;
     const data = await LeaveRequest.findByPk(Id);
     if (!data) return res.status(404).json({ error: "Not found" });
@@ -400,6 +404,7 @@ const updateLeaveRequest = async (req, res) => {
       reason: reason,
       attachment: fileName ? fileName : null,
       leave_duration,
+      half_section,
     });
 
     res.status(200).json(data);
