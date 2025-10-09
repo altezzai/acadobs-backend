@@ -200,4 +200,5 @@ router.get(
   "/getLeaveRequestByStudentId/:student_id",
   commonController.getLeaveRequestByStudentId
 );
+router.get("/getSchoolDetails", commonController.getSchoolDetails);
 module.exports = router;

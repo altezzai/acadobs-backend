@@ -514,6 +514,32 @@ const getLatestNews = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch news" });
   }
 };
+const getSchoolDetails = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const school = await School.findByPk(school_id, {
+      attributes: [
+        "id",
+        "name",
+        "address",
+        "phone",
+        "email",
+        "website",
+        "logo",
+        "period_count",
+        "attendance_count",
+        "syllabus_type",
+      ],
+    });
+    if (!school) {
+      return res.status(404).json({ error: "School not found" });
+    }
+    res.status(200).json({ school });
+  } catch (error) {
+    console.error("Error fetching school details:", error);
+    res.status(500).json({ error: "Failed to fetch school details" });
+  }
+};
 module.exports = {
   getStudentsByClassId,
   getschoolIdByStudentId,
@@ -536,4 +562,5 @@ module.exports = {
 
   getLatestEvents,
   getLatestNews,
+  getSchoolDetails,
 };
