@@ -614,11 +614,10 @@ const getHomeworkByTeacher = async (req, res) => {
 const createAttendance = async (req, res) => {
   try {
     const school_id = req.user.school_id || "";
-    const { teacher_id, class_id, subject_id, period, date, students } =
-      req.body;
+    const teacher_id = req.user.user_id || "";
+    const { class_id, subject_id, period, date, students } = req.body;
 
     if (
-      !teacher_id ||
       !school_id ||
       !class_id ||
       !period ||
@@ -649,7 +648,6 @@ const createAttendance = async (req, res) => {
       (student) => !leaveStudentIds.includes(student.student_id)
     );
 
-    console.log("Filtered Students:", filteredStudents);
     let attendance;
 
     const existingAttendance = await Attendance.findOne({

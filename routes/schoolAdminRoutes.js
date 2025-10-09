@@ -259,8 +259,8 @@ router.get(
   schoolAdminController.getFreeStaffForPeriod
 );
 router.get(
-  "/getTimetablesWithMultipleClasses",
-  schoolAdminController.getTimetablesWithMultipleClasses
+  "/getTimetablesWithClassId/:class_id",
+  schoolAdminController.getTimetablesWithClassId
 );
 //substitution routes
 router.post(
