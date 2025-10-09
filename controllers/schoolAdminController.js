@@ -3772,15 +3772,15 @@ const getTimetablesWithClassId = async (req, res) => {
     const school_id = req.user.school_id;
     const class_id = req.params.class_id;
 
-    const SchoolDetails = await School.findOne({
+    const schoolDetails = await School.findOne({
       where: { id: school_id },
       attributes: ["period_count"],
     });
-    const period_count = SchoolDetails.period_count || 7;
-    const whereClause = { school_id, class_id };
-    const Timetables = await Timetable.findAll({
-      distinct: true,
-      where: whereClause,
+
+    const period_count = schoolDetails?.period_count || 7;
+
+    const timetables = await Timetable.findAll({
+      where: { school_id },
       attributes: [
         "id",
         "class_id",
@@ -3800,23 +3800,63 @@ const getTimetablesWithClassId = async (req, res) => {
         },
         {
           model: User,
-          attributes: ["name"],
+          attributes: ["id", "name"],
         },
       ],
-      order: [["class_id", "ASC"]],
+      order: [
+        ["day_of_week", "ASC"],
+        ["period_number", "ASC"],
+      ],
     });
 
+    // Filter the timetables only for the requested class_id
+    const classTimetables = timetables.filter(
+      (t) => t.class_id === parseInt(class_id)
+    );
+
+    // ---- 🔍 Conflict Check Logic ----
+    const conflictMap = {};
+    const conflicts = [];
+
+    for (const entry of timetables) {
+      const key = `${entry.staff_id}-${entry.day_of_week}-${entry.period_number}`;
+
+      if (!conflictMap[key]) {
+        conflictMap[key] = [];
+      }
+
+      conflictMap[key].push(entry);
+    }
+
+    // Collect conflicts (same staff, same day, same period)
+    for (const key in conflictMap) {
+      if (conflictMap[key].length > 1) {
+        conflicts.push({
+          day_of_week: conflictMap[key][0].day_of_week,
+          period_number: conflictMap[key][0].period_number,
+          staff_id: conflictMap[key][0].staff_id,
+          staff_name: conflictMap[key][0].User?.name || "Unknown",
+          classes: conflictMap[key].map((c) => ({
+            class_id: c.class_id,
+            classname: c.Class?.classname,
+            subject_name: c.Subject?.subject_name,
+          })),
+        });
+      }
+    }
+
     res.status(200).json({
-      totalcontent: Timetables.length,
+      totalcontent: classTimetables.length,
       period_count,
-      Timetables,
+      classTimetables,
+      conflict_count: conflicts.length,
+      conflicts,
     });
   } catch (error) {
     console.error("Error fetching timetable:", error);
     res.status(500).json({ error: "Failed to fetch timetable" });
   }
 };
-
 const getFreeStaffForPeriod = async (req, res) => {
   try {
     const school_id = req.user.school_id;
