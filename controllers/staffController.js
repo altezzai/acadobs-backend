@@ -1479,6 +1479,7 @@ const createLeaveRequest = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const user_id = req.user.user_id;
+    const role = req.user.role || "staff";
     const {
       from_date,
       to_date,
@@ -1511,7 +1512,7 @@ const createLeaveRequest = async (req, res) => {
     const data = await LeaveRequest.create({
       school_id: school_id,
       user_id: user_id,
-      role: "staff",
+      role: role,
       from_date: from_date,
       to_date: to_date,
       leave_type: leave_type,
@@ -1639,6 +1640,7 @@ const updateLeaveRequest = async (req, res) => {
       reason: reason,
       attachment: fileName ? fileName : null,
       leave_duration,
+      half_section,
     });
 
     res.status(200).json(data);

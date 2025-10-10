@@ -3823,12 +3823,12 @@ const getTimetablesConflicts = async (req, res) => {
   try {
     const school_id = req.user.school_id;
 
-    const schoolDetails = await School.findOne({
-      where: { id: school_id },
-      attributes: ["period_count"],
-    });
+    // const schoolDetails = await School.findOne({
+    //   where: { id: school_id },
+    //   attributes: ["period_count"],
+    // });
 
-    const period_count = schoolDetails?.period_count || 7;
+    // const period_count = schoolDetails?.period_count || 7;
 
     const timetables = await Timetable.findAll({
       where: { school_id },
@@ -3893,12 +3893,149 @@ const getTimetablesConflicts = async (req, res) => {
 
     res.status(200).json({
       totalcontent: conflicts.length,
-      period_count,
+      // period_count,
       conflicts,
     });
   } catch (error) {
     console.error("Error fetching timetable:", error);
     res.status(500).json({ error: "Failed to fetch timetable" });
+  }
+};
+const getAllTeacherLeaveRequestsforSubstitution = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const date = req.query.date || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const SchoolDetails = await School.findOne({
+      where: { id: school_id },
+      attributes: ["period_count"],
+    });
+    const periodCount = SchoolDetails.period_count;
+    console.log(periodCount);
+    const whereClause = {
+      trash: false,
+      school_id,
+      role: "teacher",
+      status: "approved", // 👈 only teachers
+    };
+
+    if (searchQuery) {
+      whereClause[Op.or] = [{ reason: { [Op.like]: `%${searchQuery}%` } }];
+    }
+
+    if (date) {
+      whereClause[Op.or] = [
+        { from_date: { [Op.like]: `%${date}%` } },
+        { to_date: { [Op.like]: `%${date}%` } },
+      ];
+    }
+
+    const { count, rows: leaveRequests } = await LeaveRequest.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+
+      attributes: [
+        "id",
+        "from_date",
+        "to_date",
+        "reason",
+        "status",
+        "user_id",
+        "half_section",
+        "leave_duration",
+      ],
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone", "dp"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    const leaveRequestsWithExtraData = await Promise.all(
+      leaveRequests.map(async (leave) => {
+        const fromDate = new Date(leave.from_date);
+        const toDate = new Date(leave.to_date || leave.from_date);
+
+        // Get all day numbers (0 = Sun → 6 = Sat)
+        const dayNumbers = [];
+        let tempDate = new Date(fromDate);
+        while (tempDate <= toDate) {
+          dayNumbers.push(tempDate.getDay());
+          tempDate.setDate(tempDate.getDate() + 1);
+        }
+
+        // Determine timetable filters
+        let periodFilter = {}; // default all periods
+        const halfSection = leave.half_section?.toLowerCase();
+        const leaveDuration = leave.leave_duration?.toLowerCase();
+
+        if (leaveDuration === "half") {
+          const halfPoint = Math.ceil(periodCount / 2);
+          if (halfSection === "forenoon") {
+            periodFilter = { period_number: { [Op.lte]: halfPoint } };
+          } else if (halfSection === "afternoon") {
+            periodFilter = { period_number: { [Op.gt]: halfPoint } };
+          }
+        }
+        // ✅ Get timetables assigned to teacher considering half-day rules
+        const timetables = await Timetable.findAll({
+          where: {
+            school_id,
+            staff_id: leave.user_id,
+            day_of_week: { [Op.in]: dayNumbers },
+            ...periodFilter, // 👈 added filter for period_number
+          },
+          attributes: ["id", "day_of_week", "period_number"],
+        });
+
+        const timetablesWithSubs = await Promise.all(
+          timetables.map(async (t) => {
+            const substitutionCount = await TimetableSubstitution.count({
+              where: {
+                school_id,
+                timetable_id: t.id,
+                date: { [Op.between]: [fromDate, toDate] },
+              },
+            });
+            return {
+              timetable_id: t.id,
+              substitution_count: substitutionCount,
+            };
+          })
+        );
+
+        const totalSubstituted = timetablesWithSubs.reduce(
+          (sum, t) => sum + t.substitution_count,
+          0
+        );
+
+        return {
+          ...leave.toJSON(),
+          total_timetables_assigned: timetables.length,
+          substituted_count: totalSubstituted,
+          // timetables_with_subs: timetablesWithSubs,
+        };
+      })
+    );
+
+    const totalPages = Math.ceil(count / limit);
+
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      leaveRequests: leaveRequestsWithExtraData,
+    });
+  } catch (error) {
+    console.error("Fetch All Teacher Leave Requests Error:", error);
+    res.status(500).json({ error: "Failed to fetch teacher leave requests" });
   }
 };
 const getFreeStaffForPeriod = async (req, res) => {
@@ -3970,6 +4107,7 @@ const getFreeStaffForPeriod = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
 const createSubstitution = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -4191,6 +4329,7 @@ const getSubstitutionById = async (req, res) => {
         { model: Subject, attributes: ["id", "subject_name"] },
       ],
     });
+
     if (!substitution) {
       return res.status(404).json({ error: "Substitution not found" });
     }
@@ -4417,9 +4556,11 @@ module.exports = {
   getAllTimetables,
   getTimetableById,
   deleteTimetableEntry,
-  getFreeStaffForPeriod,
   getTimetablesWithClassId,
   getTimetablesConflicts,
+
+  getAllTeacherLeaveRequestsforSubstitution,
+  getFreeStaffForPeriod,
 
   createSubstitution,
   bulkCreateSubstitution,

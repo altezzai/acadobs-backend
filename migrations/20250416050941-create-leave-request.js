@@ -35,13 +35,16 @@ module.exports = {
           key: "id",
         },
       },
-      role: { type: Sequelize.ENUM("student", "staff"), allowNull: false },
+      role: {
+        type: Sequelize.ENUM("student", "staff", "teacher"),
+        allowNull: false,
+      },
       leave_duration: {
         type: Sequelize.ENUM("half", "full"),
         defaultValue: "full",
       },
       half_section: {
-        type: Sequelize.ENUM("fornoon", "afternoon"),
+        type: Sequelize.ENUM("forenoon", "afternoon"),
         allowNull: true,
       },
       reason: { type: Sequelize.TEXT, allowNull: false },

@@ -10,7 +10,10 @@ const LeaveRequest = schoolSequelize.define(
     user_id: { type: DataTypes.INTEGER, allowNull: false },
     student_id: { type: DataTypes.INTEGER, allowNull: true },
     approved_by: { type: DataTypes.INTEGER, allowNull: true },
-    role: { type: DataTypes.ENUM("student", "staff"), defaultValue: "student" },
+    role: {
+      type: DataTypes.ENUM("student", "staff", "teacher"),
+      defaultValue: "student",
+    },
     reason: { type: DataTypes.TEXT, allowNull: false },
     leave_type: {
       type: DataTypes.ENUM("sick", "casual", "emergency", "vacation", "other"),
@@ -21,7 +24,7 @@ const LeaveRequest = schoolSequelize.define(
       defaultValue: "full",
     },
     half_section: {
-      type: DataTypes.ENUM("fornoon", "afternoon"),
+      type: DataTypes.ENUM("forenoon", "afternoon"),
       allowNull: true,
     },
     from_date: { type: DataTypes.DATEONLY, allowNull: false },

@@ -255,16 +255,20 @@ router.get("/timetables", schoolAdminController.getAllTimetables);
 router.get("/timetables/:id", schoolAdminController.getTimetableById);
 router.delete("/timetables/:id", schoolAdminController.deleteTimetableEntry);
 router.get(
-  "/getFreeStaffForPeriod",
-  schoolAdminController.getFreeStaffForPeriod
-);
-router.get(
   "/getTimetablesWithClassId/:class_id",
   schoolAdminController.getTimetablesWithClassId
 );
 router.get(
   "/getTimetablesConflicts",
   schoolAdminController.getTimetablesConflicts
+);
+router.get(
+  "/getAllTeacherLeaveRequestsforSubstitution",
+  schoolAdminController.getAllTeacherLeaveRequestsforSubstitution
+);
+router.get(
+  "/getFreeStaffForPeriod",
+  schoolAdminController.getFreeStaffForPeriod
 );
 //substitution routes
 router.post(
