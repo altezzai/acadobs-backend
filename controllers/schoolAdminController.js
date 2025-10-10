@@ -4107,6 +4107,12 @@ const getPeriodsForleaveRequestedTeacher = async (req, res) => {
         "half_section",
         "leave_duration",
       ],
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name"],
+        },
+      ],
     });
 
     if (!leave) {
