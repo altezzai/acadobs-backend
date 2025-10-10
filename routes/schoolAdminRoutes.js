@@ -201,6 +201,11 @@ router.patch(
   "/leaveRequestpermission/:id",
   schoolAdminController.leaveRequestPermission
 );
+router.patch(
+  "/staffLeaveRequestPermission/:id",
+  schoolAdminController.staffLeaveRequestPermission
+);
+
 router.get(
   "/getAllStaffLeaveRequests",
   schoolAdminController.getAllStaffLeaveRequests

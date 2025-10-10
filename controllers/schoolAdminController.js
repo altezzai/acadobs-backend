@@ -3039,6 +3039,32 @@ const leaveRequestPermission = async (req, res) => {
     res.status(500).json({ error: "Failed to approve leave request" });
   }
 };
+const staffLeaveRequestPermission = async (req, res) => {
+  try {
+    const Id = req.params.id;
+    const user_id = req.user.user_id;
+    const status = req.query.status;
+    const admin_remarks = req.query.admin_remarks;
+    const school_id = req.user.school_id;
+    if (!status) {
+      return res.status(400).json({ error: "status is required" });
+    }
+    const leaveRequest = await LeaveRequest.findOne({
+      where: { id: Id, trash: false, school_id },
+    });
+    if (!leaveRequest) return res.status(404).json({ error: "Not found" });
+    leaveRequest.approved_by = user_id;
+    leaveRequest.admin_remarks = admin_remarks;
+    leaveRequest.status = status;
+    await leaveRequest.save();
+    res.status(200).json({
+      message: `Leave request ${status} successfully`,
+    });
+  } catch (error) {
+    console.error("Approve Error:", error);
+    res.status(500).json({ error: "Failed to approve leave request" });
+  }
+};
 const deleteLeaveRequest = async (req, res) => {
   try {
     const { id } = req.params;
@@ -4701,6 +4727,7 @@ module.exports = {
   getLeaveRequestById,
   updateLeaveRequest,
   leaveRequestPermission,
+  staffLeaveRequestPermission,
   deleteLeaveRequest,
   restoreLeaveRequest,
   getAllStaffLeaveRequests,
