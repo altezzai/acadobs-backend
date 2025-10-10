@@ -273,6 +273,11 @@ router.get(
   schoolAdminController.getTimetablesConflicts
 );
 router.get(
+  "/getTimetableByTeacherId/:teacher_id",
+  schoolAdminController.getTimetableByTeacherId
+);
+
+router.get(
   "/getAllTeacherLeaveRequestsforSubstitution",
   schoolAdminController.getAllTeacherLeaveRequestsforSubstitution
 );

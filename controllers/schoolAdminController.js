@@ -3249,50 +3249,7 @@ const getAllStudentLeaveRequests = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch leave requests" });
   }
 };
-//i want to get teachers leave request status approved
-const getApprovedStaffLeaveRequests = async (req, res) => {
-  try {
-    const school_id = req.user.school_id;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
-    const whereClause = {
-      trash: false,
-      school_id: school_id,
-      role: "staff",
-      status: "approved",
-    };
-    const { count, rows: leaveRequests } = await LeaveRequest.findAndCountAll({
-      offset,
-      distinct: true,
-      limit,
-      where: whereClause,
-      include: [
-        {
-          model: User,
-          attributes: ["id", "name", "email", "phone", "dp"],
-          // include: [
-          //   {
-          //     model: Timetable,
-          //     attributes: ["id", "class_id", "section_id", "subject_id"],
-          //   },
-          // ],
-        },
-      ],
-      order: [["createdAt", "DESC"]],
-    });
-    const totalPages = Math.ceil(count / limit);
-    res.status(200).json({
-      totalcontent: count,
-      totalPages,
-      currentPage: page,
-      leaveRequests,
-    });
-  } catch (error) {
-    console.error("Fetch All Error:", error);
-    res.status(500).json({ error: "Failed to fetch leave requests" });
-  }
-};
+
 const createNews = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -3892,6 +3849,7 @@ const getTimetablesWithClassId = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch timetable" });
   }
 };
+
 const getTimetablesConflicts = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -3969,6 +3927,27 @@ const getTimetablesConflicts = async (req, res) => {
       // period_count,
       conflicts,
     });
+  } catch (error) {
+    console.error("Error fetching timetable:", error);
+    res.status(500).json({ error: "Failed to fetch timetable" });
+  }
+};
+const getTimetableByTeacherId = async (req, res) => {
+  try {
+    const teacherId = req.params.teacher_id;
+    const school_id = req.user.school_id;
+    const day_of_week = req.query.day_of_week;
+    if (!teacherId || !school_id || !day_of_week) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const timetables = await Timetable.findAll({
+      where: { staff_id: teacherId, school_id, day_of_week },
+      order: [
+        ["day_of_week", "ASC"],
+        ["period_number", "ASC"],
+      ],
+    });
+    res.json(timetables);
   } catch (error) {
     console.error("Error fetching timetable:", error);
     res.status(500).json({ error: "Failed to fetch timetable" });
@@ -4116,7 +4095,6 @@ const getPeriodsForleaveRequestedTeacher = async (req, res) => {
     const school_id = req.user.school_id;
     const leaveRequestId = req.params.leaveRequest_id;
 
-    // 🔹 Fetch the leave request
     const leave = await LeaveRequest.findOne({
       where: { id: leaveRequestId, school_id },
       attributes: [
@@ -4137,24 +4115,25 @@ const getPeriodsForleaveRequestedTeacher = async (req, res) => {
 
     const teacherId = leave.user_id;
 
-    // 🔹 Get school period count
     const school = await School.findOne({
       where: { id: school_id },
       attributes: ["period_count"],
     });
     const periodCount = school?.period_count || 7;
 
-    // 🔹 Calculate date range days
     const fromDate = new Date(leave.from_date);
     const toDate = new Date(leave.to_date || leave.from_date);
-    const dayNumbers = [];
+    const dateList = [];
     let tempDate = new Date(fromDate);
     while (tempDate <= toDate) {
-      dayNumbers.push(tempDate.getDay());
+      dateList.push({
+        date: new Date(tempDate),
+        day_of_week: tempDate.getDay(),
+      });
       tempDate.setDate(tempDate.getDate() + 1);
     }
 
-    // 🔹 Determine half-day period filter
+    const dayNumbers = dateList.map((d) => d.day_of_week);
     let periodFilter = {};
     const leaveDuration = leave.leave_duration?.toLowerCase();
     const halfSection = leave.half_section?.toLowerCase();
@@ -4170,7 +4149,6 @@ const getPeriodsForleaveRequestedTeacher = async (req, res) => {
       }
     }
 
-    // 🔹 Get all timetables of that teacher within the weekday and half-day logic
     const timetables = await Timetable.findAll({
       where: {
         school_id,
@@ -4189,11 +4167,18 @@ const getPeriodsForleaveRequestedTeacher = async (req, res) => {
         ["day_of_week", "ASC"],
         ["period_number", "ASC"],
       ],
+      include: [
+        { model: Class, attributes: ["id", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+      ],
     });
 
-    // 🔹 For each timetable, include substitution data for that leave date range
     const timetablesWithSubs = await Promise.all(
       timetables.map(async (t) => {
+        const matchedDates = dateList
+          .filter((d) => d.day_of_week === t.day_of_week)
+          .map((d) => d.date.toISOString().split("T")[0]);
+
         const substitutions = await TimetableSubstitution.findAll({
           where: {
             school_id,
@@ -4208,10 +4193,15 @@ const getPeriodsForleaveRequestedTeacher = async (req, res) => {
             "reason",
             "createdAt",
           ],
+          include: [
+            { model: User, attributes: ["id", "name"] },
+            { model: Subject, attributes: ["id", "subject_name"] },
+          ],
         });
 
         return {
           ...t.toJSON(),
+          leave_dates: matchedDates,
           substitution_count: substitutions.length,
           substitutions,
         };
@@ -4756,6 +4746,7 @@ module.exports = {
   deleteTimetableEntry,
   getTimetablesWithClassId,
   getTimetablesConflicts,
+  getTimetableByTeacherId,
 
   getAllTeacherLeaveRequestsforSubstitution,
   getPeriodsForleaveRequestedTeacher,
