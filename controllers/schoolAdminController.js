@@ -3124,6 +3124,53 @@ const getAllStaffLeaveRequests = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch leave requests" });
   }
 };
+const getAllTeacherLeaveRequests = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const date = req.query.date || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+      school_id: school_id,
+      role: "teacher",
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [{ reason: { [Op.like]: `%${searchQuery}%` } }];
+    }
+    if (date) {
+      whereClause[Op.or] = [
+        { from_date: { [Op.like]: `%${date}%` } },
+        { to_date: { [Op.like]: `%${date}%` } },
+      ];
+    }
+    const { count, rows: leaveRequests } = await LeaveRequest.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone", "dp"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      leaveRequests,
+    });
+  } catch (error) {
+    console.error("Fetch All Error:", error);
+    res.status(500).json({ error: "Failed to fetch leave requests" });
+  }
+};
 
 const getAllStudentLeaveRequests = async (req, res) => {
   try {
@@ -4038,6 +4085,129 @@ const getAllTeacherLeaveRequestsforSubstitution = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch teacher leave requests" });
   }
 };
+const getPeriodsForleaveRequestedTeacher = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const leaveRequestId = req.params.leaveRequest_id;
+
+    // 🔹 Fetch the leave request
+    const leave = await LeaveRequest.findOne({
+      where: { id: leaveRequestId, school_id },
+      attributes: [
+        "id",
+        "from_date",
+        "to_date",
+        "reason",
+        "status",
+        "user_id",
+        "half_section",
+        "leave_duration",
+      ],
+    });
+
+    if (!leave) {
+      return res.status(404).json({ error: "Leave request not found" });
+    }
+
+    const teacherId = leave.user_id;
+
+    // 🔹 Get school period count
+    const school = await School.findOne({
+      where: { id: school_id },
+      attributes: ["period_count"],
+    });
+    const periodCount = school?.period_count || 7;
+
+    // 🔹 Calculate date range days
+    const fromDate = new Date(leave.from_date);
+    const toDate = new Date(leave.to_date || leave.from_date);
+    const dayNumbers = [];
+    let tempDate = new Date(fromDate);
+    while (tempDate <= toDate) {
+      dayNumbers.push(tempDate.getDay());
+      tempDate.setDate(tempDate.getDate() + 1);
+    }
+
+    // 🔹 Determine half-day period filter
+    let periodFilter = {};
+    const leaveDuration = leave.leave_duration?.toLowerCase();
+    const halfSection = leave.half_section?.toLowerCase();
+
+    if (leaveDuration === "half") {
+      const forenoonPeriods = Math.ceil(periodCount / 2 + 0.5);
+      const afternoonStart = forenoonPeriods + 1;
+
+      if (halfSection === "forenoon") {
+        periodFilter = { period_number: { [Op.lte]: forenoonPeriods } };
+      } else if (halfSection === "afternoon") {
+        periodFilter = { period_number: { [Op.gte]: afternoonStart } };
+      }
+    }
+
+    // 🔹 Get all timetables of that teacher within the weekday and half-day logic
+    const timetables = await Timetable.findAll({
+      where: {
+        school_id,
+        staff_id: teacherId,
+        day_of_week: { [Op.in]: dayNumbers },
+        ...periodFilter,
+      },
+      attributes: [
+        "id",
+        "day_of_week",
+        "period_number",
+        "class_id",
+        "subject_id",
+      ],
+      order: [
+        ["day_of_week", "ASC"],
+        ["period_number", "ASC"],
+      ],
+    });
+
+    // 🔹 For each timetable, include substitution data for that leave date range
+    const timetablesWithSubs = await Promise.all(
+      timetables.map(async (t) => {
+        const substitutions = await TimetableSubstitution.findAll({
+          where: {
+            school_id,
+            timetable_id: t.id,
+            date: { [Op.between]: [fromDate, toDate] },
+          },
+          attributes: [
+            "id",
+            "sub_staff_id",
+            "date",
+            "subject_id",
+            "reason",
+            "createdAt",
+          ],
+        });
+
+        return {
+          ...t.toJSON(),
+          substitution_count: substitutions.length,
+          substitutions,
+        };
+      })
+    );
+
+    // 🔹 Response
+    res.status(200).json({
+      success: true,
+      leave_id: leave.id,
+      teacher_id: teacherId,
+      leave_duration: leave.leave_duration,
+      half_section: leave.half_section,
+      total_periods: timetablesWithSubs.length,
+      timetables: timetablesWithSubs,
+    });
+  } catch (error) {
+    console.error("Error fetching periods with substitutions:", error);
+    res.status(500).json({ error: "Failed to fetch periods for teacher" });
+  }
+};
+
 const getFreeStaffForPeriod = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -4534,6 +4704,7 @@ module.exports = {
   deleteLeaveRequest,
   restoreLeaveRequest,
   getAllStaffLeaveRequests,
+  getAllTeacherLeaveRequests,
   getAllStudentLeaveRequests,
 
   createNews,
@@ -4560,6 +4731,7 @@ module.exports = {
   getTimetablesConflicts,
 
   getAllTeacherLeaveRequestsforSubstitution,
+  getPeriodsForleaveRequestedTeacher,
   getFreeStaffForPeriod,
 
   createSubstitution,

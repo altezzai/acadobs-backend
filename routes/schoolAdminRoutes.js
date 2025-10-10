@@ -206,6 +206,11 @@ router.get(
   schoolAdminController.getAllStaffLeaveRequests
 );
 router.get(
+  "/getAllTeacherLeaveRequests",
+  schoolAdminController.getAllTeacherLeaveRequests
+);
+
+router.get(
   "/getAllStudentLeaveRequests",
   schoolAdminController.getAllStudentLeaveRequests
 );
@@ -265,6 +270,10 @@ router.get(
 router.get(
   "/getAllTeacherLeaveRequestsforSubstitution",
   schoolAdminController.getAllTeacherLeaveRequestsforSubstitution
+);
+router.get(
+  "/getPeriodsForleaveRequestedTeacher/:leaveRequest_id",
+  schoolAdminController.getPeriodsForleaveRequestedTeacher
 );
 router.get(
   "/getFreeStaffForPeriod",
