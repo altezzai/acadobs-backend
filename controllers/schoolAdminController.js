@@ -4219,6 +4219,7 @@ const getPeriodsForleaveRequestedTeacher = async (req, res) => {
       success: true,
       leave_id: leave.id,
       teacher_id: teacherId,
+      teacher_name: leave.User.name,
       leave_duration: leave.leave_duration,
       half_section: leave.half_section,
       total_periods: timetablesWithSubs.length,
