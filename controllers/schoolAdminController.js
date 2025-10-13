@@ -373,7 +373,7 @@ const createStaff = async (req, res) => {
         role,
         qualification,
         address,
-        class_id,
+        class_id: class_id || null,
       },
       { transaction }
     );
@@ -3945,6 +3945,10 @@ const getTimetableByTeacherId = async (req, res) => {
       order: [
         ["day_of_week", "ASC"],
         ["period_number", "ASC"],
+      ],
+      include: [
+        { model: Subject, attributes: ["id", "subject_name"] }, // optional
+        { model: Class, attributes: ["id", "classname"] }, // optional
       ],
     });
     res.json(timetables);
