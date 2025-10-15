@@ -593,13 +593,17 @@ const getHomeworkByTeacher = async (req, res) => {
       order: [["createdAt", "DESC"]],
     });
 
-    // Group by date (yyyy-mm-dd)
-    const groupedHomework = rows.reduce((acc, hw) => {
-      const dateKey = hw.createdAt.toISOString().split("T")[0]; // format date
+    const grouped = rows.reduce((acc, hw) => {
+      const dateKey = hw.createdAt.toISOString().split("T")[0];
       if (!acc[dateKey]) acc[dateKey] = [];
       acc[dateKey].push(hw);
       return acc;
     }, {});
+
+    // Convert object map to array of objects
+    const groupedHomework = Object.keys(grouped).map((date) => ({
+      [date]: grouped[date],
+    }));
 
     const totalPages = Math.ceil(count / limit);
 
