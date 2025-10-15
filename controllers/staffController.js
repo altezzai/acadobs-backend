@@ -1114,7 +1114,7 @@ const getAttendanceByTeacher = async (req, res) => {
 };
 const getAllDuties = async (req, res) => {
   try {
-    const staff_id = req.query.staff_id;
+    const staff_id = req.user.user_id;
     const searchQuery = req.query.q || "";
     const deadline = req.query.deadline || "";
     const page = parseInt(req.query.page) || 1;
@@ -1168,7 +1168,7 @@ const getAllDuties = async (req, res) => {
 const getAssignedDutyById = async (req, res) => {
   try {
     const id = req.params.id;
-    const staff_id = req.query.staff_id;
+    const staff_id = req.user.user_id;
     const duty = await DutyAssignment.findOne({
       where: { id, staff_id },
       attributes: ["id", "remarks", "status", "solved_file"],
@@ -1200,7 +1200,8 @@ const getAssignedDutyById = async (req, res) => {
 const updateAssignedDuty = async (req, res) => {
   try {
     const { id } = req.params;
-    const { remarks, status, staff_id } = req.body;
+    const staff_id = req.user.user_id;
+    const { remarks, status } = req.body;
     const assignedDuty = await DutyAssignment.findOne({
       where: {
         id,
@@ -1430,7 +1431,7 @@ const updateStudentAchievement = async (req, res) => {
   try {
     const recorded_by = req.user.user_id;
 
-    const { status, proof_document, remarks } = req.body;
+    const { status, remarks } = req.body;
     if (
       status !== "1st prize" &&
       status !== "2nd prize" &&
@@ -1458,12 +1459,12 @@ const updateStudentAchievement = async (req, res) => {
     let AchievementFilename = StudentAchievementData.proof_document;
     const uploadPath = "uploads/achievement_proofs/";
     if (req.file) {
+      console.log(req.file);
       await deletefilewithfoldername(AchievementFilename, uploadPath);
       AchievementFilename = await compressAndSaveFile(req.file, uploadPath);
     }
     await StudentAchievementData.update({
       status,
-      proof_document,
       remarks,
       proof_document: AchievementFilename ? AchievementFilename : null,
     });
@@ -1472,6 +1473,7 @@ const updateStudentAchievement = async (req, res) => {
       StudentAchievementData,
     });
   } catch (error) {
+    console.error("Error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
