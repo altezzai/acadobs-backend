@@ -320,6 +320,11 @@ router.get(
   schoolAdminController.getSchoolAttendanceSummary
 );
 
+router.get(
+  "/getNavigationBarCounts",
+  schoolAdminController.getNavigationBarCounts
+);
+
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);

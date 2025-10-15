@@ -22,6 +22,8 @@ const Timetable = require("../models/timetables");
 const Invoice = require("../models/invoice");
 const InvoiceStudent = require("../models/invoice_students");
 const TimetableSubstitution = require("../models/timetable_substitutions");
+const Chat = require("../models/chat");
+const Message = require("../models/messages");
 
 const { getschoolIdByStudentId } = require("../controllers/commonController");
 
@@ -675,6 +677,36 @@ const getAllDayTimetableByStudentId = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+const getNavigationBarCounts = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
+
+    const unreadChatCount = await Chat.findAll({
+      where: {
+        [Op.or]: [{ user1_id: user_id }, { user2_id: user_id }],
+      },
+      include: [
+        {
+          model: Message,
+          attributes: ["id", "receiver_id", "status"],
+          where: { status: { [Op.ne]: "read" }, trash: false },
+        },
+      ],
+    });
+    res.json({
+      unreadChatCount: unreadChatCount.length,
+    });
+  } catch (error) {
+    console.error(
+      "Error fetching pending leave request counts by role:",
+      error
+    );
+    res
+      .status(500)
+      .json({ error: "Failed to fetch pending leave request counts" });
+  }
+};
 
 module.exports = {
   updateHomeworkAssignment,
@@ -697,4 +729,6 @@ module.exports = {
 
   getTodayTimetableByStudentId,
   getAllDayTimetableByStudentId,
+
+  getNavigationBarCounts,
 };

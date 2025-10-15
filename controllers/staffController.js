@@ -24,6 +24,8 @@ const ParentNote = require("../models/parent_note");
 const Timetable = require("../models/timetables");
 const TimetableSubstitution = require("../models/timetable_substitutions");
 const Staff = require("../models/staff");
+const Chat = require("../models/chat");
+const Message = require("../models/messages");
 
 const { Homework, HomeworkAssignment } = require("../models");
 const { getGuarduianIdbyStudentId } = require("./commonController");
@@ -2150,47 +2152,54 @@ const getAllDaysTimetableForStaff = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-//get datewise timetablesubstitute  for staff
-// const getSubstituteTimetableForStaff = async (req, res) => {
-//   try {
-//     const staff_id = req.user.user_id;
-//     const school_id = req.user.school_id;
-//     const date = req.params.date || new Date().toISOString().split("T")[0];
-//     let whereClause = {
-//       sub_staff_id: staff_id,
-//       school_id,
-//       // date,
-//     };
+const getNavigationBarCounts = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
+    const staff = await Staff.findOne({ where: { user_id, school_id } });
+    const class_id = staff ? staff.class_id : null;
 
-//     const timetable = await TimetableSubstitution.findAll({
-//       where: whereClause,
-//       order: [
-//         ["date", "ASC"],
-//         ["timetable_id", "ASC"],
-//       ],
-//       include: [
-//         {
-//           model: Timetable,
-//           attributes: ["id", "day_of_week", "period_number"],
-//           required: false,
-//           include: [
-//             {
-//               model: Class,
-//               attributes: ["id", "classname"],
-//             },
-//           ],
-//         },
-//         { model: Subject, attributes: ["id", "subject_name"] },
-//       ],
-//     });
-//     return res.json({
-//       timetable,
-//     });
-//   } catch (error) {
-//     console.error("getSubstituteTimetableForStaff error:", error);
-//     return res.status(500).json({ error: error.message });
-//   }
-// };
+    const studentLeaveRequestCount = await LeaveRequest.count({
+      where: {
+        school_id,
+        role: "student",
+        status: "pending",
+        trash: false,
+      },
+      include: [
+        {
+          model: Student,
+          attributes: ["id", "full_name", "reg_no", "class_id"],
+          where: { class_id: class_id },
+        },
+      ],
+    });
+    const unreadChatCount = await Chat.findAll({
+      where: {
+        [Op.or]: [{ user1_id: user_id }, { user2_id: user_id }],
+      },
+      include: [
+        {
+          model: Message,
+          attributes: ["id", "receiver_id", "status"],
+          where: { status: { [Op.ne]: "read" }, trash: false },
+        },
+      ],
+    });
+    res.json({
+      studentLeaveRequestCount,
+      unreadChatCount: unreadChatCount.length,
+    });
+  } catch (error) {
+    console.error(
+      "Error fetching pending leave request counts by role:",
+      error
+    );
+    res
+      .status(500)
+      .json({ error: "Failed to fetch pending leave request counts" });
+  }
+};
 
 module.exports = {
   createExamWithMarks,
@@ -2260,5 +2269,6 @@ module.exports = {
 
   getTodayTimetableForStaff,
   getAllDaysTimetableForStaff,
-  // getSubstituteTimetableForStaff,
+
+  getNavigationBarCounts,
 };

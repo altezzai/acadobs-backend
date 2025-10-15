@@ -4639,6 +4639,52 @@ const getSchoolAttendanceSummary = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const getNavigationBarCounts = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+
+    const teacherLeaveRequestCount = await LeaveRequest.count({
+      where: {
+        school_id,
+        role: "teacher",
+        status: "pending",
+        trash: false,
+      },
+    });
+
+    const staffLeaveRequestCount = await LeaveRequest.count({
+      where: {
+        school_id,
+        role: "staff",
+        status: "pending",
+        trash: false,
+      },
+    });
+
+    const studentLeaveRequestCount = await LeaveRequest.count({
+      where: {
+        school_id,
+        role: "student",
+        status: "pending",
+        trash: false,
+      },
+    });
+
+    res.json({
+      teacherLeaveRequestCount,
+      staffLeaveRequestCount,
+      studentLeaveRequestCount,
+    });
+  } catch (error) {
+    console.error(
+      "Error fetching pending leave request counts by role:",
+      error
+    );
+    res
+      .status(500)
+      .json({ error: "Failed to fetch pending leave request counts" });
+  }
+};
 
 module.exports = {
   createClass,
@@ -4771,4 +4817,5 @@ module.exports = {
   deleteSubstitution,
 
   getSchoolAttendanceSummary,
+  getNavigationBarCounts,
 };

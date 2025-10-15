@@ -155,11 +155,10 @@ router.get(
   "/getAllDayTimetableForStaff",
   staffController.getAllDaysTimetableForStaff
 );
-// router.get(
-//   "/getSubstituteTimetableForStaff",
-//   staffController.getSubstituteTimetableForStaff
-// );
+
+router.get("/getNavigationBarCounts", staffController.getNavigationBarCounts);
 router.get("/getLatestNotices", staffController.getLatestNotices);
+
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);
@@ -169,6 +168,7 @@ router.get(
   commonController.getStudentsByClassId
 );
 router.get("/getClassesByYear/:year", commonController.getClassesByYear);
+
 //common controller for student
 router.get("/students/:id", commonController.getStudentById);
 router.get(

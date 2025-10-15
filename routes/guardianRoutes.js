@@ -57,6 +57,11 @@ router.get(
   guardianController.getAllDayTimetableByStudentId
 );
 
+router.get(
+  "/getNavigationBarCounts",
+  guardianController.getNavigationBarCounts
+);
+
 //common controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);
