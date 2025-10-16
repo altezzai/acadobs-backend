@@ -1138,12 +1138,12 @@ const getAllDuties = async (req, res) => {
         { description: { [Op.like]: `%${searchQuery}%` } },
       ];
     }
-    const { count, rows: duties } = await DutyAssignment.findAndCountAll({
+    const { count, rows } = await DutyAssignment.findAndCountAll({
       offset,
       distinct: true,
       limit,
       where: { staff_id },
-      attributes: ["id", "remarks", "status", "solved_file"],
+      attributes: ["id", "remarks", "status", "solved_file", "createdAt"],
       include: [
         {
           model: Duty,
@@ -1155,16 +1155,32 @@ const getAllDuties = async (req, res) => {
             "deadline",
             "file",
             "start_date",
+            "createdAt",
           ],
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
+    const grouped = rows.reduce((acc, Duties) => {
+      const dateKey = Duties.createdAt.toISOString().split("T")[0];
+      if (!acc[dateKey]) acc[dateKey] = [];
+      acc[dateKey].push(Duties);
+      return acc;
+    }, {});
+
+    // Convert object to desired array format
+    const groupedDuties = Object.keys(grouped)
+      .sort((a, b) => new Date(b) - new Date(a)) // newest date first
+      .map((date) => ({
+        date,
+        requests: grouped[date],
+      }));
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
       totalPages,
       currentPage: page,
-      duties,
+      duties: groupedDuties,
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch duties" });
@@ -1835,11 +1851,19 @@ const getStudentLeaveRequestsForClassTeacher = async (req, res) => {
     if (date) {
       whereClause.date = date;
     }
-    const { count, rows: leaveRequests } = await LeaveRequest.findAndCountAll({
+    const { count, rows } = await LeaveRequest.findAndCountAll({
       offset,
       distinct: true,
       limit,
       where: whereClause,
+      attributes: [
+        "id",
+        "user_id",
+        "from_date",
+        "to_date",
+        "status",
+        "createdAt",
+      ],
       include: [
         {
           model: Student,
@@ -1849,12 +1873,27 @@ const getStudentLeaveRequestsForClassTeacher = async (req, res) => {
       ],
       order: [["createdAt", "DESC"]],
     });
+
+    const grouped = rows.reduce((acc, leave) => {
+      const dateKey = leave.createdAt.toISOString().split("T")[0];
+      if (!acc[dateKey]) acc[dateKey] = [];
+      acc[dateKey].push(leave);
+      return acc;
+    }, {});
+
+    // Convert object to desired array format
+    const groupedLeaveRequests = Object.keys(grouped)
+      .sort((a, b) => new Date(b) - new Date(a)) // newest date first
+      .map((date) => ({
+        date,
+        requests: grouped[date],
+      }));
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
       totalPages,
       currentPage: page,
-      leaveRequests,
+      leaveRequests: groupedLeaveRequests,
     });
   } catch (error) {
     console.error("Error fetching leave requests:", error);
