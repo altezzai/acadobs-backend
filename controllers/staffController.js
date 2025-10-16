@@ -590,18 +590,19 @@ const getHomeworkByTeacher = async (req, res) => {
         title: { [Op.like]: `%${searchQuery}%` },
       },
       attributes: ["id", "title", "description", "due_date", "createdAt"],
-      order: [["createdAt", "DESC"]],
+      order: [["due_date", "DESC"]],
     });
     const grouped = rows.reduce((acc, hw) => {
-      const dateKey = hw.createdAt.toISOString().split("T")[0];
+      // const dateKey = hw.due_date.toISOString().split("T")[0];
+      const dateKey = hw.due_date;
       if (!acc[dateKey]) acc[dateKey] = [];
       acc[dateKey].push(hw);
       return acc;
     }, {});
 
-    const groupedHomework = Object.keys(grouped).map((date) => ({
-      date,
-      homeworks: grouped[date],
+    const groupedHomework = Object.keys(grouped).map((due_date) => ({
+      due_date,
+      homeworks: grouped[due_date],
     }));
 
     const totalPages = Math.ceil(count / limit);
