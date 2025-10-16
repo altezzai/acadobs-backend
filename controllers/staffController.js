@@ -599,7 +599,6 @@ const getHomeworkByTeacher = async (req, res) => {
       return acc;
     }, {});
 
-    // Convert to desired array format
     const groupedHomework = Object.keys(grouped).map((date) => ({
       date,
       homeworks: grouped[date],
