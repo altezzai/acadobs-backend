@@ -396,6 +396,14 @@ const getHomeworkById = async (req, res) => {
             },
           ],
         },
+        {
+          model: Class,
+          attributes: ["id", "classname"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name"],
+        },
       ],
     });
     if (!homework) return res.status(404).json({ error: "Not found" });
@@ -589,20 +597,34 @@ const getHomeworkByTeacher = async (req, res) => {
         trash: false,
         title: { [Op.like]: `%${searchQuery}%` },
       },
-      attributes: ["id", "title", "description", "due_date", "createdAt"],
-      order: [["due_date", "DESC"]],
+      attributes: [
+        "id",
+        "title",
+        "description",
+        "due_date",
+        "class_id",
+        "createdAt",
+      ],
+      include: [
+        {
+          model: Class,
+          attributes: ["id", "classname"],
+        },
+      ],
+
+      order: [["createdAt", "DESC"]],
     });
     const grouped = rows.reduce((acc, hw) => {
-      // const dateKey = hw.due_date.toISOString().split("T")[0];
-      const dateKey = hw.due_date;
+      const dateKey = hw.createdAt.toISOString().split("T")[0];
+      // const dateKey = hw.createdAt;
       if (!acc[dateKey]) acc[dateKey] = [];
       acc[dateKey].push(hw);
       return acc;
     }, {});
 
-    const groupedHomework = Object.keys(grouped).map((due_date) => ({
-      due_date,
-      homeworks: grouped[due_date],
+    const groupedHomework = Object.keys(grouped).map((date) => ({
+      date,
+      homeworks: grouped[date],
     }));
 
     const totalPages = Math.ceil(count / limit);
