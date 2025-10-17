@@ -153,6 +153,10 @@ const getHomeworkByStudentId = async (req, res) => {
               model: User,
               attributes: ["id", "name"],
             },
+            {
+              model: Subject,
+              attributes: ["id", "subject_name"],
+            },
           ],
         },
       ],
