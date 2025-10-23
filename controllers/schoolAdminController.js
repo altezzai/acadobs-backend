@@ -183,6 +183,10 @@ const deleteClass = async (req, res) => {
 const createSubject = async (req, res) => {
   try {
     const school_id = req.user.school_id;
+    const schoolData = await School.findOne({
+      where: { id: school_id },
+      attributes: ["syllabus_type"],
+    });
     const { subject_name, class_range } = req.body;
     if (!subject_name || !class_range || !school_id) {
       return res.status(400).json({ error: "Required fields are missing" });
@@ -210,6 +214,7 @@ const createSubject = async (req, res) => {
       subject_name,
       class_range,
       school_id,
+      syllabus_type: schoolData.syllabus_type,
     });
     res.status(201).json(subject);
   } catch (err) {
@@ -3539,7 +3544,7 @@ const createNotice = async (req, res) => {
 
     if (type === "classes" && Array.isArray(class_ids)) {
       const mappings = class_ids.map((cid) => ({
-        id: notice.id,
+        notice_id: notice.id,
         class_id: cid,
       }));
       await NoticeClass.bulkCreate(mappings);

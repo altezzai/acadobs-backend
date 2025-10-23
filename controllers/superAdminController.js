@@ -272,6 +272,7 @@ const deleteClass = async (req, res) => {
 
 const createSubject = async (req, res) => {
   try {
+    const school_id = req.body.school_id || null;
     const { subject_name, class_range, syllabus_type } = req.body;
     if (!subject_name || !class_range) {
       return res.status(400).json({ error: "Required fields are missing" });
@@ -286,7 +287,13 @@ const createSubject = async (req, res) => {
       return res.status(400).json({ error: "Invalid class range" });
     }
     const exists = await Subject.findOne({
-      where: { subject_name, class_range, trash: false, syllabus_type },
+      where: {
+        subject_name,
+        class_range,
+        trash: false,
+        syllabus_type,
+        school_id,
+      },
     });
 
     if (exists) {
@@ -299,6 +306,7 @@ const createSubject = async (req, res) => {
       subject_name,
       class_range,
       syllabus_type,
+      school_id: school_id ? school_id : null,
     });
     res.status(201).json(subject);
   } catch (err) {
