@@ -967,7 +967,13 @@ const getAllGuardians = async (req, res) => {
         guardian_name: { [Op.like]: `%${searchQuery}%` },
         trash: false,
       },
-      include: [{ model: User, attributes: ["name", "email", "phone", "dp"] }],
+      include: [
+        {
+          model: User,
+          attributes: ["name", "email", "phone", "dp"],
+          where: { school_id: req.user.school_id },
+        },
+      ],
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -1013,7 +1019,11 @@ const updateGuardian = async (req, res) => {
       father_name,
       mother_name,
     } = req.body;
-    const guardian = await Guardian.findByPk(id);
+    const guardian = await Guardian.findOne({
+      where: { id, trash: false },
+      include: [{ model: User, where: { school_id } }],
+    });
+    let fileName = null;
     if (!guardian) return res.status(404).json({ error: "Guardian not found" });
 
     if (guardian_email) {
@@ -1068,7 +1078,7 @@ const updateGuardian = async (req, res) => {
 
     await user.update({
       name: guardian.guardian_name,
-      email: guardian.guardian_email,
+      // email: guardian.guardian_email,
       phone: guardian.guardian_contact,
       dp: fileName,
     });
@@ -1078,7 +1088,6 @@ const updateGuardian = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
 const deleteGuardian = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1091,7 +1100,52 @@ const deleteGuardian = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const getGuardianBySchoolId = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const guardians = await User.findAll({
+      offset,
+      distinct: true,
+      limit,
+      where: {
+        school_id,
+        role: "guardian",
+        trash: false,
+      },
+      attributes: ["id", "name", "email", "phone", "dp"],
+    });
+    const totalPages = Math.ceil(guardians.length / limit);
+    res.status(200).json({
+      totalcontent: guardians.length,
+      totalPages,
+      currentPage: page,
+      guardians,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const updateGuardianUserPassword = async (req, res) => {
+  try {
+    const id = req.params.user_id;
+    const school_id = req.user.school_id;
 
+    const { newPassword } = req.body;
+    const user = await User.findOne({
+      where: { id, school_id },
+    });
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await user.update({ password: hashedPassword });
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+// Create Student
 const createStudent = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -3675,7 +3729,6 @@ const bulkUpsertTimetable = async (req, res) => {
       ...record,
       school_id,
     }));
-    // Use bulkCreate with updateOnDuplicate
     await Timetable.bulkCreate(records, {
       updateOnDuplicate: ["subject_id", "staff_id", "updatedAt"],
     });
@@ -4719,6 +4772,9 @@ module.exports = {
   updateGuardian,
   createGuardianService,
   deleteGuardian,
+
+  getGuardianBySchoolId,
+  updateGuardianUserPassword,
 
   createStudent,
   bulkCreateStudents,

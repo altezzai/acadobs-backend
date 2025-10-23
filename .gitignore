@@ -1,5 +1,6 @@
 .env
 /uploads/
+serviceAccountKey.json
 # Logs
 logs
 *.log

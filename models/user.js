@@ -47,10 +47,16 @@ const User = schoolSequelize.define(
       ),
       allowNull: false,
     },
+    fcm_token: {
+      type: DataTypes.TEXT, // using TEXT to handle long tokens
+      allowNull: true,
+      comment: "Firebase Cloud Messaging token for push notifications",
+    },
     status: {
       type: DataTypes.ENUM("active", "inactive"),
       defaultValue: "active",
     },
+
     verified: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

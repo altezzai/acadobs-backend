@@ -1,4 +1,6 @@
 const { Op, where, DATEONLY } = require("sequelize");
+const bcrypt = require("bcrypt");
+
 const User = require("../models/user");
 const Student = require("../models/student");
 const HomeworkAssignment = require("../models/homeworkassignment");
@@ -14,7 +16,6 @@ const LeaveRequest = require("../models/leaverequest");
 const School = require("../models/school");
 const Event = require("../models/event");
 const News = require("../models/news");
-
 const { Class } = require("../models");
 
 const getStudentsByClassId = async (req, res) => {
@@ -543,6 +544,49 @@ const getSchoolDetails = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch school details" });
   }
 };
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: "Old password is incorrect" });
+    }
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+    res.status(200).json({ message: "Password changed successfully" });
+  } catch (err) {
+    console.error("Error changing password:", err);
+    res.status(500).json({ error: "Failed to change password" });
+  }
+};
+const updateTcmToken = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const { fcm_token } = req.body;
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    user.fcm_token = fcm_token;
+    await user.save();
+    res.status(200).json({ message: "FCM token updated successfully" });
+  } catch (err) {
+    console.error("Error updating FCM token:", err);
+    res.status(500).json({ error: "Failed to update FCM token" });
+  }
+};
+
 module.exports = {
   getStudentsByClassId,
   getschoolIdByStudentId,
@@ -566,4 +610,7 @@ module.exports = {
   getLatestEvents,
   getLatestNews,
   getSchoolDetails,
+
+  changePassword,
+  updateTcmToken,
 };

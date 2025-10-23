@@ -76,6 +76,14 @@ router.put(
   schoolAdminController.updateGuardian
 );
 router.delete("/guardian/:id", schoolAdminController.deleteGuardian);
+router.get(
+  "/getGuardianBySchoolId",
+  schoolAdminController.getGuardianBySchoolId
+);
+router.put(
+  "/updateGuardianUserPassword/:user_id",
+  schoolAdminController.updateGuardianUserPassword
+);
 
 // Student routes
 router.post(

@@ -32,6 +32,7 @@ const { getGuarduianIdbyStudentId } = require("./commonController");
 const {
   sendMessageWithParentNote,
 } = require("../socketHandlers/messageHandlers");
+const { sendPushNotification } = require("./../utils/notifcationHandler");
 
 const createExamWithMarks = async (req, res) => {
   try {
@@ -712,6 +713,44 @@ const createAttendance = async (req, res) => {
     }));
 
     await AttendanceMarked.bulkCreate(records);
+    const absentStudents = filteredStudents.filter(
+      (s) => s.status.toLowerCase() === "absent"
+    );
+
+    if (absentStudents.length > 0) {
+      const studentIds = absentStudents.map((s) => s.student_id);
+
+      const studentRecords = await Student.findAll({
+        where: { student_id: studentIds },
+        attributes: ["student_id", "guardian_id", "name"],
+      });
+
+      const guardianIds = studentRecords.map((s) => s.guardian_id);
+
+      // Fetch guardian FCM tokens
+      const guardians = await User.findAll({
+        where: {
+          user_id: guardianIds,
+          fcm_token: { [Op.ne]: null },
+        },
+        attributes: ["user_id", "fcm_token", "name"],
+      });
+
+      const tokens = guardians.map((g) => g.fcm_token);
+
+      if (tokens.length > 0) {
+        const absentNames = studentRecords.map((s) => s.name).join(", ");
+        const title = "Student Absence Alert";
+        const body = `Your child ${absentNames} are marked absent on ${date}.`;
+
+        await sendPushNotification(tokens, title, body, {
+          type: "attendance_alert",
+          date: date,
+          attendance_id: attendance.id,
+          attendanceMrakedIds: records.map((r) => r.id),
+        });
+      }
+    }
 
     res.status(201).json({
       message: existingAttendance ? "Attendance updated" : "Attendance created",
@@ -1885,6 +1924,11 @@ const getStudentLeaveRequestsForClassTeacher = async (req, res) => {
         "from_date",
         "to_date",
         "status",
+        "attachment",
+        "leave_type",
+        "reason",
+        "leave_duration",
+        "half_section",
         "createdAt",
       ],
       include: [

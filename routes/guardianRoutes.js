@@ -91,4 +91,7 @@ router.get(
   "/getLeaveRequestByStudentId/:student_id",
   commonController.getLeaveRequestByStudentId
 );
+
+router.put("/changePassword", commonController.changePassword);
+router.put("/updateTcmToken", commonController.updateTcmToken);
 module.exports = router;
