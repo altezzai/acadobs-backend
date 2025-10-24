@@ -1,14 +1,14 @@
 const { Op, where, DATEONLY } = require("sequelize");
-// const User = require("../models/user");
+const User = require("../models/user");
 // const Student = require("../models/student");
 // const HomeworkAssignment = require("../models/homeworkassignment");
 // const Homework = require("../models/homework");
-// const AttendanceMarked = require("../models/attendancemarked");
-// const Attendance = require("../models/attendance");
+const AttendanceMarked = require("../models/attendancemarked");
+const Attendance = require("../models/attendance");
 // const Achievement = require("../models/achievement");
 // const StudentAchievement = require("../models/studentachievement");
 // const InternalMark = require("../models/internal_marks");
-// const Subject = require("../models/subject");
+const Subject = require("../models/subject");
 // const Marks = require("../models/marks");
 // const LeaveRequest = require("../models/leaverequest");
 // const School = require("../models/school");
@@ -149,12 +149,12 @@ const getPaymentReport = async (req, res) => {
 
     const offset = page && limit ? (page - 1) * limit : 0;
 
-    let whereConditions = {
+    let whereClause = {
       trash: false,
       school_id,
     };
     if (searchQuery) {
-      whereConditions[Op.or] = [
+      whereClause[Op.or] = [
         { payment_type: { [Op.like]: `%${searchQuery}%` } },
         { transaction_id: { [Op.like]: `%${searchQuery}%` } },
 
@@ -162,19 +162,20 @@ const getPaymentReport = async (req, res) => {
       ];
     }
     if (student_id) {
-      whereConditions.student_id = student_id;
+      whereClause.student_id = student_id;
     }
     if (payment_status) {
-      whereConditions.payment_status = payment_status;
+      whereClause.payment_status = payment_status;
     }
     if (payment_type) {
-      whereConditions.payment_type = payment_type;
+      whereClause.payment_type = payment_type;
     }
-    const { count, rows: report } = await Payment.findAndCountAll({
+    const totalCount = await Payment.count({ where: whereClause });
+    const report = await Payment.findAll({
       offset,
       distinct: true,
       limit,
-      where: whereConditions,
+      where: whereClause,
       include: [
         {
           model: Student,
@@ -191,10 +192,9 @@ const getPaymentReport = async (req, res) => {
       ],
     });
     res.status(200).json({
-      total: count,
-      page: download === "true" ? null : page,
-      limit: download === "true" ? null : limit,
-      pages: download === "true" ? null : Math.ceil(count / limit),
+      totalCount,
+      totalPages: download === "true" ? null : Math.ceil(totalCount / limit),
+      currentPage: download === "true" ? null : page,
       report,
     });
   } catch (error) {
@@ -202,5 +202,104 @@ const getPaymentReport = async (req, res) => {
     res.status(500).json({ error: "Failed to generate payment report" });
   }
 };
+const getAttendanceReport = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const date = req.query.date || "";
+    const class_id = req.query.class_id || "";
+    const teacher_id = req.query.teacher_id || "";
 
-module.exports = { getInvoiceReport, getPaymentReport };
+    const download = req.query.download || "";
+    let { page = 1, limit = 10 } = req.query;
+    if (download === "true") {
+      page = null;
+      limit = null;
+    } else {
+      page = parseInt(page) || 1;
+      limit = parseInt(limit) || 10;
+    }
+
+    const offset = page && limit ? (page - 1) * limit : 0;
+
+    const whereClause = { trash: false, school_id };
+    if (date) whereClause.date = date;
+    if (class_id) whereClause.class_id = class_id;
+    if (teacher_id) whereClause.teacher_id = teacher_id;
+    const totalCount = await Attendance.count({ where: whereClause });
+    const attendance = await Attendance.findAll({
+      offset,
+      limit,
+      distinct: true,
+      where: whereClause,
+      include: [
+        {
+          model: AttendanceMarked,
+          attributes: ["id", "status", "remarks"],
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "image"],
+            },
+          ],
+        },
+        {
+          model: Class,
+          attributes: ["id", "classname"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name"],
+        },
+        {
+          model: User,
+          attributes: ["id", "name"],
+        },
+      ],
+      order: [["date", "DESC"]],
+    });
+
+    // Format summarized report
+    const formattedData = attendance.map((record) => {
+      const total_students = record.AttendanceMarkeds?.length || 0;
+      const present_count =
+        record.AttendanceMarkeds?.filter((m) => m.status === "present")
+          .length || 0;
+      const absent_count =
+        record.AttendanceMarkeds?.filter((m) => m.status === "absent").length ||
+        0;
+      const late_count =
+        record.AttendanceMarkeds?.filter((m) => m.status === "late").length ||
+        0;
+      const leave_count =
+        record.AttendanceMarkeds?.filter((m) => m.status === "leave").length ||
+        0;
+
+      return {
+        class: record.Class.classname,
+        subject: record.subject_id ? record.Subject.subject_name : "null",
+        teacher: record.teacher_id ? record.User.name : "null",
+        period: record.period,
+        date: record.date,
+        total_students,
+        present_count,
+        absent_count,
+        late_count,
+        leave_count,
+      };
+    });
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    res.status(200).json({
+      totalCount,
+      totalPages: download === "true" ? null : totalPages,
+      currentPage: download === "true" ? null : page,
+      reports: formattedData,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+module.exports = { getInvoiceReport, getPaymentReport, getAttendanceReport };

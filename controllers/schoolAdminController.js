@@ -3604,16 +3604,35 @@ const getNoticeById = async (req, res) => {
     const school_id = req.user.school_id;
     const notice = await Notice.findOne({
       where: { id: id, trash: false, school_id: school_id },
+
       include: [
         {
           model: NoticeClass,
+          attributes: ["id", "class_id"],
           include: [{ model: Class, attributes: ["id", "classname"] }],
           required: false,
         },
       ],
     });
+    const formattedNotice = {
+      id: notice.id,
+      school_id: notice.school_id,
+      title: notice.title,
+      content: notice.content,
+      file: notice.file,
+      type: notice.type,
+      date: notice.date,
+      trash: notice.trash,
+      createdAt: notice.createdAt,
+      updatedAt: notice.updatedAt,
+      NoticeClasses: notice.NoticeClasses.map((nc) => ({
+        id: nc.id,
+        class_id: nc.class_id,
+        classname: nc.Class ? nc.Class.classname : null,
+      })),
+    };
     if (!notice) return res.status(404).json({ error: "Notice not found" });
-    res.json(notice);
+    res.json(formattedNotice);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
