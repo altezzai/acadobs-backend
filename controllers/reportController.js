@@ -1,8 +1,8 @@
 const { Op, where, DATEONLY } = require("sequelize");
 const User = require("../models/user");
 // const Student = require("../models/student");
-// const HomeworkAssignment = require("../models/homeworkassignment");
-// const Homework = require("../models/homework");
+const HomeworkAssignment = require("../models/homeworkassignment");
+const Homework = require("../models/homework");
 const AttendanceMarked = require("../models/attendancemarked");
 const Attendance = require("../models/attendance");
 // const Achievement = require("../models/achievement");
@@ -236,24 +236,12 @@ const getAttendanceReport = async (req, res) => {
           model: AttendanceMarked,
           attributes: ["id", "status", "remarks"],
           include: [
-            {
-              model: Student,
-              attributes: ["id", "full_name", "image"],
-            },
+            { model: Student, attributes: ["id", "full_name", "image"] },
           ],
         },
-        {
-          model: Class,
-          attributes: ["id", "classname"],
-        },
-        {
-          model: Subject,
-          attributes: ["id", "subject_name"],
-        },
-        {
-          model: User,
-          attributes: ["id", "name"],
-        },
+        { model: Class, attributes: ["id", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: User, attributes: ["id", "name"] },
       ],
       order: [["date", "DESC"]],
     });
@@ -275,6 +263,7 @@ const getAttendanceReport = async (req, res) => {
         0;
 
       return {
+        id: record.id,
         class: record.Class.classname,
         subject: record.subject_id ? record.Subject.subject_name : "null",
         teacher: record.teacher_id ? record.User.name : "null",
@@ -301,5 +290,105 @@ const getAttendanceReport = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const getHomeworkReport = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const class_id = req.query.class_id || "";
+    const teacher_id = req.query.teacher_id || "";
+    const subject_id = req.query.subject_id || "";
 
-module.exports = { getInvoiceReport, getPaymentReport, getAttendanceReport };
+    const download = req.query.download || "";
+    const searchQuery = req.query.q || "";
+    let { page = 1, limit = 10 } = req.query;
+    // Download mode → no pagination
+    if (download === "true") {
+      page = null;
+      limit = null;
+    } else {
+      page = parseInt(page) || 1;
+      limit = parseInt(limit) || 10;
+    }
+    const offset = page && limit ? (page - 1) * limit : 0;
+    let whereClause = {
+      trash: false,
+      school_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+        // Add other fields to search if needed
+      ];
+    }
+    if (class_id) {
+      whereClause.class_id = class_id;
+    }
+    if (subject_id) {
+      whereClause.subject_id = subject_id;
+    }
+    if (teacher_id) {
+      whereClause.teacher_id = teacher_id;
+    }
+    const totalCount = await Homework.count({ where: whereClause });
+    const homeworks = await Homework.findAll({
+      where: whereClause,
+      offset,
+      limit,
+      include: [
+        { model: Class, attributes: ["id", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: User, attributes: ["id", "name"] },
+        {
+          model: HomeworkAssignment,
+          attributes: ["id", "student_id", "points"],
+          include: [{ model: Student, attributes: ["id", "full_name"] }],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    // ✅ Summarize report
+    const formattedReport = homeworks.map((hw) => {
+      const assignments = hw.HomeworkAssignments || [];
+      const total_students = assignments.length;
+
+      // Count per point level (1 to 5)
+      const point_1_count = assignments.filter((a) => a.points === 1).length;
+      const point_2_count = assignments.filter((a) => a.points === 2).length;
+      const point_3_count = assignments.filter((a) => a.points === 3).length;
+      const point_4_count = assignments.filter((a) => a.points === 4).length;
+      const point_5_count = assignments.filter((a) => a.points === 5).length;
+
+      return {
+        id: hw.id,
+        class: hw.class_id ? hw.Class.classname : "null",
+        subject: hw.subject_id ? hw.Subject.subject_name : "null",
+        teacher: hw.teacher_id ? hw.User.name : "null",
+        title: hw.title,
+        due_date: hw.due_date,
+        total_students,
+        point_1_count,
+        point_2_count,
+        point_3_count,
+        point_4_count,
+        point_5_count,
+      };
+    });
+
+    res.status(200).json({
+      totalCount,
+      totalPages: download === "true" ? null : Math.ceil(totalCount / limit),
+      currentPage: download === "true" ? null : page,
+      report: formattedReport,
+    });
+  } catch (error) {
+    console.error("Error generating homework report:", error);
+    res.status(500).json({ error: "Failed to generate homework report" });
+  }
+};
+module.exports = {
+  getInvoiceReport,
+  getPaymentReport,
+  getAttendanceReport,
+  getHomeworkReport,
+};

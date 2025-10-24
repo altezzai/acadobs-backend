@@ -367,4 +367,5 @@ router.get(
 router.get("/invoiceReport", reportController.getInvoiceReport);
 router.get("/paymentReport", reportController.getPaymentReport);
 router.get("/attendanceReport", reportController.getAttendanceReport);
+router.get("/homeworkReport", reportController.getHomeworkReport);
 module.exports = router;
