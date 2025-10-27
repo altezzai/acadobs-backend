@@ -716,41 +716,40 @@ const createAttendance = async (req, res) => {
     const absentStudents = filteredStudents.filter(
       (s) => s.status.toLowerCase() === "absent"
     );
-
+    let status = null;
     if (absentStudents.length > 0) {
       const studentIds = absentStudents.map((s) => s.student_id);
 
       const studentRecords = await Student.findAll({
-        where: { student_id: studentIds },
-        attributes: ["student_id", "guardian_id", "name"],
+        where: { id: studentIds },
+        attributes: ["id", "guardian_id", "full_name"],
       });
 
       const guardianIds = studentRecords.map((s) => s.guardian_id);
-
       // Fetch guardian FCM tokens
       const guardians = await User.findAll({
         where: {
-          user_id: guardianIds,
+          id: guardianIds,
           fcm_token: { [Op.ne]: null },
         },
-        attributes: ["user_id", "fcm_token", "name"],
+        attributes: ["id", "fcm_token", "name"],
       });
-
       const tokens = guardians.map((g) => g.fcm_token);
 
       if (tokens.length > 0) {
         const absentNames = studentRecords.map((s) => s.name).join(", ");
         const title = "Student Absence Alert";
-        const body = `Your child ${absentNames} are marked absent on ${date}.`;
+        const body = `Your child ${absentNames} was marked absent on ${date} during the ${period} period..`;
 
-        await sendPushNotification(tokens, title, body, {
+        status = await sendPushNotification(tokens, title, body, {
           type: "attendance_alert",
-          date: date,
-          attendance_id: attendance.id,
-          attendanceMrakedIds: records.map((r) => r.id),
+          date: String(date),
+          attendance_id: String(attendance.id),
+          attendanceMarkedIds: JSON.stringify(records.map((r) => r.id)), // Convert array to JSON string
         });
       }
     }
+    // console.log("notification status:", status);
 
     res.status(201).json({
       message: existingAttendance ? "Attendance updated" : "Attendance created",

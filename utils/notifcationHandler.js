@@ -6,22 +6,31 @@ const sendPushNotification = async (tokens, title, body, data = {}) => {
     console.log("No tokens provided for notification.");
     return;
   }
+  const stringData = {};
+  for (const key in data) {
+    stringData[key] =
+      typeof data[key] === "string" ? data[key] : JSON.stringify(data[key]);
+  }
   const message = {
-    notification: {
-      title: title,
-      body: body,
-    },
-    data: data,
-    tokens: tokens,
+    notification: { title, body },
+    data: stringData,
+    tokens,
   };
-
   try {
-    const response = await admin.messaging().sendMulticast(message);
-    console.log("Notification sent successfully:", response);
+    const response = await admin.messaging().sendEachForMulticast(message);
+
+    // Print specific errors
+    response.responses.forEach((r, i) => {
+      if (!r.success) {
+      }
+    });
+
+    return response;
   } catch (error) {
     console.error("Error sending notification:", error);
   }
 };
+
 module.exports = {
   sendPushNotification,
 };
