@@ -570,7 +570,7 @@ const changePassword = async (req, res) => {
     res.status(500).json({ error: "Failed to change password" });
   }
 };
-const updateTcmToken = async (req, res) => {
+const updateFcmToken = async (req, res) => {
   try {
     const userId = req.user.user_id;
     const { fcm_token } = req.body;
@@ -612,5 +612,5 @@ module.exports = {
   getSchoolDetails,
 
   changePassword,
-  updateTcmToken,
+  updateFcmToken,
 };

@@ -93,5 +93,5 @@ router.get(
 );
 
 router.put("/changePassword", commonController.changePassword);
-router.put("/updateTcmToken", commonController.updateTcmToken);
+router.put("/updateFcmToken", commonController.updateFcmToken);
 module.exports = router;

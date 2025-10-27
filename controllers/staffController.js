@@ -657,7 +657,6 @@ const createAttendance = async (req, res) => {
       return res.status(400).json({ error: "Missing or invalid fields" });
     }
 
-    // Get all students on approved leave for the date
     const leaveStudents = await LeaveRequest.findAll({
       where: {
         school_id,
@@ -672,14 +671,11 @@ const createAttendance = async (req, res) => {
 
     const leaveStudentIds = leaveStudents.map((leave) => leave.student_id);
 
-    // Filter out students on leave
     const filteredStudents = students.filter(
       (student) => !leaveStudentIds.includes(student.student_id)
     );
 
-    let attendance;
-
-    const existingAttendance = await Attendance.findOne({
+    let attendance = await Attendance.findOne({
       where: {
         school_id,
         class_id,
@@ -688,14 +684,12 @@ const createAttendance = async (req, res) => {
       },
     });
 
-    if (existingAttendance) {
-      await existingAttendance.update({
+    if (attendance) {
+      await attendance.update({
         teacher_id,
         subject_id,
       });
-      attendance = existingAttendance;
     } else {
-      // Create new attendance
       attendance = await Attendance.create({
         teacher_id,
         school_id,
@@ -705,6 +699,7 @@ const createAttendance = async (req, res) => {
         date,
       });
     }
+
     const records = filteredStudents.map((student) => ({
       attendance_id: attendance.id,
       student_id: student.student_id,
@@ -712,21 +707,28 @@ const createAttendance = async (req, res) => {
       remarks: student.remarks || null,
     }));
 
-    await AttendanceMarked.bulkCreate(records);
+    const insertedRecords = await AttendanceMarked.bulkCreate(records, {
+      returning: true,
+    });
+
     const absentStudents = filteredStudents.filter(
       (s) => s.status.toLowerCase() === "absent"
     );
-    let status = null;
+
     if (absentStudents.length > 0) {
-      const studentIds = absentStudents.map((s) => s.student_id);
+      const absentStudentIds = absentStudents.map((s) => s.student_id);
 
       const studentRecords = await Student.findAll({
-        where: { id: studentIds },
+        where: { id: absentStudentIds },
         attributes: ["id", "guardian_id", "full_name"],
       });
 
+      const markedIdMap = {};
+      insertedRecords.forEach((rec) => {
+        markedIdMap[rec.student_id] = rec.id;
+      });
+
       const guardianIds = studentRecords.map((s) => s.guardian_id);
-      // Fetch guardian FCM tokens
       const guardians = await User.findAll({
         where: {
           id: guardianIds,
@@ -734,27 +736,36 @@ const createAttendance = async (req, res) => {
         },
         attributes: ["id", "fcm_token", "name"],
       });
+
       const tokens = guardians.map((g) => g.fcm_token);
-
+      let status;
       if (tokens.length > 0) {
-        const absentNames = studentRecords.map((s) => s.name).join(", ");
-        const title = "Student Absence Alert";
-        const body = `Your child ${absentNames} was marked absent on ${date} during the ${period} period..`;
+        for (const student of studentRecords) {
+          const guardian = guardians.find((g) => g.id === student.guardian_id);
 
-        status = await sendPushNotification(tokens, title, body, {
-          type: "attendance_alert",
-          date: String(date),
-          attendance_id: String(attendance.id),
-          attendanceMarkedIds: JSON.stringify(records.map((r) => r.id)), // Convert array to JSON string
-        });
+          if (guardian && guardian.fcm_token) {
+            const absentNames = studentRecords.map((s) => s.name).join(", ");
+            const title = "Student Absence Alert";
+            const body = `Your child ${absentNames} was marked absent on ${date} during the ${period} period..`;
+            const attendanceMarkedId = markedIdMap[student.id];
+
+            status = await sendPushNotification(tokens, title, body, {
+              type: "attendance_alert",
+              date: String(date),
+              attendance_id: String(attendance.id),
+              attendanceMarkedIds: JSON.stringify([attendanceMarkedId]), // Convert array to JSON string
+            });
+          }
+        }
       }
     }
-    // console.log("notification status:", status);
 
     res.status(201).json({
-      message: existingAttendance ? "Attendance updated" : "Attendance created",
+      message: attendance ? "Attendance updated" : "Attendance created",
       attendance_id: attendance.id,
-      inserted_count: records.length,
+      inserted_count: insertedRecords.length,
+      // notifications_sent: notificationResults.length,
+      // notification_details: notificationResults,
     });
   } catch (err) {
     console.error("Create Attendance Error:", err);
