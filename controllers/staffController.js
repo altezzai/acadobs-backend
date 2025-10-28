@@ -758,8 +758,8 @@ const createAttendance = async (req, res) => {
               type: "attendance_alert",
               date: String(date),
               attendance_id: String(attendance.id),
-              attendanceMarkedIds: JSON.stringify([attendanceMarkedId]),
-              student_id: JSON.stringify([student.id]), // Convert array to JSON string
+              attendanceMarkedIds: JSON.stringify(attendanceMarkedId),
+              student_id: JSON.stringify(student.id), // Convert array to JSON string
             });
           }
         }
