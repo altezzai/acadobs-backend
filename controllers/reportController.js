@@ -5,12 +5,12 @@ const HomeworkAssignment = require("../models/homeworkassignment");
 const Homework = require("../models/homework");
 const AttendanceMarked = require("../models/attendancemarked");
 const Attendance = require("../models/attendance");
-// const Achievement = require("../models/achievement");
-// const StudentAchievement = require("../models/studentachievement");
-// const InternalMark = require("../models/internal_marks");
+const Achievement = require("../models/achievement");
+const StudentAchievement = require("../models/studentachievement");
+const InternalMark = require("../models/internal_marks");
+const Marks = require("../models/marks");
 const Subject = require("../models/subject");
-// const Marks = require("../models/marks");
-// const LeaveRequest = require("../models/leaverequest");
+const LeaveRequest = require("../models/leaverequest");
 // const School = require("../models/school");
 // const Event = require("../models/event");
 // const News = require("../models/news");
@@ -18,6 +18,7 @@ const Invoice = require("../models/invoice");
 const InvoiceStudent = require("../models/invoice_students");
 const Payment = require("../models/payment");
 const Student = require("../models/student");
+const Guardian = require("../models/guardian");
 
 const { Class } = require("../models");
 const { schoolSequelize } = require("../config/connection");
@@ -386,9 +387,205 @@ const getHomeworkReport = async (req, res) => {
     res.status(500).json({ error: "Failed to generate homework report" });
   }
 };
+const getStudentReportByStudentId = async (req, res) => {
+  try {
+    const { student_id } = req.params;
+    const school_id = req.user.school_id;
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const offset = (page - 1) * limit;
+
+    // ✅ 1. Fetch student info
+    const student = await Student.findOne({
+      where: { id: student_id, school_id },
+      include: [
+        { model: Class, attributes: ["classname"] },
+        {
+          model: User,
+          attributes: ["name"],
+          include: [
+            {
+              model: Guardian,
+              attributes: [
+                "guardian_name",
+                "guardian_contact",
+                "guardian_email",
+                "guardian_job",
+                "guardian_relation",
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    // ✅ 2. Fetch payments
+    const payments = await Payment.findAll({
+      where: { student_id, school_id },
+      include: [
+        {
+          model: InvoiceStudent,
+          attributes: ["invoice_id", "status"],
+          include: [
+            {
+              model: Invoice,
+              attributes: ["title", "amount", "due_date"],
+            },
+          ],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+      offset,
+      limit,
+    });
+
+    // ✅ 3. Fetch invoices
+    const invoices = await InvoiceStudent.findAll({
+      where: { student_id },
+      include: [
+        {
+          model: Invoice,
+          where: { school_id },
+          attributes: ["title", "amount", "due_date"],
+        },
+      ],
+      offset,
+      limit,
+    });
+    //ATTENDANCE, MARKS, ACHIEVEMENTS can be added similarly
+    const Attendancedata = await AttendanceMarked.findAll({
+      where: { student_id },
+    });
+    const attendance = await AttendanceMarked.findAll({
+      where: { student_id },
+      include: [
+        {
+          model: Attendance,
+          attributes: ["date"],
+          include: [
+            { model: Class, attributes: ["classname"] },
+            { model: Subject, attributes: ["subject_name"] },
+            { model: User, attributes: ["name"] },
+          ],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+      offset,
+      limit,
+    });
+    //where get the count of attendance statuses
+    const attendanceSummary = {
+      present: 0,
+      absent: 0,
+      late: 0,
+      leave: 0,
+    };
+    Attendancedata.forEach((record) => {
+      if (record.status in attendanceSummary) {
+        attendanceSummary[record.status] += 1;
+      }
+    });
+    const leaveRequests = await LeaveRequest.findAll({
+      where: { student_id },
+      attributes: [
+        "from_date",
+        "to_date",
+        "reason",
+        "status",
+        "admin_remarks",
+        "leave_type",
+        "leave_duration",
+        "half_section",
+        "createdAt",
+      ],
+      include: [{ model: User, attributes: ["name"] }],
+      order: [["createdAt", "DESC"]],
+      offset,
+      limit,
+    });
+
+    //achivments
+    const achievements = await StudentAchievement.findAll({
+      where: { student_id },
+      attributes: ["status", "proof_document", "remarks"],
+      include: [
+        {
+          model: Achievement,
+          attributes: [
+            "title",
+            "description",
+            "date",
+            "level",
+            "category",
+            "awarding_body",
+          ],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+      offset,
+      limit,
+    });
+    const homework = await HomeworkAssignment.findAll({
+      where: { student_id },
+      attributes: ["points", "remarks", "createdAt"],
+      include: [
+        {
+          model: Homework,
+          attributes: ["title", "description", "due_date"],
+          include: [
+            { model: Class, attributes: ["classname"] },
+            { model: Subject, attributes: ["subject_name"] },
+            { model: User, attributes: ["name"] },
+          ],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+      offset,
+      limit,
+    });
+    const internalMarks = await Marks.findAll({
+      where: { student_id },
+      attributes: ["marks_obtained", "status"],
+      include: [
+        {
+          model: InternalMark,
+          attributes: ["internal_name", "max_marks", "date"],
+          include: [
+            { model: Class, attributes: ["classname"] },
+            { model: Subject, attributes: ["subject_name"] },
+            { model: User, attributes: ["name"] },
+          ],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+      offset,
+      limit,
+    });
+    res.status(200).json({
+      student,
+      payments,
+      invoices,
+      attendanceSummary,
+      attendance,
+      leaveRequests,
+      achievements,
+      homework,
+      internalMarks,
+    });
+  } catch (error) {
+    console.error("Error generating student report:", error);
+    res.status(500).json({ error: "Failed to generate student report" });
+  }
+};
 module.exports = {
   getInvoiceReport,
   getPaymentReport,
   getAttendanceReport,
   getHomeworkReport,
+  getStudentReportByStudentId,
 };

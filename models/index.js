@@ -79,7 +79,8 @@ StudentAchievement.belongsTo(Student, { foreignKey: "student_id" });
 Student.belongsTo(Class, { foreignKey: "class_id" });
 Student.belongsTo(School, { foreignKey: "school_id" });
 Student.belongsTo(User, { foreignKey: "guardian_id" });
-
+User.hasOne(Student, { foreignKey: "guardian_id" });
+User.hasOne(Guardian, { foreignKey: "user_id" });
 InternalMark.belongsTo(School, { foreignKey: "school_id" });
 InternalMark.belongsTo(Class, { foreignKey: "class_id" });
 InternalMark.belongsTo(Subject, { foreignKey: "subject_id" });

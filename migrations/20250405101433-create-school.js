@@ -44,6 +44,10 @@ module.exports = {
         allowNull: true,
         defaultValue: "CBSE",
       },
+      education_year_start: {
+        type: Sequelize.DATEONLY,
+        allowNull: true,
+      },
       status: {
         type: Sequelize.ENUM("active", "inactive"),
         defaultValue: "active",

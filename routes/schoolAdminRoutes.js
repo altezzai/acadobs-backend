@@ -368,4 +368,8 @@ router.get("/invoiceReport", reportController.getInvoiceReport);
 router.get("/paymentReport", reportController.getPaymentReport);
 router.get("/attendanceReport", reportController.getAttendanceReport);
 router.get("/homeworkReport", reportController.getHomeworkReport);
+router.get(
+  "/studentReport/:student_id",
+  reportController.getStudentReportByStudentId
+);
 module.exports = router;

@@ -35,6 +35,10 @@ const School = schoolSequelize.define(
       allowNull: true,
       defaultValue: "CBSE",
     },
+    education_year_start: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    },
     status: {
       type: DataTypes.ENUM("active", "inactive"),
       defaultValue: "active",

@@ -748,18 +748,24 @@ const createAttendance = async (req, res) => {
             const title = "Student Absence Alert";
             const body = `Your child ${absentNames} was marked absent on ${date} during the ${period} period..`;
             const attendanceMarkedId = markedIdMap[student.id];
-
+            console.log(
+              "student id:",
+              student.id,
+              "marked id:",
+              attendanceMarkedId
+            );
             status = await sendPushNotification(tokens, title, body, {
               type: "attendance_alert",
               date: String(date),
               attendance_id: String(attendance.id),
-              attendanceMarkedIds: JSON.stringify([attendanceMarkedId]), // Convert array to JSON string
+              attendanceMarkedIds: JSON.stringify([attendanceMarkedId]),
+              student_id: JSON.stringify([student.id]), // Convert array to JSON string
             });
           }
         }
       }
+      console.log("Notification Status:", status);
     }
-
     res.status(201).json({
       message: attendance ? "Attendance updated" : "Attendance created",
       attendance_id: attendance.id,
