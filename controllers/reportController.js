@@ -11,7 +11,7 @@ const InternalMark = require("../models/internal_marks");
 const Marks = require("../models/marks");
 const Subject = require("../models/subject");
 const LeaveRequest = require("../models/leaverequest");
-// const School = require("../models/school");
+const School = require("../models/school");
 // const Event = require("../models/event");
 // const News = require("../models/news");
 const Invoice = require("../models/invoice");
@@ -22,6 +22,7 @@ const Guardian = require("../models/guardian");
 
 const { Class } = require("../models");
 const { schoolSequelize } = require("../config/connection");
+const e = require("express");
 
 const getInvoiceReport = async (req, res) => {
   try {
@@ -391,6 +392,9 @@ const getStudentReportByStudentId = async (req, res) => {
   try {
     const { student_id } = req.params;
     const school_id = req.user.school_id;
+    const schooldata = await School.findOne({ where: { id: school_id } });
+    const education_year_start =
+      schooldata.education_year_start || process.env.EDUCATION_YEAR_START;
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 5;
@@ -426,7 +430,11 @@ const getStudentReportByStudentId = async (req, res) => {
 
     // ✅ 2. Fetch payments
     const payments = await Payment.findAll({
-      where: { student_id, school_id },
+      where: {
+        student_id,
+        // school_id,
+        createdAt: { [Op.gte]: education_year_start },
+      },
       include: [
         {
           model: InvoiceStudent,
@@ -446,7 +454,7 @@ const getStudentReportByStudentId = async (req, res) => {
 
     // ✅ 3. Fetch invoices
     const invoices = await InvoiceStudent.findAll({
-      where: { student_id },
+      where: { student_id, createdAt: { [Op.gte]: education_year_start } },
       include: [
         {
           model: Invoice,
@@ -462,7 +470,7 @@ const getStudentReportByStudentId = async (req, res) => {
       where: { student_id },
     });
     const attendance = await AttendanceMarked.findAll({
-      where: { student_id },
+      where: { student_id, createdAt: { [Op.gte]: education_year_start } },
       include: [
         {
           model: Attendance,
@@ -491,7 +499,7 @@ const getStudentReportByStudentId = async (req, res) => {
       }
     });
     const leaveRequests = await LeaveRequest.findAll({
-      where: { student_id },
+      where: { student_id, createdAt: { [Op.gte]: education_year_start } },
       attributes: [
         "from_date",
         "to_date",
@@ -511,7 +519,7 @@ const getStudentReportByStudentId = async (req, res) => {
 
     //achivments
     const achievements = await StudentAchievement.findAll({
-      where: { student_id },
+      where: { student_id, createdAt: { [Op.gte]: education_year_start } },
       attributes: ["status", "proof_document", "remarks"],
       include: [
         {
@@ -531,7 +539,7 @@ const getStudentReportByStudentId = async (req, res) => {
       limit,
     });
     const homework = await HomeworkAssignment.findAll({
-      where: { student_id },
+      where: { student_id, createdAt: { [Op.gte]: education_year_start } },
       attributes: ["points", "remarks", "createdAt"],
       include: [
         {
@@ -549,7 +557,7 @@ const getStudentReportByStudentId = async (req, res) => {
       limit,
     });
     const internalMarks = await Marks.findAll({
-      where: { student_id },
+      where: { student_id, createdAt: { [Op.gte]: education_year_start } },
       attributes: ["marks_obtained", "status"],
       include: [
         {
