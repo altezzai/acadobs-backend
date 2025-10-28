@@ -332,7 +332,10 @@ router.get(
   "/getNavigationBarCounts",
   schoolAdminController.getNavigationBarCounts
 );
-
+router.get(
+  "/getInternalmarkById/:id",
+  schoolAdminController.getInternalmarkById
+);
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);
@@ -372,4 +375,6 @@ router.get(
   "/studentReport/:student_id",
   reportController.getStudentReportByStudentId
 );
+router.get("/internalmarksReport", reportController.getInternalmarksReport);
+
 module.exports = router;

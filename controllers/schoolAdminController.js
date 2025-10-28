@@ -34,6 +34,8 @@ const Attendance = require("../models/attendance");
 const AttendanceMarked = require("../models/attendancemarked");
 const Invoice = require("../models/invoice");
 const InvoiceStudent = require("../models/invoice_students");
+const InternalMark = require("../models/internal_marks");
+const Marks = require("../models/marks");
 const { School } = require("../models");
 const { schoolSequelize } = require("../config/connection");
 
@@ -4763,6 +4765,33 @@ const getNavigationBarCounts = async (req, res) => {
   }
 };
 
+const getInternalmarkById = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { id } = req.params;
+    const internalmark = await InternalMark.findOne({
+      where: { id, school_id },
+      include: [
+        { model: Class, attributes: ["classname"] },
+        { model: Subject, attributes: ["subject_name"] },
+        { model: User, attributes: ["name"] },
+        {
+          model: Marks,
+          attributes: ["marks_obtained", "status"],
+          include: [
+            { model: Student, attributes: ["full_name", "roll_number"] },
+          ],
+        },
+      ],
+    });
+    if (!internalmark) {
+      return res.status(404).json({ error: "Internal mark not found" });
+    }
+    res.status(200).json(internalmark);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 module.exports = {
   createClass,
   getAllClasses,
@@ -4898,4 +4927,6 @@ module.exports = {
 
   getSchoolAttendanceSummary,
   getNavigationBarCounts,
+
+  getInternalmarkById,
 };

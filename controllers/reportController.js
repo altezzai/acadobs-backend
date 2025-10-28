@@ -590,10 +590,101 @@ const getStudentReportByStudentId = async (req, res) => {
     res.status(500).json({ error: "Failed to generate student report" });
   }
 };
+const getInternalmarksReport = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const class_id = req.query.class_id || null;
+    const subject_id = req.query.subject_id || null;
+    const exam_type = req.query.exam_type || null;
+    const teacher_id = req.query.teacher_id || null;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const passMarkPercentage = 0.4; // 40% pass mark
+
+    let whereClause = {
+      school_id,
+    };
+    if (class_id) {
+      whereClause.class_id = class_id;
+    }
+    if (subject_id) {
+      whereClause.subject_id = subject_id;
+    }
+    if (exam_type) {
+      whereClause.exam_type = exam_type;
+    }
+    if (teacher_id) {
+      whereClause.recorded_by = teacher_id;
+    }
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { internal_name: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+
+    const internalMarks = await InternalMark.findAll({
+      where: whereClause,
+      offset,
+      limit,
+      distinct: true,
+      attributes: ["id", "internal_name", "max_marks", "date", "createdAt"],
+      include: [
+        { model: Marks, attributes: ["marks_obtained"] },
+
+        { model: Class, attributes: ["classname"] },
+        { model: Subject, attributes: ["subject_name"] },
+        { model: User, attributes: ["name"] },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    const enrichedData = internalMarks.map((internal) => {
+      const totalStudents = internal.Marks?.length || 0;
+      const passMark = (internal.max_marks || 0) * passMarkPercentage; // 40% rule
+      let passCount = 0;
+
+      internal.Marks?.forEach((m) => {
+        if (m.marks_obtained >= passMark) passCount++;
+      });
+
+      const failCount = totalStudents - passCount;
+      const passPercentage =
+        totalStudents > 0 ? ((passCount / totalStudents) * 100).toFixed(1) : 0;
+
+      return {
+        id: internal.id,
+        internal_name: internal.internal_name,
+        class: internal.Class?.classname || null,
+        subject: internal.Subject?.subject_name || null,
+        teacher: internal.User?.name || null,
+        date: internal.date,
+        max_marks: internal.max_marks,
+        total_students: totalStudents,
+        pass_students: passCount,
+        fail_students: failCount,
+        pass_percentage: passPercentage,
+      };
+    });
+
+    // ✅ Final response
+    const totalPages = Math.ceil(internalMarks.length / limit);
+    res.status(200).json({
+      totalcontent: internalMarks.length,
+      totalPages,
+      currentPage: page,
+      internalMarksReport: enrichedData,
+    });
+  } catch (error) {
+    console.error("Error fetching internal marks:", error);
+    res.status(500).json({ error: "Failed to fetch internal marks" });
+  }
+};
 module.exports = {
   getInvoiceReport,
   getPaymentReport,
   getAttendanceReport,
   getHomeworkReport,
   getStudentReportByStudentId,
+  getInternalmarksReport,
 };
