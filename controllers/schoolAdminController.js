@@ -36,6 +36,9 @@ const Invoice = require("../models/invoice");
 const InvoiceStudent = require("../models/invoice_students");
 const InternalMark = require("../models/internal_marks");
 const Marks = require("../models/marks");
+const Homework = require("../models/homework");
+const HomeworkAssignment = require("../models/homeworkassignment");
+const StaffAttendance = require("../models/staff_attendance");
 const { School } = require("../models");
 const { schoolSequelize } = require("../config/connection");
 
@@ -1684,9 +1687,17 @@ const getAllDuties = async (req, res) => {
     const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
     const deadline = req.query.deadline || "";
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
+    const download = req.query.download || "";
+    let { page = 1, limit = 10 } = req.query;
+    if (download === "true") {
+      page = null;
+      limit = null;
+    } else {
+      page = parseInt(page) || 1;
+      limit = parseInt(limit) || 10;
+    }
+
+    const offset = page && limit ? (page - 1) * limit : 0;
     const whereClause = {
       trash: false,
       school_id,
@@ -1701,7 +1712,8 @@ const getAllDuties = async (req, res) => {
         { description: { [Op.like]: `%${searchQuery}%` } },
       ];
     }
-    const { count, rows: duties } = await Duty.findAndCountAll({
+    const totalCount = await Duty.count({ where: whereClause });
+    const duties = await Duty.findAll({
       offset,
       distinct: true,
       limit,
@@ -1719,12 +1731,32 @@ const getAllDuties = async (req, res) => {
         },
       ],
     });
-    const totalPages = Math.ceil(count / limit);
+    const formattedData = duties.map((record) => {
+      const total_staff = record.DutyAssignments?.length || 0;
+      const pending_count =
+        record.AttendanceMarkeds?.filter((m) => m.status === "pending")
+          .length || 0;
+      const in_progress_count =
+        record.AttendanceMarkeds?.filter((m) => m.status === "in_progress")
+          .length || 0;
+      const completed_count =
+        record.AttendanceMarkeds?.filter((m) => m.status === "completed")
+          .length || 0;
+      return {
+        ...record.toJSON(),
+        total_staff,
+        pending_count,
+        in_progress_count,
+        completed_count,
+      };
+    });
+
+    const totalPages = Math.ceil(totalCount / limit);
     res.status(200).json({
-      totalcontent: count,
-      totalPages,
-      currentPage: page,
-      duties,
+      totalcontent: totalCount,
+      totalPages: download === "true" ? null : totalPages,
+      currentPage: download === "true" ? null : page,
+      duties: formattedData,
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch duties" });
@@ -4792,6 +4824,238 @@ const getInternalmarkById = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const getHomeworkById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const homework = await Homework.findOne({
+      where: { id, trash: false },
+      include: [
+        { model: Class, attributes: ["id", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: User, attributes: ["id", "name"] },
+        {
+          model: HomeworkAssignment,
+          attributes: ["id", "points", "remarks"],
+          include: [
+            { model: Student, attributes: ["id", "full_name", "roll_number"] },
+          ],
+        },
+      ],
+    });
+    if (!homework) return res.status(404).json({ error: "Not found" });
+    res.status(200).json(homework);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getAttendanceById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const attendance = await Attendance.findOne({
+      where: { id, trash: false },
+      include: [
+        { model: Class, attributes: ["id", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: User, attributes: ["id", "name"] },
+        {
+          model: AttendanceMarked,
+          attributes: ["id", "status", "remarks"],
+          include: [
+            { model: Student, attributes: ["id", "full_name", "roll_number"] },
+          ],
+        },
+      ],
+    });
+    if (!attendance) return res.status(404).json({ error: "Not found" });
+    res.status(200).json(attendance);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const createStaffAttendance = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { staff_id, date, status, check_in_time, check_out_time, remarks } =
+      req.body;
+
+    // Check if attendance already exists
+    const existing = await StaffAttendance.findOne({
+      where: { school_id, staff_id, date, trash: false },
+    });
+
+    if (existing)
+      return res
+        .status(400)
+        .json({ message: "Attendance already exists for this date" });
+
+    // Calculate total hours if both check-in and check-out provided
+    let total_hours = null;
+    if (check_in_time && check_out_time) {
+      const diff =
+        (new Date(check_out_time) - new Date(check_in_time)) / (1000 * 60 * 60);
+      total_hours = diff.toFixed(2);
+    }
+
+    const attendance = await StaffAttendance.create({
+      school_id,
+      staff_id,
+      date,
+      status,
+      check_in_time: check_in_time || new Date().toISOString(),
+      check_out_time: check_out_time || null,
+      total_hours,
+      marked_by: req.user.user_id,
+      marked_method: "Manual",
+      remarks,
+    });
+
+    res.status(201).json({
+      message: "Attendance added successfully",
+      attendance,
+    });
+  } catch (error) {
+    console.error("Error adding attendance:", error);
+    res.status(500).json({ error: "Failed to add attendance" });
+  }
+};
+const updateStaffAttendance = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { id } = req.params;
+    const { status, check_in_time, check_out_time, remarks } = req.body;
+    const attendance = await StaffAttendance.findOne({
+      where: { id, school_id, trash: false },
+    });
+    if (!attendance)
+      return res.status(404).json({ message: "Attendance not found" });
+
+    // Calculate total hours if both check-in and check-out provided
+    let total_hours = attendance.total_hours;
+    if (check_in_time && check_out_time) {
+      const diff =
+        (new Date(check_out_time) - new Date(check_in_time)) / (1000 * 60 * 60);
+      total_hours = diff.toFixed(2);
+    }
+    await attendance.update({
+      status: status || attendance.status,
+      check_in_time: check_in_time || attendance.check_in_time,
+      check_out_time: check_out_time || attendance.check_out_time,
+      total_hours,
+      remarks: remarks || attendance.remarks,
+    });
+
+    res.status(200).json({
+      message: "Attendance updated successfully",
+      attendance,
+    });
+  } catch (error) {
+    console.error("Error updating attendance:", error);
+    res.status(500).json({ error: "Failed to update attendance" });
+  }
+};
+const getAllStaffAttendance = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const staff_id = req.query.staff_id;
+    const start_date = req.query.start_date;
+    const end_date = req.query.end_date;
+
+    const whereClause = { school_id, trash: false };
+    if (staff_id) whereClause.staff_id = staff_id;
+    if (start_date && end_date) {
+      whereClause.date = { [Op.between]: [start_date, end_date] };
+    }
+
+    const records = await StaffAttendance.findAll({
+      where: whereClause,
+      include: [{ model: User, attributes: ["id", "name"] }],
+      order: [["date", "DESC"]],
+    });
+
+    res.status(200).json(records);
+  } catch (error) {
+    console.error("Error fetching attendance:", error);
+    res.status(500).json({ error: "Failed to fetch attendance" });
+  }
+};
+
+const bulkCreateStaffAttendance = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const admin_id = req.user.user_id;
+    const records = req.body.records; // Array of attendance objects
+
+    if (!records || !Array.isArray(records) || records.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "No attendance records provided" });
+    }
+
+    const processedRecords = [];
+
+    for (const record of records) {
+      const { staff_id, date, status, check_in_time, check_out_time, remarks } =
+        record;
+
+      // Skip if essential fields missing
+      if (!staff_id || !date) continue;
+
+      // Check for existing attendance record
+      const existing = await StaffAttendance.findOne({
+        where: { school_id, staff_id, date, trash: false },
+      });
+
+      if (existing) {
+        processedRecords.push({
+          staff_id,
+          date,
+          status: "Skipped",
+          message: "Attendance already exists for this staff on the date",
+        });
+        continue;
+      }
+
+      // Calculate total hours
+      let total_hours = null;
+      if (check_in_time && check_out_time) {
+        const diff =
+          (new Date(check_out_time) - new Date(check_in_time)) /
+          (1000 * 60 * 60);
+        total_hours = diff.toFixed(2);
+      }
+
+      const attendanceData = {
+        school_id,
+        staff_id,
+        date,
+        status: status || "Present",
+        check_in_time: check_in_time || new Date().toISOString(),
+        check_out_time,
+        total_hours,
+        marked_by: admin_id,
+        marked_method: "Manual",
+        remarks,
+      };
+
+      await StaffAttendance.create(attendanceData);
+      processedRecords.push({
+        staff_id,
+        date,
+        status: "Added",
+        message: "Attendance marked successfully",
+      });
+    }
+
+    res.status(201).json({
+      message: "Bulk attendance processing completed",
+      results: processedRecords,
+    });
+  } catch (error) {
+    console.error("Bulk attendance creation error:", error);
+    res.status(500).json({ error: "Failed to process bulk attendance" });
+  }
+};
+
 module.exports = {
   createClass,
   getAllClasses,
@@ -4929,4 +5193,11 @@ module.exports = {
   getNavigationBarCounts,
 
   getInternalmarkById,
+  getHomeworkById,
+  getAttendanceById,
+
+  createStaffAttendance,
+  updateStaffAttendance,
+  getAllStaffAttendance,
+  bulkCreateStaffAttendance,
 };

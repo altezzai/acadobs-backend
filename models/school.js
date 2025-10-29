@@ -39,6 +39,15 @@ const School = schoolSequelize.define(
       type: DataTypes.DATEONLY,
       allowNull: true,
     },
+    location: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
+    pass_percent: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true,
+      defaultValue: 40.0,
+    },
     status: {
       type: DataTypes.ENUM("active", "inactive"),
       defaultValue: "active",

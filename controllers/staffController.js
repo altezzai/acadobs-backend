@@ -1,5 +1,6 @@
 const { Op } = require("sequelize");
 const moment = require("moment");
+const geolib = require("geolib");
 const {
   compressAndSaveFile,
   compressAndSaveMultiFile,
@@ -26,6 +27,7 @@ const TimetableSubstitution = require("../models/timetable_substitutions");
 const Staff = require("../models/staff");
 const Chat = require("../models/chat");
 const Message = require("../models/messages");
+const StaffAttendance = require("../models/staff_attendance");
 
 const { Homework, HomeworkAssignment } = require("../models");
 const { getGuarduianIdbyStudentId } = require("./commonController");
@@ -2326,6 +2328,170 @@ const getNavigationBarCounts = async (req, res) => {
   }
 };
 
+const markSelfAttendance = async (req, res) => {
+  try {
+    const staff_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const { status, remarks, latitude, longitude } = req.body;
+    const date = new Date().toISOString().split("T")[0];
+
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        message: "Location coordinates (latitude, longitude) are required",
+      });
+    }
+
+    const school = await School.findOne({ where: { id: school_id } });
+    if (!school || !school.location) {
+      return res
+        .status(400)
+        .json({ message: "School location not configured" });
+    }
+
+    const [schoolLat, schoolLon] = school.location.split(",").map(Number);
+
+    // ✅ Calculate distance using geolib
+    const distance = geolib.getDistance(
+      { latitude, longitude },
+      { latitude: schoolLat, longitude: schoolLon }
+    );
+
+    if (distance > 100) {
+      return res.status(400).json({
+        message: `You are too far from the school to mark attendance (Distance: ${distance}m)`,
+      });
+    }
+
+    const existing = await StaffAttendance.findOne({
+      where: { staff_id, school_id, date, trash: false },
+    });
+
+    if (existing) {
+      return res
+        .status(400)
+        .json({ message: "Attendance already marked for today" });
+    }
+
+    const newAttendance = await StaffAttendance.create({
+      school_id,
+      staff_id,
+      date,
+      status: status || "Present",
+      check_in_time: new Date(),
+      marked_by: staff_id,
+      marked_method: "Self",
+      remarks,
+      latitude,
+      longitude,
+    });
+
+    res.status(201).json({
+      message: "Attendance marked successfully",
+      attendance: newAttendance,
+      distance: `${distance} meters`,
+    });
+  } catch (error) {
+    console.error("Error marking attendance:", error);
+    res.status(500).json({ error: "Failed to mark attendance" });
+  }
+};
+
+const markCheckOutSelfAttendance = async (req, res) => {
+  try {
+    const staff_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const date = new Date().toISOString().split("T")[0];
+    const { latitude, longitude } = req.body;
+
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        message: "Location coordinates (latitude, longitude) are required",
+      });
+    }
+
+    const school = await School.findOne({ where: { id: school_id } });
+    if (!school || !school.location) {
+      return res
+        .status(400)
+        .json({ message: "School location not configured" });
+    }
+
+    const [schoolLat, schoolLon] = school.location.split(",").map(Number);
+
+    // ✅ Calculate distance using geolib
+    const distance = geolib.getDistance(
+      { latitude, longitude },
+      { latitude: schoolLat, longitude: schoolLon }
+    );
+
+    if (distance > 100) {
+      return res.status(400).json({
+        message: `You are too far from the school to mark attendance (Distance: ${distance}m)`,
+      });
+    }
+    // Check if already marked today
+    const existing = await StaffAttendance.findOne({
+      where: { staff_id, school_id, date, trash: false },
+    });
+
+    if (!existing)
+      return res
+        .status(400)
+        .json({ message: "Attendance not marked for today" });
+    if (existing.check_out_time)
+      return res
+        .status(400)
+        .json({ message: "Check-out already marked for today" });
+
+    const checkOut = new Date();
+    const diff =
+      (new Date(checkOut) - new Date(existing.check_in_time)) /
+      (1000 * 60 * 60);
+    const total_hours = diff.toFixed(2);
+
+    existing.check_out_time = checkOut;
+    existing.total_hours = total_hours;
+
+    await existing.save();
+
+    res.status(200).json({
+      message: "Check-out marked successfully",
+      attendance: existing,
+    });
+  } catch (error) {
+    console.error("Error marking check-out attendance:", error);
+    res.status(500).json({ error: "Failed to mark check-out attendance" });
+  }
+};
+const todayAttendaceStatus = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const staff_id = req.user.user_id;
+    const date = new Date().toISOString().split("T")[0];
+    const attendanceRecords = await StaffAttendance.findOne({
+      where: { school_id, staff_id, date, trash: false },
+    });
+
+    let status = "Not Marked";
+    if (attendanceRecords) {
+      if (attendanceRecords.check_out_time) {
+        status = "Checked Out";
+      } else {
+        status = "Checked In";
+        attendanceRecords.dataValues.can_check_out = true;
+      }
+    }
+    res.status(200).json({
+      status,
+      attendanceRecords,
+    });
+  } catch (error) {
+    console.error("Error fetching today's attendance status:", error);
+    res
+      .status(500)
+      .json({ error: "Failed to fetch today's attendance status" });
+  }
+};
 module.exports = {
   createExamWithMarks,
   getAllmarks,
@@ -2396,4 +2562,8 @@ module.exports = {
   getAllDaysTimetableForStaff,
 
   getNavigationBarCounts,
+
+  markSelfAttendance,
+  markCheckOutSelfAttendance,
+  todayAttendaceStatus,
 };

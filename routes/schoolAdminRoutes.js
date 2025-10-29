@@ -336,6 +336,16 @@ router.get(
   "/getInternalmarkById/:id",
   schoolAdminController.getInternalmarkById
 );
+router.get("/getHomeworkById/:id", schoolAdminController.getHomeworkById);
+router.get("/getAttendanceById/:id", schoolAdminController.getAttendanceById);
+
+router.post("/StaffAttendance", schoolAdminController.createStaffAttendance);
+router.get("/StaffAttendance", schoolAdminController.getAllStaffAttendance);
+router.put("/StaffAttendance/:id", schoolAdminController.updateStaffAttendance);
+router.post(
+  "/bulkCreateStaffAttendance",
+  schoolAdminController.bulkCreateStaffAttendance
+);
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);

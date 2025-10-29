@@ -159,6 +159,13 @@ router.get(
 router.get("/getNavigationBarCounts", staffController.getNavigationBarCounts);
 router.get("/getLatestNotices", staffController.getLatestNotices);
 
+router.post("/markSelfAttendance", staffController.markSelfAttendance);
+router.put(
+  "/markCheckOutSelfAttendance",
+  staffController.markCheckOutSelfAttendance
+);
+router.get("/todayAttendaceStatus", staffController.todayAttendaceStatus);
+
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);

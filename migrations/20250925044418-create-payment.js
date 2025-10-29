@@ -54,17 +54,18 @@ module.exports = {
         defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
       },
     });
-    // await queryInterface.addConstraint("Payments", {
-    //   fields: [
-    //     "school_id",
-    //     "student_id",
-    //     "payment_type",
-    //     "payment_date",
-    //     "payment_status",
-    //   ],
-    //   type: "unique",
-    //   name: "unique_payment_combination",
-    // });
+    await queryInterface.addConstraint("Payments", {
+      fields: [
+        "invoice_student_id",
+        "school_id",
+        "student_id",
+        "payment_type",
+        "payment_date",
+        "payment_status",
+      ],
+      type: "unique",
+      name: "unique_payment_combination",
+    });
   },
   async down(queryInterface) {
     await queryInterface.dropTable("payments");
