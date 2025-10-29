@@ -3713,9 +3713,9 @@ const updateNotice = async (req, res) => {
     await notice.update({ title, content, type, file: fileName });
 
     if (type === "classes") {
-      await NoticeClass.destroy({ where: { id: id } });
+      await NoticeClass.destroy({ where: { notice_id: id } });
       const mappings = class_ids.map((cid) => ({
-        id: id,
+        notice_id: id,
         class_id: cid,
       }));
       await NoticeClass.bulkCreate(mappings);
