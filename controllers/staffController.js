@@ -2463,7 +2463,7 @@ const markCheckOutSelfAttendance = async (req, res) => {
     res.status(500).json({ error: "Failed to mark check-out attendance" });
   }
 };
-const todayAttendaceStatus = async (req, res) => {
+const todayAttendanceStatus = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const staff_id = req.user.user_id;
@@ -2565,5 +2565,5 @@ module.exports = {
 
   markSelfAttendance,
   markCheckOutSelfAttendance,
-  todayAttendaceStatus,
+  todayAttendanceStatus,
 };
