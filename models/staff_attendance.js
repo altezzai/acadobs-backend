@@ -21,7 +21,7 @@ const StaffAttendance = schoolSequelize.define(
       allowNull: false,
     },
     status: {
-      type: DataTypes.ENUM("Present", "Absent", "Half Day", "On Leave", "Late"),
+      type: DataTypes.ENUM("Present", "Absent", "Half Day", "Leave", "Late"),
       defaultValue: "Present",
     },
     check_in_time: DataTypes.DATE,

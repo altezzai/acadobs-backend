@@ -29,13 +29,7 @@ module.exports = {
         allowNull: false,
       },
       status: {
-        type: Sequelize.ENUM(
-          "Present",
-          "Absent",
-          "Half Day",
-          "On Leave",
-          "Late"
-        ),
+        type: Sequelize.ENUM("Present", "Absent", "Half Day", "Leave", "Late"),
         defaultValue: "Present",
       },
       check_in_time: {

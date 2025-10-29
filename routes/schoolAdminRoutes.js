@@ -339,9 +339,13 @@ router.get(
 router.get("/getHomeworkById/:id", schoolAdminController.getHomeworkById);
 router.get("/getAttendanceById/:id", schoolAdminController.getAttendanceById);
 
-router.post("/StaffAttendance", schoolAdminController.createStaffAttendance);
-router.get("/StaffAttendance", schoolAdminController.getAllStaffAttendance);
-router.put("/StaffAttendance/:id", schoolAdminController.updateStaffAttendance);
+router.post("/staffAttendance", schoolAdminController.createStaffAttendance);
+router.get("/staffAttendance", schoolAdminController.getAllStaffAttendance);
+router.put("/staffAttendance/:id", schoolAdminController.updateStaffAttendance);
+router.delete(
+  "/staffAttendance/:id",
+  schoolAdminController.deleteStaffAttendance
+);
 router.post(
   "/bulkCreateStaffAttendance",
   schoolAdminController.bulkCreateStaffAttendance

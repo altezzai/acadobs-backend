@@ -3139,17 +3139,56 @@ const staffLeaveRequestPermission = async (req, res) => {
     const status = req.query.status;
     const admin_remarks = req.query.admin_remarks;
     const school_id = req.user.school_id;
+
     if (!status) {
       return res.status(400).json({ error: "status is required" });
     }
+
     const leaveRequest = await LeaveRequest.findOne({
       where: { id: Id, trash: false, school_id },
     });
-    if (!leaveRequest) return res.status(404).json({ error: "Not found" });
+
+    if (!leaveRequest) {
+      return res.status(404).json({ error: "Leave request not found" });
+    }
+
+    // Update leave request
     leaveRequest.approved_by = user_id;
-    leaveRequest.admin_remarks = admin_remarks;
+    leaveRequest.admin_remarks = admin_remarks || null;
     leaveRequest.status = status;
     await leaveRequest.save();
+
+    // If approved, add attendance entries for the leave period
+    if (status === "approved") {
+      const fromDate = moment(leaveRequest.from_date);
+      const toDate = moment(leaveRequest.to_date);
+
+      const staff_id = leaveRequest.user_id;
+      const attendanceEntries = [];
+
+      for (
+        let date = moment(fromDate);
+        date.isSameOrBefore(toDate);
+        date.add(1, "days")
+      ) {
+        attendanceEntries.push({
+          school_id,
+          staff_id,
+          date: date.format("YYYY-MM-DD"),
+          status: "On Leave",
+          check_in_time: null,
+          check_out_time: null,
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+      }
+
+      // Bulk insert attendance entries
+      await StaffAttendance.bulkCreate(attendanceEntries, {
+        ignoreDuplicates: true, // avoid duplicates if already exists
+      });
+    }
+
     res.status(200).json({
       message: `Leave request ${status} successfully`,
     });
@@ -4901,7 +4940,10 @@ const createStaffAttendance = async (req, res) => {
       staff_id,
       date,
       status,
-      check_in_time: check_in_time || new Date().toISOString(),
+      check_in_time:
+        check_in_time || check_in_time || status === "present"
+          ? new Date().toISOString()
+          : null,
       check_out_time: check_out_time || null,
       total_hours,
       marked_by: req.user.user_id,
@@ -4938,7 +4980,13 @@ const updateStaffAttendance = async (req, res) => {
     }
     await attendance.update({
       status: status || attendance.status,
-      check_in_time: check_in_time || attendance.check_in_time,
+      check_in_time:
+        check_in_time ||
+        attendance.check_in_time ||
+        check_in_time ||
+        status === "present"
+          ? new Date().toISOString()
+          : null,
       check_out_time: check_out_time || attendance.check_out_time,
       total_hours,
       remarks: remarks || attendance.remarks,
@@ -5029,7 +5077,10 @@ const bulkCreateStaffAttendance = async (req, res) => {
         staff_id,
         date,
         status: status || "Present",
-        check_in_time: check_in_time || new Date().toISOString(),
+        check_in_time:
+          check_in_time || status === "present"
+            ? new Date().toISOString()
+            : null,
         check_out_time,
         total_hours,
         marked_by: admin_id,
@@ -5053,6 +5104,22 @@ const bulkCreateStaffAttendance = async (req, res) => {
   } catch (error) {
     console.error("Bulk attendance creation error:", error);
     res.status(500).json({ error: "Failed to process bulk attendance" });
+  }
+};
+const deleteStaffAttendance = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const attendance = await StaffAttendance.findOne({
+      where: { id, school_id, trash: false },
+    });
+    if (!attendance)
+      return res.status(404).json({ message: "Attendance not found" });
+    await attendance.destroy();
+    res.status(200).json({ message: "Attendance deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting attendance:", error);
+    res.status(500).json({ error: "Failed to delete attendance" });
   }
 };
 
@@ -5200,4 +5267,5 @@ module.exports = {
   updateStaffAttendance,
   getAllStaffAttendance,
   bulkCreateStaffAttendance,
+  deleteStaffAttendance,
 };
