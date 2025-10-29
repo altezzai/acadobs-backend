@@ -164,7 +164,7 @@ router.put(
   "/markCheckOutSelfAttendance",
   staffController.markCheckOutSelfAttendance
 );
-router.get("/todayAttendaceStatus", staffController.todayAttendaceStatus);
+router.get("/todayAttendanceStatus", staffController.todayAttendanceStatus);
 
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
