@@ -16,6 +16,10 @@ const createSchool = async (req, res) => {
       admin_password,
       period_count,
       syllabus_type,
+      attendance_count,
+      education_year_start,
+      location,
+      pass_percent,
     } = req.body;
     if (!name || !email || !phone || !admin_password) {
       return res.status(400).json({ error: "Required fields are missing" });
@@ -44,6 +48,10 @@ const createSchool = async (req, res) => {
       period_count,
       logo: fileName,
       syllabus_type,
+      attendance_count,
+      education_year_start,
+      location,
+      pass_percent,
     });
 
     const hashedPassword = await bcrypt.hash(admin_password, 10);
@@ -99,8 +107,19 @@ const getAllSchools = async (req, res) => {
 const updateSchool = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, phone, address, status, period_count, syllabus_type } =
-      req.body;
+    const {
+      name,
+      email,
+      phone,
+      address,
+      status,
+      period_count,
+      syllabus_type,
+      attendance_count,
+      education_year_start,
+      location,
+      pass_percent,
+    } = req.body;
 
     const school = await School.findByPk(id);
     if (!school) return res.status(404).json({ error: "School not found" });
@@ -120,6 +139,10 @@ const updateSchool = async (req, res) => {
       logo: fileName ? fileName : school.logo,
       status,
       syllabus_type,
+      attendance_count,
+      education_year_start,
+      location,
+      pass_percent,
     });
 
     res.status(200).json({ message: "School updated successfully", school });
