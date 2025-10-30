@@ -192,12 +192,8 @@ const getPaymentReport = async (req, res) => {
           ],
         },
         {
-          model: User,
-          attributes: ["id", "name"],
-        },
-        {
           model: InvoiceStudent,
-          attributes: ["id", "amount", "status"],
+          attributes: ["id", "status"],
           include: [
             {
               model: Invoice,

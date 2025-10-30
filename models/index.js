@@ -95,6 +95,7 @@ Mark.belongsTo(Student, { foreignKey: "student_id" });
 
 Payment.belongsTo(School, { foreignKey: "school_id" });
 Payment.belongsTo(Student, { foreignKey: "student_id" });
+Payment.belongsTo(User, { foreignKey: "recorded_by" });
 Payment.belongsTo(InvoiceStudent, { foreignKey: "invoice_student_id" });
 
 Invoice.belongsTo(School, { foreignKey: "school_id" });
