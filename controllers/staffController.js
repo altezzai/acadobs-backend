@@ -966,8 +966,13 @@ const getAttendanceByclassIdAndDate = async (req, res) => {
         {
           model: AttendanceMarked,
           separate: true,
-          attributes: ["id", "student_id", "status", "remarks"],
-          // order: [[{ model: Student }, "roll_number", "ASC"]],
+          attributes: ["id", "status", "remarks"],
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "roll_number"],
+            },
+          ],
         },
       ],
     });
