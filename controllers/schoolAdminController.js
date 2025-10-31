@@ -5051,7 +5051,7 @@ const getAllStaffAttendance = async (req, res) => {
     const totalPages = Math.ceil(records.length / limit);
 
     res.status(200).json({
-      totalCount,
+      totalCount: records.length,
       totalPages: download === "true" ? null : totalPages,
       currentPage: download === "true" ? null : page,
       attendance: records,
@@ -5082,14 +5082,13 @@ const getStaffAttendanceByDate = async (req, res) => {
     const school_id = req.user.school_id;
     const date = req.query.date || new Date().toISOString().split("T")[0];
 
-    // Get all users with role 'staff' under this school
     const staffList = await User.findAll({
       where: { role: { [Op.in]: ["teacher", "staff"] }, school_id },
       attributes: ["id", "name", "email", "phone"],
       include: [
         {
           model: StaffAttendance,
-          required: false, // LEFT JOIN → show all staff, even without attendance
+          required: false,
           where: { date, trash: false },
           attributes: [
             "id",
@@ -5117,7 +5116,7 @@ const bulkCreateStaffAttendance = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const admin_id = req.user.user_id;
-    const records = req.body.records; // Array of attendance objects
+    const records = req.body.records;
 
     if (!records || !Array.isArray(records) || records.length === 0) {
       return res
