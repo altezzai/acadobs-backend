@@ -36,13 +36,13 @@ router.delete("/subjects/:id", schoolAdminController.deleteSubject);
 //staff routes
 router.post("/staffs", upload.single("dp"), schoolAdminController.createStaff);
 router.get("/staffs", schoolAdminController.getAllStaff);
-router.get("/staffs", schoolAdminController.getAllStaff);
 router.get("/staffs/:staff_id", schoolAdminController.getStaffById);
 router.put(
   "/staffs/:staff_id",
   upload.single("dp"),
   schoolAdminController.updateStaff
 );
+router.get("/getStaffs", schoolAdminController.getStaffs);
 router.put(
   "/updateStaffUser/:user_id",
   upload.single("dp"),
@@ -358,6 +358,7 @@ router.get(
   "/staffAttendanceByDate",
   schoolAdminController.getStaffAttendanceByDate
 );
+
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);

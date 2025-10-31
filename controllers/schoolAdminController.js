@@ -514,7 +514,23 @@ const getStaffById = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getStaffs = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const users = await User.findAll({
+      where: {
+        school_id: school_id,
+        role: { [Op.in]: ["teacher", "staff"] },
+        trash: false,
+      },
+      attributes: ["id", "name", "email", "dp"],
+    });
 
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 const updateStaff = async (req, res) => {
   const transaction = await Staff.sequelize.transaction();
 
@@ -5008,7 +5024,6 @@ const getAllStaffAttendance = async (req, res) => {
     const start_date = req.query.start_date;
     const end_date = req.query.end_date;
     const download = req.query.download || "";
-    const searchQuery = req.query.q || "";
     let { page = 1, limit = 10 } = req.query;
     if (download === "true") {
       page = null;
@@ -5028,14 +5043,7 @@ const getAllStaffAttendance = async (req, res) => {
 
     const records = await StaffAttendance.findAll({
       where: whereClause,
-      include: [
-        {
-          model: User,
-          where: searchQuery ? { name: { [Op.like]: `%${searchQuery}%` } } : {},
-          attributes: ["id", "name"],
-        },
-      ],
-
+      include: [{ model: User, attributes: ["id", "name"] }],
       order: [["date", "DESC"]],
       offset,
       limit,
@@ -5043,7 +5051,7 @@ const getAllStaffAttendance = async (req, res) => {
     const totalPages = Math.ceil(records.length / limit);
 
     res.status(200).json({
-      totalCount: records.length,
+      totalCount,
       totalPages: download === "true" ? null : totalPages,
       currentPage: download === "true" ? null : page,
       attendance: records,
@@ -5068,6 +5076,7 @@ const getStaffAttendanceById = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch attendance" });
   }
 };
+
 const getStaffAttendanceByDate = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -5075,7 +5084,7 @@ const getStaffAttendanceByDate = async (req, res) => {
 
     // Get all users with role 'staff' under this school
     const staffList = await User.findAll({
-      where: { role: "staff", school_id },
+      where: { role: { [Op.in]: ["teacher", "staff"] }, school_id },
       attributes: ["id", "name", "email", "phone"],
       include: [
         {
@@ -5222,6 +5231,7 @@ module.exports = {
   restoredStaff,
   updateStaffUser,
   getAllTeachers,
+  getStaffs,
 
   getAllStaffPermissions,
   updateStaffPermission,
