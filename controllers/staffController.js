@@ -2521,6 +2521,27 @@ const updateProfileDetails = async (req, res) => {
     res.status(500).json({ error: "Failed to update profile details" });
   }
 };
+const getProfileDetails = async (req, res) => {
+  try {
+    const user_id = req.user.user_id;
+    const staff = await Staff.findOne({
+      where: { user_id },
+      attributes: ["id", "qualification", "address"],
+    });
+    if (!staff) {
+      return res.status(404).json({ error: "Staff not found" });
+    }
+    const user = await User.findOne({
+      where: { id: user_id },
+      attributes: ["id", "name", "email", "phone"],
+    });
+
+    res.status(200).json({ staff, user });
+  } catch (error) {
+    console.error("Error fetching profile details:", error);
+    res.status(500).json({ error: "Failed to fetch profile details" });
+  }
+};
 module.exports = {
   createExamWithMarks,
   getAllmarks,
@@ -2597,4 +2618,5 @@ module.exports = {
   todayAttendanceStatus,
 
   updateProfileDetails,
+  getProfileDetails,
 };

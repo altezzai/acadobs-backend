@@ -762,6 +762,38 @@ const updateProfileDetails = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const getProfileDetails = async (req, res) => {
+  try {
+    const user_id = req.user.user_id;
+    const guardian = await Guardian.findOne({
+      where: { user_id: user_id },
+      attributes: [
+        "guardian_name",
+        "guardian_contact",
+        "guardian_email",
+        "guardian_job",
+        "guardian_relation",
+        "guardian2_name",
+        "guardian2_contact",
+        "guardian2_job",
+        "guardian2_relation",
+        "father_name",
+        "mother_name",
+      ],
+    });
+    if (!guardian) return res.status(404).json({ error: "Guardian not found" });
+    const user = await User.findOne({
+      where: { id: user_id },
+      attributes: ["name", "email", "phone", "dp"],
+    });
+
+    res
+      .status(200)
+      .json({ message: "Guardian profile details", guardian, user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 module.exports = {
   updateHomeworkAssignment,
@@ -788,4 +820,5 @@ module.exports = {
   getNavigationBarCounts,
 
   updateProfileDetails,
+  getProfileDetails,
 };

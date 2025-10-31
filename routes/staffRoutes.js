@@ -167,6 +167,7 @@ router.put(
 router.get("/todayAttendanceStatus", staffController.todayAttendanceStatus);
 
 router.put("/updateProfileDetails", staffController.updateProfileDetails);
+router.get("/getProfileDetails", staffController.getProfileDetails);
 
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);

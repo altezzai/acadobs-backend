@@ -62,6 +62,7 @@ router.get(
   guardianController.getNavigationBarCounts
 );
 router.put("/updateProfileDetails", guardianController.updateProfileDetails);
+router.get("/getProfileDetails", guardianController.getProfileDetails);
 
 //common controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
