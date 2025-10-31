@@ -1,5 +1,3 @@
-const path = require("path");
-const fs = require("fs");
 const moment = require("moment");
 const bcrypt = require("bcrypt");
 const { Op, where, DATEONLY } = require("sequelize");
@@ -7,7 +5,6 @@ const {
   compressAndSaveFile,
   deletefilewithfoldername,
   compressAndSaveMultiFile,
-  compressImage,
 } = require("../utils/fileHandler");
 const Staff = require("../models/staff");
 const StaffPermission = require("../models/staff_permissions");
@@ -41,9 +38,6 @@ const HomeworkAssignment = require("../models/homeworkassignment");
 const StaffAttendance = require("../models/staff_attendance");
 const { School } = require("../models");
 const { schoolSequelize } = require("../config/connection");
-
-// const { create } = require("domain");
-// const { time } = require("console");
 
 // CREATE
 const createClass = async (req, res) => {
@@ -613,11 +607,13 @@ const updateStaffUser = async (req, res) => {
         .status(400)
         .json({ error: "SchoolAdmin phone already exists in user table" });
     }
-    let fileName = null;
+    let fileName = user.dp;
 
     if (req.file) {
       const uploadPath = "uploads/dp/";
+      const oldFileName = user.dp;
       fileName = await compressAndSaveFile(req.file, uploadPath);
+      await deletefilewithfoldername(oldFileName, uploadPath);
     }
     const user = await User.findOne({
       where: { id: user_id },
@@ -1033,7 +1029,7 @@ const updateGuardian = async (req, res) => {
       where: { id, trash: false },
       include: [{ model: User, where: { school_id } }],
     });
-    let fileName = null;
+
     if (!guardian) return res.status(404).json({ error: "Guardian not found" });
 
     if (guardian_email) {
@@ -1077,15 +1073,18 @@ const updateGuardian = async (req, res) => {
       father_name,
       mother_name,
     });
-    if (req.file) {
-      const uploadPath = "uploads/dp/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-    }
+
     const user = await User.findOne({
       where: { id: guardian.user_id },
     });
     if (!user) return res.status(404).json({ error: "user not found" });
-
+    let fileName = user.dp;
+    if (req.file) {
+      const uploadPath = "uploads/dp/";
+      const oldFileName = user.dp;
+      fileName = await compressAndSaveFile(req.file, uploadPath);
+      await deletefilewithfoldername(oldFileName, uploadPath);
+    }
     await user.update({
       name: guardian.guardian_name,
       // email: guardian.guardian_email,
@@ -1809,6 +1808,7 @@ const updateDuty = async (req, res) => {
     if (req.file) {
       uploadPath = "uploads/duties/";
       fileName = await compressAndSaveFile(req.file, uploadPath);
+      await deletefilewithfoldername(duty.file, uploadPath);
     }
     await duty.update({
       title,

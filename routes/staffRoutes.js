@@ -166,6 +166,8 @@ router.put(
 );
 router.get("/todayAttendanceStatus", staffController.todayAttendanceStatus);
 
+router.put("/updateProfileDetails", staffController.updateProfileDetails);
+
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);
@@ -208,4 +210,7 @@ router.get(
   commonController.getLeaveRequestByStudentId
 );
 router.get("/getSchoolDetails", commonController.getSchoolDetails);
+
+router.put("/changePassword", commonController.changePassword);
+router.put("/updateDp", upload.single("dp"), commonController.updateDp);
 module.exports = router;

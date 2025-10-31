@@ -24,6 +24,7 @@ const InvoiceStudent = require("../models/invoice_students");
 const TimetableSubstitution = require("../models/timetable_substitutions");
 const Chat = require("../models/chat");
 const Message = require("../models/messages");
+const Guardian = require("../models/guardian");
 
 const { getschoolIdByStudentId } = require("../controllers/commonController");
 
@@ -707,6 +708,60 @@ const getNavigationBarCounts = async (req, res) => {
       .json({ error: "Failed to fetch pending leave request counts" });
   }
 };
+// Update guardian profile details from guardian table
+const updateProfileDetails = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const {
+      guardian_relation,
+      guardian_name,
+      guardian_contact,
+      guardian_job,
+      guardian2_relation,
+      guardian2_name,
+      guardian2_job,
+      guardian2_contact,
+      father_name,
+      mother_name,
+    } = req.body;
+    const guardian = await Guardian.findOne({
+      where: { user_id: userId },
+    });
+
+    if (!guardian) return res.status(404).json({ error: "Guardian not found" });
+    if (guardian_contact) {
+      const existingPhone = await User.findOne({
+        where: {
+          phone: guardian_contact,
+          id: { [Op.ne]: userId },
+        },
+      });
+
+      if (existingPhone) {
+        return res
+          .status(400)
+          .json({ error: "Guardian phone already exists in user table" });
+      }
+      await User.update({ phone: guardian_contact }, { where: { id: userId } });
+    }
+
+    await guardian.update({
+      guardian_relation,
+      guardian_name,
+      guardian_contact,
+      guardian_job,
+      guardian2_relation,
+      guardian2_name,
+      guardian2_job,
+      guardian2_contact,
+      father_name,
+      mother_name,
+    });
+    res.status(200).json({ message: "Guardian profile updated", guardian });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 module.exports = {
   updateHomeworkAssignment,
@@ -731,4 +786,6 @@ module.exports = {
   getAllDayTimetableByStudentId,
 
   getNavigationBarCounts,
+
+  updateProfileDetails,
 };

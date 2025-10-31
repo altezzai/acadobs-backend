@@ -2497,6 +2497,30 @@ const todayAttendanceStatus = async (req, res) => {
       .json({ error: "Failed to fetch today's attendance status" });
   }
 };
+const updateProfileDetails = async (req, res) => {
+  try {
+    const user_id = req.user.user_id;
+    const { name, phone, qualification, address } = req.body;
+    const staff = await Staff.findOne({ where: { user_id } });
+    if (!staff) {
+      return res.status(404).json({ error: "Staff not found" });
+    }
+    await staff.update({
+      qualification,
+      address,
+    });
+    const user = await User.findOne({ where: { id: user_id } });
+
+    await user.update({
+      name,
+      phone,
+    });
+    res.status(200).json({ message: "Profile details updated successfully" });
+  } catch (error) {
+    console.error("Error updating profile details:", error);
+    res.status(500).json({ error: "Failed to update profile details" });
+  }
+};
 module.exports = {
   createExamWithMarks,
   getAllmarks,
@@ -2530,7 +2554,7 @@ module.exports = {
   getTrashedAttendanceByTeacher,
   getAttendanceByTeacher,
   bulkUpdateAttendanceById,
-  getAttendanceByclassIdAndDate, //do not checked
+  getAttendanceByclassIdAndDate,
   getAllClassesAttendanceStatus,
 
   getAllDuties,
@@ -2571,4 +2595,6 @@ module.exports = {
   markSelfAttendance,
   markCheckOutSelfAttendance,
   todayAttendanceStatus,
+
+  updateProfileDetails,
 };
