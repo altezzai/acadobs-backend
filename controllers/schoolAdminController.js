@@ -5008,6 +5008,7 @@ const getAllStaffAttendance = async (req, res) => {
     const start_date = req.query.start_date;
     const end_date = req.query.end_date;
     const download = req.query.download || "";
+    const searchQuery = req.query.q || "";
     let { page = 1, limit = 10 } = req.query;
     if (download === "true") {
       page = null;
@@ -5027,7 +5028,14 @@ const getAllStaffAttendance = async (req, res) => {
 
     const records = await StaffAttendance.findAll({
       where: whereClause,
-      include: [{ model: User, attributes: ["id", "name"] }],
+      include: [
+        {
+          model: User,
+          where: searchQuery ? { name: { [Op.like]: `%${searchQuery}%` } } : {},
+          attributes: ["id", "name"],
+        },
+      ],
+
       order: [["date", "DESC"]],
       offset,
       limit,
