@@ -5007,6 +5007,17 @@ const getAllStaffAttendance = async (req, res) => {
     const staff_id = req.query.staff_id;
     const start_date = req.query.start_date;
     const end_date = req.query.end_date;
+    const download = req.query.download || "";
+    let { page = 1, limit = 10 } = req.query;
+    if (download === "true") {
+      page = null;
+      limit = null;
+    } else {
+      page = parseInt(page) || 1;
+      limit = parseInt(limit) || 10;
+    }
+
+    const offset = page && limit ? (page - 1) * limit : 0;
 
     const whereClause = { school_id, trash: false };
     if (staff_id) whereClause.staff_id = staff_id;
@@ -5018,15 +5029,73 @@ const getAllStaffAttendance = async (req, res) => {
       where: whereClause,
       include: [{ model: User, attributes: ["id", "name"] }],
       order: [["date", "DESC"]],
+      offset,
+      limit,
     });
+    const totalPages = Math.ceil(records.length / limit);
 
-    res.status(200).json(records);
+    res.status(200).json({
+      totalCount: records.length,
+      totalPages: download === "true" ? null : totalPages,
+      currentPage: download === "true" ? null : page,
+      attendance: records,
+    });
   } catch (error) {
     console.error("Error fetching attendance:", error);
     res.status(500).json({ error: "Failed to fetch attendance" });
   }
 };
+const getStaffAttendanceById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const attendance = await StaffAttendance.findOne({
+      where: { id, school_id, trash: false },
+    });
+    if (!attendance)
+      return res.status(404).json({ message: "Attendance not found" });
+    res.status(200).json(attendance);
+  } catch (error) {
+    console.error("Error fetching attendance:", error);
+    res.status(500).json({ error: "Failed to fetch attendance" });
+  }
+};
+const getStaffAttendanceByDate = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const date = req.query.date || new Date().toISOString().split("T")[0];
 
+    // Get all users with role 'staff' under this school
+    const staffList = await User.findAll({
+      where: { role: "staff", school_id },
+      attributes: ["id", "name", "email", "phone"],
+      include: [
+        {
+          model: StaffAttendance,
+          required: false, // LEFT JOIN → show all staff, even without attendance
+          where: { date, trash: false },
+          attributes: [
+            "id",
+            "status",
+            "check_in_time",
+            "check_out_time",
+            "createdAt",
+          ],
+        },
+      ],
+      order: [["name", "ASC"]],
+    });
+
+    res.status(200).json({
+      total_staff: staffList.length,
+      date,
+      attendance: staffList,
+    });
+  } catch (error) {
+    console.error("Error fetching staff attendance by date:", error);
+    res.status(500).json({ error: "Failed to fetch staff attendance by date" });
+  }
+};
 const bulkCreateStaffAttendance = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -5266,6 +5335,8 @@ module.exports = {
   createStaffAttendance,
   updateStaffAttendance,
   getAllStaffAttendance,
+  getStaffAttendanceById,
+  getStaffAttendanceByDate,
   bulkCreateStaffAttendance,
   deleteStaffAttendance,
 };

@@ -461,6 +461,7 @@ const getLeaveRequestByStudentId = async (req, res) => {
           attributes: ["id", "name", "email", "phone"],
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({

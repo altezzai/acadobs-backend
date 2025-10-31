@@ -338,9 +338,13 @@ router.get(
 );
 router.get("/getHomeworkById/:id", schoolAdminController.getHomeworkById);
 router.get("/getAttendanceById/:id", schoolAdminController.getAttendanceById);
-
+//staff attendance
 router.post("/staffAttendance", schoolAdminController.createStaffAttendance);
 router.get("/staffAttendance", schoolAdminController.getAllStaffAttendance);
+router.get(
+  "/staffAttendance/:id",
+  schoolAdminController.getStaffAttendanceById
+);
 router.put("/staffAttendance/:id", schoolAdminController.updateStaffAttendance);
 router.delete(
   "/staffAttendance/:id",
@@ -349,6 +353,10 @@ router.delete(
 router.post(
   "/bulkCreateStaffAttendance",
   schoolAdminController.bulkCreateStaffAttendance
+);
+router.get(
+  "/staffAttendanceByDate",
+  schoolAdminController.getStaffAttendanceByDate
 );
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
