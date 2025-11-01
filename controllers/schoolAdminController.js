@@ -5124,7 +5124,7 @@ const bulkCreateStaffAttendance = async (req, res) => {
     const school_id = req.user.school_id;
     const admin_id = req.user.user_id;
     const records = req.body.records;
-
+    console.log(records);
     if (!records || !Array.isArray(records) || records.length === 0) {
       return res
         .status(400)
@@ -5132,7 +5132,7 @@ const bulkCreateStaffAttendance = async (req, res) => {
     }
 
     const processedRecords = [];
-
+    copnsole.log(" stage 1");
     for (const record of records) {
       const { staff_id, date, status, check_in_time, check_out_time, remarks } =
         record;
@@ -5144,7 +5144,7 @@ const bulkCreateStaffAttendance = async (req, res) => {
       const existing = await StaffAttendance.findOne({
         where: { school_id, staff_id, date, trash: false },
       });
-
+      copnsole.log(" stage 2");
       if (existing) {
         processedRecords.push({
           staff_id,
@@ -5163,7 +5163,7 @@ const bulkCreateStaffAttendance = async (req, res) => {
           (1000 * 60 * 60);
         total_hours = diff.toFixed(2);
       }
-
+      copnsole.log(" stage 3");
       const attendanceData = {
         school_id,
         staff_id,
@@ -5195,6 +5195,7 @@ const bulkCreateStaffAttendance = async (req, res) => {
     });
   } catch (error) {
     console.error("Bulk attendance creation error:", error);
+    console.log(error);
     res.status(500).json({ error: "Failed to process bulk attendance" });
   }
 };
