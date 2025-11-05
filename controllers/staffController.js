@@ -2533,7 +2533,7 @@ const getProfileDetails = async (req, res) => {
     }
     const user = await User.findOne({
       where: { id: user_id },
-      attributes: ["id", "name", "email", "phone"],
+      attributes: ["id", "name", "email", "phone", "dp"],
     });
 
     res.status(200).json({ staff, user });
