@@ -267,7 +267,8 @@ const getSubjectById = async (req, res) => {
 const updateSubject = async (req, res) => {
   try {
     const { id } = req.params;
-    const { subject_name, class_range, school_id } = req.body;
+    const school_id = req.user.school_id;
+    const { subject_name, class_range } = req.body;
 
     const exists = await Subject.findOne({
       where: {
