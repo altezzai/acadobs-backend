@@ -4858,6 +4858,7 @@ const getInternalmarkById = async (req, res) => {
     const school_id = req.user.school_id;
     const { id } = req.params;
     const internalmark = await InternalMark.findOne({
+      attributes: ["id", "internal_name", "max_marks", "date"],
       where: { id, school_id },
       include: [
         { model: Class, attributes: ["classname"] },
@@ -4883,7 +4884,9 @@ const getInternalmarkById = async (req, res) => {
 const getHomeworkById = async (req, res) => {
   try {
     const { id } = req.params;
+
     const homework = await Homework.findOne({
+      attributes: ["id", "title", "description", "due_date", "file"],
       where: { id, trash: false },
       include: [
         { model: Class, attributes: ["id", "classname"] },
@@ -4898,17 +4901,50 @@ const getHomeworkById = async (req, res) => {
         },
       ],
     });
+
     if (!homework) return res.status(404).json({ error: "Not found" });
-    res.status(200).json(homework);
+
+    // Initialize counts for each point level (1–5)
+    const pointCounts = {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+    };
+
+    const assignments = homework.HomeworkAssignments || [];
+
+    assignments.forEach((record) => {
+      const point = record.points;
+      if (point && pointCounts.hasOwnProperty(point)) {
+        pointCounts[point]++;
+      }
+    });
+
+    const total_students = assignments.length;
+
+    const response = {
+      summary: {
+        total_students,
+        ...pointCounts,
+      },
+      ...homework.toJSON(),
+    };
+
+    res.status(200).json(response);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
 const getAttendanceById = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const attendance = await Attendance.findOne({
-      where: { id, trash: false },
+      attributes: ["id", "period", "date"],
+      where: { id, school_id, trash: false },
       include: [
         { model: Class, attributes: ["id", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
@@ -4922,12 +4958,42 @@ const getAttendanceById = async (req, res) => {
         },
       ],
     });
+
     if (!attendance) return res.status(404).json({ error: "Not found" });
-    res.status(200).json(attendance);
+
+    // Count attendance status
+    const counts = {
+      present: 0,
+      absent: 0,
+      late: 0,
+      leave: 0,
+    };
+
+    const marked = attendance.AttendanceMarkeds || []; // Sequelize association array
+
+    marked.forEach((record) => {
+      const status = record.status?.toLowerCase();
+      if (status && counts.hasOwnProperty(status)) {
+        counts[status]++;
+      }
+    });
+
+    const total_students = marked.length;
+
+    const response = {
+      summary: {
+        total_students,
+        ...counts,
+      },
+      ...attendance.toJSON(),
+    };
+
+    res.status(200).json(response);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
 const createStaffAttendance = async (req, res) => {
   try {
     const school_id = req.user.school_id;

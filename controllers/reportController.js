@@ -26,11 +26,15 @@ const e = require("express");
 
 const getInvoiceReport = async (req, res) => {
   try {
-    const { class_id, download, category } = req.query;
+    const school_id = req.user.school_id;
+    const download = req.query.download || "";
     const searchQuery = req.query.q || "";
+    const category = req.query.category || null;
+    const class_id = req.query.class_id || null;
+    const due_date = req.query.due_date || null;
+
     let { page = 1, limit = 10 } = req.query;
 
-    // Download mode → no pagination
     if (download === "true") {
       page = null;
       limit = null;
@@ -41,30 +45,33 @@ const getInvoiceReport = async (req, res) => {
 
     const offset = page && limit ? (page - 1) * limit : 0;
 
-    // Count query
     const countQuery = `
       SELECT COUNT(DISTINCT i.id) AS total
       FROM invoices i
       LEFT JOIN invoice_students istd ON i.id = istd.invoice_id
       LEFT JOIN students s ON s.id = istd.student_id
-      WHERE (:classId IS NULL OR s.class_id = :classId)
+      WHERE i.school_id = :schoolId
+      AND (:classId IS NULL OR s.class_id = :classId)
       AND (:title IS NULL OR i.title LIKE :titleLike)
       AND (:category IS NULL OR i.category = :category)
+      AND (:dueDate IS NULL OR DATE(i.due_date) = :dueDate)
     `;
 
     const totalResult = await schoolSequelize.query(countQuery, {
       replacements: {
+        schoolId: school_id,
         classId: class_id || null,
         title: searchQuery || null,
         titleLike: searchQuery ? `%${searchQuery}%` : null,
         category: category || null,
+        dueDate: due_date || null,
       },
       type: schoolSequelize.QueryTypes.SELECT,
     });
 
     const total = totalResult[0]?.total || 0;
 
-    // Main report query
+    // ✅ Main query with school_id and due_date filter
     let query = `
       SELECT 
           i.id AS invoice_id,
@@ -89,25 +96,29 @@ const getInvoiceReport = async (req, res) => {
             ON p.invoice_student_id = istd.id
             AND istd.status IN ('paid','partially_paid')
 
-      WHERE (:classId IS NULL OR s.class_id = :classId)
+      WHERE i.school_id = :schoolId
+      AND (:classId IS NULL OR s.class_id = :classId)
       AND (:title IS NULL OR i.title LIKE :titleLike)
       AND (:category IS NULL OR i.category = :category)
+      AND (:dueDate IS NULL OR DATE(i.due_date) = :dueDate)
 
       GROUP BY i.id, i.title, i.category, i.createdAt, i.due_date
       ORDER BY i.createdAt DESC
     `;
 
-    // Pagination if not download
+    // ✅ Add pagination if not downloading
     if (!(download === "true") && page && limit) {
       query += ` LIMIT :limit OFFSET :offset`;
     }
 
     const report = await schoolSequelize.query(query, {
       replacements: {
+        schoolId: school_id,
         classId: class_id || null,
         title: searchQuery || null,
         titleLike: searchQuery ? `%${searchQuery}%` : null,
         category: category || null,
+        dueDate: due_date || null,
         limit,
         offset,
       },
@@ -126,6 +137,7 @@ const getInvoiceReport = async (req, res) => {
     res.status(500).json({ error: "Failed to generate invoice report" });
   }
 };
+
 const getPaymentReport = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -155,14 +167,12 @@ const getPaymentReport = async (req, res) => {
       trash: false,
       school_id,
     };
-    if (searchQuery) {
-      whereClause[Op.or] = [
-        { payment_type: { [Op.like]: `%${searchQuery}%` } },
-        { transaction_id: { [Op.like]: `%${searchQuery}%` } },
-
-        // Add other fields to search if needed
-      ];
-    }
+    // if (searchQuery) {
+    //   whereClause[Op.or] = [
+    //     { payment_type: { [Op.like]: `%${searchQuery}%` } },
+    //     { transaction_id: { [Op.like]: `%${searchQuery}%` } },
+    //   ];
+    // }
     if (student_id) {
       whereClause.student_id = student_id;
     }
@@ -198,6 +208,11 @@ const getPaymentReport = async (req, res) => {
             {
               model: Invoice,
               attributes: ["id", "title", "category"],
+              where: searchQuery
+                ? {
+                    title: { [Op.like]: `%${searchQuery}%` },
+                  }
+                : {},
             },
           ],
         },
