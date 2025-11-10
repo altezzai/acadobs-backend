@@ -64,6 +64,9 @@ router.get(
 router.put("/updateProfileDetails", guardianController.updateProfileDetails);
 router.get("/getProfileDetails", guardianController.getProfileDetails);
 
+router.get("/getHomeworkById/:id", guardianController.getHomeworkById);
+router.get("/getAchievementById/:id", guardianController.getAchievementById);
+
 //common controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);
@@ -97,5 +100,11 @@ router.get(
 router.put("/changePassword", commonController.changePassword);
 router.put("/updateFcmToken", commonController.updateFcmToken);
 router.put("/updateDp", upload.single("dp"), commonController.updateDp);
+
+router.get("/getPaymentById/:id", commonController.getPaymentById);
+router.get(
+  "/getAchievementsBySchool",
+  commonController.getAchievementsBySchool
+);
 
 module.exports = router;

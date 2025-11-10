@@ -25,6 +25,9 @@ const TimetableSubstitution = require("../models/timetable_substitutions");
 const Chat = require("../models/chat");
 const Message = require("../models/messages");
 const Guardian = require("../models/guardian");
+const Homework = require("../models/homework");
+const Achievement = require("../models/achievement");
+const StudentAchievement = require("../models/studentachievement");
 
 const { getschoolIdByStudentId } = require("../controllers/commonController");
 
@@ -794,6 +797,91 @@ const getProfileDetails = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const getHomeworkById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const homework = await Homework.findOne({
+      where: { id, school_id, trash: false },
+
+      include: [
+        {
+          model: HomeworkAssignment,
+          attributes: ["id", "remarks", "points", "solved_file"],
+          include: [
+            {
+              model: HomeworkAssignment,
+              attributes: ["id", "remarks", "points", "solved_file"],
+
+              include: [
+                {
+                  model: Student,
+                  attributes: [
+                    "id",
+                    "reg_no",
+                    "full_name",
+                    "image",
+                    "roll_number",
+                  ],
+                },
+              ],
+            },
+            {
+              model: Class,
+              attributes: ["id", "classname"],
+            },
+            {
+              model: Subject,
+              attributes: ["id", "subject_name"],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!homework) return res.status(404).json({ error: "Not found" });
+    res.status(200).json(homework);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const getAchievementById = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const achievement = await Achievement.findOne({
+      where: { id: req.params.id, school_id, trash: false },
+      attributes: [
+        "id",
+        "title",
+        "description",
+        "category",
+        "level",
+        "date",
+        "awarding_body",
+      ],
+      include: [
+        {
+          model: StudentAchievement,
+          attributes: ["student_id", "status", "proof_document", "remarks"],
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "reg_no", "image"],
+            },
+          ],
+        },
+        {
+          model: Class,
+          attributes: ["id", "classname", "year", "division"],
+        },
+      ],
+    });
+    res.status(200).json(achievement);
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 module.exports = {
   updateHomeworkAssignment,
@@ -821,4 +909,7 @@ module.exports = {
 
   updateProfileDetails,
   getProfileDetails,
+
+  getHomeworkById,
+  getAchievementById,
 };

@@ -214,4 +214,10 @@ router.get("/getSchoolDetails", commonController.getSchoolDetails);
 
 router.put("/changePassword", commonController.changePassword);
 router.put("/updateDp", upload.single("dp"), commonController.updateDp);
+
+router.get("/getPaymentById/:id", commonController.getPaymentById);
+router.get(
+  "/getAchievementsBySchool",
+  commonController.getAchievementsBySchool
+);
 module.exports = router;

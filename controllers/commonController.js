@@ -16,6 +16,8 @@ const LeaveRequest = require("../models/leaverequest");
 const School = require("../models/school");
 const Event = require("../models/event");
 const News = require("../models/news");
+const Payment = require("../models/payment");
+
 const { Class } = require("../models");
 
 const {
@@ -28,7 +30,9 @@ const getStudentsByClassId = async (req, res) => {
     const { class_id } = req.params;
     const school_id = req.user.school_id || "";
     const searchQuery = req.query.q || "";
-
+    if (!school_id) {
+      return res.status(404).json({ error: "School not found" });
+    }
     const { count, rows: students } = await Student.findAndCountAll({
       where: {
         class_id,
@@ -84,6 +88,10 @@ const getStudentById = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id || "";
+    if (!school_id) {
+      return res.status(404).json({ error: "School not found" });
+    }
+
     const student = await Student.findOne({
       where: { id, school_id, trash: false },
       attributes: [
@@ -266,6 +274,10 @@ const getStudentAttendanceByDate = async (req, res) => {
 const allAchievements = async (req, res) => {
   try {
     const school_id = req.user.school_id;
+    if (!school_id) {
+      return res.status(404).json({ error: "School not found" });
+    }
+
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -478,6 +490,10 @@ const getLeaveRequestByStudentId = async (req, res) => {
 const getLatestEvents = async (req, res) => {
   try {
     const school_id = req.user.school_id;
+    if (!school_id) {
+      return res.status(404).json({ error: "School not found" });
+    }
+
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 3;
     const offset = (page - 1) * limit;
@@ -503,6 +519,9 @@ const getLatestEvents = async (req, res) => {
 const getLatestNews = async (req, res) => {
   try {
     const school_id = req.user.school_id;
+    if (!school_id) {
+      return res.status(404).json({ error: "School not found" });
+    }
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 3;
     const offset = (page - 1) * limit;
@@ -618,6 +637,66 @@ const updateDp = async (req, res) => {
   }
 };
 
+const getPaymentById = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    if (!school_id) {
+      return res.status(404).json({ error: "School not found" });
+    }
+
+    const payment = await Payment.findOne({
+      where: { id: req.params.id, school_id, trash: false },
+      include: [
+        {
+          model: Student,
+          attributes: ["id", "full_name", "reg_no", "image"],
+        },
+      ],
+    });
+    if (!payment || payment.trash)
+      return res.status(404).json({ error: "Payment not found" });
+    res.status(200).json(payment);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getAchievementsBySchool = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    if (!school_id) {
+      return res.status(404).json({ error: "School not found" });
+    }
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 3;
+    const offset = (page - 1) * limit;
+    const achievements = await Achievement.findAll({
+      where: {
+        school_id,
+        trash: false,
+        level: {
+          [Op.ne]: "class",
+        },
+      },
+      include: [
+        {
+          model: Student,
+          attributes: ["id", "full_name", "reg_no", "image"],
+        },
+      ],
+      limit,
+      offset,
+    });
+    const totalPages = Math.ceil(achievements.length / limit);
+    res.status(200).json({
+      totalcontent: achievements.length,
+      totalPages,
+      currentPage: page,
+      achievements,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 module.exports = {
   getStudentsByClassId,
   getschoolIdByStudentId,
@@ -645,4 +724,8 @@ module.exports = {
   changePassword,
   updateFcmToken,
   updateDp,
+
+  getPaymentById,
+
+  getAchievementsBySchool,
 };

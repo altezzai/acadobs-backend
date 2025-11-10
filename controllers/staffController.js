@@ -1336,8 +1336,15 @@ const createAchievementWithStudents = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const recorded_by = req.user.user_id;
-    const { title, description, category, date, awarding_body, students } =
-      req.body;
+    const {
+      title,
+      description,
+      category,
+      date,
+      awarding_body,
+      students,
+      level,
+    } = req.body;
     if (
       students === undefined ||
       students.length === 0 ||
@@ -1373,7 +1380,7 @@ const createAchievementWithStudents = async (req, res) => {
       title,
       description,
       category,
-      level: "class",
+      level: level || "class",
       date,
       awarding_body,
       recorded_by,
