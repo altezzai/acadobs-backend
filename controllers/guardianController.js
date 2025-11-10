@@ -868,15 +868,18 @@ const getAchievementById = async (req, res) => {
             {
               model: Student,
               attributes: ["id", "full_name", "reg_no", "image"],
+              include: [
+                {
+                  model: Class,
+                  attributes: ["id", "classname", "year", "division"],
+                },
+              ],
             },
           ],
         },
-        {
-          model: Class,
-          attributes: ["id", "classname", "year", "division"],
-        },
       ],
     });
+    if (!achievement) return res.status(404).json({ error: "Not found" });
     res.status(200).json(achievement);
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
