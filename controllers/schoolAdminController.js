@@ -38,6 +38,7 @@ const HomeworkAssignment = require("../models/homeworkassignment");
 const StaffAttendance = require("../models/staff_attendance");
 const { School } = require("../models");
 const { schoolSequelize } = require("../config/connection");
+const { get } = require("../routes/staffRoutes");
 
 // CREATE
 const createClass = async (req, res) => {
@@ -177,7 +178,64 @@ const deleteClass = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
+//get trashed classes
+const getTrashedClasses = async (req, res) => {
+  try {
+    const trashedClasses = await Class.findAll({
+      where: {
+        school_id: req.user.school_id,
+        trash: true,
+      },
+    });
+    res.status(200).json(trashedClasses);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const restoreClass = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const school_id = req.user.school_id;
+    const classData = await Class.findOne({
+      where: {
+        id,
+        school_id,
+        trash: true,
+      },
+    });
+    if (!classData) return res.status(404).json({ message: "Class not found" });
+    await Class.update(
+      { trash: false },
+      {
+        where: {
+          id,
+          school_id,
+        },
+      }
+    );
+    res.status(200).json({ message: "Class restored" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const permanentDeleteClass = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const school_id = req.user.school_id;
+    const classData = await Class.findOne({
+      where: {
+        id,
+        school_id,
+        trash: true,
+      },
+    });
+    if (!classData) return res.status(404).json({ message: "Class not found" });
+    await Class.destroy({ where: { id, school_id } });
+    res.status(200).json({ message: "Class permanently deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 // Create Subject
 const createSubject = async (req, res) => {
   try {
@@ -309,6 +367,61 @@ const deleteSubject = async (req, res) => {
     await subject.save();
 
     res.status(200).json({ message: "Subject deleted (soft)" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getTrashedSubjects = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: subjects } = await Subject.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: {
+        trash: true,
+      },
+    });
+    res.status(200).json({
+      totalcontent: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      subjects,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+// Restore Subject
+const restoreSubject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const subject = await Subject.findByPk(id);
+    if (!subject || !subject.trash)
+      return res.status(404).json({ error: "Subject not found" });
+
+    subject.trash = false;
+    await subject.save();
+
+    res.status(200).json({ message: "Subject restored" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Permanent Delete Subject
+const permanentDeleteSubject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const subject = await Subject.findByPk(id);
+    if (!subject || !subject.trash)
+      return res.status(404).json({ error: "Subject not found" });
+
+    await subject.destroy();
+    res.status(200).json({ message: "Subject permanently deleted" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -687,6 +800,31 @@ const restoredStaff = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getTrashedStaffs = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: staffs } = await Staff.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: {
+        trash: true,
+      },
+    });
+    res.status(200).json({
+      totalcontent: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      staffs,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 const getAllTeachers = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
@@ -1952,6 +2090,29 @@ const deleteDuty = async (req, res) => {
     res.status(500).json({ error: "Delete failed duty" });
   }
 };
+const getTrashedDuties = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const school_id = req.user.school_id;
+    const { count, rows: duties } = await Duty.findAndCountAll({
+      offset,
+      limit,
+      distinct: true,
+      where: { school_id, trash: true },
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      duties,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 const restoreDuty = async (req, res) => {
   try {
@@ -2200,6 +2361,29 @@ const deleteAchievement = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+const getTrashedAchievements = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const school_id = req.user.school_id;
+    const { count, rows: achievements } = await Achievement.findAndCountAll({
+      offset,
+      limit,
+      where: { school_id, trash: true },
+      attributes: ["id", "title", "description", "category", "level", "date"],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      achievements,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 const restoreAchievement = async (req, res) => {
   try {
     await Achievement.update(
@@ -2403,6 +2587,28 @@ const deleteEvent = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getTrashedEvents = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const { count, rows: events } = await Event.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: { trash: true },
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      events,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 const restoreEvent = async (req, res) => {
   try {
     await Event.update({ trash: false }, { where: { id: req.params.id } });
@@ -2411,7 +2617,19 @@ const restoreEvent = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const permanentDeleteEvent = async (req, res) => {
+  try {
+    const event = await Event.findOne({ where: { id: req.params.id } });
+    if (!event) return res.status(404).json({ error: "Event not found" });
+    const uploadPath = "uploads/event_files/";
+    await deletefilewithfoldername(event.file, uploadPath);
+    await event.destroy();
 
+    res.status(200).json({ message: "Event permanently deleted" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 const createPayment = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -2637,6 +2855,36 @@ const deletePayment = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const getTrashedPayments = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const school_id = req.user.school_id;
+    const { count, rows: payment } = await Payment.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: { school_id, trash: true },
+
+      include: [
+        {
+          model: Student,
+          attributes: ["id", "full_name", "reg_no", "image"],
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      payment,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 const restorePayment = async (req, res) => {
   try {
     await Payment.update({ trash: false }, { where: { id: req.params.id } });
@@ -2815,6 +3063,29 @@ const deleteInvoice = async (req, res) => {
       { where: { id: req.params.id, school_id } }
     );
     res.status(200).json({ message: "Invoice soft deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getTrashedInvoices = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const school_id = req.user.school_id;
+    const { count, rows: invoices } = await Invoice.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: { school_id, trash: true },
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      invoices,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -3235,6 +3506,41 @@ const deleteLeaveRequest = async (req, res) => {
     res.status(500).json({ error: "Failed to delete leave request" });
   }
 };
+const getTrashedLeaveRequests = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+
+    const whereClause = {
+      trash: true,
+      school_id: school_id,
+    };
+
+    if (searchQuery) {
+      whereClause[Op.or] = [{ reason: { [Op.like]: `%${searchQuery}%` } }];
+    }
+
+    const { count, rows: leaveRequests } = await LeaveRequest.findAndCountAll({
+      where: whereClause,
+      offset,
+      limit,
+      order: [["createdAt", "DESC"]],
+    });
+
+    res.status(200).json({
+      total: count,
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      data: leaveRequests,
+    });
+  } catch (error) {
+    console.error("Get Trashed Leave Requests Error:", error);
+    res.status(500).json({ error: "Failed to get trashed leave requests" });
+  }
+};
 const restoreLeaveRequest = async (req, res) => {
   try {
     const { id } = req.params;
@@ -3577,6 +3883,30 @@ const deleteNews = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getTrashedNews = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const school_id = req.user.school_id;
+    const { count, rows: news } = await News.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: { trash: true, school_id: school_id },
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      news,
+    });
+  } catch (error) {
+    console.error("Fetch Error:", error);
+    res.status(500).json({ error: "Failed to fetch news" });
+  }
+};
 const restoreNews = async (req, res) => {
   try {
     const { id } = req.params;
@@ -3663,7 +3993,7 @@ const getAllNotices = async (req, res) => {
         { content: { [Op.like]: `%${searchQuery}%` } },
       ];
     }
-    const { count, rows: notices } = await Notice.findAndCountAll({
+    const notices = await Notice.findAll({
       offset,
       distinct: true,
       limit,
@@ -3677,9 +4007,9 @@ const getAllNotices = async (req, res) => {
       ],
       order: [["createdAt", "DESC"]],
     });
-    const totalPages = Math.ceil(count / limit);
+    const totalPages = Math.ceil(notices.length / limit);
     res.status(200).json({
-      totalcontent: count,
+      totalcontent: notices.length,
       totalPages,
       currentPage: page,
       notices,
@@ -3789,6 +4119,42 @@ const deleteNotice = async (req, res) => {
     const [rows] = await Notice.update({ trash: true }, { where: { id: id } });
     if (!rows) return res.status(404).json({ error: "Not found" });
     res.json({ message: "Notice soft-deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getTrashedNotices = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const school_id = req.user.school_id;
+    const notices = await Notice.findAll({
+      offset,
+      distinct: true,
+      limit,
+      where: {
+        school_id: school_id,
+        trash: true,
+      },
+      include: [
+        {
+          model: NoticeClass,
+          attributes: ["id", "class_id"],
+          include: [{ model: Class, attributes: ["id", "classname"] }],
+          required: false,
+        },
+      ],
+
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(notices.length / limit);
+    res.status(200).json({
+      totalcontent: notices.length,
+      totalPages,
+      currentPage: page,
+      notices,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -5288,12 +5654,18 @@ module.exports = {
   updateClass,
   deleteClass,
   getClassesByYear,
+  getTrashedClasses,
+  restoreClass,
+  permanentDeleteClass,
 
   createSubject,
   getSubjects,
   getSubjectById,
   updateSubject,
   deleteSubject,
+  getTrashedSubjects,
+  restoreSubject,
+  permanentDeleteSubject,
 
   createStaff,
   getAllStaff,
@@ -5304,6 +5676,7 @@ module.exports = {
   updateStaffUser,
   getAllTeachers,
   getStaffs,
+  getTrashedStaffs,
 
   getAllStaffPermissions,
   updateStaffPermission,
@@ -5332,6 +5705,7 @@ module.exports = {
   getAllDuties,
   updateDuty,
   deleteDuty,
+  getTrashedDuties,
   restoreDuty,
   permanentDeleteDuty,
   updateDutyAssigned,
@@ -5342,6 +5716,7 @@ module.exports = {
   getAchievementById,
   updateAchievement,
   deleteAchievement,
+  getTrashedAchievements,
   restoreAchievement,
   updateStudentAchievement,
 
@@ -5351,6 +5726,8 @@ module.exports = {
   updateEvent,
   deleteEvent,
   restoreEvent,
+  getTrashedEvents,
+  permanentDeleteEvent,
 
   createPayment,
   getAllPayments,
@@ -5358,6 +5735,7 @@ module.exports = {
   updatePayment,
   deletePayment,
   restorePayment,
+  getTrashedPayments,
 
   createInvoice,
   addInvoiceStudentsbyInvoiceId,
@@ -5367,6 +5745,7 @@ module.exports = {
   deleteInvoice,
   restoreInvoice,
   permanentDeleteInvoiceStudent,
+  getTrashedInvoices,
 
   createLeaveRequest,
   getAllLeaveRequests,
@@ -5375,6 +5754,7 @@ module.exports = {
   leaveRequestPermission,
   staffLeaveRequestPermission,
   deleteLeaveRequest,
+  getTrashedLeaveRequests,
   restoreLeaveRequest,
   getAllStaffLeaveRequests,
   getAllTeacherLeaveRequests,
@@ -5385,6 +5765,7 @@ module.exports = {
   getNewsById,
   updateNews,
   deleteNews,
+  getTrashedNews,
   restoreNews,
   deleteNewsImage,
 
@@ -5393,6 +5774,7 @@ module.exports = {
   getNoticeById,
   updateNotice,
   deleteNotice,
+  getTrashedNotices,
   restoreNotice,
   getLatestNotices,
 

@@ -23,6 +23,12 @@ router.get("/classes", schoolAdminController.getAllClasses); // Get all classes
 router.get("/classes/:id", schoolAdminController.getClassById);
 router.put("/classes/:id", schoolAdminController.updateClass); // Update a class
 router.delete("/classes/:id", schoolAdminController.deleteClass); // Soft delete a class
+router.patch("/classes/:id", schoolAdminController.restoreClass);
+router.get("/getTrashedClasses", schoolAdminController.getTrashedClasses);
+router.delete(
+  "/permanentDeleteClass/:id",
+  schoolAdminController.permanentDeleteClass
+);
 //common controller
 router.get("/getClassesByYear/:year", commonController.getClassesByYear); // Get classes by year
 
@@ -32,6 +38,12 @@ router.get("/subjects", schoolAdminController.getSubjects);
 router.get("/subjects/:id", schoolAdminController.getSubjectById);
 router.put("/subjects/:id", schoolAdminController.updateSubject);
 router.delete("/subjects/:id", schoolAdminController.deleteSubject);
+router.patch("/subjects/:id", schoolAdminController.restoreSubject);
+router.get("/getTrashedSubjects", schoolAdminController.getTrashedSubjects);
+router.delete(
+  "/permanentDeleteSubject/:id",
+  schoolAdminController.permanentDeleteSubject
+);
 
 //staff routes
 router.post("/staffs", upload.single("dp"), schoolAdminController.createStaff);
@@ -51,6 +63,8 @@ router.put(
 router.delete("/staffs/:staff_id", schoolAdminController.deleteStaff);
 router.patch("/staffs/:staff_id", schoolAdminController.restoredStaff);
 router.get("/getAllTeachers", schoolAdminController.getAllTeachers);
+router.get("/getTrashedStaffs", schoolAdminController.getTrashedStaffs);
+
 //staff permissions
 router.get(
   "/staffPermissions/:user_id",
@@ -124,6 +138,7 @@ router.put(
 );
 router.delete("/duties/:id", schoolAdminController.deleteDuty);
 router.patch("/duties/:id", schoolAdminController.restoreDuty);
+router.get("/getTrashedDuties", schoolAdminController.getTrashedDuties);
 router.delete(
   "/permanentDeleteDuty/:id",
   schoolAdminController.permanentDeleteDuty
@@ -147,6 +162,10 @@ router.get("/achievements/:id", schoolAdminController.getAchievementById);
 router.put("/achievements/:id", schoolAdminController.updateAchievement);
 router.delete("/achievements/:id", schoolAdminController.deleteAchievement);
 router.patch("/achievements/:id", schoolAdminController.restoreAchievement);
+router.get(
+  "/getTrashedAchievements",
+  schoolAdminController.getTrashedAchievements
+);
 router.put(
   "/updateStudentAchievement/:id",
   upload.single("proof_document"),
@@ -167,6 +186,11 @@ router.put(
 );
 router.delete("/events/:id", schoolAdminController.deleteEvent);
 router.patch("/events/:id", schoolAdminController.restoreEvent);
+router.get("/getTrashedEvents", schoolAdminController.getTrashedEvents);
+router.delete(
+  "/permanentDeleteEvent/:id",
+  schoolAdminController.permanentDeleteEvent
+);
 //payment
 router.post("/payments", schoolAdminController.createPayment);
 router.get("/payments", schoolAdminController.getAllPayments);
@@ -174,6 +198,7 @@ router.get("/payments/:id", schoolAdminController.getPaymentById);
 router.put("/payments/:id", schoolAdminController.updatePayment);
 router.delete("/payments/:id", schoolAdminController.deletePayment);
 router.patch("/payments/:id", schoolAdminController.restorePayment);
+router.get("/getTrashedPayments", schoolAdminController.getTrashedPayments);
 //invoice
 router.post("/invoices", schoolAdminController.createInvoice);
 router.post(
@@ -189,6 +214,7 @@ router.delete(
   "/permanentDeleteInvoiceStudent/:id",
   schoolAdminController.permanentDeleteInvoiceStudent
 );
+router.get("/getTrashedInvoices", schoolAdminController.getTrashedInvoices);
 
 //leave request
 router.post(
@@ -249,6 +275,7 @@ router.put(
 );
 router.delete("/news/:id", schoolAdminController.deleteNews);
 router.patch("/news/:id", schoolAdminController.restoreNews);
+router.get("/getTrashedNews", schoolAdminController.getTrashedNews);
 router.delete("/deleteNewsImage/:id", schoolAdminController.deleteNewsImage);
 
 //notice
@@ -266,6 +293,7 @@ router.put(
 );
 router.delete("/notices/:id", schoolAdminController.deleteNotice);
 router.patch("/notices/:id", schoolAdminController.restoreNotice);
+router.get("/getTrashedNotices", schoolAdminController.getTrashedNotices);
 router.get("/getLatestNotices", schoolAdminController.getLatestNotices);
 
 router.post("/timetables", schoolAdminController.bulkUpsertTimetable);
