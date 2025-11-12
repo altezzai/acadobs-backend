@@ -50,8 +50,6 @@ const createClass = async (req, res) => {
     }
     const existingClass = await Class.findOne({
       where: {
-        year,
-        division,
         classname,
         school_id,
         trash: false,
@@ -60,8 +58,7 @@ const createClass = async (req, res) => {
 
     if (existingClass) {
       return res.status(409).json({
-        message:
-          "Class with same year, division, and name already exists in this school.",
+        message: "Class with same class name already exists in this school.",
       });
     }
     const newClass = await Class.create({

@@ -1484,6 +1484,9 @@ const getAchievementById = async (req, res) => {
         },
       ],
     });
+    if (!achievement) {
+      return res.status(404).json({ error: "Achievement not found" });
+    }
     res.status(200).json(achievement);
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
