@@ -679,8 +679,20 @@ const getAchievementsBySchool = async (req, res) => {
       },
       include: [
         {
-          model: Student,
-          attributes: ["id", "full_name", "reg_no", "image"],
+          model: StudentAchievement,
+          attributes: ["status", "remarks"],
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "reg_no", "image"],
+              include: [
+                {
+                  model: Class,
+                  attributes: ["id", "classname"],
+                },
+              ],
+            },
+          ],
         },
       ],
       limit,
