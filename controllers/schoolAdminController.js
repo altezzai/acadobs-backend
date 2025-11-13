@@ -1449,9 +1449,14 @@ const bulkCreateStudents = async (req, res) => {
   const transaction = await schoolSequelize.transaction();
   try {
     const school_id = req.user.school_id;
-    const studentsData = req.body.students; // expect array
+    const studentsData = req.body.students;
+    const class_id = req.body.class_id;
+    // expect array
     if (!Array.isArray(studentsData) || studentsData.length === 0) {
       return res.status(400).json({ error: "No students provided" });
+    }
+    if (!class_id) {
+      return res.status(400).json({ error: "Class ID is required" });
     }
 
     const createdStudents = [];
@@ -1463,7 +1468,6 @@ const bulkCreateStudents = async (req, res) => {
         full_name,
         date_of_birth,
         gender,
-        class_id,
         address,
         admission_date,
         status,
@@ -1482,13 +1486,7 @@ const bulkCreateStudents = async (req, res) => {
         mother_name,
       } = studentObj;
 
-      if (
-        !guardian_email ||
-        !full_name ||
-        !reg_no ||
-        !class_id ||
-        !roll_number
-      ) {
+      if (!guardian_email || !full_name || !reg_no || !roll_number) {
         throw new Error("Required fields missing for student: " + full_name);
       }
 
