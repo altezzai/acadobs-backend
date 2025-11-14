@@ -181,16 +181,23 @@ const getTrashedClasses = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const whereClause = {
+      trash: true,
+      school_id: school_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [{ classname: { [Op.like]: `%${searchQuery}%` } }];
+    }
 
     const { count, rows: classes } = await Class.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: {
-        school_id: req.user.school_id,
-        trash: true,
-      },
+      where: whereClause,
     });
+
     res.status(200).json({
       totalcontent: count,
       totalPages: Math.ceil(count / limit),
