@@ -11,6 +11,7 @@ require("dotenv").config();
 const PORT = process.env.PORT || 4444;
 const { auth, socketAuth } = require("./middlewares/authMiddleware");
 const limiter = require("./middlewares/rateLimitMiddleware");
+
 const server = http.createServer(app); // Wrap Express with HTTP server
 const io = new Server(server, {
   cors: {
@@ -23,6 +24,11 @@ const SchooladminRoutes = require("./routes/schoolAdminRoutes");
 const StaffRoutes = require("./routes/staffRoutes");
 const GuardianRoutes = require("./routes/guardianRoutes");
 const PublicRoutes = require("./routes/publicRoutes");
+
+const verifyAdmin = require("./middlewares/adminMiddleware");
+const verifySuperAdmin = require("./middlewares/superAdminMiddleware");
+const verifyStaff = require("./middlewares/staffMiddleware");
+const verifyGuardian = require("./middlewares/guardianMiddleware");
 
 // Apply Middleware
 app.use(helmet());
@@ -51,10 +57,10 @@ app.use((req, res, next) => {
 });
 const versionPath = "/api/s1/";
 
-app.use(`${versionPath}superadmin`, auth, SuperadminRoutes);
-app.use(`${versionPath}schooladmin`, auth, SchooladminRoutes);
-app.use(`${versionPath}staff`, auth, StaffRoutes);
-app.use(`${versionPath}guardian`, auth, GuardianRoutes);
+app.use(`${versionPath}superadmin`, auth, verifySuperAdmin, SuperadminRoutes);
+app.use(`${versionPath}schooladmin`, auth, verifyAdmin, SchooladminRoutes);
+app.use(`${versionPath}staff`, auth, verifyStaff, StaffRoutes);
+app.use(`${versionPath}guardian`, auth, verifyGuardian, GuardianRoutes);
 app.use(`${versionPath}public`, PublicRoutes);
 
 // Add other routes similarly...
