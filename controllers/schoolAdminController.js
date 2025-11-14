@@ -178,13 +178,25 @@ const deleteClass = async (req, res) => {
 //get trashed classes
 const getTrashedClasses = async (req, res) => {
   try {
-    const trashedClasses = await Class.findAll({
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: classes } = await Class.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
       where: {
         school_id: req.user.school_id,
         trash: true,
       },
     });
-    res.status(200).json(trashedClasses);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      classes,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1597,14 +1609,12 @@ const bulkCreateStudents = async (req, res) => {
       });
     }
 
-    // ✅ Bulk insert all students in one go
     const inserted = await Student.bulkCreate(createdStudents, { transaction });
 
     await transaction.commit();
     return res.status(201).json({
       success: true,
       count: inserted.length,
-      students: inserted,
     });
   } catch (err) {
     await transaction.rollback();
