@@ -57,12 +57,16 @@ app.use((req, res, next) => {
 });
 const versionPath = "/api/s1/";
 
-app.use(`${versionPath}superadmin`, auth, verifySuperAdmin, SuperadminRoutes);
-app.use(`${versionPath}schooladmin`, auth, verifyAdmin, SchooladminRoutes);
-app.use(`${versionPath}staff`, auth, verifyStaff, StaffRoutes);
-app.use(`${versionPath}guardian`, auth, verifyGuardian, GuardianRoutes);
+// app.use(`${versionPath}superadmin`, auth, verifySuperAdmin, SuperadminRoutes);
+// app.use(`${versionPath}schooladmin`, auth, verifyAdmin, SchooladminRoutes);
+// app.use(`${versionPath}staff`, auth, verifyStaff, StaffRoutes);
+// app.use(`${versionPath}guardian`, auth, verifyGuardian, GuardianRoutes);
+// app.use(`${versionPath}public`, PublicRoutes);
+app.use(`${versionPath}superadmin`, auth, SuperadminRoutes);
+app.use(`${versionPath}schooladmin`, auth, SchooladminRoutes);
+app.use(`${versionPath}staff`, auth, StaffRoutes);
+app.use(`${versionPath}guardian`, auth, GuardianRoutes);
 app.use(`${versionPath}public`, PublicRoutes);
-
 // Add other routes similarly...
 const socketHandlers = require("./socketHandlers/socket");
 
