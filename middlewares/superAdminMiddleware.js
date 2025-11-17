@@ -8,7 +8,7 @@ const verifySuperAdmin = (req, res, next) => {
     return next();
   }
 
-  return res.status(403).json({ message: "Forbidden: Admins only" });
+  return res.status(403).json({ message: "Forbidden: SuperAdmin only" });
 };
 
 module.exports = verifySuperAdmin;

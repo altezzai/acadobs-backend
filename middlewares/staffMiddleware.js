@@ -8,7 +8,7 @@ const verifyStaff = (req, res, next) => {
     return next();
   }
 
-  return res.status(403).json({ message: "Forbidden: Admins only" });
+  return res.status(403).json({ message: "Forbidden: Staff or Teacher only" });
 };
 
 module.exports = verifyStaff;

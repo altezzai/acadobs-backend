@@ -7,7 +7,7 @@ const verifyGuardian = (req, res, next) => {
     return next();
   }
 
-  return res.status(403).json({ message: "Forbidden: user only" });
+  return res.status(403).json({ message: "Forbidden: Guardian only" });
 };
 
 module.exports = verifyGuardian;

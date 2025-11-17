@@ -28,6 +28,8 @@ const Staff = require("../models/staff");
 const Chat = require("../models/chat");
 const Message = require("../models/messages");
 const StaffAttendance = require("../models/staff_attendance");
+const StaffSubject = require("../models/staffsubject");
+const StaffPermission = require("../models/staff_permissions");
 
 const { Homework, HomeworkAssignment } = require("../models");
 const { getGuarduianIdbyStudentId } = require("./commonController");
@@ -2552,6 +2554,100 @@ const getProfileDetails = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch profile details" });
   }
 };
+const getSubjects = async (req, res) => {
+  try {
+    const searchQuery = req.query.q || "";
+    const range = req.query.range || "";
+    const school_id = req.user.school_id;
+    const schoolDetails = await School.findOne({
+      where: { id: school_id },
+      attributes: ["syllabus_type"],
+    });
+    let whereClause = {
+      trash: false,
+      syllabus_type: schoolDetails.syllabus_type,
+      [Op.or]: [
+        { school_id: school_id },
+        { school_id: null }, // include global subjects
+      ],
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { subject_name: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if (range) {
+      whereClause.range = range;
+    }
+
+    const subjects = await Subject.findAll({
+      distinct: true,
+      where: whereClause,
+    });
+    res.status(200).json({
+      totalcontent: subjects.length,
+      subjects,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getStaffSubjects = async (req, res) => {
+  try {
+    const staff_id = req.user.user_id;
+    const searchQuery = req.query.q || "";
+    const school_id = req.user.school_id;
+    let whereClause = {
+      school_id,
+      trash: false,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { subject_name: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    // const subjects = await StaffSubject.findAll({
+    //   where: whereClause,
+    //   distinct: true,
+    //   include: [
+    //     {
+    //       model: Subject,
+    //       where: { trash: false },
+    //       attributes: ["id", "subject_name"],
+    //     },
+    //   ],
+    // });
+    const subjects = await Subject.findAll({
+      distinct: true,
+      attributes: ["id", "subject_name"],
+      include: [
+        {
+          model: StaffSubject,
+          where: { staff_id },
+          attributes: [],
+        },
+      ],
+      where: whereClause,
+    });
+    res.status(200).json({
+      totalcontent: subjects.length,
+      subjects,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getMyPermissions = async (req, res) => {
+  try {
+    const user_id = req.user.user_id;
+    const permissions = await StaffPermission.findAll({
+      where: { user_id },
+    });
+    res.status(200).json(permissions);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 module.exports = {
   createExamWithMarks,
   getAllmarks,
@@ -2629,4 +2725,9 @@ module.exports = {
 
   updateProfileDetails,
   getProfileDetails,
+
+  getSubjects,
+  getStaffSubjects,
+
+  getMyPermissions,
 };
