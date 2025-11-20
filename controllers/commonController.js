@@ -669,14 +669,16 @@ const getAchievementsBySchool = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 3;
     const offset = (page - 1) * limit;
-    const achievements = await Achievement.findAll({
-      where: {
-        school_id,
-        trash: false,
-        level: {
-          [Op.ne]: "class",
-        },
+    const whereClause = {
+      school_id,
+      trash: false,
+      level: {
+        [Op.ne]: "class",
       },
+    };
+    const count = await Achievement.count({ where: whereClause });
+    const achievements = await Achievement.findAll({
+      where: whereClause,
       include: [
         {
           model: StudentAchievement,
@@ -698,9 +700,9 @@ const getAchievementsBySchool = async (req, res) => {
       limit,
       offset,
     });
-    const totalPages = Math.ceil(achievements.length / limit);
+    const totalPages = Math.ceil(count / limit);
     res.status(200).json({
-      totalcontent: achievements.length,
+      totalcontent: count,
       totalPages,
       currentPage: page,
       achievements,
