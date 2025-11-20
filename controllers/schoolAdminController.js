@@ -4014,6 +4014,7 @@ const getAllNotices = async (req, res) => {
         { content: { [Op.like]: `%${searchQuery}%` } },
       ];
     }
+    const count = await Notice.count({ where: whereClause });
     const notices = await Notice.findAll({
       offset,
       distinct: true,
@@ -4028,9 +4029,9 @@ const getAllNotices = async (req, res) => {
       ],
       order: [["createdAt", "DESC"]],
     });
-    const totalPages = Math.ceil(notices.length / limit);
+    const totalPages = Math.ceil(count / limit);
     res.status(200).json({
-      totalcontent: notices.length,
+      totalcontent: count,
       totalPages,
       currentPage: page,
       notices,
@@ -5495,7 +5496,7 @@ const getAllStaffAttendance = async (req, res) => {
     if (start_date && end_date) {
       whereClause.date = { [Op.between]: [start_date, end_date] };
     }
-
+    const count = await StaffAttendance.count({ where: whereClause });
     const records = await StaffAttendance.findAll({
       where: whereClause,
       include: [
@@ -5509,10 +5510,10 @@ const getAllStaffAttendance = async (req, res) => {
       offset,
       limit,
     });
-    const totalPages = Math.ceil(records.length / limit);
+    const totalPages = Math.ceil(count / limit);
 
     res.status(200).json({
-      totalCount: records.length,
+      totalCount: count,
       totalPages: download === "true" ? null : totalPages,
       currentPage: download === "true" ? null : page,
       attendance: records,
@@ -5542,9 +5543,13 @@ const getStaffAttendanceByDate = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const date = req.query.date || new Date().toISOString().split("T")[0];
-
+    const whereClause = {
+      role: { [Op.in]: ["teacher", "staff"] },
+      school_id,
+    };
+    const count = await User.count({ where: whereClause });
     const staffList = await User.findAll({
-      where: { role: { [Op.in]: ["teacher", "staff"] }, school_id },
+      where: whereClause,
       attributes: ["id", "name", "email", "phone"],
       include: [
         {
@@ -5564,7 +5569,7 @@ const getStaffAttendanceByDate = async (req, res) => {
     });
 
     res.status(200).json({
-      total_staff: staffList.length,
+      total_staff: count,
       date,
       attendance: staffList,
     });

@@ -2606,17 +2606,7 @@ const getStaffSubjects = async (req, res) => {
         { subject_name: { [Op.like]: `%${searchQuery}%` } },
       ];
     }
-    // const subjects = await StaffSubject.findAll({
-    //   where: whereClause,
-    //   distinct: true,
-    //   include: [
-    //     {
-    //       model: Subject,
-    //       where: { trash: false },
-    //       attributes: ["id", "subject_name"],
-    //     },
-    //   ],
-    // });
+
     const subjects = await Subject.findAll({
       distinct: true,
       attributes: ["id", "subject_name"],
