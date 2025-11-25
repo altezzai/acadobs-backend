@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const staffController = require("../controllers/staffController");
 const commonController = require("../controllers/commonController");
-const { upload } = require("../middlewares/upload");
+const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 // Internal Exam
 router.post("/internalmarks", staffController.createExamWithMarks);
 router.get("/internalmarks", staffController.getAllmarks);
@@ -19,14 +19,14 @@ router.get(
 // Homework
 router.post(
   "/homeworks",
-  upload.single("file"),
+  uploadWithErrorHandler(upload.single("file")),
   staffController.createHomeworkWithAssignments
 );
 router.get("/homeworks", staffController.getAllHomework);
 router.get("/homeworks/:id", staffController.getHomeworkById);
 router.put(
   "/homeworks/:id",
-  upload.single("file"),
+  uploadWithErrorHandler(upload.single("file")),
   staffController.updateHomework
 );
 router.delete("/homeworks/:id", staffController.deleteHomework);
@@ -37,7 +37,7 @@ router.delete(
 );
 router.put(
   "/updateHomeworkAssignment/:id",
-  upload.single("file"),
+  uploadWithErrorHandler(upload.single("file")),
   staffController.updateHomeworkAssignment
 );
 router.put(
@@ -87,13 +87,13 @@ router.get("/duties/:id", staffController.getAssignedDutyById);
 
 router.put(
   "/updateAssignedDuty/:id",
-  upload.single("solved_file"),
+  uploadWithErrorHandler(upload.single("solved_file")),
   staffController.updateAssignedDuty
 );
 
 router.post(
   "/achievements",
-  upload.any(),
+  uploadWithErrorHandler(upload.any()),
   staffController.createAchievementWithStudents
 );
 router.get("/achievements", staffController.getAllAchievementsByStaffId);
@@ -103,20 +103,20 @@ router.delete("/achievements/:id", staffController.deleteAchievement);
 router.patch("/achievements/:id", staffController.restoreAchievement);
 router.put(
   "/updateStudentAchievement/:id",
-  upload.single("proof_document"),
+  uploadWithErrorHandler(upload.single("proof_document")),
   staffController.updateStudentAchievement
 );
 //Leave Request
 router.post(
   "/leaveRequest",
-  upload.single("attachment"),
+  uploadWithErrorHandler(upload.single("attachment")),
   staffController.createLeaveRequest
 );
 router.get("/leaveRequest", staffController.getAllLeaveRequests);
 router.get("/leaveRequest/:id", staffController.getLeaveRequestById);
 router.put(
   "/leaveRequest/:id",
-  upload.single("attachment"),
+  uploadWithErrorHandler(upload.single("attachment")),
   staffController.updateLeaveRequest
 );
 router.delete("/leaveRequest/:id", staffController.deleteLeaveRequest);
@@ -134,14 +134,14 @@ router.patch(
 //parent notes
 router.post(
   "/parentNotes",
-  upload.single("note_attachment"),
+  uploadWithErrorHandler(upload.single("note_attachment")),
   staffController.createParentNote
 );
 router.get("/parentNotes", staffController.getAllOwnCreatedParentNotes);
 router.get("/parentNotes/:id", staffController.getParentNoteById);
 router.put(
   "/parentNotes/:id",
-  upload.single("note_attachment"),
+  uploadWithErrorHandler(upload.single("note_attachment")),
   staffController.updateParentNote
 );
 router.delete("/parentNotes/:id", staffController.deleteParentNote);
@@ -218,7 +218,11 @@ router.get(
 router.get("/getSchoolDetails", commonController.getSchoolDetails);
 
 router.put("/changePassword", commonController.changePassword);
-router.put("/updateDp", upload.single("dp"), commonController.updateDp);
+router.put(
+  "/updateDp",
+  uploadWithErrorHandler(upload.single("dp")),
+  commonController.updateDp
+);
 
 router.get("/getPaymentById/:id", commonController.getPaymentById);
 router.get(

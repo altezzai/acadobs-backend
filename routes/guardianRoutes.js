@@ -2,10 +2,10 @@ const express = require("express");
 const router = express.Router();
 const guardianController = require("../controllers/guardianController");
 const commonController = require("../controllers/commonController");
-const { upload } = require("../middlewares/upload");
+const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 router.put(
   "/updateHomeworkAssignment/:id",
-  upload.single("file"),
+  uploadWithErrorHandler(upload.single("file")),
   guardianController.updateHomeworkAssignment
 );
 
@@ -24,7 +24,7 @@ router.get(
 
 router.post(
   "/leaveRequest",
-  upload.single("attachment"),
+  uploadWithErrorHandler(upload.single("attachment")),
   guardianController.createLeaveRequest
 );
 router.get("/leaveRequest", guardianController.getAllLeaveRequests);
@@ -32,7 +32,7 @@ router.get("/leaveRequest/:id", guardianController.getLeaveRequestById);
 
 router.put(
   "/leaveRequest/:id",
-  upload.single("attachment"),
+  uploadWithErrorHandler(upload.single("attachment")),
   guardianController.updateLeaveRequest
 );
 router.delete("/leaveRequest/:id", guardianController.deleteLeaveRequest);
@@ -99,7 +99,11 @@ router.get(
 
 router.put("/changePassword", commonController.changePassword);
 router.put("/updateFcmToken", commonController.updateFcmToken);
-router.put("/updateDp", upload.single("dp"), commonController.updateDp);
+router.put(
+  "/updateDp",
+  uploadWithErrorHandler(upload.single("dp")),
+  commonController.updateDp
+);
 
 router.get("/getPaymentById/:id", commonController.getPaymentById);
 router.get(

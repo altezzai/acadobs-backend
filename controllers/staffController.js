@@ -325,7 +325,12 @@ const createHomeworkWithAssignments = async (req, res) => {
       type,
       file: fileName ? fileName : null,
     });
-
+    if (!assignments || assignments.length === 0) {
+      return res.status(200).json({
+        message: "Homework and assignments created",
+        homework,
+      });
+    }
     const assignmentData = assignments.map((a) => ({
       ...a,
       homework_id: homework.id,

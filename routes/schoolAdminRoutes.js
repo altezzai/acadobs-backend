@@ -4,18 +4,7 @@ const schoolAdminController = require("../controllers/schoolAdminController");
 const commonController = require("../controllers/commonController");
 const reportController = require("../controllers/reportController");
 
-const { upload, nUpload } = require("../middlewares/upload");
-const multer = require("multer");
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/proofs/");
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = Date.now() + "-" + file.originalname;
-    cb(null, uniqueName);
-  },
-});
+const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 
 // Class routes
 router.post("/classes", schoolAdminController.createClass); // Create a new class
@@ -46,18 +35,22 @@ router.delete(
 );
 
 //staff routes
-router.post("/staffs", upload.single("dp"), schoolAdminController.createStaff);
+router.post(
+  "/staffs",
+  uploadWithErrorHandler(upload.single("dp")),
+  schoolAdminController.createStaff
+);
 router.get("/staffs", schoolAdminController.getAllStaff);
 router.get("/staffs/:staff_id", schoolAdminController.getStaffById);
 router.put(
   "/staffs/:staff_id",
-  upload.single("dp"),
+  uploadWithErrorHandler(upload.single("dp")),
   schoolAdminController.updateStaff
 );
 router.get("/getStaffs", schoolAdminController.getStaffs);
 router.put(
   "/updateStaffUser/:user_id",
-  upload.single("dp"),
+  uploadWithErrorHandler(upload.single("dp")),
   schoolAdminController.updateStaffUser
 );
 router.delete("/staffs/:staff_id", schoolAdminController.deleteStaff);
@@ -79,14 +72,14 @@ router.put(
 // Guardian routes
 router.post(
   "/guardian",
-  upload.single("dp"),
+  uploadWithErrorHandler(upload.single("dp")),
   schoolAdminController.createGuardian
 );
 router.get("/guardian", schoolAdminController.getAllGuardians);
 router.get("/guardian/:id", schoolAdminController.getGuardianById);
 router.put(
   "/guardian/:id",
-  upload.single("dp"),
+  uploadWithErrorHandler(upload.single("dp")),
   schoolAdminController.updateGuardian
 );
 router.delete("/guardian/:id", schoolAdminController.deleteGuardian);
@@ -102,10 +95,12 @@ router.put(
 // Student routes
 router.post(
   "/students",
-  upload.fields([
-    { name: "dp", maxCount: 1 }, // guardian image
-    { name: "image", maxCount: 1 }, // student image
-  ]),
+  uploadWithErrorHandler(
+    upload.fields([
+      { name: "dp", maxCount: 1 }, // guardian image
+      { name: "image", maxCount: 1 }, // student image
+    ])
+  ),
   schoolAdminController.createStudent
 );
 router.post("/bulkCreateStudents", schoolAdminController.bulkCreateStudents);
@@ -113,7 +108,7 @@ router.get("/students", schoolAdminController.getAllStudents);
 router.get("/students/:id", schoolAdminController.getStudentById);
 router.put(
   "/students/:id",
-  upload.single("image"),
+  uploadWithErrorHandler(upload.single("image")),
   schoolAdminController.updateStudent
 );
 router.delete("/students/:id", schoolAdminController.deleteStudent);
@@ -126,14 +121,14 @@ router.get(
 //duty
 router.post(
   "/duties",
-  upload.single("file"),
+  uploadWithErrorHandler(upload.single("file")),
   schoolAdminController.createDutyWithAssignments
 );
 router.get("/duties", schoolAdminController.getAllDuties);
 router.get("/duties/:id", schoolAdminController.getDutyById);
 router.put(
   "/duties/:id",
-  upload.single("file"),
+  uploadWithErrorHandler(upload.single("file")),
   schoolAdminController.updateDuty
 );
 router.delete("/duties/:id", schoolAdminController.deleteDuty);
@@ -145,7 +140,7 @@ router.delete(
 );
 router.put(
   "/updateDutyAssigned/:id",
-  upload.single("solved_file"),
+  uploadWithErrorHandler(upload.single("solved_file")),
   schoolAdminController.updateDutyAssigned
 );
 router.put(
@@ -154,7 +149,7 @@ router.put(
 );
 router.post(
   "/achievements",
-  upload.any(),
+  uploadWithErrorHandler(upload.any()),
   schoolAdminController.createAchievementWithStudents
 );
 router.get("/getAllAchievements", schoolAdminController.getAllAchievements);
@@ -168,20 +163,20 @@ router.get(
 );
 router.put(
   "/updateStudentAchievement/:id",
-  upload.single("proof_document"),
+  uploadWithErrorHandler(upload.single("proof_document")),
   schoolAdminController.updateStudentAchievement
 );
 //events
 router.post(
   "/events",
-  upload.single("file"),
+  uploadWithErrorHandler(upload.single("file")),
   schoolAdminController.createEvent
 );
 router.get("/events", schoolAdminController.getAllEvents);
 router.get("/events/:id", schoolAdminController.getEventById);
 router.put(
   "/events/:id",
-  upload.single("file"),
+  uploadWithErrorHandler(upload.single("file")),
   schoolAdminController.updateEvent
 );
 router.delete("/events/:id", schoolAdminController.deleteEvent);
@@ -219,7 +214,7 @@ router.get("/getTrashedInvoices", schoolAdminController.getTrashedInvoices);
 //leave request
 router.post(
   "/leaveRequest",
-  upload.single("attachment"),
+  uploadWithErrorHandler(upload.single("attachment")),
   schoolAdminController.createLeaveRequest
 );
 router.get("/leaveRequest", schoolAdminController.getAllLeaveRequests);
@@ -232,7 +227,7 @@ router.delete(
 );
 router.put(
   "/leaveRequest/:id",
-  upload.single("attachment"),
+  uploadWithErrorHandler(upload.single("attachment")),
   schoolAdminController.updateLeaveRequest
 );
 router.patch(
@@ -260,10 +255,12 @@ router.get(
 //news
 router.post(
   "/news",
-  upload.fields([
-    { name: "file", maxCount: 1 },
-    { name: "images", maxCount: 10 },
-  ]),
+  uploadWithErrorHandler(
+    upload.fields([
+      { name: "file", maxCount: 1 },
+      { name: "images", maxCount: 10 },
+    ])
+  ),
   schoolAdminController.createNews
 );
 
@@ -289,14 +286,14 @@ router.delete("/deleteNewsImage/:id", schoolAdminController.deleteNewsImage);
 //notice
 router.post(
   "/notices",
-  nUpload.single("file"),
+  uploadWithErrorHandler(upload.single("file")),
   schoolAdminController.createNotice
 );
 router.get("/notices", schoolAdminController.getAllNotices);
 router.get("/notices/:id", schoolAdminController.getNoticeById);
 router.put(
   "/notices/:id",
-  nUpload.single("file"),
+  uploadWithErrorHandler(upload.single("file")),
   schoolAdminController.updateNotice
 );
 router.delete("/notices/:id", schoolAdminController.deleteNotice);
