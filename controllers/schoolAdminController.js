@@ -3132,9 +3132,13 @@ const permanentDeleteInvoiceStudent = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+// Leave Request Management
+const leaverequestFilePath = "uploads/leave_requests/";
+
 const createLeaveRequest = async (req, res) => {
   try {
     const school_id = req.user.school_id;
+    const admin_id = req.user.user_id;
     const {
       user_id,
       student_id,
@@ -3147,22 +3151,14 @@ const createLeaveRequest = async (req, res) => {
       status,
       admin_remarks,
     } = req.body;
-    if (
-      !school_id ||
-      !user_id ||
-      !student_id ||
-      !from_date ||
-      !to_date ||
-      !leave_type ||
-      !reason
-    ) {
+    if (!from_date || !to_date || !leave_type || !reason) {
       return res.status(400).json({ error: "Missing required fields" });
     }
     const existingRequest = await LeaveRequest.findOne({
       where: {
         school_id: school_id,
-        user_id: user_id,
-        student_id: student_id,
+        user_id: user_id || null,
+        student_id: student_id || null,
         from_date: from_date,
         to_date: to_date,
       },
@@ -3174,12 +3170,12 @@ const createLeaveRequest = async (req, res) => {
 
     let fileName = null;
     if (req.file) {
-      const uploadPath = "uploads/leave_requests/";
+      const uploadPath = leaverequestFilePath;
       fileName = await compressAndSaveFile(req.file, uploadPath);
     }
     const data = await LeaveRequest.create({
       school_id: school_id,
-      user_id: user_id,
+      user_id: user_id ? user_id : admin_id,
       student_id: student_id,
       role: role ? role : "student",
       from_date: from_date,
@@ -3312,7 +3308,7 @@ const updateLeaveRequest = async (req, res) => {
     }
     let fileName = data.attachment;
     if (req.file) {
-      const uploadPath = "uploads/leave_requests/";
+      const uploadPath = leaverequestFilePath;
       await deletefilewithfoldername(fileName, uploadPath);
       fileName = await compressAndSaveFile(req.file, uploadPath);
     }
@@ -3521,7 +3517,7 @@ const deleteLeaveRequest = async (req, res) => {
     if (!leave) return res.status(404).json({ error: "Not found" });
 
     await leave.update({ trash: true });
-    res.status(200).json("Successfully deleted");
+    res.status(200).json("Successfully soft deleted");
   } catch (error) {
     console.error("Delete Error:", error);
     res.status(500).json({ error: "Failed to delete leave request" });
@@ -3576,6 +3572,27 @@ const restoreLeaveRequest = async (req, res) => {
   } catch (error) {
     console.error("Restore Error:", error);
     res.status(500).json({ error: "Failed to restore leave request" });
+  }
+};
+const permanentDeleteLeaveRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const leave = await LeaveRequest.findOne({
+      where: { id: id, trash: true },
+    });
+    if (!leave) return res.status(404).json({ error: "Not found" });
+    if (leave.attachment) {
+      const uploadPath = leaverequestFilePath;
+      await deletefilewithfoldername(leave.attachment, uploadPath);
+    }
+    await leave.destroy();
+
+    res.status(200).json("Successfully permanently deleted");
+  } catch (error) {
+    console.error("Permanent Delete Error:", error);
+    res
+      .status(500)
+      .json({ error: "Failed to permanently delete leave request" });
   }
 };
 //get all staff leave request
@@ -3725,7 +3742,8 @@ const getAllStudentLeaveRequests = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch leave requests" });
   }
 };
-
+const newsimagePath = "uploads/news_images/";
+const newsfilePath = "uploads/news_files/";
 const createNews = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -3746,7 +3764,7 @@ const createNews = async (req, res) => {
     let fileName = null;
     if (req.files?.file?.[0]) {
       fileName = req.files.file[0];
-      const uploadPath = "uploads/news_files/";
+      const uploadPath = newsfilePath;
       fileName = await compressAndSaveFile(fileName, uploadPath);
     }
 
@@ -3764,10 +3782,7 @@ const createNews = async (req, res) => {
       const imageRecords = [];
 
       for (const img of req.files.images) {
-        const compressedName = await compressAndSaveFile(
-          img,
-          "uploads/news_images/"
-        );
+        const compressedName = await compressAndSaveFile(img, newsimagePath);
         imageRecords.push({
           news_id: news.id,
           image_url: compressedName,
@@ -3866,7 +3881,7 @@ const updateNews = async (req, res) => {
   }
   let fileName = news.file;
   if (req.file) {
-    const uploadPath = "uploads/news_files/";
+    const uploadPath = newsfilePath;
     fileName = await compressAndSaveFile(req.file, uploadPath);
   }
   await news.update({ title, content, file: fileName });
@@ -3875,10 +3890,7 @@ const updateNews = async (req, res) => {
     const imageRecords = [];
 
     for (const img of req.files.images) {
-      const compressedName = await compressAndSaveFile(
-        img,
-        "uploads/news_images/"
-      );
+      const compressedName = await compressAndSaveFile(img, newsimagePath);
       imageRecords.push({
         news_id: news.id,
         image_url: compressedName,
@@ -3939,18 +3951,47 @@ const restoreNews = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const permanentDeleteNews = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const news = await News.findOne({ where: { id, trash: true } });
+    if (!news) return res.status(404).json({ error: "Not found" });
+    if (news.file) {
+      const uploadPath = newsfilePath;
+      await deletefilewithfoldername(news.file, uploadPath);
+    }
+    const newsImages = await NewsImage.findAll({ where: { news_id: id } });
+    for (const img of newsImages) {
+      if (img.image_url) {
+        const uploadPath = newsimagePath;
+        await deletefilewithfoldername(img.image_url, uploadPath);
+      }
+      await img.destroy();
+    }
+    await news.destroy();
+    res.json({ message: "Permanently deleted" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 const deleteNewsImage = async (req, res) => {
   try {
     const { id } = req.params;
     const newsImage = await NewsImage.findOne({ where: { id, trash: false } });
     if (!newsImage) return res.status(404).json({ error: "Not found" });
-    await newsImage.update({ trash: true });
+    if (newsImage.image_url) {
+      const uploadPath = newsimagePath;
+      await deletefilewithfoldername(newsImage.image_url, uploadPath);
+    }
+    await newsImage.destroy();
+
     res.json({ message: "Soft deleted" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
-
+// Notice Management
+const noticeFilePath = "uploads/notices/";
 const createNotice = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -3970,7 +4011,7 @@ const createNotice = async (req, res) => {
     }
 
     if (req.file) {
-      const uploadPath = "uploads/notices/";
+      const uploadPath = noticeFilePath;
       fileName = await compressAndSaveFile(req.file, uploadPath);
     }
 
@@ -4046,7 +4087,6 @@ const getNoticeById = async (req, res) => {
     const school_id = req.user.school_id;
     const notice = await Notice.findOne({
       where: { id: id, trash: false, school_id: school_id },
-
       include: [
         {
           model: NoticeClass,
@@ -4056,6 +4096,8 @@ const getNoticeById = async (req, res) => {
         },
       ],
     });
+    if (!notice) return res.status(404).json({ error: "Notice not found" });
+
     const formattedNotice = {
       id: notice.id,
       school_id: notice.school_id,
@@ -4073,7 +4115,6 @@ const getNoticeById = async (req, res) => {
         classname: nc.Class ? nc.Class.classname : null,
       })),
     };
-    if (!notice) return res.status(404).json({ error: "Notice not found" });
     res.json(formattedNotice);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -4110,7 +4151,7 @@ const updateNotice = async (req, res) => {
 
     let fileName = notice.file || null;
     if (req.file) {
-      const uploadPath = "uploads/notices/";
+      const uploadPath = noticeFilePath;
       if (fileName) {
         await deletefilewithfoldername(fileName, uploadPath);
       }
@@ -4141,6 +4182,22 @@ const deleteNotice = async (req, res) => {
     const [rows] = await Notice.update({ trash: true }, { where: { id: id } });
     if (!rows) return res.status(404).json({ error: "Not found" });
     res.json({ message: "Notice soft-deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const permanentDeleteNotice = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const notice = await Notice.findOne({ where: { id: id, trash: true } });
+    if (!notice) return res.status(404).json({ error: "Not found" });
+    if (notice.file) {
+      const uploadPath = noticeFilePath;
+      await deletefilewithfoldername(notice.file, uploadPath);
+    }
+    await NoticeClass.destroy({ where: { notice_id: id } });
+    await notice.destroy();
+    res.json({ message: "Notice permanently deleted" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -4219,6 +4276,7 @@ const getLatestNotices = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch notices" });
   }
 };
+// Timetable Management
 const bulkUpsertTimetable = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -5782,6 +5840,7 @@ module.exports = {
   deleteLeaveRequest,
   getTrashedLeaveRequests,
   restoreLeaveRequest,
+  permanentDeleteLeaveRequest,
   getAllStaffLeaveRequests,
   getAllTeacherLeaveRequests,
   getAllStudentLeaveRequests,
@@ -5793,6 +5852,7 @@ module.exports = {
   deleteNews,
   getTrashedNews,
   restoreNews,
+  permanentDeleteNews,
   deleteNewsImage,
 
   createNotice,
@@ -5800,6 +5860,7 @@ module.exports = {
   getNoticeById,
   updateNotice,
   deleteNotice,
+  permanentDeleteNotice,
   getTrashedNotices,
   restoreNotice,
   getLatestNotices,

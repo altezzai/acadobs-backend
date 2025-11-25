@@ -226,6 +226,10 @@ router.get("/leaveRequest", schoolAdminController.getAllLeaveRequests);
 router.get("/leaveRequest/:id", schoolAdminController.getLeaveRequestById);
 router.delete("/leaveRequest/:id", schoolAdminController.deleteLeaveRequest);
 router.patch("/leaveRequest/:id", schoolAdminController.restoreLeaveRequest);
+router.delete(
+  "/permanentDeleteLeaveRequest/:id",
+  schoolAdminController.permanentDeleteLeaveRequest
+);
 router.put(
   "/leaveRequest/:id",
   upload.single("attachment"),
@@ -276,6 +280,10 @@ router.put(
 router.delete("/news/:id", schoolAdminController.deleteNews);
 router.patch("/news/:id", schoolAdminController.restoreNews);
 router.get("/getTrashedNews", schoolAdminController.getTrashedNews);
+router.delete(
+  "/permanentDeleteNews/:id",
+  schoolAdminController.permanentDeleteNews
+);
 router.delete("/deleteNewsImage/:id", schoolAdminController.deleteNewsImage);
 
 //notice
@@ -293,6 +301,10 @@ router.put(
 );
 router.delete("/notices/:id", schoolAdminController.deleteNotice);
 router.patch("/notices/:id", schoolAdminController.restoreNotice);
+router.delete(
+  "/permanentDeleteNotice/:id",
+  schoolAdminController.permanentDeleteNotice
+);
 router.get("/getTrashedNotices", schoolAdminController.getTrashedNotices);
 router.get("/getLatestNotices", schoolAdminController.getLatestNotices);
 
