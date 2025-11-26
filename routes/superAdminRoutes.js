@@ -32,4 +32,14 @@ router.get("/subjects/:id", superAdminController.getSubjectById);
 router.put("/subjects/:id", superAdminController.updateSubject);
 router.delete("/subjects/:id", superAdminController.deleteSubject);
 
+// Account Delete Request routes
+router.get(
+  "/accountDeleteRequests",
+  superAdminController.getAccountDeleteRequests
+);
+router.put(
+  "/updateAccountDeleteRequests/:id",
+  superAdminController.updateAccountDeleteRequests
+);
+
 module.exports = router;

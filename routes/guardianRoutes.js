@@ -111,4 +111,6 @@ router.get(
   commonController.getAchievementsBySchool
 );
 
+router.post("/accountDeleteRequests", commonController.accountDeleteRequests);
+
 module.exports = router;

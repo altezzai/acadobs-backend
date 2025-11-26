@@ -30,6 +30,7 @@ const Timetable = require("./timetables");
 const TimetableSubstitution = require("./timetable_substitutions");
 const StaffPermission = require("./staff_permissions");
 const StaffAttendance = require("./staff_attendance");
+const AccountDelete = require("../models/accountdelete");
 
 // Relations
 
@@ -133,6 +134,8 @@ TimetableSubstitution.belongsTo(School, { foreignKey: "school_id" });
 TimetableSubstitution.belongsTo(Timetable, { foreignKey: "timetable_id" });
 TimetableSubstitution.belongsTo(User, { foreignKey: "sub_staff_id" });
 TimetableSubstitution.belongsTo(Subject, { foreignKey: "subject_id" });
+
+AccountDelete.belongsTo(User, { foreignKey: "user_id" });
 
 module.exports = {
   Homework,

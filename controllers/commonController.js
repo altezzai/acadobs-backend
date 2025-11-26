@@ -17,6 +17,7 @@ const School = require("../models/school");
 const Event = require("../models/event");
 const News = require("../models/news");
 const Payment = require("../models/payment");
+const AccountDelete = require("../models/accountdelete");
 
 const { Class } = require("../models");
 
@@ -711,6 +712,32 @@ const getAchievementsBySchool = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const accountDeleteRequests = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const reason = req.body.reason || "";
+
+    const existingRequest = await AccountDelete.findOne({
+      where: { user_id: userId },
+    });
+
+    if (existingRequest) {
+      return res.status(400).json({ error: "Delete request already exists" });
+    }
+
+    const deleteRequest = await AccountDelete.create({
+      user_id: userId,
+      reason,
+    });
+
+    res
+      .status(200)
+      .json({ message: "Delete request created successfully", deleteRequest });
+  } catch (err) {
+    console.error("Error creating delete request:", err);
+    res.status(500).json({ error: "Failed to create delete request" });
+  }
+};
 module.exports = {
   getStudentsByClassId,
   getschoolIdByStudentId,
@@ -742,4 +769,6 @@ module.exports = {
   getPaymentById,
 
   getAchievementsBySchool,
+
+  accountDeleteRequests,
 };

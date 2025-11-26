@@ -3,6 +3,8 @@ const School = require("../models/school");
 const User = require("../models/user");
 const Class = require("../models/class");
 const Subject = require("../models/subject");
+const AccountDelete = require("../models/accountdelete");
+
 const { compressAndSaveFile } = require("../utils/fileHandler");
 const { Op } = require("sequelize");
 
@@ -426,6 +428,66 @@ const deleteSubject = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const getAccountDeleteRequests = async (req, res) => {
+  try {
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const status = req.query.status || "";
+    const reason = req.query.reason || "";
+    let whereClause = {};
+
+    if (status) {
+      whereClause.status = status;
+    }
+    if (reason) {
+      whereClause.reason = { [Op.like]: `%${reason}%` };
+    }
+
+    const { count, rows: requests } = await AccountDelete.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: User,
+          where: {
+            [Op.or]: [
+              { name: { [Op.like]: `%${searchQuery}%` } },
+              { email: { [Op.like]: `%${searchQuery}%` } },
+            ],
+          },
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+
+      offset,
+      distinct: true,
+      limit,
+    });
+    res.status(200).json({
+      totalcontent: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      requests,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const updateAccountDeleteRequests = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, reason } = req.body;
+    const request = await AccountDelete.findByPk(id);
+    if (!request) {
+      return res.status(404).json({ error: "Delete request not found" });
+    }
+    await request.update({ status, reason });
+    res.status(200).json({ message: "Request status updated", request });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 module.exports = {
   createSchool,
   getAllSchools,
@@ -443,4 +505,7 @@ module.exports = {
   getSubjectById,
   updateSubject,
   deleteSubject,
+
+  getAccountDeleteRequests,
+  updateAccountDeleteRequests,
 };
