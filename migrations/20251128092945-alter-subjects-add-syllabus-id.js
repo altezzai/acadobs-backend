@@ -3,7 +3,7 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     // 1. Remove old ENUM column
-    await queryInterface.removeColumn("subjects", "syllabus_id");
+    await queryInterface.removeColumn("subjects", "syllabus_type");
 
     // 2. Add new syllabus_id column
     await queryInterface.addColumn("subjects", "syllabus_id", {
