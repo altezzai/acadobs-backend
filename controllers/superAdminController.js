@@ -227,6 +227,7 @@ const getAllClasses = async (req, res) => {
         school_id: { [Op.like]: `%${school_id}%` },
         trash: false,
       },
+      order: [["id", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -358,6 +359,7 @@ const getSubjects = async (req, res) => {
         syllabus_type: { [Op.like]: `%${syllabus_type}%` },
         trash: false,
       },
+      order: [["id", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
