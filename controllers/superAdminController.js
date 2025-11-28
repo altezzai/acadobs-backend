@@ -211,22 +211,33 @@ const getAllClasses = async (req, res) => {
     const year = req.query.year || "";
     const division = req.query.division || "";
     const school_id = req.query.school_id || "";
+    const trash = req.query.trash || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    let whereClause = {};
+
+    if (searchQuery) {
+      whereClause.classname = { [Op.like]: `%${searchQuery}%` };
+    }
+    if (year) {
+      whereClause.year = year;
+    }
+    if (division) {
+      whereClause.division = division;
+    }
+    if (school_id) {
+      whereClause.school_id = school_id;
+    }
+    if (trash) {
+      whereClause.trash = trash;
+    }
 
     const { count, rows: classes } = await Class.findAndCountAll({
       offset,
       distinct: true,
       limit,
-
-      where: {
-        classname: { [Op.like]: `%${searchQuery}%` },
-        year: { [Op.like]: `%${year}%` },
-        division: { [Op.like]: `%${division}%` },
-        school_id: { [Op.like]: `%${school_id}%` },
-        trash: false,
-      },
+      where: whereClause,
       order: [["id", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
@@ -345,20 +356,34 @@ const getSubjects = async (req, res) => {
     const searchQuery = req.query.q || "";
     const syllabus_type = req.query.syllabus_type || "";
     const range = req.query.range || "";
+    const school_id = req.query.school_id || "";
+    const trash = req.query.trash || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    let whereClause = {};
+
+    if (searchQuery) {
+      whereClause.subject_name = { [Op.like]: `%${searchQuery}%` };
+    }
+    if (syllabus_type) {
+      whereClause.syllabus_type = syllabus_type;
+    }
+    if (range) {
+      whereClause.class_range = range;
+    }
+    if (school_id) {
+      whereClause.school_id = school_id;
+    }
+    if (trash) {
+      whereClause.trash = trash;
+    }
 
     const { count, rows: subjects } = await Subject.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: {
-        subject_name: { [Op.like]: `%${searchQuery}%` },
-        class_range: { [Op.like]: `%${range}%` },
-        syllabus_type: { [Op.like]: `%${syllabus_type}%` },
-        trash: false,
-      },
+      where: whereClause,
       order: [["id", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
