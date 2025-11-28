@@ -18,6 +18,7 @@ const Event = require("../models/event");
 const News = require("../models/news");
 const Payment = require("../models/payment");
 const AccountDelete = require("../models/accountdelete");
+const Syllabus = require("../models/syllabus");
 
 const { Class } = require("../models");
 
@@ -558,7 +559,13 @@ const getSchoolDetails = async (req, res) => {
         "logo",
         "period_count",
         "attendance_count",
-        "syllabus_type",
+        "syllabus_id",
+      ],
+      include: [
+        {
+          model: Syllabus,
+          attributes: ["name"],
+        },
       ],
     });
     if (!school) {

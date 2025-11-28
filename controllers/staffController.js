@@ -2566,11 +2566,11 @@ const getSubjects = async (req, res) => {
     const school_id = req.user.school_id;
     const schoolDetails = await School.findOne({
       where: { id: school_id },
-      attributes: ["syllabus_type"],
+      attributes: ["syllabus_id"],
     });
     let whereClause = {
       trash: false,
-      syllabus_type: schoolDetails.syllabus_type,
+      syllabus_id: schoolDetails.syllabus_id,
       [Op.or]: [
         { school_id: school_id },
         { school_id: null }, // include global subjects

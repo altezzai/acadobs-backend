@@ -1,6 +1,6 @@
 const moment = require("moment");
 const bcrypt = require("bcrypt");
-const { Op, where, DATEONLY } = require("sequelize");
+const { Op } = require("sequelize");
 const {
   compressAndSaveFile,
   deletefilewithfoldername,
@@ -38,7 +38,6 @@ const HomeworkAssignment = require("../models/homeworkassignment");
 const StaffAttendance = require("../models/staff_attendance");
 const { School } = require("../models");
 const { schoolSequelize } = require("../config/connection");
-const { get } = require("../routes/staffRoutes");
 
 // CREATE
 const createClass = async (req, res) => {
@@ -135,10 +134,11 @@ const getClassById = async (req, res) => {
 const getClassesByYear = async (req, res) => {
   try {
     const year = req.params.year;
+    const school_id = req.user.school_id;
     const classData = await Class.findAll({
       where: {
         year: year,
-        school_id: req.user.school_id,
+        school_id: school_id,
       },
       attributes: ["id", "division", "classname"],
     });
@@ -258,7 +258,7 @@ const createSubject = async (req, res) => {
     const school_id = req.user.school_id;
     const schoolData = await School.findOne({
       where: { id: school_id },
-      attributes: ["syllabus_type"],
+      attributes: ["syllabus_id"],
     });
     const { subject_name, class_range } = req.body;
     if (!subject_name || !class_range || !school_id) {
@@ -287,7 +287,7 @@ const createSubject = async (req, res) => {
       subject_name,
       class_range,
       school_id,
-      syllabus_type: schoolData.syllabus_type,
+      syllabus_id: schoolData.syllabus_id,
     });
     res.status(201).json(subject);
   } catch (err) {
@@ -295,16 +295,26 @@ const createSubject = async (req, res) => {
   }
 };
 
-// Read All Subjects
 const getSubjects = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
     const range = req.query.range || "";
-
-    // const subjects = await Subject.findAll({
+    const school_id = req.user.school_id;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    let whereClause = {
+      school_id: school_id,
+      trash: false,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { subject_name: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if (range) {
+      whereClause[Op.or] = [{ class_range: { [Op.like]: `%${range}%` } }];
+    }
 
     const { count, rows: subjects } = await Subject.findAndCountAll({
       offset,
@@ -337,7 +347,6 @@ const getSubjectById = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-// Update Subject
 const updateSubject = async (req, res) => {
   try {
     const { id } = req.params;

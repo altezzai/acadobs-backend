@@ -30,10 +30,13 @@ const School = schoolSequelize.define(
       allowNull: true,
       defaultValue: 2,
     },
-    syllabus_type: {
-      type: DataTypes.ENUM("CBSE", "ICSE", "Kerala State", "IB", "Other"),
+    syllabus_id: {
+      type: DataTypes.INTEGER,
       allowNull: true,
-      defaultValue: "CBSE",
+      references: {
+        model: "syllabuses",
+        key: "id",
+      },
     },
     education_year_start: {
       type: DataTypes.DATEONLY,

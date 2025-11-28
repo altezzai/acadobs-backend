@@ -4,6 +4,7 @@ const User = require("../models/user");
 const Class = require("../models/class");
 const Subject = require("../models/subject");
 const AccountDelete = require("../models/accountdelete");
+const Syllabus = require("../models/syllabus");
 
 const { compressAndSaveFile } = require("../utils/fileHandler");
 const { Op } = require("sequelize");
@@ -17,7 +18,7 @@ const createSchool = async (req, res) => {
       address,
       admin_password,
       period_count,
-      syllabus_type,
+      syllabus_id,
       attendance_count,
       education_year_start,
       location,
@@ -49,7 +50,7 @@ const createSchool = async (req, res) => {
       address,
       period_count,
       logo: fileName,
-      syllabus_type,
+      syllabus_id,
       attendance_count,
       education_year_start,
       location,
@@ -105,7 +106,16 @@ const getAllSchools = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
+const getSchoolById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school = await School.findByPk(id);
+    if (!school) return res.status(404).json({ error: "School not found" });
+    res.status(200).json({ school });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 const updateSchool = async (req, res) => {
   try {
     const { id } = req.params;
@@ -116,7 +126,7 @@ const updateSchool = async (req, res) => {
       address,
       status,
       period_count,
-      syllabus_type,
+      syllabus_id,
       attendance_count,
       education_year_start,
       location,
@@ -140,7 +150,7 @@ const updateSchool = async (req, res) => {
       period_count,
       logo: fileName ? fileName : school.logo,
       status,
-      syllabus_type,
+      syllabus_id,
       attendance_count,
       education_year_start,
       location,
@@ -164,6 +174,58 @@ const deleteSchool = async (req, res) => {
     res
       .status(200)
       .json({ message: "School deleted successfully (soft delete)" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+const restoreSchool = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school = await School.findByPk(id);
+    if (!school) return res.status(404).json({ error: "School not found" });
+
+    await school.update({ trash: false });
+
+    res.status(200).json({ message: "School restored successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+const permanentlyDeleteSchool = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school = await School.findByPk(id);
+    if (!school) return res.status(404).json({ error: "School not found" });
+
+    await school.destroy();
+    res.status(200).json({ message: "School deleted permanently" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+const getTrashedSchools = async (req, res) => {
+  try {
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: schools } = await School.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: {
+        name: { [Op.like]: `%${searchQuery}%` },
+        trash: true,
+      },
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      schools,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -306,11 +368,51 @@ const deleteClass = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const restoreClass = async (req, res) => {
+  try {
+    const id = req.params.id;
+    await Class.update({ trash: false }, { where: { id } });
+    res.status(200).json({ message: "Class restored" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const permanentDeleteClass = async (req, res) => {
+  try {
+    const id = req.params.id;
+    await Class.destroy({ where: { id } });
+    res.status(200).json({ message: "Class permanently deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getTrashedClasses = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const { count, rows: classes } = await Class.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: { trash: true },
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      classes,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 const createSubject = async (req, res) => {
   try {
     const school_id = req.body.school_id || null;
-    const { subject_name, class_range, syllabus_type } = req.body;
+    const { subject_name, class_range, syllabus_id } = req.body;
     if (!subject_name || !class_range) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
@@ -328,7 +430,7 @@ const createSubject = async (req, res) => {
         subject_name,
         class_range,
         trash: false,
-        syllabus_type,
+        syllabus_id,
         school_id,
       },
     });
@@ -342,7 +444,7 @@ const createSubject = async (req, res) => {
     const subject = await Subject.create({
       subject_name,
       class_range,
-      syllabus_type,
+      syllabus_id,
       school_id: school_id ? school_id : null,
     });
     res.status(201).json(subject);
@@ -354,7 +456,7 @@ const createSubject = async (req, res) => {
 const getSubjects = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
-    const syllabus_type = req.query.syllabus_type || "";
+    const syllabus_id = req.query.syllabus_id || "";
     const range = req.query.range || "";
     const school_id = req.query.school_id || "";
     const trash = req.query.trash || "";
@@ -366,8 +468,8 @@ const getSubjects = async (req, res) => {
     if (searchQuery) {
       whereClause.subject_name = { [Op.like]: `%${searchQuery}%` };
     }
-    if (syllabus_type) {
-      whereClause.syllabus_type = syllabus_type;
+    if (syllabus_id) {
+      whereClause.syllabus_id = syllabus_id;
     }
     if (range) {
       whereClause.class_range = range;
@@ -384,6 +486,12 @@ const getSubjects = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
+      include: [
+        {
+          model: Syllabus,
+          attributes: ["name"],
+        },
+      ],
       order: [["id", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
@@ -410,13 +518,13 @@ const getSubjectById = async (req, res) => {
 const updateSubject = async (req, res) => {
   try {
     const { id } = req.params;
-    const { subject_name, class_range, syllabus_type } = req.body;
+    const { subject_name, class_range, syllabus_id } = req.body;
 
     const exists = await Subject.findOne({
       where: {
         subject_name,
         class_range,
-        syllabus_type,
+        syllabus_id,
 
         id: { [require("sequelize").Op.ne]: id },
         trash: false,
@@ -429,11 +537,19 @@ const updateSubject = async (req, res) => {
       });
     }
 
-    const subject = await Subject.findByPk(id);
+    const subject = await Subject.findOne({
+      where: { id },
+      include: [
+        {
+          model: Syllabus,
+          attributes: ["name"],
+        },
+      ],
+    });
     if (!subject || subject.trash)
       return res.status(404).json({ error: "Subject not found" });
 
-    await subject.update({ subject_name, class_range, syllabus_type });
+    await subject.update({ subject_name, class_range, syllabus_id });
     res.status(200).json(subject);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -451,6 +567,81 @@ const deleteSubject = async (req, res) => {
     await subject.save();
 
     res.status(200).json({ message: "Subject deleted (soft)" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const restoreSubject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const subject = await Subject.findByPk(id);
+    if (!subject || !subject.trash)
+      return res.status(404).json({ error: "Subject not found" });
+
+    subject.trash = false;
+    await subject.save();
+
+    res.status(200).json({ message: "Subject restored" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getTrashedSubjects = async (req, res) => {
+  try {
+    const searchQuery = req.query.q || "";
+    const syllabus_id = req.query.syllabus_id || "";
+    const range = req.query.range || "";
+    const school_id = req.query.school_id || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    let whereClause = {};
+
+    if (searchQuery) {
+      whereClause.subject_name = { [Op.like]: `%${searchQuery}%` };
+    }
+    if (syllabus_id) {
+      whereClause.syllabus_id = syllabus_id;
+    }
+    if (range) {
+      whereClause.class_range = range;
+    }
+    if (school_id) {
+      whereClause.school_id = school_id;
+    }
+
+    const { count, rows: subjects } = await Subject.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: { ...whereClause, trash: true },
+      include: [
+        {
+          model: Syllabus,
+          attributes: ["name"],
+        },
+      ],
+      order: [["id", "DESC"]],
+    });
+    res.status(200).json({
+      totalcontent: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      subjects,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const permanentlyDeleteSubject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const subject = await Subject.findByPk(id);
+    if (!subject || !subject.trash)
+      return res.status(404).json({ error: "Subject not found" });
+
+    await subject.destroy();
+    res.status(200).json({ message: "Subject permanently deleted" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -515,24 +706,179 @@ const updateAccountDeleteRequests = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+//syllabus management functions can be added here
+const createSyllabus = async (req, res) => {
+  try {
+    const { name, description, level, country } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: "Syllabus name is required" });
+    }
+    const syllabus = await Syllabus.create({
+      name,
+      description,
+      level,
+      country,
+    });
+    res.status(201).json(syllabus);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getSyllabuses = async (req, res) => {
+  try {
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const { count, rows: syllabuses } = await Syllabus.findAndCountAll({
+      where: {
+        name: { [Op.like]: `%${searchQuery}%` },
+        trash: false,
+      },
+      offset,
+      distinct: true,
+      limit,
+    });
+    res.status(200).json({
+      totalcontent: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      syllabuses,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getSyllabusById = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const syllabus = await Syllabus.findByPk(id);
+    if (!syllabus || syllabus.trash) {
+      return res.status(404).json({ error: "Syllabus not found" });
+    }
+    res.status(200).json(syllabus);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const updateSyllabus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, level, country } = req.body;
+    const syllabus = await Syllabus.findByPk(id);
+    if (!syllabus || syllabus.trash) {
+      return res.status(404).json({ error: "Syllabus not found" });
+    }
+    await syllabus.update({ name, description, level, country });
+    res.status(200).json(syllabus);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const deleteSyllabus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const syllabus = await Syllabus.findByPk(id);
+    if (!syllabus || syllabus.trash) {
+      return res.status(404).json({ error: "Syllabus not found" });
+    }
+    syllabus.trash = true;
+    await syllabus.save();
+    res.status(200).json({ message: "Syllabus deleted (soft)" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const restoreSyllabus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const syllabus = await Syllabus.findByPk(id);
+    if (!syllabus) {
+      return res.status(404).json({ error: "Syllabus not found" });
+    }
+    syllabus.trash = false;
+    await syllabus.save();
+    res.status(200).json({ message: "Syllabus restored successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const permanentlyDeleteSyllabus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const syllabus = await Syllabus.findByPk(id);
+    if (!syllabus) {
+      return res.status(404).json({ error: "Syllabus not found" });
+    }
+    await syllabus.destroy();
+    res.status(200).json({ message: "Syllabus deleted permanently" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getTrashedSyllabuses = async (req, res) => {
+  try {
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const { count, rows: trashedSyllabuses } = await Syllabus.findAndCountAll({
+      where: {
+        name: { [Op.like]: `%${searchQuery}%` },
+        trash: true,
+      },
+      offset,
+      distinct: true,
+      limit,
+    });
+    res.status(200).json({
+      totalcontent: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      trashedSyllabuses,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   createSchool,
   getAllSchools,
+  getSchoolById,
   updateSchool,
   deleteSchool,
+  restoreSchool,
+  permanentlyDeleteSchool,
+  getTrashedSchools,
 
   createClass,
   getAllClasses,
   getClassById,
   updateClass,
   deleteClass,
+  restoreClass,
+  permanentDeleteClass,
+  getTrashedClasses,
 
   createSubject,
   getSubjects,
   getSubjectById,
   updateSubject,
   deleteSubject,
-
+  restoreSubject,
+  permanentlyDeleteSubject,
+  getTrashedSubjects,
   getAccountDeleteRequests,
   updateAccountDeleteRequests,
+
+  createSyllabus,
+  getSyllabuses,
+  getSyllabusById,
+  updateSyllabus,
+  deleteSyllabus,
+  restoreSyllabus,
+  permanentlyDeleteSyllabus,
+  getTrashedSyllabuses,
 };

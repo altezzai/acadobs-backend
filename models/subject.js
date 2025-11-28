@@ -22,10 +22,9 @@ const Subject = schoolSequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-    syllabus_type: {
-      type: DataTypes.ENUM("CBSE", "ICSE", "Kerala State", "IB", "Other"),
+    syllabus_id: {
+      type: DataTypes.INTEGER,
       allowNull: true,
-      defaultValue: "CBSE",
     },
     trash: {
       type: DataTypes.BOOLEAN,

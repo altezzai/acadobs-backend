@@ -31,6 +31,7 @@ const TimetableSubstitution = require("./timetable_substitutions");
 const StaffPermission = require("./staff_permissions");
 const StaffAttendance = require("./staff_attendance");
 const AccountDelete = require("../models/accountdelete");
+const Syllabus = require("../models/syllabus");
 
 // Relations
 
@@ -69,6 +70,11 @@ User.hasOne(StaffAttendance, { foreignKey: "staff_id" });
 staffsubject.belongsTo(Staff, { foreignKey: "staff_id" });
 staffsubject.belongsTo(Subject, { foreignKey: "subject_id" });
 Subject.hasMany(staffsubject, { foreignKey: "subject_id" });
+Subject.belongsTo(Syllabus, { foreignKey: "syllabus_id" });
+
+Syllabus.hasMany(Subject, { foreignKey: "syllabus_id" });
+Syllabus.hasMany(School, { foreignKey: "syllabus_id" });
+School.belongsTo(Syllabus, { foreignKey: "syllabus_id" });
 
 Guardian.belongsTo(User, { foreignKey: "user_id" });
 

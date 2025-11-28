@@ -39,7 +39,7 @@ module.exports = {
         allowNull: true,
         defaultValue: 2,
       },
-      syllabus_type: {
+      syllabus_id: {
         type: Sequelize.ENUM("CBSE", "ICSE", "Kerala State", "IB", "Other"),
         allowNull: true,
         defaultValue: "CBSE",
