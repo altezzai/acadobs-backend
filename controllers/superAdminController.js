@@ -180,7 +180,7 @@ const createClass = async (req, res) => {
         year,
         division,
         classname,
-        school_id,
+        school_id: school_id ? school_id : { [Op.ne]: null },
 
         trash: false,
       },
