@@ -36,6 +36,7 @@ const Marks = require("../models/marks");
 const Homework = require("../models/homework");
 const HomeworkAssignment = require("../models/homeworkassignment");
 const StaffAttendance = require("../models/staff_attendance");
+const Syllabus = require("../models/syllabus");
 const { School } = require("../models");
 const { schoolSequelize } = require("../config/connection");
 
@@ -294,37 +295,40 @@ const createSubject = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
+//managing subjects
 const getSubjects = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
-    const range = req.query.range || "";
     const school_id = req.user.school_id;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+
     let whereClause = {
-      school_id: school_id,
       trash: false,
+      school_id,
     };
+
     if (searchQuery) {
-      whereClause[Op.or] = [
-        { subject_name: { [Op.like]: `%${searchQuery}%` } },
-      ];
+      whereClause.subject_name = { [Op.like]: `%${searchQuery}%` };
     }
+
     if (range) {
-      whereClause[Op.or] = [{ class_range: { [Op.like]: `%${range}%` } }];
+      whereClause.class_range = range;
     }
 
     const { count, rows: subjects } = await Subject.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: {
-        subject_name: { [Op.like]: `%${searchQuery}%` },
-        class_range: { [Op.like]: `%${range}%` },
-        trash: false,
-      },
+      where: whereClause,
+      include: [
+        {
+          model: Syllabus,
+          attributes: ["name"],
+        },
+      ],
+      order: [["id", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -340,7 +344,20 @@ const getSubjects = async (req, res) => {
 const getSubjectById = async (req, res) => {
   try {
     const id = req.params.id;
-    const subject = await Subject.findByPk(id);
+    const school_id = req.user.school_id;
+    const subject = await Subject.findOne({
+      where: {
+        id,
+        trash: false,
+        school_id,
+      },
+      include: [
+        {
+          model: Syllabus,
+          attributes: ["name"],
+        },
+      ],
+    });
     if (!subject) return res.status(404).json({ message: "Subject not found" });
     res.status(200).json(subject);
   } catch (err) {
@@ -418,6 +435,12 @@ const getTrashedSubjects = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
+      include: [
+        {
+          model: Syllabus,
+          attributes: ["name"],
+        },
+      ],
     });
     res.status(200).json({
       totalcontent: count,
