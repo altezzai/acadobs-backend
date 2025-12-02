@@ -321,6 +321,7 @@ const getSubjects = async (req, res) => {
       offset,
       distinct: true,
       limit,
+      attributes: ["id", "subject_name", "class_range"],
       where: whereClause,
       include: [
         {
