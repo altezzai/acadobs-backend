@@ -87,6 +87,35 @@ const getClassesByYear = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const getStaffsForFilter = async (req, res) => {
+  const school_id = req.user.school_id;
+  try {
+    const searchQuery = req.query.q || "";
+    let whereClause = {
+      role: "staff",
+      school_id,
+    };
+    //search name and phone
+    if (searchQuery) {
+      whereClause = {
+        [Op.or]: [
+          { name: { [Op.like]: `%${searchQuery}%` } },
+          { phone: { [Op.like]: `%${searchQuery}%` } },
+        ],
+      };
+    }
+    const staffs = await User.findAll({
+      where: {
+        role: "staff",
+        school_id,
+      },
+      attributes: ["id", "name", "phone"],
+    });
+    res.status(200).json(staffs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 const getStudentById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -753,6 +782,7 @@ module.exports = {
   getGuarduianIdbyStudentId,
 
   getClassesByYear,
+  getStaffsForFilter,
 
   getHomeworkByStudentId,
 
