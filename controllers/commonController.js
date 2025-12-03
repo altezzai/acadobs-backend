@@ -92,10 +92,9 @@ const getStaffsForFilter = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
     let whereClause = {
-      role: "staff",
+      role: "teacher",
       school_id,
     };
-    //search name and phone
     if (searchQuery) {
       whereClause = {
         [Op.or]: [
@@ -105,10 +104,7 @@ const getStaffsForFilter = async (req, res) => {
       };
     }
     const staffs = await User.findAll({
-      where: {
-        role: "staff",
-        school_id,
-      },
+      where: whereClause,
       attributes: ["id", "name", "phone"],
     });
     res.status(200).json(staffs);
