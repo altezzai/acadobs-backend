@@ -204,10 +204,12 @@ const getPaymentReport = async (req, res) => {
         {
           model: InvoiceStudent,
           attributes: ["id", "status"],
+          required: searchQuery ? true : false,
           include: [
             {
               model: Invoice,
               attributes: ["id", "title", "category"],
+              required: true,
               where: searchQuery
                 ? {
                     title: { [Op.like]: `%${searchQuery}%` },
@@ -323,9 +325,9 @@ const getHomeworkReport = async (req, res) => {
     const class_id = req.query.class_id || "";
     const teacher_id = req.query.teacher_id || "";
     const subject_id = req.query.subject_id || "";
+    const searchQuery = req.query.q || "";
 
     const download = req.query.download || "";
-    const searchQuery = req.query.q || "";
     let { page = 1, limit = 10 } = req.query;
     // Download mode → no pagination
     if (download === "true") {
@@ -624,10 +626,18 @@ const getInternalmarksReport = async (req, res) => {
     const start_date = req.query.start_date || null;
     const end_date = req.query.end_date || null;
     const searchQuery = req.query.q || "";
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
     const passMarkPercentage = 0.4; // 40% pass mark
+
+    const download = req.query.download || "";
+    let { page = 1, limit = 10 } = req.query;
+    if (download === "true") {
+      page = null;
+      limit = null;
+    } else {
+      page = parseInt(page) || 1;
+      limit = parseInt(limit) || 10;
+    }
+    const offset = page && limit ? (page - 1) * limit : 0;
 
     let whereClause = {
       school_id,
@@ -652,7 +662,7 @@ const getInternalmarksReport = async (req, res) => {
     if (end_date) {
       whereClause.date = { [Op.lte]: end_date };
     }
-
+    const count = await InternalMark.count({ where: whereClause });
     const internalMarks = await InternalMark.findAll({
       where: whereClause,
       offset,
@@ -697,11 +707,11 @@ const getInternalmarksReport = async (req, res) => {
     });
 
     // ✅ Final response
-    const totalPages = Math.ceil(internalMarks.length / limit);
+    const totalPages = Math.ceil(count / limit);
     res.status(200).json({
-      totalcontent: internalMarks.length,
-      totalPages,
-      currentPage: page,
+      totalContents: count,
+      totalPages: download === "true" ? null : totalPages,
+      currentPage: download === "true" ? null : page,
       internalMarksReport: enrichedData,
     });
   } catch (error) {
