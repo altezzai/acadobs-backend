@@ -28,6 +28,7 @@ router.get("/subjects/:id", schoolAdminController.getSubjectById);
 router.put("/subjects/:id", schoolAdminController.updateSubject);
 router.delete("/subjects/:id", schoolAdminController.deleteSubject);
 router.patch("/subjects/:id", schoolAdminController.restoreSubject);
+router.get("/getSubjectsForFilter", schoolAdminController.getSubjectsForFilter);
 router.get("/getTrashedSubjects", schoolAdminController.getTrashedSubjects);
 router.delete(
   "/permanentDeleteSubject/:id",
@@ -426,6 +427,8 @@ router.get(
   "/getLeaveRequestByStudentId/:student_id",
   commonController.getLeaveRequestByStudentId
 );
+router.get("/getClassesByYear/:year", commonController.getClassesByYear);
+
 //REPORTS
 router.get("/invoiceReport", reportController.getInvoiceReport);
 router.get("/paymentReport", reportController.getPaymentReport);

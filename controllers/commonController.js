@@ -72,10 +72,11 @@ const getschoolIdByStudentId = async (student_id) => {
 const getClassesByYear = async (req, res) => {
   try {
     const year = req.params.year;
+    const school_id = req.user.school_id;
     const classData = await Class.findAll({
       where: {
         year: year,
-        school_id: req.user.school_id,
+        school_id,
       },
       attributes: ["id", "division", "classname"],
     });

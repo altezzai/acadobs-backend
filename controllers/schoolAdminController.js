@@ -415,6 +415,45 @@ const deleteSubject = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const getSubjectsForFilter = async (req, res) => {
+  try {
+    const searchQuery = req.query.q || "";
+    const range = req.query.range || "";
+    const school_id = req.user.school_id;
+    const schoolDetails = await School.findOne({
+      where: { id: school_id },
+      attributes: ["syllabus_id"],
+    });
+    let whereClause = {
+      trash: false,
+      syllabus_id: schoolDetails.syllabus_id,
+      [Op.or]: [
+        { school_id: school_id },
+        { school_id: null }, // include global subjects
+      ],
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { subject_name: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if (range) {
+      whereClause.range = range;
+    }
+
+    const subjects = await Subject.findAll({
+      distinct: true,
+      where: whereClause,
+      attributes: ["id", "subject_name"],
+    });
+    res.status(200).json({
+      totalcontent: subjects.length,
+      subjects,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 const getTrashedSubjects = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -5781,6 +5820,7 @@ module.exports = {
   getSubjectById,
   updateSubject,
   deleteSubject,
+  getSubjectsForFilter,
   getTrashedSubjects,
   restoreSubject,
   permanentDeleteSubject,
