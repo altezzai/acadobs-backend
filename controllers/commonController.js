@@ -96,12 +96,11 @@ const getStaffsForFilter = async (req, res) => {
       school_id,
     };
     if (searchQuery) {
-      whereClause = {
-        [Op.or]: [
-          { name: { [Op.like]: `%${searchQuery}%` } },
-          { phone: { [Op.like]: `%${searchQuery}%` } },
-        ],
-      };
+      whereClause[Op.or] = [
+        { name: { [Op.like]: `%${searchQuery}%` } },
+        { phone: { [Op.like]: `%${searchQuery}%` } },
+        ,
+      ];
     }
     const staffs = await User.findAll({
       where: whereClause,
