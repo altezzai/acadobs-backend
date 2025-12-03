@@ -620,8 +620,9 @@ const getInternalmarksReport = async (req, res) => {
     const school_id = req.user.school_id;
     const class_id = req.query.class_id || null;
     const subject_id = req.query.subject_id || null;
-    const exam_type = req.query.exam_type || null;
     const teacher_id = req.query.teacher_id || null;
+    const start_date = req.query.start_date || null;
+    const end_date = req.query.end_date || null;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -637,9 +638,6 @@ const getInternalmarksReport = async (req, res) => {
     if (subject_id) {
       whereClause.subject_id = subject_id;
     }
-    if (exam_type) {
-      whereClause.exam_type = exam_type;
-    }
     if (teacher_id) {
       whereClause.recorded_by = teacher_id;
     }
@@ -647,6 +645,12 @@ const getInternalmarksReport = async (req, res) => {
       whereClause[Op.or] = [
         { internal_name: { [Op.like]: `%${searchQuery}%` } },
       ];
+    }
+    if (start_date) {
+      whereClause.date = { [Op.gte]: start_date };
+    }
+    if (end_date) {
+      whereClause.date = { [Op.lte]: end_date };
     }
 
     const internalMarks = await InternalMark.findAll({
