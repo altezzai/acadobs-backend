@@ -427,8 +427,12 @@ router.get(
   "/getLeaveRequestByStudentId/:student_id",
   commonController.getLeaveRequestByStudentId
 );
-router.get("/getClassesByYear/:year", commonController.getClassesByYear);
 router.get("/getStaffsForFilter", commonController.getStaffsForFilter);
+router.get("/getClassesByYear/:year", commonController.getClassesByYear);
+router.get(
+  "/getStudentsByClassId/:class_id",
+  commonController.getStudentsByClassId
+);
 
 //REPORTS
 router.get("/invoiceReport", reportController.getInvoiceReport);
