@@ -37,7 +37,7 @@ const Homework = require("../models/homework");
 const HomeworkAssignment = require("../models/homeworkassignment");
 const StaffAttendance = require("../models/staff_attendance");
 const Syllabus = require("../models/syllabus");
-// const { School } = require("../models");
+const { School } = require("../models");
 const { schoolSequelize } = require("../config/connection");
 
 // CREATE
@@ -69,6 +69,7 @@ const createClass = async (req, res) => {
     });
     res.status(201).json({ message: "Class created", class: newClass });
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "Error creating class:", err);
     console.error("Error creating class:", err);
     res.status(500).json({ error: err.message });
   }
@@ -111,6 +112,12 @@ const getAllClasses = async (req, res) => {
       classes,
     });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching classes:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -128,6 +135,7 @@ const getClassById = async (req, res) => {
     if (!classData) return res.status(404).json({ message: "Class not found" });
     res.status(200).json(classData);
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "Error fetching class:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -147,6 +155,7 @@ const getClassesByYear = async (req, res) => {
     if (!classData) return res.status(404).json({ message: "Class not found" });
     res.status(200).json(classData);
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "Error fetching class:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -162,6 +171,7 @@ const updateClass = async (req, res) => {
     );
     res.status(200).json({ message: "Class updated", updated });
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "Error updating class:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -173,6 +183,7 @@ const deleteClass = async (req, res) => {
     await Class.update({ trash: true }, { where: { id } });
     res.status(200).json({ message: "Class soft-deleted" });
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "Error deleting class:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -206,6 +217,12 @@ const getTrashedClasses = async (req, res) => {
       classes,
     });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching trashed classes:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -232,6 +249,12 @@ const restoreClass = async (req, res) => {
     );
     res.status(200).json({ message: "Class restored" });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error restoring class:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -250,6 +273,12 @@ const permanentDeleteClass = async (req, res) => {
     await Class.destroy({ where: { id, school_id } });
     res.status(200).json({ message: "Class permanently deleted" });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error permanently deleting class:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -292,6 +321,12 @@ const createSubject = async (req, res) => {
     });
     res.status(201).json(subject);
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error creating subject:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -340,6 +375,12 @@ const getSubjects = async (req, res) => {
       subjects,
     });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting subjects:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -363,6 +404,12 @@ const getSubjectById = async (req, res) => {
     if (!subject) return res.status(404).json({ message: "Subject not found" });
     res.status(200).json(subject);
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting subject by ID:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -395,6 +442,12 @@ const updateSubject = async (req, res) => {
     await subject.update({ subject_name, class_range, school_id });
     res.status(200).json(subject);
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error updating subject:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -412,6 +465,12 @@ const deleteSubject = async (req, res) => {
 
     res.status(200).json({ message: "Subject deleted (soft)" });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error deleting subject:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -451,6 +510,12 @@ const getSubjectsForFilter = async (req, res) => {
       subjects,
     });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting subjects for filter:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -490,6 +555,12 @@ const getTrashedSubjects = async (req, res) => {
       subjects,
     });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting trashed subjects:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -506,6 +577,12 @@ const restoreSubject = async (req, res) => {
 
     res.status(200).json({ message: "Subject restored" });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error restoring subject:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -521,6 +598,12 @@ const permanentDeleteSubject = async (req, res) => {
     await subject.destroy();
     res.status(200).json({ message: "Subject permanently deleted" });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error permanently deleting subject:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -637,9 +720,9 @@ const createStaff = async (req, res) => {
     }
 
     res.status(201).json(newStaff);
-
     await transaction.commit();
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Error creating staff:", err);
     await transaction.rollback();
     res.status(500).json({ error: error.message });
   }
@@ -688,6 +771,12 @@ const getAllStaff = async (req, res) => {
       staff,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting all staff:",
+      error
+    );
     res.status(500).json({ error: error.message });
   }
 };
@@ -723,6 +812,12 @@ const getStaffById = async (req, res) => {
 
     res.status(200).json(staff);
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting staff by ID:",
+      error
+    );
     res.status(500).json({ error: error.message });
   }
 };
@@ -740,6 +835,12 @@ const getStaffs = async (req, res) => {
 
     res.status(200).json(users);
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting staffs:",
+      error
+    );
     res.status(500).json({ error: error.message });
   }
 };
@@ -805,6 +906,12 @@ const updateStaff = async (req, res) => {
 
     res.status(200).json({ message: "Staff updated successfully", staff });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error updating staff:",
+      error
+    );
     await transaction.rollback();
     res.status(500).json({ error: error.message });
   }
@@ -860,6 +967,12 @@ const updateStaffUser = async (req, res) => {
 
     res.status(200).json(user);
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error updating staff user:",
+      error
+    );
     res.status(500).json({ error: error.message });
   }
 };
@@ -878,6 +991,12 @@ const deleteStaff = async (req, res) => {
     await user.update({ trash: true });
     res.status(200).json({ message: "Staff deleted (soft)" });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error deleting staff:",
+      error
+    );
     res.status(500).json({ error: error.message });
   }
 };
@@ -919,6 +1038,12 @@ const getTrashedStaffs = async (req, res) => {
       staffs,
     });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting trashed staffs:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -980,6 +1105,12 @@ const getAllTeachers = async (req, res) => {
       staff,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting all teachers:",
+      error
+    );
     res.status(500).json({ error: error.message });
   }
 };
@@ -999,6 +1130,12 @@ const getAllStaffPermissions = async (req, res) => {
     });
     res.json({ success: true, data: permissions });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting staff permissions:",
+      err
+    );
     res.status(500).json({ error: "Failed to fetch staff permissions" });
   }
 };
@@ -1015,6 +1152,12 @@ const getStaffPermissionByUser = async (req, res) => {
 
     res.json({ success: true, data: permission });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting staff permission:",
+      err
+    );
     res.status(500).json({ error: "Failed to fetch staff permission" });
   }
 };
@@ -1059,6 +1202,12 @@ const updateStaffPermission = async (req, res) => {
     });
     res.json({ success: true, data: permission });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error updating staff permission:",
+      err
+    );
     res.status(500).json({ error: "Failed to update staff permission" });
   }
 };
@@ -1139,77 +1288,93 @@ const createGuardian = async (req, res) => {
 
     res.status(201).json({ user, guardian });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error creating guardian:",
+      error
+    );
     console.error(error);
     res.status(500).json({ error: error.message });
   }
 };
 const createGuardianService = async (guardianData, fileBuffer, req) => {
-  const {
-    guardian_relation,
-    guardian_name,
-    guardian_contact,
-    guardian_email,
-    guardian_job,
-    guardian2_relation,
-    guardian2_name,
-    guardian2_job,
-    guardian2_contact,
-    father_name,
-    mother_name,
-    school_id,
-  } = guardianData;
+  try {
+    const {
+      guardian_relation,
+      guardian_name,
+      guardian_contact,
+      guardian_email,
+      guardian_job,
+      guardian2_relation,
+      guardian2_name,
+      guardian2_job,
+      guardian2_contact,
+      father_name,
+      mother_name,
+      school_id,
+    } = guardianData;
 
-  if (!guardian_name || !guardian_email || !guardian_contact) {
-    throw new Error("Required guardian fields are missing");
+    if (!guardian_name || !guardian_email || !guardian_contact) {
+      throw new Error("Required guardian fields are missing");
+    }
+
+    const existingUser = await User.findOne({
+      where: { email: guardian_email },
+    });
+    const existingPhone = await User.findOne({
+      where: { phone: guardian_contact },
+    });
+
+    if (existingUser) {
+      throw new Error("Guardian email already exists");
+    }
+
+    let fileName = null;
+    if (fileBuffer) {
+      const file = fileBuffer;
+      const uploadPath = "uploads/dp/";
+      fileName = await compressAndSaveFile(file, uploadPath);
+    }
+
+    const hashedPassword = await bcrypt.hash(guardian_contact, 10);
+
+    const user = await User.create({
+      role: "guardian",
+      name: guardian_name,
+      email: guardian_email,
+      phone: guardian_contact,
+      dp: fileName,
+      school_id,
+      status: "active",
+      password: hashedPassword,
+    });
+
+    await Guardian.create({
+      user_id: user.id,
+      guardian_relation,
+      guardian_name,
+      guardian_contact,
+      guardian_email,
+      guardian_job,
+      guardian2_relation,
+      guardian2_name,
+      guardian2_job,
+      guardian2_contact,
+      father_name,
+      mother_name,
+    });
+
+    return user.id;
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error creating guardian:",
+      error
+    );
+    throw error;
   }
-
-  const existingUser = await User.findOne({
-    where: { email: guardian_email },
-  });
-  const existingPhone = await User.findOne({
-    where: { phone: guardian_contact },
-  });
-
-  if (existingUser) {
-    throw new Error("Guardian email already exists");
-  }
-
-  let fileName = null;
-  if (fileBuffer) {
-    const file = fileBuffer;
-    const uploadPath = "uploads/dp/";
-    fileName = await compressAndSaveFile(file, uploadPath);
-  }
-
-  const hashedPassword = await bcrypt.hash(guardian_contact, 10);
-
-  const user = await User.create({
-    role: "guardian",
-    name: guardian_name,
-    email: guardian_email,
-    phone: guardian_contact,
-    dp: fileName,
-    school_id,
-    status: "active",
-    password: hashedPassword,
-  });
-
-  await Guardian.create({
-    user_id: user.id,
-    guardian_relation,
-    guardian_name,
-    guardian_contact,
-    guardian_email,
-    guardian_job,
-    guardian2_relation,
-    guardian2_name,
-    guardian2_job,
-    guardian2_contact,
-    father_name,
-    mother_name,
-  });
-
-  return user.id;
 };
 const getAllGuardians = async (req, res) => {
   try {
@@ -1243,6 +1408,12 @@ const getAllGuardians = async (req, res) => {
       guardians,
     });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting guardians:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -1257,6 +1428,12 @@ const getGuardianById = async (req, res) => {
     });
     res.status(200).json(guardians);
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting guardians:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -1347,6 +1524,12 @@ const updateGuardian = async (req, res) => {
     //
     res.status(200).json(guardian);
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error updating guardian:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -1387,6 +1570,12 @@ const getGuardianBySchoolId = async (req, res) => {
       guardians,
     });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting guardians:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -1404,6 +1593,12 @@ const updateGuardianUserPassword = async (req, res) => {
     await user.update({ password: hashedPassword });
     res.status(200).json({ message: "Password updated successfully" });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error updating guardian user password:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -1542,6 +1737,12 @@ const createStudent = async (req, res) => {
 
     res.status(201).json({ success: true, student });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error creating student:",
+      err
+    );
     console.error("Error creating student:", err);
     res.status(500).json({ error: "Failed to create student" });
   }
@@ -1706,6 +1907,12 @@ const bulkCreateStudents = async (req, res) => {
       count: inserted.length,
     });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error bulk creating students:",
+      err
+    );
     await transaction.rollback();
     console.error("Error bulk creating students:", err);
     return res.status(500).json({ error: err.message });
@@ -1744,6 +1951,12 @@ const getAllStudents = async (req, res) => {
       .status(200)
       .json({ totalcontent: count, totalPages, currentPage: page, students });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching students:",
+      err
+    );
     console.error("Error fetching students:", err);
     res.status(500).json({ error: "Failed to fetch students" });
   }
@@ -1768,6 +1981,12 @@ const getStudentById = async (req, res) => {
 
     res.status(200).json(student);
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting student:",
+      err
+    );
     console.error("Error getting student:", err);
     res.status(500).json({ error: "Failed to get student" });
   }
@@ -1831,6 +2050,12 @@ const updateStudent = async (req, res) => {
 
     res.status(200).json({ message: "Student updated successfully", updated });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error updating student:",
+      err
+    );
     console.error("Error updating student:", err);
     res.status(500).json({ error: "Failed to update student" });
   }
@@ -1851,6 +2076,12 @@ const deleteStudent = async (req, res) => {
 
     res.status(200).json({ message: "Student deleted successfully" });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error deleting student:",
+      err
+    );
     console.error("Error deleting student:", err);
     res.status(500).json({ error: "Failed to delete student" });
   }
@@ -1923,6 +2154,12 @@ const createDutyWithAssignments = async (req, res) => {
       assignments: createdAssignments,
     });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "createDutyWithAssignments →",
+      err
+    );
     if (uploadDir) await deletefilewithfoldername(req.file, uploadDir);
     await transaction.rollback();
     console.error("createDutyWithAssignments →", err);
@@ -2007,6 +2244,7 @@ const getAllDuties = async (req, res) => {
       duties: formattedData,
     });
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "getAllDuties →", err);
     res.status(500).json({ error: "Failed to fetch duties" });
   }
 };
@@ -2033,6 +2271,7 @@ const getDutyById = async (req, res) => {
 
     res.json(duty);
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "getDutyById →", err);
     res.status(500).json({ error: "Failed to fetch duty" });
   }
 };
@@ -2068,6 +2307,7 @@ const updateDuty = async (req, res) => {
     });
     res.json(duty);
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "updateDuty →", err);
     res.status(500).json({ error: "Failed to update duty" });
   }
 };
@@ -2093,6 +2333,7 @@ const updateDutyAssigned = async (req, res) => {
     });
     res.json({ message: "Updated", updatedDuty });
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "updateDutyAssigned →", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -2160,6 +2401,12 @@ const bulkUpdateDutyAssignments = async (req, res) => {
     await transaction.commit();
     res.status(200).json({ message: "Duty assignments synced successfully" });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "bulkUpdateDutyAssignments →",
+      error
+    );
     await transaction.rollback();
     console.error("Bulk update failed:", error);
     res.status(500).json({ error: "Bulk update failed" });
@@ -2181,6 +2428,7 @@ const deleteDuty = async (req, res) => {
       message: `Deleted successfully.`,
     });
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "deleteDuty →", err);
     res.status(500).json({ error: "Delete failed duty" });
   }
 };
@@ -2204,6 +2452,7 @@ const getTrashedDuties = async (req, res) => {
       duties,
     });
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "getTrashedDuties →", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -2220,6 +2469,7 @@ const restoreDuty = async (req, res) => {
       message: `restored successfully duty.`,
     });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "restoreDuty →", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -2319,6 +2569,12 @@ const createAchievementWithStudents = async (req, res) => {
       achievement,
     });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "createAchievementWithStudents →",
+      err
+    );
     console.error("Error:", err);
     res.status(500).json({ error: "Server error" });
   }
@@ -2373,6 +2629,12 @@ const getAllAchievements = async (req, res) => {
       achievements,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "getAllAchievements →",
+      error
+    );
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -2404,6 +2666,12 @@ const getAchievementById = async (req, res) => {
     });
     res.status(200).json(achievement);
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "getAchievementById →",
+      error
+    );
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -2439,6 +2707,7 @@ const updateAchievement = async (req, res) => {
       .status(200)
       .json({ message: "Achievement updated successfully", achievement });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "updateAchievement →", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -2452,6 +2721,7 @@ const deleteAchievement = async (req, res) => {
     );
     res.status(200).json({ message: "Achievement trashed successfully" });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "deleteAchievement →", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -2475,6 +2745,12 @@ const getTrashedAchievements = async (req, res) => {
       achievements,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "getTrashedAchievements →",
+      error
+    );
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -2486,6 +2762,12 @@ const restoreAchievement = async (req, res) => {
     );
     res.status(200).json({ message: "Achievement restored successfully" });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "restoreAchievement :",
+      error
+    );
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -2533,6 +2815,12 @@ const updateStudentAchievement = async (req, res) => {
       StudentAchievementData,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "updateStudentAchievement :",
+      error
+    );
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -2571,6 +2859,7 @@ const createEvent = async (req, res) => {
 
     res.status(201).json(event);
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "createEvent :", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -2611,6 +2900,7 @@ const getAllEvents = async (req, res) => {
       events,
     });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getAllEvents :", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -2625,6 +2915,7 @@ const getEventById = async (req, res) => {
       return res.status(404).json({ error: "Event not found" });
     res.status(200).json(event);
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getEventById :", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -2665,6 +2956,7 @@ const updateEvent = async (req, res) => {
     });
     res.status(200).json({ message: "Event updated successfully", event });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "updateEvent :", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -2678,6 +2970,7 @@ const deleteEvent = async (req, res) => {
     );
     res.status(200).json({ message: "Event soft deleted" });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "deleteEvent :", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -2700,6 +2993,7 @@ const getTrashedEvents = async (req, res) => {
       events,
     });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getTrashedEvents :", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -2708,6 +3002,7 @@ const restoreEvent = async (req, res) => {
     await Event.update({ trash: false }, { where: { id: req.params.id } });
     res.status(200).json({ message: "Event restored successfully" });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "restoreEvent :", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -2721,6 +3016,12 @@ const permanentDeleteEvent = async (req, res) => {
 
     res.status(200).json({ message: "Event permanently deleted" });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "permanentDeleteEvent :",
+      error
+    );
     res.status(500).json({ error: error.message });
   }
 };
@@ -2816,6 +3117,7 @@ const createPayment = async (req, res) => {
       "invoice status": invoice_status,
     });
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "createPayment :", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -2910,6 +3212,7 @@ const getAllPayments = async (req, res) => {
       payment,
     });
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "getAllPayments :", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -2989,6 +3292,7 @@ const updatePayment = async (req, res) => {
     });
     res.status(200).json({ message: "Payment updated", payment });
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "updatePayment :", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -3032,6 +3336,7 @@ const getTrashedPayments = async (req, res) => {
       payment,
     });
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "getTrashedPayments :", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -3084,6 +3389,7 @@ const createInvoice = async (req, res) => {
 
     res.status(201).json(invoice);
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "createInvoice :", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -3112,6 +3418,12 @@ const addInvoiceStudentsbyInvoiceId = async (req, res) => {
       .status(200)
       .json({ success: true, message: "Invoice updated successfully" });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "addInvoiceStudentsbyInvoiceId :",
+      error
+    );
     console.error("Error updating invoice:", error);
     res.status(500).json({ error: "Failed to update invoice" });
   }
@@ -3152,6 +3464,7 @@ const getAllInvoices = async (req, res) => {
       invoices,
     });
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "getAllInvoices :", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -3202,6 +3515,7 @@ const updateInvoice = async (req, res) => {
     });
     res.status(200).json({ message: "Invoice updated", invoice });
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "updateInvoice :", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -3214,6 +3528,7 @@ const deleteInvoice = async (req, res) => {
     );
     res.status(200).json({ message: "Invoice soft deleted" });
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "deleteInvoice :", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -3237,6 +3552,7 @@ const getTrashedInvoices = async (req, res) => {
       invoices,
     });
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "getTrashedInvoices :", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -3245,6 +3561,7 @@ const restoreInvoice = async (req, res) => {
     await Invoice.update({ trash: false }, { where: { id: req.params.id } });
     res.status(200).json({ message: "Invoice restored" });
   } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "restoreInvoice :", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -3258,6 +3575,12 @@ const permanentDeleteInvoiceStudent = async (req, res) => {
     await invoiceStudent.destroy();
     res.status(200).json({ message: "Invoice student deleted" });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "permanentDeleteInvoiceStudent :",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -3318,6 +3641,12 @@ const createLeaveRequest = async (req, res) => {
     });
     res.status(201).json(data);
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "createLeaveRequest :",
+      error
+    );
     console.error("Create Error:", error);
     res.status(500).json({ error: "Failed to create leave request" });
   }
@@ -3380,6 +3709,12 @@ const getAllLeaveRequests = async (req, res) => {
       leaves,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "getAllLeaveRequests :",
+      error
+    );
     console.error("Fetch Error:", error);
     res.status(500).json({ error: "Failed to fetch leave requests" });
   }
@@ -3402,6 +3737,12 @@ const getLeaveRequestById = async (req, res) => {
     if (!data) return res.status(404).json({ error: "Not found" });
     res.status(200).json(data);
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "getLeaveRequestById :",
+      error
+    );
     console.error("Fetch One Error:", error);
     res.status(500).json({ error: "Failed to fetch leave request" });
   }
@@ -3456,6 +3797,12 @@ const updateLeaveRequest = async (req, res) => {
 
     res.status(200).json(data);
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "updateLeaveRequest :",
+      error
+    );
     console.error("Update Error:", error);
     res.status(500).json({ error: "Failed to update leave request" });
   }
@@ -3562,6 +3909,12 @@ const leaveRequestPermission = async (req, res) => {
       message: `Leave request ${status} successfully`,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "leaveRequestPermission :",
+      error
+    );
     console.error("Approve Error:", error);
     res.status(500).json({ error: "Failed to approve leave request" });
   }
@@ -3627,6 +3980,12 @@ const staffLeaveRequestPermission = async (req, res) => {
       message: `Leave request ${status} successfully`,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "staffLeaveRequestPermission :",
+      error
+    );
     console.error("Approve Error:", error);
     res.status(500).json({ error: "Failed to approve leave request" });
   }
@@ -3648,6 +4007,12 @@ const deleteLeaveRequest = async (req, res) => {
     await leave.update({ trash: true });
     res.status(200).json("Successfully soft deleted");
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error deleting leave request:",
+      error
+    );
     console.error("Delete Error:", error);
     res.status(500).json({ error: "Failed to delete leave request" });
   }
@@ -3683,6 +4048,12 @@ const getTrashedLeaveRequests = async (req, res) => {
       data: leaveRequests,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting trashed leave requests:",
+      error
+    );
     console.error("Get Trashed Leave Requests Error:", error);
     res.status(500).json({ error: "Failed to get trashed leave requests" });
   }
@@ -3699,6 +4070,12 @@ const restoreLeaveRequest = async (req, res) => {
     await leave.update({ trash: false });
     res.status(200).json("Successfully restored");
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error restoring leave request:",
+      error
+    );
     console.error("Restore Error:", error);
     res.status(500).json({ error: "Failed to restore leave request" });
   }
@@ -3718,6 +4095,12 @@ const permanentDeleteLeaveRequest = async (req, res) => {
 
     res.status(200).json("Successfully permanently deleted");
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error permanently deleting leave request:",
+      error
+    );
     console.error("Permanent Delete Error:", error);
     res
       .status(500)
@@ -3768,6 +4151,12 @@ const getAllStaffLeaveRequests = async (req, res) => {
       leaveRequests,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching all leave requests:",
+      error
+    );
     console.error("Fetch All Error:", error);
     res.status(500).json({ error: "Failed to fetch leave requests" });
   }
@@ -3815,6 +4204,12 @@ const getAllTeacherLeaveRequests = async (req, res) => {
       leaveRequests,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching all leave requests:",
+      error
+    );
     console.error("Fetch All Error:", error);
     res.status(500).json({ error: "Failed to fetch leave requests" });
   }
@@ -3867,6 +4262,12 @@ const getAllStudentLeaveRequests = async (req, res) => {
       leaveRequests,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching all leave requests:",
+      error
+    );
     console.error("Fetch All Error:", error);
     res.status(500).json({ error: "Failed to fetch leave requests" });
   }
@@ -3922,6 +4323,12 @@ const createNews = async (req, res) => {
     }
     res.status(201).json(news);
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error creating news:",
+      error
+    );
     res.status(500).json({ error: error.message });
   }
 };
@@ -3963,6 +4370,12 @@ const getAllNews = async (req, res) => {
       news,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching all news:",
+      error
+    );
     console.error("Fetch Error:", error);
     res.status(500).json({ error: "Failed to fetch news" });
   }
@@ -3985,50 +4398,67 @@ const getNewsById = async (req, res) => {
     if (!news) return res.status(404).json({ error: "Not found" });
     res.json(news);
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching news by id:",
+      error
+    );
     console.error("Fetch Error:", error);
     res.status(500).json({ error: "Failed to fetch news" });
   }
 };
 
 const updateNews = async (req, res) => {
-  const { id } = req.params;
-  const school_id = req.user.school_id;
-  const { title, content, file } = req.body;
-  const news = await News.findOne({
-    where: { id: id, school_id: school_id, trash: false },
-  });
-  if (!news) {
-    return res.status(404).json({ error: "Not found" });
-  }
-  const existingNews = await News.findOne({
-    where: { title, id: { [Op.ne]: id } },
-  });
-  if (existingNews) {
-    return res
-      .status(409)
-      .json({ error: "News with the same title already exists" });
-  }
-  let fileName = news.file;
-  if (req.file) {
-    const uploadPath = newsfilePath;
-    fileName = await compressAndSaveFile(req.file, uploadPath);
-  }
-  await news.update({ title, content, file: fileName });
-
-  if (req.files?.images) {
-    const imageRecords = [];
-
-    for (const img of req.files.images) {
-      const compressedName = await compressAndSaveFile(img, newsimagePath);
-      imageRecords.push({
-        news_id: news.id,
-        image_url: compressedName,
-      });
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const { title, content, file } = req.body;
+    const news = await News.findOne({
+      where: { id: id, school_id: school_id, trash: false },
+    });
+    if (!news) {
+      return res.status(404).json({ error: "Not found" });
     }
+    const existingNews = await News.findOne({
+      where: { title, id: { [Op.ne]: id } },
+    });
+    if (existingNews) {
+      return res
+        .status(409)
+        .json({ error: "News with the same title already exists" });
+    }
+    let fileName = news.file;
+    if (req.file) {
+      const uploadPath = newsfilePath;
+      fileName = await compressAndSaveFile(req.file, uploadPath);
+    }
+    await news.update({ title, content, file: fileName });
 
-    await NewsImage.bulkCreate(imageRecords);
+    if (req.files?.images) {
+      const imageRecords = [];
+
+      for (const img of req.files.images) {
+        const compressedName = await compressAndSaveFile(img, newsimagePath);
+        imageRecords.push({
+          news_id: news.id,
+          image_url: compressedName,
+        });
+      }
+
+      await NewsImage.bulkCreate(imageRecords);
+    }
+    res.json({ message: "Updated", news });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error updating news:",
+      error
+    );
+    console.error("Update Error:", error);
+    res.status(500).json({ error: "Failed to update news" });
   }
-  res.json({ message: "Updated", news });
 };
 
 const deleteNews = async (req, res) => {
@@ -4042,6 +4472,12 @@ const deleteNews = async (req, res) => {
     await news.update({ trash: true });
     res.json({ message: "Soft deleted" });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error deleting news:",
+      error
+    );
     res.status(500).json({ error: error.message });
   }
 };
@@ -4065,6 +4501,12 @@ const getTrashedNews = async (req, res) => {
       news,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching trashed news:",
+      error
+    );
     console.error("Fetch Error:", error);
     res.status(500).json({ error: "Failed to fetch news" });
   }
@@ -4077,6 +4519,12 @@ const restoreNews = async (req, res) => {
     await news.update({ trash: false });
     res.json({ message: "Restored" });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error restoring news:",
+      error
+    );
     res.status(500).json({ error: error.message });
   }
 };
@@ -4100,6 +4548,12 @@ const permanentDeleteNews = async (req, res) => {
     await news.destroy();
     res.json({ message: "Permanently deleted" });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error permanently deleting news:",
+      error
+    );
     res.status(500).json({ error: error.message });
   }
 };
@@ -4116,6 +4570,12 @@ const deleteNewsImage = async (req, res) => {
 
     res.json({ message: "Soft deleted" });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error deleting news image:",
+      error
+    );
     res.status(500).json({ error: error.message });
   }
 };
@@ -4163,6 +4623,12 @@ const createNotice = async (req, res) => {
 
     res.status(201).json({ message: "Notice created", notice });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error creating notice:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -4301,6 +4767,12 @@ const updateNotice = async (req, res) => {
 
     res.json({ message: "Notice updated" });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error updating notice:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -4312,6 +4784,12 @@ const deleteNotice = async (req, res) => {
     if (!rows) return res.status(404).json({ error: "Not found" });
     res.json({ message: "Notice soft-deleted" });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error deleting notice:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -4328,6 +4806,12 @@ const permanentDeleteNotice = async (req, res) => {
     await notice.destroy();
     res.json({ message: "Notice permanently deleted" });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error permanently deleting notice:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -4364,6 +4848,12 @@ const getTrashedNotices = async (req, res) => {
       notices,
     });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting trashed notices:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -4374,6 +4864,12 @@ const restoreNotice = async (req, res) => {
     if (!rows) return res.status(404).json({ error: "Not found" });
     res.json({ message: "Notice restored" });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error restoring notice:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -4401,6 +4897,12 @@ const getLatestNotices = async (req, res) => {
       notices,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching latest notices:",
+      error
+    );
     console.error("Error fetching notices:", error);
     res.status(500).json({ error: "Failed to fetch notices" });
   }
@@ -4426,6 +4928,12 @@ const bulkUpsertTimetable = async (req, res) => {
       message: "Timetable updated successfully",
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "bulkUpsertTimetable error:",
+      error
+    );
     console.error("bulkUpsertTimetable error:", error);
     return res.status(500).json({ error: error.message });
   }
@@ -4484,6 +4992,12 @@ const getAllTimetables = async (req, res) => {
       timetable,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching timetable:",
+      error
+    );
     console.error("Error fetching timetable:", error);
     res.status(500).json({ error: "Failed to fetch timetable" });
   }
@@ -4514,6 +5028,12 @@ const getTimetableById = async (req, res) => {
     }
     res.json(timetableEntry);
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching timetable entry:",
+      error
+    );
     console.error("Error fetching timetable entry:", error);
     res.status(500).json({ error: "Failed to fetch timetable entry" });
   }
@@ -4534,6 +5054,12 @@ const deleteTimetableEntry = async (req, res) => {
     await timetableEntry.destroy();
     res.json({ message: "Timetable deleted" });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Delete Timetable Entry Error:",
+      error
+    );
     console.error("Delete Timetable Entry Error:", error);
     res.status(500).json({ error: "Failed to delete timetable entry" });
   }
@@ -4587,6 +5113,12 @@ const getTimetablesWithClassId = async (req, res) => {
       timetables,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching timetable:",
+      error
+    );
     console.error("Error fetching timetable:", error);
     res.status(500).json({ error: "Failed to fetch timetable" });
   }
@@ -4670,6 +5202,12 @@ const getTimetablesConflicts = async (req, res) => {
       conflicts,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching timetable:",
+      error
+    );
     console.error("Error fetching timetable:", error);
     res.status(500).json({ error: "Failed to fetch timetable" });
   }
@@ -4695,6 +5233,12 @@ const getTimetableByTeacherId = async (req, res) => {
     });
     res.json(timetables);
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching timetable:",
+      error
+    );
     console.error("Error fetching timetable:", error);
     res.status(500).json({ error: "Failed to fetch timetable" });
   }
@@ -4832,6 +5376,12 @@ const getAllTeacherLeaveRequestsforSubstitution = async (req, res) => {
       leaveRequests: leaveRequestsWithExtraData,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Fetch All Teacher Leave Requests Error:",
+      error
+    );
     console.error("Fetch All Teacher Leave Requests Error:", error);
     res.status(500).json({ error: "Failed to fetch teacher leave requests" });
   }
@@ -4972,6 +5522,12 @@ const getPeriodsForleaveRequestedTeacher = async (req, res) => {
       timetables: timetablesWithSubs,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching periods with substitutions:",
+      error
+    );
     console.error("Error fetching periods with substitutions:", error);
     res.status(500).json({ error: "Failed to fetch periods for teacher" });
   }
@@ -5003,7 +5559,6 @@ const getFreeStaffForPeriod = async (req, res) => {
     if (subject_id) {
       whereClause["$Staff.StaffSubjects.subject_id$"] = subject_id;
     }
-    // 1. Get all staff in the school
     const allStaff = await User.findAll({
       where: whereClause,
       attributes: ["id", "name", "dp"],
@@ -5062,7 +5617,6 @@ const createSubstitution = async (req, res) => {
     if (!timetable) {
       return res.status(404).json({ error: "Timetable not found" });
     }
-    // i want check the sub_staff_id is allready assigned to other class at the same period
     const existingTimetable = await Timetable.findOne({
       where: {
         staff_id: sub_staff_id,
@@ -5078,7 +5632,6 @@ const createSubstitution = async (req, res) => {
       });
     }
 
-    // Check for existing substitution
     const existingSub = await TimetableSubstitution.findOne({
       where: {
         school_id,
@@ -5103,6 +5656,7 @@ const createSubstitution = async (req, res) => {
 
     res.status(201).json(substitution);
   } catch (err) {
+    console.error("Error creating substitution:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -5140,7 +5694,6 @@ const bulkCreateSubstitution = async (req, res) => {
         continue;
       }
 
-      // Check if substitute is already assigned in same period
       const existingTimetable = await Timetable.findOne({
         where: {
           staff_id: sub_staff_id,
@@ -5158,7 +5711,6 @@ const bulkCreateSubstitution = async (req, res) => {
         continue;
       }
 
-      // Check if substitution already exists
       const existingSub = await TimetableSubstitution.findOne({
         where: {
           school_id,
@@ -5195,6 +5747,7 @@ const bulkCreateSubstitution = async (req, res) => {
       failed: errors,
     });
   } catch (err) {
+    console.error("Error bulk creating substitutions:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -5244,6 +5797,7 @@ const getAllSubstitutions = async (req, res) => {
       subs: subs,
     });
   } catch (err) {
+    console.error("Error fetching substitutions:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -5274,6 +5828,7 @@ const getSubstitutionById = async (req, res) => {
     }
     res.json(substitution);
   } catch (err) {
+    console.error("Error fetching substitution:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -5294,6 +5849,7 @@ const updateSubstitution = async (req, res) => {
     );
     res.json({ message: "Substitution updated", updated });
   } catch (err) {
+    console.error("Error updating substitution:", err);
     res.status(500).json({ error: err.message });
     console.log(err);
   }
@@ -5305,6 +5861,7 @@ const deleteSubstitution = async (req, res) => {
     await TimetableSubstitution.destroy({ where: { id } });
     res.json({ message: "Substitution deleted" });
   } catch (err) {
+    console.error("Error deleting substitution:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -5315,13 +5872,11 @@ const getSchoolAttendanceSummary = async (req, res) => {
       where: { id: school_id },
       attributes: ["attendance_count"],
     });
-    //default today
     const date = req.query.date || new Date().toISOString().split("T")[0];
     if (!school_id || !date) {
       return res.status(400).json({ error: "school_id and date are required" });
     }
 
-    // Fetch attendance + markings
     const records = await Attendance.findAll({
       where: { school_id, date, trash: false },
       attributes: ["id", "class_id", "period", "date"],
@@ -5341,11 +5896,9 @@ const getSchoolAttendanceSummary = async (req, res) => {
       ],
     });
 
-    // Group by class_id
     const classSummary = {};
     for (const rec of records) {
       const classId = rec.class_id;
-      //i want total studnet count the class id used student table
       const studentCount = await Student.count({
         where: {
           class_id: classId,
@@ -5377,6 +5930,12 @@ const getSchoolAttendanceSummary = async (req, res) => {
       classSummary: Object.values(classSummary),
     });
   } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error in getSchoolAttendanceSummary:",
+      err
+    );
     console.error("Error in getSchoolAttendanceSummary:", err);
     res.status(500).json({ error: err.message });
   }
@@ -5418,6 +5977,12 @@ const getNavigationBarCounts = async (req, res) => {
       studentLeaveRequestCount,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching pending leave request counts by role:",
+      error
+    );
     console.error(
       "Error fetching pending leave request counts by role:",
       error
@@ -5453,6 +6018,7 @@ const getInternalmarkById = async (req, res) => {
     }
     res.status(200).json(internalmark);
   } catch (err) {
+    console.error("Error in getInternalmarkById:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -5479,7 +6045,6 @@ const getHomeworkById = async (req, res) => {
 
     if (!homework) return res.status(404).json({ error: "Not found" });
 
-    // Initialize counts for each point level (1–5)
     const pointCounts = {
       1: 0,
       2: 0,
@@ -5509,6 +6074,7 @@ const getHomeworkById = async (req, res) => {
 
     res.status(200).json(response);
   } catch (err) {
+    console.error("Error in getHomeworkById:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -5536,7 +6102,6 @@ const getAttendanceById = async (req, res) => {
 
     if (!attendance) return res.status(404).json({ error: "Not found" });
 
-    // Count attendance status
     const counts = {
       present: 0,
       absent: 0,
@@ -5544,7 +6109,7 @@ const getAttendanceById = async (req, res) => {
       leave: 0,
     };
 
-    const marked = attendance.AttendanceMarkeds || []; // Sequelize association array
+    const marked = attendance.AttendanceMarkeds || [];
 
     marked.forEach((record) => {
       const status = record.status?.toLowerCase();
@@ -5565,6 +6130,7 @@ const getAttendanceById = async (req, res) => {
 
     res.status(200).json(response);
   } catch (err) {
+    console.error("Error in getAttendanceById:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -5575,7 +6141,6 @@ const createStaffAttendance = async (req, res) => {
     const { staff_id, date, status, check_in_time, check_out_time, remarks } =
       req.body;
 
-    // Check if attendance already exists
     const existing = await StaffAttendance.findOne({
       where: { school_id, staff_id, date, trash: false },
     });
@@ -5585,7 +6150,6 @@ const createStaffAttendance = async (req, res) => {
         .status(400)
         .json({ message: "Attendance already exists for this date" });
 
-    // Calculate total hours if both check-in and check-out provided
     let total_hours = null;
     if (check_in_time && check_out_time) {
       const diff =
@@ -5615,6 +6179,7 @@ const createStaffAttendance = async (req, res) => {
     });
   } catch (error) {
     console.error("Error adding attendance:", error);
+    console.error("Error adding attendance:", error);
     res.status(500).json({ error: "Failed to add attendance" });
   }
 };
@@ -5629,7 +6194,6 @@ const updateStaffAttendance = async (req, res) => {
     if (!attendance)
       return res.status(404).json({ message: "Attendance not found" });
 
-    // Calculate total hours if both check-in and check-out provided
     let total_hours = attendance.total_hours;
     if (check_in_time && check_out_time) {
       const diff =
@@ -5655,6 +6219,12 @@ const updateStaffAttendance = async (req, res) => {
       attendance,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error updating attendance:",
+      error
+    );
     console.error("Error updating attendance:", error);
     res.status(500).json({ error: "Failed to update attendance" });
   }
@@ -5706,6 +6276,12 @@ const getAllStaffAttendance = async (req, res) => {
       attendance: records,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching attendance:",
+      error
+    );
     console.error("Error fetching attendance:", error);
     res.status(500).json({ error: "Failed to fetch attendance" });
   }
@@ -5721,6 +6297,12 @@ const getStaffAttendanceById = async (req, res) => {
       return res.status(404).json({ message: "Attendance not found" });
     res.status(200).json(attendance);
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching attendance:",
+      error
+    );
     console.error("Error fetching attendance:", error);
     res.status(500).json({ error: "Failed to fetch attendance" });
   }
@@ -5761,6 +6343,12 @@ const getStaffAttendanceByDate = async (req, res) => {
       attendance: staffList,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching staff attendance by date:",
+      error
+    );
     console.error("Error fetching staff attendance by date:", error);
     res.status(500).json({ error: "Failed to fetch staff attendance by date" });
   }
@@ -5784,10 +6372,8 @@ const bulkCreateStaffAttendance = async (req, res) => {
           ? new Date().toISOString()
           : null;
       const check_out_time = record.check_out_time || null;
-      // Skip if essential fields missing
       if (!staff_id || !date) continue;
 
-      // Check for existing attendance record
       const existing = await StaffAttendance.findOne({
         where: { school_id, staff_id, date, trash: false },
       });
@@ -5801,7 +6387,6 @@ const bulkCreateStaffAttendance = async (req, res) => {
         continue;
       }
 
-      // Calculate total hours
       let total_hours = null;
       if (check_in_time && check_out_time) {
         const diff =
@@ -5839,6 +6424,12 @@ const bulkCreateStaffAttendance = async (req, res) => {
       results: processedRecords,
     });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Bulk attendance creation error:",
+      error
+    );
     console.error("Bulk attendance creation error:", error);
     res.status(500).json({ error: "Failed to process bulk attendance" });
   }
@@ -5855,6 +6446,12 @@ const deleteStaffAttendance = async (req, res) => {
     await attendance.destroy();
     res.status(200).json({ message: "Attendance deleted successfully" });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error deleting attendance:",
+      error
+    );
     console.error("Error deleting attendance:", error);
     res.status(500).json({ error: "Failed to delete attendance" });
   }

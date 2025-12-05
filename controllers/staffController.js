@@ -88,6 +88,12 @@ const createExamWithMarks = async (req, res) => {
       .status(201)
       .json({ message: "Internal internal and marks created", internal });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error creating internal mark and marks:",
+      error
+    );
     console.error("Error creating internal mark and marks:", error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -116,6 +122,12 @@ const getInternalMarksById = async (req, res) => {
     }
     res.status(200).json(internal);
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      " Error fetching internal mark:",
+      error
+    );
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -152,6 +164,7 @@ const getAllmarks = async (req, res) => {
     });
     // res.status(200).json(marks);
   } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching marks:", err);
     console.error("Error fetching marks:", err);
     res.status(500).json({ error: "Failed to fetch marks" });
   }
@@ -165,6 +178,13 @@ const updateExam = async (req, res) => {
     });
     res.status(200).json({ message: "Exam detail updated", updated });
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error updating exam detail:",
+      err
+    );
+    console.log(err);
     res.status(500).json({ error: "Update failed" });
   }
 };
@@ -177,6 +197,12 @@ const updateMark = async (req, res) => {
     });
     res.status(200).json({ message: "mark updated", updated });
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error updating mark detail:",
+      err
+    );
     res.status(500).json({ error: "Update failed" });
   }
 };
@@ -187,6 +213,7 @@ const deleteExam = async (req, res) => {
     await InternalMark.update({ trash: true }, { where: { id: id } });
     res.status(200).json({ message: "Exam soft-deleted" });
   } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error deleting exam:", err);
     res.status(500).json({ error: "Delete failed" });
   }
 };
@@ -220,6 +247,7 @@ const bulkUpdateMarks = async (req, res) => {
 
     res.status(200).json({ message: "Marks updated successfully" });
   } catch (error) {
+    logger.error("userId:", req.user.user_id, "Bulk update failed:", error);
     console.error("Bulk update failed:", error);
     res.status(500).json({ error: "Bulk update failed" });
   }
@@ -260,6 +288,7 @@ const getInternalMarkByRecordedBy = async (req, res) => {
       exams,
     });
   } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching exams:", err);
     console.error("Error fetching exams:", err);
     res.status(500).json({ error: "Failed to fetch exams" });
   }
@@ -343,6 +372,7 @@ const createHomeworkWithAssignments = async (req, res) => {
       homework,
     });
   } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error creating homework:", err);
     console.error("Error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -385,6 +415,7 @@ const getAllHomework = async (req, res) => {
       homework,
     });
   } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching homework:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -419,6 +450,7 @@ const getHomeworkById = async (req, res) => {
     if (!homework) return res.status(404).json({ error: "Not found" });
     res.status(200).json(homework);
   } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching homework:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -464,6 +496,7 @@ const updateHomework = async (req, res) => {
     });
     res.status(200).json({ message: "Updated successfully d", homework });
   } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error updating homework:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -486,6 +519,12 @@ const updateHomeworkAssignment = async (req, res) => {
     });
     res.status(200).json({ message: "Updated successfully", assignment });
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error updating homework assignment:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -503,6 +542,7 @@ const deleteHomework = async (req, res) => {
       message: `Deleted successfully,'description : ${homework.description}'.`,
     });
   } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error deleting homework:", err);
     res.status(500).json({ error: "Delete failed" });
   }
 };
@@ -520,6 +560,12 @@ const permanentDeleteHomework = async (req, res) => {
 
     res.status(200).json({ message: "Deleted successfully" });
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error permanently deleting homework:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -535,6 +581,12 @@ const restoreHomework = async (req, res) => {
       message: `restored 'description : ${homework.description}'`,
     });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error restoring homework:",
+      error
+    );
     res.status(500).json({ error: error.message });
   }
 };
@@ -569,6 +621,12 @@ const bulkUpdateHomeworkAssignments = async (req, res) => {
       .status(200)
       .json({ message: "Homework assignments updated successfully" });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error bulk updating homework assignments:",
+      error
+    );
     console.error("Bulk update failed:", error);
     res.status(500).json({ error: "Bulk update failed" });
   }
@@ -587,6 +645,12 @@ const getHomeworkAssignmentById = async (req, res) => {
     if (!assignment) return res.status(404).json({ error: "Not found" });
     res.status(200).json(assignment);
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error getting homework assignment:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -646,6 +710,13 @@ const getHomeworkByTeacher = async (req, res) => {
       groupedHomework,
     });
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error getting homework by teacher:",
+      err
+    );
+
     res.status(500).json({ error: err.message });
   }
 };
@@ -783,6 +854,7 @@ const createAttendance = async (req, res) => {
       // notification_details: notificationResults,
     });
   } catch (err) {
+    logger.error("userId:", req.user.user_id, "Create Attendance Error:", err);
     console.error("Create Attendance Error:", err);
     res.status(500).json({ error: "Failed to create/update attendance" });
   }
@@ -826,6 +898,7 @@ const getAllAttendance = async (req, res) => {
       attendance,
     });
   } catch (err) {
+    logger.error("userId:", req.user.user_id, "Get All Attendance Error:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -863,6 +936,12 @@ const getAttendanceById = async (req, res) => {
     }
     res.json(attendance);
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Get Attendance By Id Error:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -892,6 +971,7 @@ const updateAttendance = async (req, res) => {
     await Attendance.update({ subject_id, period, date }, { where: { id } });
     res.json({ message: "Updated", attendance });
   } catch (err) {
+    logger.error("userId:", req.user.user_id, "Update Attendance Error:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -902,6 +982,12 @@ const updateAttendanceMarkedById = async (req, res) => {
     await AttendanceMarked.update({ status, remarks }, { where: { id } });
     res.json({ message: "Updated" });
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      " Update Attendance Marked Error:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -936,6 +1022,12 @@ const bulkUpdateAttendanceById = async (req, res) => {
 
     res.status(200).json({ message: "Attendance marked updated successfully" });
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Bulk Update Attendance Marked Error:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -1006,6 +1098,12 @@ const getAttendanceByclassIdAndDate = async (req, res) => {
       });
     }
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Get Attendance By Class Id And Date Error:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -1078,6 +1176,12 @@ const getAllClassesAttendanceStatus = async (req, res) => {
 
     res.json({ status: "checked", attendance: Object.values(grouped) });
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Get All Classes Attendance Status Error:",
+      err
+    );
     console.error("Error fetching attendance:", err);
     res.status(500).json({ error: err.message });
   }
@@ -1095,6 +1199,12 @@ const deleteAttendance = async (req, res) => {
       message: `Deleted successfully.`,
     });
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error deleting attendance:",
+      err
+    );
     res.status(500).json({ error: "Delete failed" });
   }
 };
@@ -1111,6 +1221,12 @@ const restoreAttendance = async (req, res) => {
       message: `restored successfully.`,
     });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error restoring attendance:",
+      error
+    );
     res.status(500).json({ error: error.message });
   }
 };
@@ -1123,6 +1239,12 @@ const permanentDeleteAttendance = async (req, res) => {
     await Attendance.destroy({ where: { id } });
     res.json({ message: "Peremently Deleted" });
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error deleting attendance:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -1163,6 +1285,12 @@ const getTrashedAttendanceByTeacher = async (req, res) => {
       attendance,
     });
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error getting trashed attendance:",
+      err
+    );
     res.status(500).json({ error: err.message });
   }
 };
@@ -1206,6 +1334,7 @@ const getAttendanceByTeacher = async (req, res) => {
       attendance,
     });
   } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error getting attendance:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -1275,6 +1404,7 @@ const getAllDuties = async (req, res) => {
       duties: groupedDuties,
     });
   } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error in getAllDuties →", err);
     res.status(500).json({ error: "Failed to fetch duties" });
   }
 };
@@ -1307,6 +1437,12 @@ const getAssignedDutyById = async (req, res) => {
 
     res.json(duty);
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error in getAssignedDutyById :",
+      err
+    );
     res.status(500).json({ error: "Failed to fetch duty" });
   }
 };
@@ -1336,6 +1472,7 @@ const updateAssignedDuty = async (req, res) => {
     });
     res.json({ message: "Updated", updatedDuty });
   } catch (err) {
+    logger.error("userId:", req.user.user_id, "updateAssignedDuty →", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -1424,6 +1561,12 @@ const createAchievementWithStudents = async (req, res) => {
       achievement,
     });
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "createAchievementWithStudents :",
+      err
+    );
     console.error("Error:", err);
     res.status(500).json({ error: "Server error" });
   }
@@ -1464,6 +1607,12 @@ const getAllAchievementsByStaffId = async (req, res) => {
       achievements,
     });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "getAllAchievementsByStaffId →",
+      error
+    );
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -1496,6 +1645,7 @@ const getAchievementById = async (req, res) => {
     }
     res.status(200).json(achievement);
   } catch (error) {
+    logger.error("userId:", req.user.user_id, "getAchievementById :", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -1528,6 +1678,12 @@ const updateAchievement = async (req, res) => {
       .json({ message: "Achievement updated successfully", achievement });
   } catch (error) {
     console.error("Error:", error);
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error in updateAchievement:",
+      error
+    );
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -1536,6 +1692,12 @@ const deleteAchievement = async (req, res) => {
     await Achievement.update({ trash: true }, { where: { id: req.params.id } });
     res.status(200).json({ message: "Achievement trashed successfully" });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error in deleteAchievement:",
+      error
+    );
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -1547,6 +1709,12 @@ const restoreAchievement = async (req, res) => {
     );
     res.status(200).json({ message: "Achievement restored successfully" });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error in restoreAchievement:",
+      error
+    );
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -1596,6 +1764,12 @@ const updateStudentAchievement = async (req, res) => {
       StudentAchievementData,
     });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error in updateStudentAchievement:",
+      error
+    );
     console.error("Error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -1648,6 +1822,12 @@ const createLeaveRequest = async (req, res) => {
     });
     res.status(201).json(data);
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error in createLeaveRequest:",
+      error
+    );
     console.error("Create Error:", error);
     res.status(500).json({ error: "Failed to create leave request" });
   }
@@ -1697,6 +1877,12 @@ const getAllLeaveRequests = async (req, res) => {
       leaves,
     });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error in getAllLeaveRequests:",
+      error
+    );
     console.error("Fetch Error:", error);
     res.status(500).json({ error: "Failed to fetch leave requests" });
   }
@@ -1719,6 +1905,12 @@ const getLeaveRequestById = async (req, res) => {
     if (!data) return res.status(404).json({ error: "Not found" });
     res.status(200).json(data);
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching leave request:",
+      error
+    );
     console.error("Fetch One Error:", error);
     res.status(500).json({ error: "Failed to fetch leave request" });
   }
@@ -1770,6 +1962,12 @@ const updateLeaveRequest = async (req, res) => {
 
     res.status(200).json(data);
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error in updateLeaveRequest:",
+      error
+    );
     console.error("Update Error:", error);
     res.status(500).json({ error: "Failed to update leave request" });
   }
@@ -1794,6 +1992,12 @@ const deleteLeaveRequest = async (req, res) => {
     await leave.update({ trash: true });
     res.status(200).json("Successfully deleted");
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error deleting leave request:",
+      error
+    );
     console.error("Delete Error:", error);
     res.status(500).json({ error: "Failed to delete leave request" });
   }
@@ -1811,6 +2015,12 @@ const restoreLeaveRequest = async (req, res) => {
     await leave.update({ trash: false });
     res.status(200).json("Successfully restored");
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error restoring leave request:",
+      error
+    );
     console.error("Restore Error:", error);
     res.status(500).json({ error: "Failed to restore leave request" });
   }
@@ -1922,6 +2132,12 @@ const leaveRequestPermission = async (req, res) => {
       message: `Leave request ${status} successfully`,
     });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error approving leave request:",
+      error
+    );
     console.error("Approve Error:", error);
     res.status(500).json({ error: "Failed to approve leave request" });
   }
@@ -2003,6 +2219,12 @@ const getStudentLeaveRequestsForClassTeacher = async (req, res) => {
       leaveRequests: groupedLeaveRequests,
     });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching leave requests:",
+      error
+    );
     console.error("Error fetching leave requests:", error);
     res.status(500).json({ error: "Failed to fetch leave requests" });
   }
@@ -2061,6 +2283,13 @@ const createParentNote = async (req, res) => {
 
     res.status(201).json(note);
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error creating parent note:",
+      err
+    );
+    console.error("Error creating parent note:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -2098,6 +2327,12 @@ const getAllOwnCreatedParentNotes = async (req, res) => {
       notes,
     });
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching parent notes:",
+      err
+    );
     console.error("Error fetching parent notes:", err);
     res.status(500).json({ error: "Failed to fetch parent notes" });
   }
@@ -2118,6 +2353,12 @@ const getParentNoteById = async (req, res) => {
 
     res.status(200).json(note);
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching parent note:",
+      err
+    );
     console.error("Error fetching parent note:", err);
     res.status(500).json({ error: "Failed to fetch parent note" });
   }
@@ -2155,6 +2396,12 @@ const updateParentNote = async (req, res) => {
 
     res.status(200).json(note);
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error updating parent note:",
+      err
+    );
     console.error("Error updating parent note:", err);
     res.status(500).json({ error: "Failed to update parent note" });
   }
@@ -2176,6 +2423,12 @@ const deleteParentNote = async (req, res) => {
     await note.update({ trash: true });
     res.status(200).json({ message: "Parent note deleted successfully" });
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error deleting parent note:",
+      err
+    );
     console.error("Error deleting parent note:", err);
     res.status(500).json({ error: "Failed to delete parent note" });
   }
@@ -2206,6 +2459,12 @@ const getLatestNotices = async (req, res) => {
       notices,
     });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching latest notices:",
+      error
+    );
     console.error("Error fetching notices:", error);
     res.status(500).json({ error: "Failed to fetch notices" });
   }
@@ -2270,6 +2529,12 @@ const getTodayTimetableForStaff = async (req, res) => {
       substitutions,
     });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "getTodayTimetableForStaff error:",
+      error
+    );
     console.error("getTodayTimetableForStaff error:", error);
     return res.status(500).json({ error: error.message });
   }
@@ -2297,6 +2562,12 @@ const getAllDaysTimetableForStaff = async (req, res) => {
       timetable,
     });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "getAllDaysTimetableForStaff error:",
+      error
+    );
     console.error("getAllDaysTimetableForStaff error:", error);
     return res.status(500).json({ error: error.message });
   }
@@ -2340,6 +2611,12 @@ const getNavigationBarCounts = async (req, res) => {
       unreadChatCount: unreadChatCount.length,
     });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching pending leave request counts by role:",
+      error
+    );
     console.error(
       "Error fetching pending leave request counts by role:",
       error
@@ -2413,6 +2690,12 @@ const markSelfAttendance = async (req, res) => {
       distance: `${distance} meters`,
     });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error marking attendance:",
+      error
+    );
     console.error("Error marking attendance:", error);
     res.status(500).json({ error: "Failed to mark attendance" });
   }
@@ -2481,6 +2764,12 @@ const markCheckOutSelfAttendance = async (req, res) => {
       attendance: existing,
     });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error marking check-out attendance:",
+      error
+    );
     console.error("Error marking check-out attendance:", error);
     res.status(500).json({ error: "Failed to mark check-out attendance" });
   }
@@ -2508,6 +2797,12 @@ const todayAttendanceStatus = async (req, res) => {
       attendanceRecords,
     });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching today's attendance status:",
+      error
+    );
     console.error("Error fetching today's attendance status:", error);
     res
       .status(500)
@@ -2534,6 +2829,12 @@ const updateProfileDetails = async (req, res) => {
     });
     res.status(200).json({ message: "Profile details updated successfully" });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error updating profile details:",
+      error
+    );
     console.error("Error updating profile details:", error);
     res.status(500).json({ error: "Failed to update profile details" });
   }
@@ -2555,6 +2856,12 @@ const getProfileDetails = async (req, res) => {
 
     res.status(200).json({ staff, user });
   } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching profile details:",
+      error
+    );
     console.error("Error fetching profile details:", error);
     res.status(500).json({ error: "Failed to fetch profile details" });
   }
@@ -2594,6 +2901,8 @@ const getSubjects = async (req, res) => {
       subjects,
     });
   } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching subjects:", err);
+    console.error("Error fetching subjects:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -2629,6 +2938,8 @@ const getStaffSubjects = async (req, res) => {
       subjects,
     });
   } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching subjects:", err);
+    console.error("Error fetching subjects:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -2640,6 +2951,14 @@ const getMyPermissions = async (req, res) => {
     });
     res.status(200).json(permissions);
   } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching permissions:",
+      err
+    );
+    console.error("Error fetching permissions:", err);
+
     res.status(500).json({ error: err.message });
   }
 };

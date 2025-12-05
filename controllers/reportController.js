@@ -133,6 +133,7 @@ const getInvoiceReport = async (req, res) => {
       report,
     });
   } catch (error) {
+    logger.error("Error generating invoice report:", error);
     console.error("Error generating invoice report:", error);
     res.status(500).json({ error: "Failed to generate invoice report" });
   }
@@ -239,6 +240,7 @@ const getPaymentReport = async (req, res) => {
       report,
     });
   } catch (error) {
+    logger.error("Error generating payment report:", error);
     console.error("Error generating payment report:", error);
     res.status(500).json({ error: "Failed to generate payment report" });
   }
@@ -345,6 +347,7 @@ const getAttendanceReport = async (req, res) => {
       reports: formattedData,
     });
   } catch (err) {
+    logger.error("Error generating attendance report:", err);
     console.error(err);
     res.status(500).json({ error: err.message });
   }
@@ -459,6 +462,7 @@ const getHomeworkReport = async (req, res) => {
       report: formattedReport,
     });
   } catch (error) {
+    logger.error("Error generating homework report:", error);
     console.error("Error generating homework report:", error);
     res.status(500).json({ error: "Failed to generate homework report" });
   }
@@ -661,6 +665,7 @@ const getStudentReportByStudentId = async (req, res) => {
       internalMarks,
     });
   } catch (error) {
+    logger.error("Error generating student report:", error);
     console.error("Error generating student report:", error);
     res.status(500).json({ error: "Failed to generate student report" });
   }
@@ -773,6 +778,7 @@ const getInternalmarksReport = async (req, res) => {
       internalMarksReport: enrichedData,
     });
   } catch (error) {
+    logger.error("Error fetching internal marks:", error);
     console.error("Error fetching internal marks:", error);
     res.status(500).json({ error: "Failed to fetch internal marks" });
   }

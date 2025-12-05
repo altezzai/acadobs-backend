@@ -2,37 +2,64 @@ const sharp = require("sharp");
 const path = require("path");
 const fs = require("fs");
 
+const jpeg = require("jpeg-js");
+
+const repairJPEG = (buffer) => {
+  try {
+    const raw = jpeg.decode(buffer, {
+      useTArray: true,
+      tolerantDecoding: true,
+    }); // tolerant decoding = auto repair
+    const repaired = jpeg.encode(raw, 80); // re-encode as clean JPEG
+    return repaired.data;
+  } catch (err) {
+    console.log("JPEG repair failed:", err.message);
+    return buffer; // fallback to original
+  }
+};
 const compressAndSaveFile = async (file, uploadPath) => {
   try {
     const date = Date.now() + "-";
     let processedFileName = `${date}${file.originalname}`;
     let processedFile = file.buffer;
 
-    const ext = path.extname(file.originalname).toLowerCase();
-
     if (file.mimetype.startsWith("image")) {
-      // Compress image
+      // 🔥 REPAIR BROKEN JPEG BEFORE SHARP
+      if (file.mimetype === "image/jpeg" || file.mimetype === "image/jpg") {
+        processedFile = repairJPEG(file.buffer);
+      }
+
       processedFileName = `${date}${file.originalname.split(".")[0]}.jpg`;
-      processedFile = await sharp(file.buffer).jpeg({ quality: 30 }).toBuffer();
+
+      // 🔥 SAFE CONVERSION TO PREVENT CRASH
+      processedFile = await sharp(processedFile)
+        .rotate()
+        .ensureAlpha()
+        .toFormat("jpeg", { quality: 30 })
+        .toBuffer();
     }
 
-    const filePath = path.join(uploadPath, processedFileName);
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
 
+    const filePath = path.join(uploadPath, processedFileName);
     fs.writeFileSync(filePath, processedFile);
 
     return processedFileName;
   } catch (error) {
     console.error("Error processing file:", error);
-    throw new Error("Error processing file");
+    throw new Error("Error processing file: " + error.message);
   }
 };
 const compressAndSaveMultiFile = async (file, uploadPath) => {
   const ext = path.extname(file.originalname);
   const fileName = `${Date.now()}_${file.originalname}`;
-  const fullPath = path.join(uploadPath, fileName);
+  let fullPath = path.join(uploadPath, fileName);
+
+  if (file.mimetype === "image/jpeg" || file.mimetype === "image/jpg") {
+    fullPath = repairJPEG(file.buffer);
+  }
 
   // Ensure upload folder exists
   if (!fs.existsSync(uploadPath)) {
@@ -67,7 +94,10 @@ const deletefilewithfoldername = async (filename, foldername) => {
 };
 const compressImage = async (filePath, outputDir) => {
   const filename = path.basename(filePath);
-  const compressedPath = path.join(outputDir, `compressed-${filename}`);
+  let compressedPath = path.join(outputDir, `compressed-${filename}`);
+  if (file.mimetype === "image/jpeg" || file.mimetype === "image/jpg") {
+    compressedPath = repairJPEG(file.buffer);
+  }
 
   await sharp(filePath)
     .resize({ width: 1080 }) // Resize width max to 1080px
