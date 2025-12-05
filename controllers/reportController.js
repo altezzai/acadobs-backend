@@ -149,6 +149,8 @@ const getPaymentReport = async (req, res) => {
       payment_type,
       student_id,
     } = req.query;
+    const start_date = req.query.start_date || null;
+    const end_date = req.query.end_date || null;
     const searchQuery = req.query.q || "";
     let { page = 1, limit = 10 } = req.query;
 
@@ -167,12 +169,6 @@ const getPaymentReport = async (req, res) => {
       trash: false,
       school_id,
     };
-    // if (searchQuery) {
-    //   whereClause[Op.or] = [
-    //     { payment_type: { [Op.like]: `%${searchQuery}%` } },
-    //     { transaction_id: { [Op.like]: `%${searchQuery}%` } },
-    //   ];
-    // }
     if (student_id) {
       whereClause.student_id = student_id;
     }
@@ -181,6 +177,22 @@ const getPaymentReport = async (req, res) => {
     }
     if (payment_type) {
       whereClause.payment_type = payment_type;
+    }
+    if (start_date) {
+      const startDate = new Date(start_date);
+      startDate.setHours(0, 0, 0, 0);
+      whereClause.createdAt = {
+        ...whereClause.createdAt,
+        [Op.gte]: new Date(startDate),
+      };
+    }
+    if (end_date) {
+      const endDate = new Date(end_date);
+      endDate.setHours(23, 59, 59, 999);
+      whereClause.createdAt = {
+        ...whereClause.createdAt,
+        [Op.lte]: new Date(endDate),
+      };
     }
     const totalCount = await Payment.count({ where: whereClause });
     const report = await Payment.findAll({
@@ -237,6 +249,8 @@ const getAttendanceReport = async (req, res) => {
     const date = req.query.date || "";
     const class_id = req.query.class_id || "";
     const teacher_id = req.query.teacher_id || "";
+    const start_date = req.query.start_date || "";
+    const end_date = req.query.end_date || "";
 
     const download = req.query.download || "";
     let { page = 1, limit = 10 } = req.query;
@@ -254,6 +268,22 @@ const getAttendanceReport = async (req, res) => {
     if (date) whereClause.date = date;
     if (class_id) whereClause.class_id = class_id;
     if (teacher_id) whereClause.teacher_id = teacher_id;
+    if (start_date) {
+      const startDate = new Date(start_date);
+      startDate.setHours(0, 0, 0, 0);
+      whereClause.createdAt = {
+        ...whereClause.createdAt,
+        [Op.gte]: new Date(startDate),
+      };
+    }
+    if (end_date) {
+      const endDate = new Date(end_date);
+      endDate.setHours(23, 59, 59, 999);
+      whereClause.createdAt = {
+        ...whereClause.createdAt,
+        [Op.lte]: new Date(endDate),
+      };
+    }
     const totalCount = await Attendance.count({ where: whereClause });
     const attendance = await Attendance.findAll({
       offset,
@@ -326,6 +356,8 @@ const getHomeworkReport = async (req, res) => {
     const teacher_id = req.query.teacher_id || "";
     const subject_id = req.query.subject_id || "";
     const searchQuery = req.query.q || "";
+    const start_date = req.query.start_date || "";
+    const end_date = req.query.end_date || "";
 
     const download = req.query.download || "";
     let { page = 1, limit = 10 } = req.query;
@@ -357,6 +389,22 @@ const getHomeworkReport = async (req, res) => {
     }
     if (teacher_id) {
       whereClause.teacher_id = teacher_id;
+    }
+    if (start_date) {
+      const startDate = new Date(start_date);
+      startDate.setHours(0, 0, 0, 0);
+      whereClause.createdAt = {
+        ...whereClause.createdAt,
+        [Op.gte]: new Date(startDate),
+      };
+    }
+    if (end_date) {
+      const endDate = new Date(end_date);
+      endDate.setHours(23, 59, 59, 999);
+      whereClause.createdAt = {
+        ...whereClause.createdAt,
+        [Op.lte]: new Date(endDate),
+      };
     }
     const totalCount = await Homework.count({ where: whereClause });
     const homeworks = await Homework.findAll({
@@ -657,10 +705,20 @@ const getInternalmarksReport = async (req, res) => {
       ];
     }
     if (start_date) {
-      whereClause.date = { [Op.gte]: start_date };
+      const startDate = new Date(start_date);
+      startDate.setHours(0, 0, 0, 0);
+      whereClause.date = {
+        ...whereClause.date,
+        [Op.gte]: new Date(startDate),
+      };
     }
     if (end_date) {
-      whereClause.date = { [Op.lte]: end_date };
+      const endDate = new Date(end_date);
+      endDate.setHours(23, 59, 59, 999);
+      whereClause.date = {
+        ...whereClause.date,
+        [Op.lte]: new Date(endDate),
+      };
     }
     const count = await InternalMark.count({ where: whereClause });
     const internalMarks = await InternalMark.findAll({

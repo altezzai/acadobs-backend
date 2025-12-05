@@ -37,7 +37,7 @@ const Homework = require("../models/homework");
 const HomeworkAssignment = require("../models/homeworkassignment");
 const StaffAttendance = require("../models/staff_attendance");
 const Syllabus = require("../models/syllabus");
-const { School } = require("../models");
+// const { School } = require("../models");
 const { schoolSequelize } = require("../config/connection");
 
 // CREATE
@@ -2747,10 +2747,14 @@ const createPayment = async (req, res) => {
     ) {
       return res.status(400).json({ error: "All fields are required" });
     }
+    //check if transaction_id already unique or null is
     const existingTransaction_id = await Payment.findOne({
       where: { transaction_id },
     });
-    if (existingTransaction_id) {
+    if (
+      existingTransaction_id &&
+      existingTransaction_id.transaction_id !== ""
+    ) {
       return res.status(400).json({ error: "Transaction ID already exists" });
     }
     const existingPayment = await Payment.findOne({
@@ -2820,11 +2824,36 @@ const getAllPayments = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
-    const date = req.query.date || "";
+    const payment_type = req.query.payment_type || "";
+    const payment_method = req.query.payment_method || "";
+    const payment_status = req.query.payment_status || "";
+    const start_date = req.query.start_date || null;
+    const end_date = req.query.end_date || null;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    const whereClause = {
+    if (
+      payment_type &&
+      ![
+        "tuition",
+        "admission",
+        "exam",
+        "transport",
+        "hostel",
+        "lab",
+        "library",
+        "activity",
+        "fine",
+        "donation",
+        "event",
+        "excursion",
+        "other",
+      ].includes(payment_type)
+    )
+      return res
+        .status(400)
+        .json({ error: "Invalid payment type" }, { status: 400 });
+    let whereClause = {
       trash: false,
       school_id: school_id,
     };
@@ -2834,8 +2863,31 @@ const getAllPayments = async (req, res) => {
         { amount: { [Op.like]: `%${searchQuery}%` } },
       ];
     }
-    if (date) {
-      whereClause.payment_date = date;
+
+    if (payment_type) {
+      whereClause.payment_type = payment_type;
+    }
+    if (payment_method) {
+      whereClause.payment_method = payment_method;
+    }
+    if (payment_status) {
+      whereClause.payment_status = payment_status;
+    }
+    if (start_date) {
+      const startDate = new Date(start_date);
+      startDate.setHours(0, 0, 0, 0);
+      whereClause.payment_date = {
+        ...whereClause.payment_date,
+        [Op.gte]: new Date(startDate),
+      };
+    }
+    if (end_date) {
+      const endDate = new Date(end_date);
+      endDate.setHours(23, 59, 59, 999);
+      whereClause.payment_date = {
+        ...whereClause.payment_date,
+        [Op.lte]: new Date(endDate),
+      };
     }
     const { count, rows: payment } = await Payment.findAndCountAll({
       offset,
@@ -2848,6 +2900,7 @@ const getAllPayments = async (req, res) => {
           attributes: ["id", "full_name", "reg_no", "image"],
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -2902,7 +2955,10 @@ const updatePayment = async (req, res) => {
     const existingTransaction_id = await Payment.findOne({
       where: { transaction_id, id: { [Op.ne]: req.params.id } },
     });
-    if (existingTransaction_id) {
+    if (
+      existingTransaction_id &&
+      existingTransaction_id.transaction_id !== ""
+    ) {
       return res.status(400).json({ error: "Transaction ID already exists" });
     }
 
