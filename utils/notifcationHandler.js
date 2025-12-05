@@ -27,6 +27,7 @@ const sendPushNotification = async (tokens, title, body, data = {}) => {
 
     return response;
   } catch (error) {
+    logger.error("Error sending notification:", error);
     console.error("Error sending notification:", error);
   }
 };
