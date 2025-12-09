@@ -3158,6 +3158,7 @@ const getAllPayments = async (req, res) => {
     let whereClause = {
       trash: false,
       school_id: school_id,
+      payment_type: { [Op.ne]: "donation" },
     };
     if (searchQuery) {
       whereClause[Op.or] = [
@@ -3196,8 +3197,6 @@ const getAllPayments = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
-      //i want exclude payment_type donation
-      exclude: [{ payment_type: "donation" }],
       include: [
         {
           model: Student,
@@ -3222,7 +3221,6 @@ const getDonations = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
-    const payment_type = req.query.payment_type || "";
     const payment_method = req.query.payment_method || "";
     const payment_status = req.query.payment_status || "";
     const start_date = req.query.start_date || null;
