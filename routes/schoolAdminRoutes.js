@@ -190,6 +190,7 @@ router.delete(
 //payment
 router.post("/payments", schoolAdminController.createPayment);
 router.get("/payments", schoolAdminController.getAllPayments);
+router.get("/donations", schoolAdminController.getDonations);
 router.get("/payments/:id", schoolAdminController.getPaymentById);
 router.put("/payments/:id", schoolAdminController.updatePayment);
 router.delete("/payments/:id", schoolAdminController.deletePayment);

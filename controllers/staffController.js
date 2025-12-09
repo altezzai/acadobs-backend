@@ -37,6 +37,7 @@ const {
   sendMessageWithParentNote,
 } = require("../socketHandlers/messageHandlers");
 const { sendPushNotification } = require("./../utils/notifcationHandler");
+const logger = require("../utils/logger");
 
 const createExamWithMarks = async (req, res) => {
   try {
@@ -2863,6 +2864,7 @@ const getProfileDetails = async (req, res) => {
       error
     );
     console.error("Error fetching profile details:", error);
+    logger.error("Error fetching profile details:", error);
     res.status(500).json({ error: "Failed to fetch profile details" });
   }
 };
@@ -2958,7 +2960,7 @@ const getMyPermissions = async (req, res) => {
       err
     );
     console.error("Error fetching permissions:", err);
-
+    logger.error("Error fetching permissions:", err);
     res.status(500).json({ error: err.message });
   }
 };

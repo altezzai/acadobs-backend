@@ -3196,6 +3196,8 @@ const getAllPayments = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
+      //i want exclude payment_type donation
+      exclude: [{ payment_type: "donation" }],
       include: [
         {
           model: Student,
@@ -3216,7 +3218,77 @@ const getAllPayments = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const getDonations = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const payment_type = req.query.payment_type || "";
+    const payment_method = req.query.payment_method || "";
+    const payment_status = req.query.payment_status || "";
+    const start_date = req.query.start_date || null;
+    const end_date = req.query.end_date || null;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
 
+    let whereClause = {
+      trash: false,
+      school_id: school_id,
+      payment_type: "donation",
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { payment_type: { [Op.like]: `%${searchQuery}%` } },
+        { amount: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if (payment_method) {
+      whereClause.payment_method = payment_method;
+    }
+    if (payment_status) {
+      whereClause.payment_status = payment_status;
+    }
+    if (start_date) {
+      const startDate = new Date(start_date);
+      startDate.setHours(0, 0, 0, 0);
+      whereClause.payment_date = {
+        ...whereClause.payment_date,
+        [Op.gte]: new Date(startDate),
+      };
+    }
+    if (end_date) {
+      const endDate = new Date(end_date);
+      endDate.setHours(23, 59, 59, 999);
+      whereClause.payment_date = {
+        ...whereClause.payment_date,
+        [Op.lte]: new Date(endDate),
+      };
+    }
+    const { count, rows: payment } = await Payment.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        {
+          model: Student,
+          attributes: ["id", "full_name", "reg_no", "image"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      payment,
+    });
+  } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "getAllPayments :", err);
+    res.status(500).json({ error: err.message });
+  }
+};
 const getPaymentById = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -6542,6 +6614,7 @@ module.exports = {
 
   createPayment,
   getAllPayments,
+  getDonations,
   getPaymentById,
   updatePayment,
   deletePayment,

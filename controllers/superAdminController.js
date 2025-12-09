@@ -5,9 +5,9 @@ const Class = require("../models/class");
 const Subject = require("../models/subject");
 const AccountDelete = require("../models/accountdelete");
 const Syllabus = require("../models/syllabus");
-
 const { compressAndSaveFile } = require("../utils/fileHandler");
 const { Op } = require("sequelize");
+const logger = require("../utils/logger");
 
 const createSchool = async (req, res) => {
   try {
@@ -175,6 +175,7 @@ const deleteSchool = async (req, res) => {
       .status(200)
       .json({ message: "School deleted successfully (soft delete)" });
   } catch (error) {
+    logger.error("Error deleting school:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -188,6 +189,7 @@ const restoreSchool = async (req, res) => {
 
     res.status(200).json({ message: "School restored successfully" });
   } catch (error) {
+    logger.error("Error restoring school:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -200,6 +202,7 @@ const permanentlyDeleteSchool = async (req, res) => {
     await school.destroy();
     res.status(200).json({ message: "School deleted permanently" });
   } catch (error) {
+    logger.error("Error permanently deleting school:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -227,6 +230,7 @@ const getTrashedSchools = async (req, res) => {
       schools,
     });
   } catch (error) {
+    logger.error("Error getting trashed schools:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -262,6 +266,7 @@ const createClass = async (req, res) => {
     });
     res.status(201).json({ message: "Class created", class: newClass });
   } catch (err) {
+    logger.error("Error creating class:", err);
     console.error("Error creating class:", err);
     res.status(500).json({ error: err.message });
   }
@@ -310,6 +315,7 @@ const getAllClasses = async (req, res) => {
       classes,
     });
   } catch (err) {
+    logger.error("Error getting classes:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -321,6 +327,7 @@ const getClassById = async (req, res) => {
     if (!classData) return res.status(404).json({ message: "Class not found" });
     res.status(200).json(classData);
   } catch (err) {
+    logger.error("Error fetching class:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -355,6 +362,7 @@ const updateClass = async (req, res) => {
     );
     res.status(200).json({ message: "Class updated", classData });
   } catch (err) {
+    logger.error("Error updating class:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -365,6 +373,7 @@ const deleteClass = async (req, res) => {
     await Class.update({ trash: true }, { where: { id } });
     res.status(200).json({ message: "Class soft-deleted" });
   } catch (err) {
+    logger.error("Error deleting class:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -374,6 +383,7 @@ const restoreClass = async (req, res) => {
     await Class.update({ trash: false }, { where: { id } });
     res.status(200).json({ message: "Class restored" });
   } catch (err) {
+    logger.error("Error restoring class:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -383,6 +393,7 @@ const permanentDeleteClass = async (req, res) => {
     await Class.destroy({ where: { id } });
     res.status(200).json({ message: "Class permanently deleted" });
   } catch (err) {
+    logger.error("Error permanently deleting class:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -405,6 +416,7 @@ const getTrashedClasses = async (req, res) => {
       classes,
     });
   } catch (err) {
+    logger.error("Error getting trashed classes:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -449,6 +461,7 @@ const createSubject = async (req, res) => {
     });
     res.status(201).json(subject);
   } catch (err) {
+    logger.error("Error creating subject:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -502,6 +515,7 @@ const getSubjects = async (req, res) => {
       subjects,
     });
   } catch (err) {
+    logger.error("Error getting subjects:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -512,6 +526,7 @@ const getSubjectById = async (req, res) => {
     if (!subject) return res.status(404).json({ message: "Subject not found" });
     res.status(200).json(subject);
   } catch (err) {
+    logger.error("Error getting subject by id:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -552,6 +567,7 @@ const updateSubject = async (req, res) => {
     await subject.update({ subject_name, class_range, syllabus_id });
     res.status(200).json(subject);
   } catch (err) {
+    logger.error("Error updating subject:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -568,6 +584,7 @@ const deleteSubject = async (req, res) => {
 
     res.status(200).json({ message: "Subject deleted (soft)" });
   } catch (err) {
+    logger.error("Error deleting subject:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -583,6 +600,7 @@ const restoreSubject = async (req, res) => {
 
     res.status(200).json({ message: "Subject restored" });
   } catch (err) {
+    logger.error("Error restoring subject:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -630,6 +648,7 @@ const getTrashedSubjects = async (req, res) => {
       subjects,
     });
   } catch (err) {
+    logger.error("Error getting trashed subjects:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -643,6 +662,7 @@ const permanentlyDeleteSubject = async (req, res) => {
     await subject.destroy();
     res.status(200).json({ message: "Subject permanently deleted" });
   } catch (err) {
+    logger.error("Error permanently deleting subject:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -689,6 +709,7 @@ const getAccountDeleteRequests = async (req, res) => {
       requests,
     });
   } catch (err) {
+    logger.error("Error getting account delete requests:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -703,6 +724,7 @@ const updateAccountDeleteRequests = async (req, res) => {
     await request.update({ status, reason });
     res.status(200).json({ message: "Request status updated", request });
   } catch (err) {
+    logger.error("Error updating account delete request:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -722,6 +744,7 @@ const createSyllabus = async (req, res) => {
     });
     res.status(201).json(syllabus);
   } catch (err) {
+    logger.error("Error creating syllabus:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -747,6 +770,7 @@ const getSyllabuses = async (req, res) => {
       syllabuses,
     });
   } catch (err) {
+    logger.error("Error getting syllabuses:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -759,6 +783,7 @@ const getSyllabusById = async (req, res) => {
     }
     res.status(200).json(syllabus);
   } catch (err) {
+    logger.error("Error getting syllabus by ID:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -773,6 +798,7 @@ const updateSyllabus = async (req, res) => {
     await syllabus.update({ name, description, level, country });
     res.status(200).json(syllabus);
   } catch (err) {
+    logger.error("Error updating syllabus:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -787,6 +813,7 @@ const deleteSyllabus = async (req, res) => {
     await syllabus.save();
     res.status(200).json({ message: "Syllabus deleted (soft)" });
   } catch (err) {
+    logger.error("Error deleting syllabus:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -801,6 +828,7 @@ const restoreSyllabus = async (req, res) => {
     await syllabus.save();
     res.status(200).json({ message: "Syllabus restored successfully" });
   } catch (err) {
+    logger.error("Error restoring syllabus:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -814,6 +842,7 @@ const permanentlyDeleteSyllabus = async (req, res) => {
     await syllabus.destroy();
     res.status(200).json({ message: "Syllabus deleted permanently" });
   } catch (err) {
+    logger.error("Error permanently deleting syllabus:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -839,6 +868,7 @@ const getTrashedSyllabuses = async (req, res) => {
       trashedSyllabuses,
     });
   } catch (err) {
+    logger.error("Error getting trashed syllabuses:", err);
     res.status(500).json({ error: err.message });
   }
 };
