@@ -37,7 +37,7 @@ const Guardian = schoolSequelize.define(
     },
     guardian_email: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       unique: true,
     },
     guardian_job: {

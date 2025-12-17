@@ -1,6 +1,7 @@
-const moment = require("moment");
+// const moment = require("moment");
 const bcrypt = require("bcrypt");
 const { Op } = require("sequelize");
+const logger = require("../utils/logger");
 const {
   compressAndSaveFile,
   deletefilewithfoldername,
@@ -1230,18 +1231,20 @@ const createGuardian = async (req, res) => {
       father_name,
       mother_name,
     } = req.body;
-    if (!guardian_name || !guardian_email || !guardian_contact) {
+    if (!guardian_name || !guardian_contact) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
-    // const file = req.file;
-    const existingUser = await User.findOne({
-      where: { email: guardian_email },
-    });
+    let existingUser = null;
+    if (guardian_email && guardian_email !== "") {
+      existingUser = await User.findOne({
+        where: { email: guardian_email },
+      });
+    }
     const existingPhone = await User.findOne({
       where: { phone: guardian_contact },
     });
 
-    if (existingUser) {
+    if (existingUser && guardian_email !== "") {
       return res
         .status(400)
         .json({ error: "guardian email already exists in user table" });
@@ -1263,7 +1266,7 @@ const createGuardian = async (req, res) => {
     const user = await User.create({
       role: "guardian",
       name: guardian_name,
-      email: guardian_email,
+      email: guardian_email || null,
       phone: guardian_contact,
       dp: fileName,
       school_id: school_id,
@@ -1315,19 +1318,16 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
       school_id,
     } = guardianData;
 
-    if (!guardian_name || !guardian_email || !guardian_contact) {
+    if (!guardian_name || !guardian_contact) {
       throw new Error("Required guardian fields are missing");
     }
 
     const existingUser = await User.findOne({
-      where: { email: guardian_email },
-    });
-    const existingPhone = await User.findOne({
       where: { phone: guardian_contact },
     });
 
     if (existingUser) {
-      throw new Error("Guardian email already exists");
+      throw new Error("Guardian phone already exists");
     }
 
     let fileName = null;
@@ -1336,21 +1336,22 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
       const uploadPath = "uploads/dp/";
       fileName = await compressAndSaveFile(file, uploadPath);
     }
-
-    const hashedPassword = await bcrypt.hash(guardian_contact, 10);
+    const password = guardian_name.slice(0, 3) + guardian_contact.slice(0, 5);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
       role: "guardian",
       name: guardian_name,
-      email: guardian_email,
+      email: guardian_email || null,
       phone: guardian_contact,
       dp: fileName,
       school_id,
       status: "active",
       password: hashedPassword,
     });
+    console.log("User created with ID:", user.id);
 
-    await Guardian.create({
+    const guardian = await Guardian.create({
       user_id: user.id,
       guardian_relation,
       guardian_name,
@@ -1364,15 +1365,11 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
       father_name,
       mother_name,
     });
+    console.log("Guardian created with ID:", guardian);
 
     return user.id;
   } catch (error) {
-    logger.error(
-      "schoolId:",
-      req.user.school_id,
-      "Error creating guardian:",
-      error
-    );
+    logger.error("Error creating guardian service:", error);
     throw error;
   }
 };
@@ -1462,19 +1459,6 @@ const updateGuardian = async (req, res) => {
 
     if (!guardian) return res.status(404).json({ error: "Guardian not found" });
 
-    if (guardian_email) {
-      const existingUser = await User.findOne({
-        where: {
-          email: guardian_email,
-          id: { [Op.ne]: guardian.user_id },
-        },
-      });
-      if (existingUser) {
-        return res
-          .status(400)
-          .json({ error: "Guardian email already exists in user table" });
-      }
-    }
     if (guardian_contact) {
       const existingPhone = await User.findOne({
         where: {
@@ -1487,6 +1471,19 @@ const updateGuardian = async (req, res) => {
         return res
           .status(400)
           .json({ error: "Guardian phone already exists in user table" });
+      }
+    }
+    if (guardian_email) {
+      const existingUser = await User.findOne({
+        where: {
+          email: guardian_email,
+          id: { [Op.ne]: guardian.user_id },
+        },
+      });
+      if (existingUser && guardian_email !== "") {
+        return res
+          .status(400)
+          .json({ error: "Guardian email already exists in user table" });
       }
     }
 
@@ -1517,7 +1514,7 @@ const updateGuardian = async (req, res) => {
     }
     await user.update({
       name: guardian.guardian_name,
-      // email: guardian.guardian_email,
+      email: guardian.guardian_email,
       phone: guardian.guardian_contact,
       dp: fileName,
     });
@@ -1618,9 +1615,9 @@ const createStudent = async (req, res) => {
       status,
 
       // Guardian Data (all inside req.body)
-      guardian_email,
+
+      guardian_contact,
       guardian_name,
-      guardian_relation,
       guardian_job,
       guardian2_name,
       guardian2_relation,
@@ -1629,9 +1626,12 @@ const createStudent = async (req, res) => {
       father_name,
       mother_name,
     } = req.body;
-    const guardian_contact = req.body.guardian_contact || null;
+    const guardian_email = req.body.guardian_email || null;
+    const guardian_relation = req.body.guardian_relation || "father";
 
-    if ((!guardian_email || !full_name || !reg_no || !class_id, !roll_number)) {
+    if (
+      (!guardian_contact || !full_name || !reg_no || !class_id, !roll_number)
+    ) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
     const existingRollNumber = await Student.findOne({
@@ -1643,7 +1643,7 @@ const createStudent = async (req, res) => {
       });
     }
     const existingUser = await User.findOne({
-      where: { email: guardian_email },
+      where: { phone: guardian_contact },
     });
     const existingRegNo = await Student.findOne({
       where: { reg_no },
@@ -1658,6 +1658,7 @@ const createStudent = async (req, res) => {
     let guardianUserId;
     const guardianDpFile = req.files?.dp?.[0];
     const studentImageFile = req.files?.image?.[0];
+    console.log("existingUser:", existingUser);
 
     if (existingUser) {
       const existingGuardian = await Guardian.findOne({
@@ -1672,22 +1673,17 @@ const createStudent = async (req, res) => {
 
       guardianUserId = existingGuardian.user_id;
     } else {
-      if (guardian_contact) {
-        const existingPhone = await User.findOne({
-          where: { phone: guardian_contact },
+      if (guardian_email) {
+        const existingEmail = await User.findOne({
+          where: { email: guardian_email },
         });
-        if (existingPhone) {
+        if (existingEmail && guardian_email !== "") {
           return res.status(400).json({
-            error: "Guardian phone number already exists in user table",
+            error: "Guardian email already exists in user table",
           });
         }
       }
-      if (
-        !guardian_name ||
-        !guardian_email ||
-        !guardian_contact ||
-        !guardian_relation
-      ) {
+      if (!guardian_name || !guardian_contact || !guardian_relation) {
         return res
           .status(400)
           .json({ error: "Required fields are missing for guardian data" });
@@ -1788,7 +1784,7 @@ const bulkCreateStudents = async (req, res) => {
         mother_name,
       } = studentObj;
 
-      if (!guardian_email || !full_name || !reg_no || !roll_number) {
+      if (!guardian_contact || !full_name || !reg_no || !roll_number) {
         throw new Error("Required fields missing for student: " + full_name);
       }
 
@@ -1815,7 +1811,7 @@ const bulkCreateStudents = async (req, res) => {
       // ✅ Guardian handling
       let guardianUserId;
       const existingUser = await User.findOne({
-        where: { email: guardian_email },
+        where: { phone: guardian_contact },
         transaction,
       });
 
@@ -1826,26 +1822,26 @@ const bulkCreateStudents = async (req, res) => {
         });
         if (!existingGuardian) {
           throw new Error(
-            `Guardian user exists but no guardian record found for email ${guardian_email}`
+            `Guardian user exists but no guardian record found for phone ${guardian_contact}`
           );
         }
         guardianUserId = existingGuardian.user_id;
       } else {
-        if (guardian_contact) {
-          const existingPhone = await User.findOne({
-            where: { phone: guardian_contact },
+        if (guardian_email) {
+          const existingEmail = await User.findOne({
+            where: { email: guardian_email },
             transaction,
           });
-          if (existingPhone) {
+          if (existingEmail && guardian_email !== "") {
             throw new Error(
-              `Guardian phone number ${guardian_contact} already exists`
+              `Guardian email number ${existingEmail.email} already exists`
             );
           }
         }
 
-        if (!guardian_name || !guardian_contact || !guardian_relation) {
+        if (!guardian_name || !guardian_contact) {
           throw new Error(
-            `Required guardian fields missing for student: ${full_name}`
+            `Required guardian fields missing for student: ${full_name}'s guardian details`
           );
         }
 
@@ -3146,7 +3142,6 @@ const getAllPayments = async (req, res) => {
         "library",
         "activity",
         "fine",
-        "donation",
         "event",
         "excursion",
         "other",
