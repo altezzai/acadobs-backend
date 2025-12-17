@@ -1,5 +1,6 @@
 const { Op, where, DATEONLY } = require("sequelize");
 const bcrypt = require("bcrypt");
+const logger = require("../utils/logger");
 
 const User = require("../models/user");
 const Student = require("../models/student");
@@ -19,7 +20,6 @@ const News = require("../models/news");
 const Payment = require("../models/payment");
 const AccountDelete = require("../models/accountdelete");
 const Syllabus = require("../models/syllabus");
-const logger = require("../utils/logger");
 
 const { Class } = require("../models");
 

@@ -1,4 +1,5 @@
 const bcrypt = require("bcrypt");
+const logger = require("../utils/logger");
 const School = require("../models/school");
 const User = require("../models/user");
 const Class = require("../models/class");
@@ -7,7 +8,6 @@ const AccountDelete = require("../models/accountdelete");
 const Syllabus = require("../models/syllabus");
 const { compressAndSaveFile } = require("../utils/fileHandler");
 const { Op } = require("sequelize");
-const logger = require("../utils/logger");
 
 const createSchool = async (req, res) => {
   try {

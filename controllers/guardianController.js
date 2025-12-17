@@ -2,6 +2,7 @@ const path = require("path");
 const fs = require("fs");
 const bcrypt = require("bcrypt");
 const { Op, where } = require("sequelize");
+const logger = require("../utils/logger");
 const {
   compressAndSaveFile,
   deletefilewithfoldername,
@@ -858,6 +859,45 @@ const updateProfileDetails = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+//update ownstudent profile details in student table
+const updateStudentProfile = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const { student_id } = req.params;
+
+    const { address } = req.body;
+    const student = await Student.findOne({
+      where: { id: student_id, guardian_id: userId },
+    });
+    if (!student) return res.status(404).json({ error: "Student not found" });
+
+    let studentImageFilename = student.image;
+    if (req.file) {
+      console.log("File uploaded:", req.file.originalname);
+      const oldFileName = student.image;
+      const uploadPath = "uploads/students_images/";
+      studentImageFilename = await compressAndSaveFile(req.file, uploadPath);
+      if (oldFileName) {
+        await deletefilewithfoldername(oldFileName, uploadPath);
+      }
+    }
+    console.log("Student Image Filename:", studentImageFilename);
+    await student.update({
+      image: studentImageFilename,
+      address,
+    });
+    res.status(200).json({ message: "Student profile updated", student });
+  } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error updating student profile:",
+      err
+    );
+    console.error("Error updating student profile:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
 const getProfileDetails = async (req, res) => {
   try {
     const user_id = req.user.user_id;
@@ -1021,7 +1061,7 @@ module.exports = {
   getAllDayTimetableByStudentId,
 
   getNavigationBarCounts,
-
+  updateStudentProfile,
   updateProfileDetails,
   getProfileDetails,
 

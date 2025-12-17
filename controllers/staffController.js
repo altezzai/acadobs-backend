@@ -1,6 +1,7 @@
 const { Op } = require("sequelize");
 const moment = require("moment");
 const geolib = require("geolib");
+const logger = require("../utils/logger");
 const {
   compressAndSaveFile,
   compressAndSaveMultiFile,
@@ -37,7 +38,6 @@ const {
   sendMessageWithParentNote,
 } = require("../socketHandlers/messageHandlers");
 const { sendPushNotification } = require("./../utils/notifcationHandler");
-const logger = require("../utils/logger");
 
 const createExamWithMarks = async (req, res) => {
   try {

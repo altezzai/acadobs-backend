@@ -61,6 +61,11 @@ router.get(
   "/getNavigationBarCounts",
   guardianController.getNavigationBarCounts
 );
+router.put(
+  "/updateStudentProfile/:student_id",
+  uploadWithErrorHandler(upload.single("image")),
+  guardianController.updateStudentProfile
+);
 router.put("/updateProfileDetails", guardianController.updateProfileDetails);
 router.get("/getProfileDetails", guardianController.getProfileDetails);
 
@@ -99,6 +104,7 @@ router.get(
 
 router.put("/changePassword", commonController.changePassword);
 router.put("/updateFcmToken", commonController.updateFcmToken);
+
 router.put(
   "/updateDp",
   uploadWithErrorHandler(upload.single("dp")),
