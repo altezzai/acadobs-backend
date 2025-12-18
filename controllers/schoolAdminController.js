@@ -1,4 +1,4 @@
-// const moment = require("moment");
+const moment = require("moment");
 const bcrypt = require("bcrypt");
 const { Op } = require("sequelize");
 const logger = require("../utils/logger");
@@ -3195,7 +3195,32 @@ const getAllPayments = async (req, res) => {
       include: [
         {
           model: Student,
-          attributes: ["id", "full_name", "reg_no", "image"],
+          attributes: ["id", "full_name", "roll_number", "class_id"],
+          where: class_id ? { class_id } : {},
+          include: [
+            {
+              model: Class,
+              attributes: ["id", "classname"],
+              where: year ? { year } : {},
+            },
+          ],
+        },
+        {
+          model: InvoiceStudent,
+          attributes: ["id", "status"],
+          required: searchQuery ? true : false,
+          include: [
+            {
+              model: Invoice,
+              attributes: ["id", "title", "category"],
+              required: true,
+              where: searchQuery
+                ? {
+                    title: { [Op.like]: `%${searchQuery}%` },
+                  }
+                : {},
+            },
+          ],
         },
       ],
       order: [["createdAt", "DESC"]],
@@ -3218,6 +3243,8 @@ const getDonations = async (req, res) => {
     const searchQuery = req.query.q || "";
     const payment_method = req.query.payment_method || "";
     const payment_status = req.query.payment_status || "";
+    const class_id = req.query.class_id || null;
+    const year = req.query.year || null;
     const start_date = req.query.start_date || null;
     const end_date = req.query.end_date || null;
     const page = parseInt(req.query.page) || 1;
@@ -3265,7 +3292,15 @@ const getDonations = async (req, res) => {
       include: [
         {
           model: Student,
-          attributes: ["id", "full_name", "reg_no", "image"],
+          attributes: ["id", "full_name", "roll_number", "class_id"],
+          where: class_id ? { class_id } : {},
+          include: [
+            {
+              model: Class,
+              attributes: ["id", "classname"],
+              where: year ? { year } : {},
+            },
+          ],
         },
       ],
       order: [["createdAt", "DESC"]],
