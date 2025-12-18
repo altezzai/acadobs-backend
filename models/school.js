@@ -51,10 +51,23 @@ const School = schoolSequelize.define(
       allowNull: true,
       defaultValue: 40.0,
     },
+    primary_colour: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    secondary_colour: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    bg_image: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     status: {
       type: DataTypes.ENUM("active", "inactive"),
       defaultValue: "active",
     },
+
     trash: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

@@ -119,4 +119,6 @@ router.get(
 
 router.post("/accountDeleteRequests", commonController.accountDeleteRequests);
 
+router.get("/getSchoolDetails", commonController.getSchoolDetails);
+
 module.exports = router;

@@ -6,7 +6,10 @@ const Class = require("../models/class");
 const Subject = require("../models/subject");
 const AccountDelete = require("../models/accountdelete");
 const Syllabus = require("../models/syllabus");
-const { compressAndSaveFile } = require("../utils/fileHandler");
+const {
+  compressAndSaveFile,
+  deletefilewithfoldername,
+} = require("../utils/fileHandler");
 const { Op } = require("sequelize");
 
 const createSchool = async (req, res) => {
@@ -23,6 +26,8 @@ const createSchool = async (req, res) => {
       education_year_start,
       location,
       pass_percent,
+      primary_colour,
+      secondary_colour,
     } = req.body;
     if (!name || !email || !phone || !admin_password) {
       return res.status(400).json({ error: "Required fields are missing" });
@@ -38,11 +43,20 @@ const createSchool = async (req, res) => {
         .json({ error: "SchoolAdmin email already exists in user table" });
     }
     let fileName = null;
-
-    if (req.file) {
+    if (req.files?.logo) {
       const uploadPath = "uploads/school_logos/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
+      fileName = await compressAndSaveFile(req.files.logo[0], uploadPath);
     }
+
+    let bgImageFileName = null;
+    if (req.files?.image) {
+      const uploadPath = "uploads/school_image/";
+      bgImageFileName = await compressAndSaveFile(
+        req.files.image[0],
+        uploadPath
+      );
+    }
+
     const school = await School.create({
       name,
       email,
@@ -55,6 +69,9 @@ const createSchool = async (req, res) => {
       education_year_start,
       location,
       pass_percent,
+      bg_image: bgImageFileName,
+      primary_colour,
+      secondary_colour,
     });
 
     const hashedPassword = await bcrypt.hash(admin_password, 10);
@@ -131,16 +148,34 @@ const updateSchool = async (req, res) => {
       education_year_start,
       location,
       pass_percent,
+      primary_colour,
+      secondary_colour,
     } = req.body;
 
     const school = await School.findByPk(id);
     if (!school) return res.status(404).json({ error: "School not found" });
 
-    let fileName = null;
-
-    if (req.file) {
+    let fileName = school.logo;
+    if (req.files?.logo) {
       const uploadPath = "uploads/school_logos/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
+      fileName = await compressAndSaveFile(req.files.logo[0], uploadPath);
+      const oldFileName = school.logo;
+      if (oldFileName) {
+        await deletefilewithfoldername(oldFileName, uploadPath);
+      }
+    }
+
+    let bgImageFileName = school.bg_image;
+    if (req.files?.image) {
+      const uploadPath = "uploads/school_image/";
+      bgImageFileName = await compressAndSaveFile(
+        req.files.image[0],
+        uploadPath
+      );
+      const oldFileName = school.bg_image;
+      if (oldFileName) {
+        await deletefilewithfoldername(oldFileName, uploadPath);
+      }
     }
     await school.update({
       name,
@@ -148,13 +183,16 @@ const updateSchool = async (req, res) => {
       phone,
       address,
       period_count,
-      logo: fileName ? fileName : school.logo,
+      logo: fileName,
       status,
       syllabus_id,
       attendance_count,
       education_year_start,
       location,
       pass_percent,
+      bg_image: bgImageFileName,
+      primary_colour,
+      secondary_colour,
     });
 
     res.status(200).json({ message: "School updated successfully", school });

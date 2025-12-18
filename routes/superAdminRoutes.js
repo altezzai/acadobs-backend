@@ -1,18 +1,22 @@
 const express = require("express");
 const router = express.Router();
-const { upload } = require("../middlewares/upload");
+const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const superAdminController = require("../controllers/superAdminController");
 const schoolAdminController = require("../controllers/schoolAdminController");
+const schoolUploads = [
+  { name: "image", maxCount: 1 },
+  { name: "logo", maxCount: 1 },
+];
 
 router.post(
   "/schools",
-  upload.single("logo"),
+  uploadWithErrorHandler(upload.fields(schoolUploads)),
   superAdminController.createSchool
 );
 router.get("/schools", superAdminController.getAllSchools);
 router.put(
   "/schools/:id",
-  upload.single("logo"),
+  uploadWithErrorHandler(upload.fields(schoolUploads)),
   superAdminController.updateSchool
 );
 router.delete("/schools/:id", superAdminController.deleteSchool);

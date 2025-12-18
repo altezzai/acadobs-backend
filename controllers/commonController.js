@@ -650,6 +650,9 @@ const getSchoolDetails = async (req, res) => {
         "period_count",
         "attendance_count",
         "syllabus_id",
+        "primary_colour",
+        "secondary_colour",
+        "bg_image",
       ],
       include: [
         {
