@@ -3125,6 +3125,9 @@ const getAllPayments = async (req, res) => {
     const payment_type = req.query.payment_type || "";
     const payment_method = req.query.payment_method || "";
     const payment_status = req.query.payment_status || "";
+    const class_id = req.query.class_id || null;
+    const year = req.query.year || null;
+    const student_id = req.query.student_id || null;
     const start_date = req.query.start_date || null;
     const end_date = req.query.end_date || null;
     const page = parseInt(req.query.page) || 1;
@@ -3171,19 +3174,22 @@ const getAllPayments = async (req, res) => {
     if (payment_status) {
       whereClause.payment_status = payment_status;
     }
+    if (student_id) {
+      whereClause.student_id = student_id;
+    }
     if (start_date) {
       const startDate = new Date(start_date);
       startDate.setHours(0, 0, 0, 0);
-      whereClause.payment_date = {
-        ...whereClause.payment_date,
+      whereClause.createdAt = {
+        ...whereClause.createdAt,
         [Op.gte]: new Date(startDate),
       };
     }
     if (end_date) {
       const endDate = new Date(end_date);
       endDate.setHours(23, 59, 59, 999);
-      whereClause.payment_date = {
-        ...whereClause.payment_date,
+      whereClause.createdAt = {
+        ...whereClause.createdAt,
         [Op.lte]: new Date(endDate),
       };
     }
