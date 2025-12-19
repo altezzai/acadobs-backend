@@ -2480,6 +2480,9 @@ const permanentDeleteDuty = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+//manage Achievements
+const uploadAchievementPath = "uploads/achievement_proofs/";
+
 const createAchievementWithStudents = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -2535,8 +2538,6 @@ const createAchievementWithStudents = async (req, res) => {
       recorded_by,
     });
 
-    const uploadPath = "uploads/achievement_proofs/";
-
     const studentAchievements = await Promise.all(
       parsedStudents.map(async (student, index) => {
         let compressedFileName = null;
@@ -2544,7 +2545,7 @@ const createAchievementWithStudents = async (req, res) => {
         if (req.files && req.files[index]) {
           compressedFileName = await compressAndSaveMultiFile(
             req.files[index],
-            uploadPath
+            uploadAchievementPath
           );
         }
 
@@ -2594,7 +2595,7 @@ const getAllAchievements = async (req, res) => {
     }
     const { count, rows: achievements } = await Achievement.findAndCountAll({
       offset,
-      distinct: true, // Add this line
+      distinct: true,
       limit,
       where: whereClause,
       attributes: ["id", "title", "description", "category", "level", "date"],
@@ -2795,10 +2796,15 @@ const updateStudentAchievement = async (req, res) => {
     }
 
     let AchievementFilename = StudentAchievementData.proof_document;
-    const uploadPath = "uploads/achievement_proofs/";
     if (req.file) {
-      await deletefilewithfoldername(AchievementFilename, uploadPath);
-      AchievementFilename = await compressAndSaveFile(req.file, uploadPath);
+      await deletefilewithfoldername(
+        AchievementFilename,
+        uploadAchievementPath
+      );
+      AchievementFilename = await compressAndSaveFile(
+        req.file,
+        uploadAchievementPath
+      );
     }
     await StudentAchievementData.update({
       status,
@@ -2815,6 +2821,37 @@ const updateStudentAchievement = async (req, res) => {
       "schoolId:",
       req.user.school_id,
       "updateStudentAchievement :",
+      error
+    );
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+const peremententDeleteAchievement = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { id } = req.params;
+    const achievement = await Achievement.findOne({
+      where: { id, school_id, trash: true },
+    });
+    if (!achievement) {
+      return res.status(404).json({ error: "Achievement not found" });
+    }
+
+    const studentAchievements = await StudentAchievement.findAll({
+      where: { achievement_id: id },
+    });
+    for (const sa of studentAchievements) {
+      await deletefilewithfoldername(sa.proof_document, uploadAchievementPath);
+    }
+
+    await StudentAchievement.destroy({ where: { achievement_id: id } });
+    await Achievement.destroy({ where: { id } });
+    res.status(200).json({ message: "Achievement deleted successfully" });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "peremententDeleteAchievement :",
       error
     );
     res.status(500).json({ error: "Internal server error" });
@@ -3277,16 +3314,16 @@ const getDonations = async (req, res) => {
     if (start_date) {
       const startDate = new Date(start_date);
       startDate.setHours(0, 0, 0, 0);
-      whereClause.payment_date = {
-        ...whereClause.payment_date,
+      whereClause.createdAt = {
+        ...whereClause.createdAt,
         [Op.gte]: new Date(startDate),
       };
     }
     if (end_date) {
       const endDate = new Date(end_date);
       endDate.setHours(23, 59, 59, 999);
-      whereClause.payment_date = {
-        ...whereClause.payment_date,
+      whereClause.createdAt = {
+        ...whereClause.createdAt,
         [Op.lte]: new Date(endDate),
       };
     }
@@ -3415,24 +3452,119 @@ const deletePayment = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 const getTrashedPayments = async (req, res) => {
   try {
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const payment_type = req.query.payment_type || "";
+    const payment_method = req.query.payment_method || "";
+    const payment_status = req.query.payment_status || "";
+    const class_id = req.query.class_id || null;
+    const year = req.query.year || null;
+    const student_id = req.query.student_id || null;
+    const start_date = req.query.start_date || null;
+    const end_date = req.query.end_date || null;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    const school_id = req.user.school_id;
+    if (
+      payment_type &&
+      ![
+        "tuition",
+        "admission",
+        "exam",
+        "transport",
+        "hostel",
+        "lab",
+        "library",
+        "activity",
+        "fine",
+        "event",
+        "excursion",
+        "other",
+      ].includes(payment_type)
+    )
+      return res
+        .status(400)
+        .json({ error: "Invalid payment type" }, { status: 400 });
+    let whereClause = {
+      trash: true,
+      school_id: school_id,
+      payment_type: { [Op.ne]: "donation" },
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { payment_type: { [Op.like]: `%${searchQuery}%` } },
+        { amount: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+
+    if (payment_type) {
+      whereClause.payment_type = payment_type;
+    }
+    if (payment_method) {
+      whereClause.payment_method = payment_method;
+    }
+    if (payment_status) {
+      whereClause.payment_status = payment_status;
+    }
+    if (student_id) {
+      whereClause.student_id = student_id;
+    }
+    if (start_date) {
+      const startDate = new Date(start_date);
+      startDate.setHours(0, 0, 0, 0);
+      whereClause.createdAt = {
+        ...whereClause.createdAt,
+        [Op.gte]: new Date(startDate),
+      };
+    }
+    if (end_date) {
+      const endDate = new Date(end_date);
+      endDate.setHours(23, 59, 59, 999);
+      whereClause.createdAt = {
+        ...whereClause.createdAt,
+        [Op.lte]: new Date(endDate),
+      };
+    }
     const { count, rows: payment } = await Payment.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: { school_id, trash: true },
-
+      where: whereClause,
       include: [
         {
           model: Student,
-          attributes: ["id", "full_name", "reg_no", "image"],
+          attributes: ["id", "full_name", "roll_number", "class_id"],
+          where: class_id ? { class_id } : {},
+          include: [
+            {
+              model: Class,
+              attributes: ["id", "classname"],
+              where: year ? { year } : {},
+            },
+          ],
+        },
+        {
+          model: InvoiceStudent,
+          attributes: ["id", "status"],
+          required: searchQuery ? true : false,
+          include: [
+            {
+              model: Invoice,
+              attributes: ["id", "title", "category"],
+              required: true,
+              where: searchQuery
+                ? {
+                    title: { [Op.like]: `%${searchQuery}%` },
+                  }
+                : {},
+            },
+          ],
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -3442,7 +3574,87 @@ const getTrashedPayments = async (req, res) => {
       payment,
     });
   } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "getTrashedPayments :", err);
+    logger.error("schoolId:", req.user.school_id, "getAllPayments :", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+const getTrashedDonations = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const payment_method = req.query.payment_method || "";
+    const payment_status = req.query.payment_status || "";
+    const class_id = req.query.class_id || null;
+    const year = req.query.year || null;
+    const start_date = req.query.start_date || null;
+    const end_date = req.query.end_date || null;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    let whereClause = {
+      trash: true,
+      school_id: school_id,
+      payment_type: "donation",
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { payment_type: { [Op.like]: `%${searchQuery}%` } },
+        { amount: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if (payment_method) {
+      whereClause.payment_method = payment_method;
+    }
+    if (payment_status) {
+      whereClause.payment_status = payment_status;
+    }
+    if (start_date) {
+      const startDate = new Date(start_date);
+      startDate.setHours(0, 0, 0, 0);
+      whereClause.createdAt = {
+        ...whereClause.createdAt,
+        [Op.gte]: new Date(startDate),
+      };
+    }
+    if (end_date) {
+      const endDate = new Date(end_date);
+      endDate.setHours(23, 59, 59, 999);
+      whereClause.createdAt = {
+        ...whereClause.createdAt,
+        [Op.lte]: new Date(endDate),
+      };
+    }
+    const { count, rows: payment } = await Payment.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        {
+          model: Student,
+          attributes: ["id", "full_name", "roll_number", "class_id"],
+          where: class_id ? { class_id } : {},
+          include: [
+            {
+              model: Class,
+              attributes: ["id", "classname"],
+              where: year ? { year } : {},
+            },
+          ],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      payment,
+    });
+  } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "getAllPayments :", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -3452,6 +3664,36 @@ const restorePayment = async (req, res) => {
     res.status(200).json({ message: "Payment restored successfully" });
   } catch (err) {
     exi;
+    res.status(500).json({ error: err.message });
+  }
+};
+const permanentDeletePayment = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
+    const data = await Payment.findOne({
+      where: { trash: true, id: req.params.id },
+    });
+    if (!data) {
+      return res.status(404).json({
+        error: "Payment not found ",
+      });
+    }
+    if (data.school_id !== school_id || data.recorded_by !== user_id) {
+      return res.status(403).json({
+        error: "You do not have permission to delete this payment",
+      });
+    }
+    await Payment.destroy({
+      where: {
+        id: req.params.id,
+        trash: true,
+        school_id,
+        recorded_by: user_id,
+      },
+    });
+    res.status(200).json({ message: "Payment permanently deleted" });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
@@ -6636,6 +6878,7 @@ module.exports = {
   getTrashedAchievements,
   restoreAchievement,
   updateStudentAchievement,
+  peremententDeleteAchievement,
 
   createEvent,
   getAllEvents,
@@ -6654,6 +6897,8 @@ module.exports = {
   deletePayment,
   restorePayment,
   getTrashedPayments,
+  getTrashedDonations,
+  permanentDeletePayment,
 
   createInvoice,
   addInvoiceStudentsbyInvoiceId,

@@ -196,6 +196,11 @@ router.put("/payments/:id", schoolAdminController.updatePayment);
 router.delete("/payments/:id", schoolAdminController.deletePayment);
 router.patch("/payments/:id", schoolAdminController.restorePayment);
 router.get("/getTrashedPayments", schoolAdminController.getTrashedPayments);
+router.get("/getTrashedDonations", schoolAdminController.getTrashedDonations);
+router.delete(
+  "/permanentDeletePayment/:id",
+  schoolAdminController.permanentDeletePayment
+);
 //invoice
 router.post("/invoices", schoolAdminController.createInvoice);
 router.post(
