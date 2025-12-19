@@ -196,6 +196,16 @@ const getPaymentReport = async (req, res) => {
         [Op.lte]: new Date(endDate),
       };
     }
+    let whereStudent = {};
+    if (class_id) {
+      whereStudent.class_id = class_id;
+    }
+    if (searchQuery) {
+      whereStudent[Op.or] = [
+        { full_name: { [Op.like]: `%${searchQuery}%` } },
+        { reg_no: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
     const totalCount = await Payment.count({ where: whereClause });
     const report = await Payment.findAll({
       offset,
@@ -206,7 +216,7 @@ const getPaymentReport = async (req, res) => {
         {
           model: Student,
           attributes: ["id", "full_name", "roll_number", "class_id"],
-          where: class_id ? { class_id } : {},
+          where: whereStudent,
           include: [
             {
               model: Class,
@@ -218,17 +228,11 @@ const getPaymentReport = async (req, res) => {
         {
           model: InvoiceStudent,
           attributes: ["id", "status"],
-          required: searchQuery ? true : false,
           include: [
             {
               model: Invoice,
               attributes: ["id", "title", "category"],
               required: true,
-              where: searchQuery
-                ? {
-                    title: { [Op.like]: `%${searchQuery}%` },
-                  }
-                : {},
             },
           ],
         },

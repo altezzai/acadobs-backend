@@ -1,6 +1,6 @@
 const moment = require("moment");
 const bcrypt = require("bcrypt");
-const { Op } = require("sequelize");
+const { Op, where } = require("sequelize");
 const logger = require("../utils/logger");
 const {
   compressAndSaveFile,
@@ -3195,12 +3195,6 @@ const getAllPayments = async (req, res) => {
       school_id: school_id,
       payment_type: { [Op.ne]: "donation" },
     };
-    if (searchQuery) {
-      whereClause[Op.or] = [
-        { payment_type: { [Op.like]: `%${searchQuery}%` } },
-        { amount: { [Op.like]: `%${searchQuery}%` } },
-      ];
-    }
 
     if (payment_type) {
       whereClause.payment_type = payment_type;
@@ -3230,6 +3224,17 @@ const getAllPayments = async (req, res) => {
         [Op.lte]: new Date(endDate),
       };
     }
+    let whereStudent = {};
+    if (class_id) {
+      whereStudent.class_id = class_id;
+    }
+    if (searchQuery) {
+      whereStudent[Op.or] = [
+        { full_name: { [Op.like]: `%${searchQuery}%` } },
+        { reg_no: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+
     const { count, rows: payment } = await Payment.findAndCountAll({
       offset,
       distinct: true,
@@ -3238,8 +3243,8 @@ const getAllPayments = async (req, res) => {
       include: [
         {
           model: Student,
-          attributes: ["id", "full_name", "roll_number", "class_id"],
-          where: class_id ? { class_id } : {},
+          attributes: ["id", "full_name", "roll_number", "reg_no", "class_id"],
+          where: whereStudent,
           include: [
             {
               model: Class,
@@ -3251,17 +3256,11 @@ const getAllPayments = async (req, res) => {
         {
           model: InvoiceStudent,
           attributes: ["id", "status"],
-          required: searchQuery ? true : false,
           include: [
             {
               model: Invoice,
               attributes: ["id", "title", "category"],
               required: true,
-              where: searchQuery
-                ? {
-                    title: { [Op.like]: `%${searchQuery}%` },
-                  }
-                : {},
             },
           ],
         },
@@ -3327,6 +3326,16 @@ const getDonations = async (req, res) => {
         [Op.lte]: new Date(endDate),
       };
     }
+    let whereStudent = {};
+    if (class_id) {
+      whereStudent.class_id = class_id;
+    }
+    if (searchQuery) {
+      whereStudent[Op.or] = [
+        { full_name: { [Op.like]: `%${searchQuery}%` } },
+        { reg_no: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
     const { count, rows: payment } = await Payment.findAndCountAll({
       offset,
       distinct: true,
@@ -3336,7 +3345,7 @@ const getDonations = async (req, res) => {
         {
           model: Student,
           attributes: ["id", "full_name", "roll_number", "class_id"],
-          where: class_id ? { class_id } : {},
+          where: whereStudent,
           include: [
             {
               model: Class,
@@ -3528,6 +3537,16 @@ const getTrashedPayments = async (req, res) => {
         [Op.lte]: new Date(endDate),
       };
     }
+    let whereStudent = {};
+    if (class_id) {
+      whereStudent.class_id = class_id;
+    }
+    if (searchQuery) {
+      whereStudent[Op.or] = [
+        { full_name: { [Op.like]: `%${searchQuery}%` } },
+        { reg_no: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
     const { count, rows: payment } = await Payment.findAndCountAll({
       offset,
       distinct: true,
@@ -3537,7 +3556,7 @@ const getTrashedPayments = async (req, res) => {
         {
           model: Student,
           attributes: ["id", "full_name", "roll_number", "class_id"],
-          where: class_id ? { class_id } : {},
+          where: whereStudent,
           include: [
             {
               model: Class,
@@ -3549,17 +3568,11 @@ const getTrashedPayments = async (req, res) => {
         {
           model: InvoiceStudent,
           attributes: ["id", "status"],
-          required: searchQuery ? true : false,
           include: [
             {
               model: Invoice,
               attributes: ["id", "title", "category"],
               required: true,
-              where: searchQuery
-                ? {
-                    title: { [Op.like]: `%${searchQuery}%` },
-                  }
-                : {},
             },
           ],
         },
@@ -3625,6 +3638,16 @@ const getTrashedDonations = async (req, res) => {
         [Op.lte]: new Date(endDate),
       };
     }
+    let whereStudent = {};
+    if (class_id) {
+      whereStudent.class_id = class_id;
+    }
+    if (searchQuery) {
+      whereStudent[Op.or] = [
+        { full_name: { [Op.like]: `%${searchQuery}%` } },
+        { reg_no: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
     const { count, rows: payment } = await Payment.findAndCountAll({
       offset,
       distinct: true,
@@ -3634,7 +3657,7 @@ const getTrashedDonations = async (req, res) => {
         {
           model: Student,
           attributes: ["id", "full_name", "roll_number", "class_id"],
-          where: class_id ? { class_id } : {},
+          where: whereStudent,
           include: [
             {
               model: Class,
