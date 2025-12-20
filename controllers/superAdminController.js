@@ -92,6 +92,7 @@ const createSchool = async (req, res) => {
       .json({ message: "School and admin created successfully", school });
   } catch (error) {
     console.error("Create school error:", error);
+    logger.error("Create school error:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -120,6 +121,7 @@ const getAllSchools = async (req, res) => {
       schools,
     });
   } catch (error) {
+    logger.error("Error getting schools:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -130,6 +132,7 @@ const getSchoolById = async (req, res) => {
     if (!school) return res.status(404).json({ error: "School not found" });
     res.status(200).json({ school });
   } catch (error) {
+    logger.error("Error getting school by ID:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -197,6 +200,7 @@ const updateSchool = async (req, res) => {
 
     res.status(200).json({ message: "School updated successfully", school });
   } catch (error) {
+    logger.error("Error updating school:", error);
     res.status(500).json({ error: error.message });
   }
 };

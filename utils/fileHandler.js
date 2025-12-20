@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 
 const jpeg = require("jpeg-js");
+const logger = require("./logger");
 
 const repairJPEG = (buffer) => {
   try {
@@ -13,6 +14,7 @@ const repairJPEG = (buffer) => {
     const repaired = jpeg.encode(raw, 80); // re-encode as clean JPEG
     return repaired.data;
   } catch (err) {
+    logger.error("JPEG repair failed:", err.message);
     console.log("JPEG repair failed:", err.message);
     return buffer; // fallback to original
   }
@@ -48,36 +50,43 @@ const compressAndSaveFile = async (file, uploadPath) => {
 
     return processedFileName;
   } catch (error) {
+    logger.error("Error processing file in compressAndSaveFile:", error);
     console.error("Error processing file:", error);
     throw new Error("Error processing file: " + error.message);
   }
 };
 const compressAndSaveMultiFile = async (file, uploadPath) => {
-  const ext = path.extname(file.originalname);
-  const fileName = `${Date.now()}_${file.originalname}`;
-  let fullPath = path.join(uploadPath, fileName);
+  try {
+    const ext = path.extname(file.originalname);
+    const fileName = `${Date.now()}_${file.originalname}`;
+    let fullPath = path.join(uploadPath, fileName);
 
-  if (file.mimetype === "image/jpeg" || file.mimetype === "image/jpg") {
-    fullPath = repairJPEG(file.buffer);
+    if (file.mimetype === "image/jpeg" || file.mimetype === "image/jpg") {
+      fullPath = repairJPEG(file.buffer);
+    }
+
+    // Ensure upload folder exists
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+
+    // Check for image type
+    if (file.mimetype.startsWith("image/")) {
+      await sharp(file.buffer)
+        .resize({ width: 800 }) // optional
+        .jpeg({ quality: 80 })
+        .toFile(fullPath);
+    } else {
+      // Just save non-image files as is
+      fs.writeFileSync(fullPath, file.buffer);
+    }
+
+    return fileName;
+  } catch (error) {
+    logger.error("Error processing file in compressAndSaveMultiFile:", error);
+    console.error("Error processing file:", error);
+    throw new Error("Error processing file: " + error.message);
   }
-
-  // Ensure upload folder exists
-  if (!fs.existsSync(uploadPath)) {
-    fs.mkdirSync(uploadPath, { recursive: true });
-  }
-
-  // Check for image type
-  if (file.mimetype.startsWith("image/")) {
-    await sharp(file.buffer)
-      .resize({ width: 800 }) // optional
-      .jpeg({ quality: 80 })
-      .toFile(fullPath);
-  } else {
-    // Just save non-image files as is
-    fs.writeFileSync(fullPath, file.buffer);
-  }
-
-  return fileName;
 };
 const deletefilewithfoldername = async (filename, foldername) => {
   try {
@@ -89,6 +98,7 @@ const deletefilewithfoldername = async (filename, foldername) => {
       }
     }
   } catch (err) {
+    logger.error("Error cleaning up " + foldername + " files:", err);
     console.error("Error cleaning up " + foldername + " files:", err);
   }
 };
