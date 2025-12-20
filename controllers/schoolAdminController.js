@@ -6364,6 +6364,215 @@ const getNavigationBarCounts = async (req, res) => {
   }
 };
 
+const dashboardCounts = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const startDate = req.query.startDate || moment().startOf("day").toDate();
+    const endDate = req.query.endDate || moment().endOf("day").toDate();
+
+    const totalStudents = await Student.count({
+      where: { school_id, trash: false },
+    });
+
+    const totalTeachers = await Staff.count({
+      where: { school_id, role: "teacher", trash: false },
+    });
+    const totalStaff = await Staff.count({
+      where: { school_id, role: "staff", trash: false },
+    });
+    const totalClasses = await Class.count({
+      where: { school_id, trash: false },
+    });
+    const totalSubjects = await Subject.count({
+      where: { school_id, trash: false },
+    });
+    const upcomingEvents = await Event.count({
+      where: {
+        school_id,
+        date: { [Op.gte]: startDate },
+        trash: false,
+      },
+    });
+
+    const pendingTeacherLeaves = await LeaveRequest.count({
+      where: {
+        school_id,
+        role: "teacher",
+        status: "pending",
+        trash: false,
+      },
+    });
+    const pendingStaffLeaves = await LeaveRequest.count({
+      where: {
+        school_id,
+        role: "staff",
+        status: "pending",
+        trash: false,
+      },
+    });
+
+    const pendingStudentLeaves = await LeaveRequest.count({
+      where: {
+        school_id,
+        role: "student",
+        status: "pending",
+        trash: false,
+      },
+    });
+    const teachersLeave = await LeaveRequest.count({
+      where: {
+        school_id,
+        role: "teacher",
+        status: "approved",
+        from_date: { [Op.lte]: startDate },
+        to_date: { [Op.gte]: endDate },
+        trash: false,
+      },
+    });
+    const staffsLeave = await LeaveRequest.count({
+      where: {
+        school_id,
+        role: "staff",
+        status: "approved",
+        from_date: { [Op.lte]: startDate },
+        to_date: { [Op.gte]: endDate },
+        trash: false,
+      },
+    });
+
+    const studentsLeave = await LeaveRequest.count({
+      where: {
+        school_id,
+        role: "student",
+        status: "approved",
+        from_date: { [Op.lte]: startDate },
+        to_date: { [Op.gte]: endDate },
+        trash: false,
+      },
+    });
+
+    const attendanceStatusCounts = await AttendanceMarked.findAll({
+      attributes: [
+        "status",
+        [schoolSequelize.fn("COUNT", schoolSequelize.col("status")), "count"],
+      ],
+      include: [
+        {
+          model: Attendance,
+          where: {
+            school_id,
+            date: {
+              [Op.between]: [startDate, endDate],
+            },
+            period: 1,
+            trash: false,
+          },
+          attributes: [],
+        },
+      ],
+      group: ["status"],
+      raw: true,
+    });
+
+    const studentsAttendance = {
+      present: 0,
+      absent: 0,
+      late: 0,
+    };
+
+    attendanceStatusCounts.forEach((row) => {
+      if (studentsAttendance.hasOwnProperty(row.status)) {
+        studentsAttendance[row.status] = parseInt(row.count, 10);
+      }
+    });
+    const homeworkCount = await Homework.count({
+      where: {
+        school_id,
+        createdAt: {
+          [Op.between]: [startDate, endDate],
+        },
+        trash: false,
+      },
+    });
+
+    const internalMarkCount = await InternalMark.count({
+      where: {
+        school_id,
+        createdAt: {
+          [Op.between]: [startDate, endDate],
+        },
+      },
+    });
+
+    const achievementCount = await Achievement.count({
+      where: {
+        school_id,
+        createdAt: {
+          [Op.between]: [startDate, endDate],
+        },
+        trash: false,
+      },
+    });
+    const paymentsCount = await Payment.count({
+      where: {
+        school_id,
+        createdAt: {
+          [Op.between]: [startDate, endDate],
+        },
+        trash: false,
+      },
+    });
+    const newsCount = await News.count({
+      where: {
+        school_id,
+        createdAt: {
+          [Op.between]: [startDate, endDate],
+        },
+        trash: false,
+      },
+    });
+    const noticeCount = await Notice.count({
+      where: {
+        school_id,
+        createdAt: {
+          [Op.between]: [startDate, endDate],
+        },
+        trash: false,
+      },
+    });
+
+    res.status(200).json({
+      totalStudents,
+      totalTeachers,
+      totalStaff,
+      totalClasses,
+      totalSubjects,
+      upcomingEvents,
+      pendingTeacherLeaves,
+      pendingStaffLeaves,
+      pendingStudentLeaves,
+      teachersLeave,
+      staffsLeave,
+      studentsLeave,
+      studentsAttendance,
+      homeworkCount,
+      internalMarkCount,
+      achievementCount,
+      paymentsCount,
+      newsCount,
+      noticeCount,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "DashbordCounts error:",
+      error
+    );
+    res.status(500).json({ error: error.message });
+  }
+};
+
 const getInternalmarkById = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -6988,6 +7197,7 @@ module.exports = {
 
   getSchoolAttendanceSummary,
   getNavigationBarCounts,
+  dashboardCounts,
 
   getInternalmarkById,
   getHomeworkById,

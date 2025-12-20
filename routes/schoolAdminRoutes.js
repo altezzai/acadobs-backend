@@ -376,6 +376,7 @@ router.get(
   "/getNavigationBarCounts",
   schoolAdminController.getNavigationBarCounts
 );
+router.get("/dashboardCounts", schoolAdminController.dashboardCounts);
 router.get(
   "/getInternalmarkById/:id",
   schoolAdminController.getInternalmarkById
