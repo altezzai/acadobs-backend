@@ -25,7 +25,7 @@ module.exports = {
         onDelete: "CASCADE",
         allowNull: true,
       },
-      syllabus_id: {
+      syllabus_type: {
         type: Sequelize.ENUM("CBSE", "ICSE", "Kerala State", "IB", "Other"),
         allowNull: true,
         defaultValue: "CBSE",

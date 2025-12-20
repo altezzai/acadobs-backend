@@ -54,7 +54,7 @@ module.exports = {
         defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
       },
     });
-    await queryInterface.addConstraint("Payments", {
+    await queryInterface.addConstraint("payments", {
       fields: [
         "invoice_student_id",
         "school_id",
