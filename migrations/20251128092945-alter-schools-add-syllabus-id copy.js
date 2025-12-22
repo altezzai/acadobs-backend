@@ -19,11 +19,9 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    // Revert: remove syllabus_id
     await queryInterface.removeColumn("schools", "syllabus_id");
 
-    // Revert: re-add syllabus_id enum
-    await queryInterface.addColumn("schools", "syllabus_id", {
+    await queryInterface.addColumn("schools", "syllabus_type", {
       type: Sequelize.ENUM("CBSE", "ICSE", "Kerala State", "IB", "Other"),
       allowNull: true,
       defaultValue: "CBSE",
