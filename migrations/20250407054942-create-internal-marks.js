@@ -71,25 +71,5 @@ module.exports = {
   },
   async down(queryInterface) {
     await queryInterface.dropTable("internal_marks");
-    await queryInterface.removeIndex(
-      "internal_marks",
-      "internal_marks_school_id_idx"
-    );
-    await queryInterface.removeIndex(
-      "internal_marks",
-      "internal_marks_class_id_idx"
-    );
-    await queryInterface.removeIndex(
-      "internal_marks",
-      "internal_marks_subject_id_idx"
-    );
-    await queryInterface.removeIndex(
-      "internal_marks",
-      "internal_marks_internal_name_idx"
-    );
-    await queryInterface.removeIndex(
-      "internal_marks",
-      "internal_marks_trash_idx"
-    );
   },
 };

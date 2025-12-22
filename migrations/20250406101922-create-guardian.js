@@ -78,7 +78,5 @@ module.exports = {
   },
   down: async (queryInterface, Sequelize) => {
     await queryInterface.dropTable("guardians");
-    await queryInterface.removeIndex("guardians", "guardians_user_id_idx");
-    await queryInterface.removeIndex("guardians", "guardians_trash_idx");
   },
 };

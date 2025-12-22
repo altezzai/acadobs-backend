@@ -90,11 +90,5 @@ module.exports = {
   },
   async down(queryInterface) {
     await queryInterface.dropTable("homeworks");
-    await queryInterface.removeIndex("homeworks", "homeworks_school_id_idx");
-    await queryInterface.removeIndex("homeworks", "homeworks_teacher_id_idx");
-    await queryInterface.removeIndex("homeworks", "homeworks_class_id_idx");
-    await queryInterface.removeIndex("homeworks", "homeworks_subject_id_idx");
-    await queryInterface.removeIndex("homeworks", "homeworks_title_idx");
-    await queryInterface.removeIndex("homeworks", "homeworks_trash_idx");
   },
 };

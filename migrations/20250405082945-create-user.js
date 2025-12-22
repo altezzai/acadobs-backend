@@ -84,13 +84,6 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    // It's good practice to remove indexes in the down migration
-    await queryInterface.removeIndex("users", "users_email_idx");
-    await queryInterface.removeIndex("users", "users_phone_idx");
-    await queryInterface.removeIndex(
-      "users",
-      "users_school_id_role_dp_trash_idx"
-    );
     await queryInterface.dropTable("users");
   },
 };

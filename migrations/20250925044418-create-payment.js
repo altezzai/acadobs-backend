@@ -102,12 +102,5 @@ module.exports = {
   },
   async down(queryInterface) {
     await queryInterface.dropTable("payments");
-    await queryInterface.removeIndex("payments", "payments_school_id_idx");
-    await queryInterface.removeIndex("payments", "payments_student_id_idx");
-    await queryInterface.removeIndex("payments", "payments_payment_type_idx");
-    await queryInterface.removeIndex("payments", "payments_payment_status_idx");
-    await queryInterface.removeIndex("payments", "payments_payment_date_idx");
-    await queryInterface.removeIndex("payments", "payments_recorded_by_idx");
-    await queryInterface.removeIndex("payments", "payments_trash_idx");
   },
 };

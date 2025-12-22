@@ -72,10 +72,5 @@ module.exports = {
 
   down: async (queryInterface, Sequelize) => {
     await queryInterface.dropTable("classes");
-    await queryInterface.removeIndex("classes", "classes_year_idx");
-    await queryInterface.removeIndex("classes", "classes_division_idx");
-    await queryInterface.removeIndex("classes", "classes_classname_idx");
-    await queryInterface.removeIndex("classes", "classes_school_id_idx");
-    await queryInterface.removeIndex("classes", "classes_trash_idx");
   },
 };

@@ -46,22 +46,9 @@ module.exports = {
       unique: true,
       name: "unique_user_pair",
     });
-    await queryInterface.addIndex("chats", ["user1_id"], {
-      name: "chats_user1_id_idx",
-    });
-    await queryInterface.addIndex("chats", ["user2_id"], {
-      name: "chats_user2_id_idx",
-    });
-    await queryInterface.addIndex("chats", ["last_message"], {
-      name: "chats_last_message_idx",
-    });
   },
 
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable("chats");
-    await queryInterface.removeIndex("chats", "unique_user_pair");
-    await queryInterface.removeIndex("chats", "chats_user1_id_idx");
-    await queryInterface.removeIndex("chats", "chats_user2_id_idx");
-    await queryInterface.removeIndex("chats", "chats_last_message_idx");
   },
 };

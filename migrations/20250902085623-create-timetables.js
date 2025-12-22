@@ -68,6 +68,18 @@ module.exports = {
       type: "unique",
       name: "unique_class_day_period_per_school",
     });
+    await queryInterface.addIndex("timetables", ["school_id"], {
+      name: "timetables_school_id_idx",
+    });
+    await queryInterface.addIndex("timetables", ["class_id"], {
+      name: "timetables_class_id_idx",
+    });
+    await queryInterface.addIndex("timetables", ["staff_id"], {
+      name: "timetables_staff_id_idx",
+    });
+    await queryInterface.addIndex("timetables", ["subject_id"], {
+      name: "timetables_subject_id_idx",
+    });
   },
 
   async down(queryInterface, Sequelize) {

@@ -114,12 +114,5 @@ module.exports = {
 
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable("messages");
-    await queryInterface.removeIndex("messages", "messages_chat_id_idx");
-    await queryInterface.removeIndex("messages", "messages_sender_id_idx");
-    await queryInterface.removeIndex("messages", "messages_receiver_id_idx");
-    await queryInterface.removeIndex("messages", "messages_student_id_idx");
-    await queryInterface.removeIndex("messages", "messages_type_idx");
-    await queryInterface.removeIndex("messages", "messages_type_id_idx");
-    await queryInterface.removeIndex("messages", "messages_trash_idx");
   },
 };
