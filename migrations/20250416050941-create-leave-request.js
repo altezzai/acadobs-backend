@@ -102,25 +102,5 @@ module.exports = {
   },
   down: async (queryInterface) => {
     await queryInterface.dropTable("leave_requests");
-    await queryInterface.removeIndex(
-      "leave_requests",
-      "leave_requests_school_id_idx"
-    );
-    await queryInterface.removeIndex(
-      "leave_requests",
-      "leave_requests_user_id_idx"
-    );
-    await queryInterface.removeIndex(
-      "leave_requests",
-      "leave_requests_student_id_idx"
-    );
-    await queryInterface.removeIndex(
-      "leave_requests",
-      "leave_requests_status_idx"
-    );
-    await queryInterface.removeIndex(
-      "leave_requests",
-      "leave_requests_trash_idx"
-    );
   },
 };

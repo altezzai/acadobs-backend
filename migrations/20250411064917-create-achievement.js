@@ -67,17 +67,5 @@ module.exports = {
   },
   down: async (queryInterface) => {
     await queryInterface.dropTable("achievements");
-    await queryInterface.removeIndex(
-      "achievements",
-      "achievements_school_id_idx"
-    );
-    await queryInterface.removeIndex("achievements", "achievements_title_idx");
-    await queryInterface.removeIndex(
-      "achievements",
-      "achievements_category_idx"
-    );
-    await queryInterface.removeIndex("achievements", "achievements_level_idx");
-    await queryInterface.removeIndex("achievements", "achievements_date_idx");
-    await queryInterface.removeIndex("achievements", "achievements_trash_idx");
   },
 };

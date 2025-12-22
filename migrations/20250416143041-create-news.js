@@ -56,9 +56,5 @@ module.exports = {
   },
   down: async (queryInterface) => {
     await queryInterface.dropTable("news");
-    await queryInterface.removeIndex("news", "news_school_id_idx");
-    await queryInterface.removeIndex("news", "news_title_idx");
-    await queryInterface.removeIndex("news", "news_date_idx");
-    await queryInterface.removeIndex("news", "news_trash_idx");
   },
 };

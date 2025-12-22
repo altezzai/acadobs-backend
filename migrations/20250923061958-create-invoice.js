@@ -65,9 +65,5 @@ module.exports = {
   },
   async down(queryInterface) {
     await queryInterface.dropTable("invoices");
-    await queryInterface.removeIndex("invoices", "invoices_school_id_idx");
-    await queryInterface.removeIndex("invoices", "invoices_title_idx");
-    await queryInterface.removeIndex("invoices", "invoices_category_idx");
-    await queryInterface.removeIndex("invoices", "invoices_trash_idx");
   },
 };

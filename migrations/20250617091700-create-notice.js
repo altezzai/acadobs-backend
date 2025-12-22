@@ -55,10 +55,5 @@ module.exports = {
   },
   down: async (queryInterface /*, Sequelize*/) => {
     await queryInterface.dropTable("notices");
-    await queryInterface.removeIndex("notices", "notices_school_id_idx");
-    await queryInterface.removeIndex("notices", "notices_title_idx");
-    await queryInterface.removeIndex("notices", "notices_type_idx");
-    await queryInterface.removeIndex("notices", "notices_date_idx");
-    await queryInterface.removeIndex("notices", "notices_trash_idx");
   },
 };
