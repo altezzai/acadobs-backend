@@ -1,5 +1,6 @@
 const { Sequelize } = require("sequelize");
 const config = require("./config.json");
+const logger = require("../utils/logger");
 
 const environment = process.env.NODE_ENV || "development";
 const schoolConfig = config[environment];
@@ -13,7 +14,7 @@ const schoolSequelize = new Sequelize(
     dialect: schoolConfig.dialect,
     freezeTableName: true,
     underscored: true,
-    logging: true,
+    logging: (msg) => logger.info(msg),
   }
 );
 
