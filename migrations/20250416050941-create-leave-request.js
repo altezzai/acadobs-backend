@@ -84,8 +84,43 @@ module.exports = {
       type: "unique",
       name: "unique_leave_request_combination",
     });
+    await queryInterface.addIndex("leave_requests", ["school_id"], {
+      name: "leave_requests_school_id_idx",
+    });
+    await queryInterface.addIndex("leave_requests", ["user_id"], {
+      name: "leave_requests_user_id_idx",
+    });
+    await queryInterface.addIndex("leave_requests", ["student_id"], {
+      name: "leave_requests_student_id_idx",
+    });
+    await queryInterface.addIndex("leave_requests", ["status"], {
+      name: "leave_requests_status_idx",
+    });
+    await queryInterface.addIndex("leave_requests", ["trash"], {
+      name: "leave_requests_trash_idx",
+    });
   },
   down: async (queryInterface) => {
     await queryInterface.dropTable("leave_requests");
+    await queryInterface.removeIndex(
+      "leave_requests",
+      "leave_requests_school_id_idx"
+    );
+    await queryInterface.removeIndex(
+      "leave_requests",
+      "leave_requests_user_id_idx"
+    );
+    await queryInterface.removeIndex(
+      "leave_requests",
+      "leave_requests_student_id_idx"
+    );
+    await queryInterface.removeIndex(
+      "leave_requests",
+      "leave_requests_status_idx"
+    );
+    await queryInterface.removeIndex(
+      "leave_requests",
+      "leave_requests_trash_idx"
+    );
   },
 };

@@ -7,7 +7,11 @@ module.exports = {
         autoIncrement: true,
         primaryKey: true,
       },
-      school_id: { type: Sequelize.INTEGER, allowNull: false },
+      school_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: { model: "schools", key: "id" },
+      },
       title: { type: Sequelize.STRING, allowNull: false },
       content: { type: Sequelize.TEXT, allowNull: false },
       file: { type: Sequelize.STRING },
@@ -33,8 +37,28 @@ module.exports = {
       type: "unique",
       name: "unique_notice_combination",
     });
+    await queryInterface.addIndex("notices", ["school_id"], {
+      name: "notices_school_id_idx",
+    });
+    await queryInterface.addIndex("notices", ["title"], {
+      name: "notices_title_idx",
+    });
+    await queryInterface.addIndex("notices", ["type"], {
+      name: "notices_type_idx",
+    });
+    await queryInterface.addIndex("notices", ["date"], {
+      name: "notices_date_idx",
+    });
+    await queryInterface.addIndex("notices", ["trash"], {
+      name: "notices_trash_idx",
+    });
   },
   down: async (queryInterface /*, Sequelize*/) => {
     await queryInterface.dropTable("notices");
+    await queryInterface.removeIndex("notices", "notices_school_id_idx");
+    await queryInterface.removeIndex("notices", "notices_title_idx");
+    await queryInterface.removeIndex("notices", "notices_type_idx");
+    await queryInterface.removeIndex("notices", "notices_date_idx");
+    await queryInterface.removeIndex("notices", "notices_trash_idx");
   },
 };

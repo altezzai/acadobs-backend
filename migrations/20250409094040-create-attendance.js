@@ -53,8 +53,28 @@ module.exports = {
       type: "unique",
       name: "unique_class_combination",
     });
+    await queryInterface.addIndex("attendance", ["school_id"], {
+      name: "attendance_school_id_idx",
+    });
+    await queryInterface.addIndex("attendance", ["class_id"], {
+      name: "attendance_class_id_idx",
+    });
+    await queryInterface.addIndex("attendance", ["subject_id"], {
+      name: "attendance_subject_id_idx",
+    });
+    await queryInterface.addIndex("attendance", ["date"], {
+      name: "attendance_date_idx",
+    });
+    await queryInterface.addIndex("attendance", ["trash"], {
+      name: "attendance_trash_idx",
+    });
   },
   down: async (queryInterface, Sequelize) => {
     await queryInterface.dropTable("attendance");
+    await queryInterface.removeIndex("attendance", "attendance_school_id_idx");
+    await queryInterface.removeIndex("attendance", "attendance_class_id_idx");
+    await queryInterface.removeIndex("attendance", "attendance_subject_id_idx");
+    await queryInterface.removeIndex("attendance", "attendance_date_idx");
+    await queryInterface.removeIndex("attendance", "attendance_trash_idx");
   },
 };

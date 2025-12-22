@@ -3,7 +3,14 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable("homework_assignments", {
       id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
-      homework_id: { type: Sequelize.INTEGER, allowNull: false },
+      homework_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: "homeworks",
+          key: "id",
+        },
+      },
       student_id: {
         type: Sequelize.INTEGER,
         allowNull: false,

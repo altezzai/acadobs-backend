@@ -3298,12 +3298,7 @@ const getDonations = async (req, res) => {
       school_id: school_id,
       payment_type: "donation",
     };
-    if (searchQuery) {
-      whereClause[Op.or] = [
-        { payment_type: { [Op.like]: `%${searchQuery}%` } },
-        { amount: { [Op.like]: `%${searchQuery}%` } },
-      ];
-    }
+
     if (payment_method) {
       whereClause.payment_method = payment_method;
     }
@@ -3502,12 +3497,6 @@ const getTrashedPayments = async (req, res) => {
       school_id: school_id,
       payment_type: { [Op.ne]: "donation" },
     };
-    if (searchQuery) {
-      whereClause[Op.or] = [
-        { payment_type: { [Op.like]: `%${searchQuery}%` } },
-        { amount: { [Op.like]: `%${searchQuery}%` } },
-      ];
-    }
 
     if (payment_type) {
       whereClause.payment_type = payment_type;
@@ -3610,12 +3599,6 @@ const getTrashedDonations = async (req, res) => {
       school_id: school_id,
       payment_type: "donation",
     };
-    if (searchQuery) {
-      whereClause[Op.or] = [
-        { payment_type: { [Op.like]: `%${searchQuery}%` } },
-        { amount: { [Op.like]: `%${searchQuery}%` } },
-      ];
-    }
     if (payment_method) {
       whereClause.payment_method = payment_method;
     }

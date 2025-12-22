@@ -53,8 +53,43 @@ module.exports = {
       type: "unique",
       name: "unique_internal_marks_combination",
     });
+    await queryInterface.addIndex("internal_marks", ["school_id"], {
+      name: "internal_marks_school_id_idx",
+    });
+    await queryInterface.addIndex("internal_marks", ["class_id"], {
+      name: "internal_marks_class_id_idx",
+    });
+    await queryInterface.addIndex("internal_marks", ["subject_id"], {
+      name: "internal_marks_subject_id_idx",
+    });
+    await queryInterface.addIndex("internal_marks", ["internal_name"], {
+      name: "internal_marks_internal_name_idx",
+    });
+    await queryInterface.addIndex("internal_marks", ["trash"], {
+      name: "internal_marks_trash_idx",
+    });
   },
   async down(queryInterface) {
     await queryInterface.dropTable("internal_marks");
+    await queryInterface.removeIndex(
+      "internal_marks",
+      "internal_marks_school_id_idx"
+    );
+    await queryInterface.removeIndex(
+      "internal_marks",
+      "internal_marks_class_id_idx"
+    );
+    await queryInterface.removeIndex(
+      "internal_marks",
+      "internal_marks_subject_id_idx"
+    );
+    await queryInterface.removeIndex(
+      "internal_marks",
+      "internal_marks_internal_name_idx"
+    );
+    await queryInterface.removeIndex(
+      "internal_marks",
+      "internal_marks_trash_idx"
+    );
   },
 };

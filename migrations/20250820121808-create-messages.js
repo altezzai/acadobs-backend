@@ -19,14 +19,26 @@ module.exports = {
       sender_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
+        references: {
+          model: "users",
+          key: "id",
+        },
       },
       receiver_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
+        references: {
+          model: "users",
+          key: "id",
+        },
       },
       student_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
+        references: {
+          model: "students",
+          key: "id",
+        },
       },
       message: {
         type: Sequelize.TEXT,
@@ -77,9 +89,37 @@ module.exports = {
         defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
       },
     });
+    await queryInterface.addIndex("messages", ["chat_id"], {
+      name: "messages_chat_id_idx",
+    });
+    await queryInterface.addIndex("messages", ["sender_id"], {
+      name: "messages_sender_id_idx",
+    });
+    await queryInterface.addIndex("messages", ["receiver_id"], {
+      name: "messages_receiver_id_idx",
+    });
+    await queryInterface.addIndex("messages", ["student_id"], {
+      name: "messages_student_id_idx",
+    });
+    await queryInterface.addIndex("messages", ["type"], {
+      name: "messages_type_idx",
+    });
+    await queryInterface.addIndex("messages", ["type_id"], {
+      name: "messages_type_id_idx",
+    });
+    await queryInterface.addIndex("messages", ["trash"], {
+      name: "messages_trash_idx",
+    });
   },
 
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable("messages");
+    await queryInterface.removeIndex("messages", "messages_chat_id_idx");
+    await queryInterface.removeIndex("messages", "messages_sender_id_idx");
+    await queryInterface.removeIndex("messages", "messages_receiver_id_idx");
+    await queryInterface.removeIndex("messages", "messages_student_id_idx");
+    await queryInterface.removeIndex("messages", "messages_type_idx");
+    await queryInterface.removeIndex("messages", "messages_type_id_idx");
+    await queryInterface.removeIndex("messages", "messages_trash_idx");
   },
 };

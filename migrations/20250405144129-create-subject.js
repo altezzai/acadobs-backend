@@ -53,6 +53,15 @@ module.exports = {
       type: "unique",
       name: "unique_subject_per_range_and_school",
     });
+    await queryInterface.addIndex("subjects", ["subject_name"], {
+      name: "subjects_subject_name_idx",
+    });
+    await queryInterface.addIndex("subjects", ["school_id"], {
+      name: "subjects_school_id_idx",
+    });
+    await queryInterface.addIndex("subjects", ["trash"], {
+      name: "subjects_trash_idx",
+    });
   },
 
   down: async (queryInterface, Sequelize) => {

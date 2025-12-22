@@ -11,6 +11,11 @@ module.exports = {
       school_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
+        references: {
+          model: "schools",
+          key: "id",
+        },
+        onDelete: "CASCADE",
       },
       timetable_id: {
         type: Sequelize.INTEGER,

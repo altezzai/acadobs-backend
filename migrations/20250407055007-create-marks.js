@@ -11,10 +11,18 @@ module.exports = {
       internal_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
+        references: {
+          model: "internal_marks",
+          key: "id",
+        },
       },
       student_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
+        references: {
+          model: "students",
+          key: "id",
+        },
       },
       marks_obtained: {
         type: Sequelize.DECIMAL(5, 2),

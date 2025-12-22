@@ -52,9 +52,30 @@ module.exports = {
       type: "unique",
       name: "unique_class_combination",
     });
+    await queryInterface.addIndex("classes", ["year"], {
+      name: "classes_year_idx",
+    });
+    await queryInterface.addIndex("classes", ["division"], {
+      name: "classes_division_idx",
+    });
+    await queryInterface.addIndex("classes", ["classname"], {
+      name: "classes_classname_idx",
+    });
+
+    await queryInterface.addIndex("classes", ["school_id"], {
+      name: "classes_school_id_idx",
+    });
+    await queryInterface.addIndex("classes", ["trash"], {
+      name: "classes_trash_idx",
+    });
   },
 
   down: async (queryInterface, Sequelize) => {
     await queryInterface.dropTable("classes");
+    await queryInterface.removeIndex("classes", "classes_year_idx");
+    await queryInterface.removeIndex("classes", "classes_division_idx");
+    await queryInterface.removeIndex("classes", "classes_classname_idx");
+    await queryInterface.removeIndex("classes", "classes_school_id_idx");
+    await queryInterface.removeIndex("classes", "classes_trash_idx");
   },
 };

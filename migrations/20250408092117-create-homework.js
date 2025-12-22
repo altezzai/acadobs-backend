@@ -69,8 +69,32 @@ module.exports = {
       type: "unique",
       name: "unique_homework_combination",
     });
+    await queryInterface.addIndex("homeworks", ["school_id"], {
+      name: "homeworks_school_id_idx",
+    });
+    await queryInterface.addIndex("homeworks", ["teacher_id"], {
+      name: "homeworks_teacher_id_idx",
+    });
+    await queryInterface.addIndex("homeworks", ["class_id"], {
+      name: "homeworks_class_id_idx",
+    });
+    await queryInterface.addIndex("homeworks", ["subject_id"], {
+      name: "homeworks_subject_id_idx",
+    });
+    await queryInterface.addIndex("homeworks", ["title"], {
+      name: "homeworks_title_idx",
+    });
+    await queryInterface.addIndex("homeworks", ["trash"], {
+      name: "homeworks_trash_idx",
+    });
   },
   async down(queryInterface) {
     await queryInterface.dropTable("homeworks");
+    await queryInterface.removeIndex("homeworks", "homeworks_school_id_idx");
+    await queryInterface.removeIndex("homeworks", "homeworks_teacher_id_idx");
+    await queryInterface.removeIndex("homeworks", "homeworks_class_id_idx");
+    await queryInterface.removeIndex("homeworks", "homeworks_subject_id_idx");
+    await queryInterface.removeIndex("homeworks", "homeworks_title_idx");
+    await queryInterface.removeIndex("homeworks", "homeworks_trash_idx");
   },
 };

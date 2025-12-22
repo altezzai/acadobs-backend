@@ -67,9 +67,25 @@ module.exports = {
         defaultValue: Sequelize.fn("NOW"),
       },
     });
+    await queryInterface.addIndex("schools", ["name"], {
+      name: "schools_name_idx",
+    });
+    await queryInterface.addIndex("schools", ["email"], {
+      name: "schools_email_idx",
+    });
+    await queryInterface.addIndex("schools", ["phone"], {
+      name: "schools_phone_idx",
+    });
+    await queryInterface.addIndex("schools", ["trash"], {
+      name: "schools_trash_idx",
+    });
   },
 
   down: async (queryInterface, Sequelize) => {
     await queryInterface.dropTable("schools");
+    await queryInterface.removeIndex("schools", "schools_name_idx");
+    await queryInterface.removeIndex("schools", "schools_email_idx");
+    await queryInterface.removeIndex("schools", "schools_phone_idx");
+    await queryInterface.removeIndex("schools", "schools_trash_idx");
   },
 };

@@ -54,9 +54,33 @@ module.exports = {
         ),
       },
     });
+    await queryInterface.addIndex("students", ["school_id"], {
+      name: "students_school_id_idx",
+    });
+    await queryInterface.addIndex("students", ["guardian_id"], {
+      name: "students_guardian_id_idx",
+    });
+    await queryInterface.addIndex("students", ["class_id"], {
+      name: "students_class_id_idx",
+    });
+    await queryInterface.addIndex("students", ["roll_number"], {
+      name: "students_roll_number_idx",
+    });
+    await queryInterface.addIndex("students", ["full_name"], {
+      name: "students_full_name_idx",
+    });
+    await queryInterface.addIndex("students", ["trash"], {
+      name: "students_trash_idx",
+    });
   },
 
   down: async (queryInterface, Sequelize) => {
     await queryInterface.dropTable("students");
+    await queryInterface.removeIndex("students", "students_school_id_idx");
+    await queryInterface.removeIndex("students", "students_guardian_id_idx");
+    await queryInterface.removeIndex("students", "students_class_id_idx");
+    await queryInterface.removeIndex("students", "students_roll_number_idx");
+    await queryInterface.removeIndex("students", "students_full_name_idx");
+    await queryInterface.removeIndex("students", "students_trash_idx");
   },
 };

@@ -46,8 +46,38 @@ module.exports = {
       type: "unique",
       name: "unique_achievement_combination",
     });
+    await queryInterface.addIndex("achievements", ["school_id"], {
+      name: "achievements_school_id_idx",
+    });
+    await queryInterface.addIndex("achievements", ["title"], {
+      name: "achievements_title_idx",
+    });
+    await queryInterface.addIndex("achievements", ["category"], {
+      name: "achievements_category_idx",
+    });
+    await queryInterface.addIndex("achievements", ["level"], {
+      name: "achievements_level_idx",
+    });
+    await queryInterface.addIndex("achievements", ["date"], {
+      name: "achievements_date_idx",
+    });
+    await queryInterface.addIndex("achievements", ["trash"], {
+      name: "achievements_trash_idx",
+    });
   },
   down: async (queryInterface) => {
     await queryInterface.dropTable("achievements");
+    await queryInterface.removeIndex(
+      "achievements",
+      "achievements_school_id_idx"
+    );
+    await queryInterface.removeIndex("achievements", "achievements_title_idx");
+    await queryInterface.removeIndex(
+      "achievements",
+      "achievements_category_idx"
+    );
+    await queryInterface.removeIndex("achievements", "achievements_level_idx");
+    await queryInterface.removeIndex("achievements", "achievements_date_idx");
+    await queryInterface.removeIndex("achievements", "achievements_trash_idx");
   },
 };

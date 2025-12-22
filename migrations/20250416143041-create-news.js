@@ -41,8 +41,24 @@ module.exports = {
       type: "unique",
       name: "unique_news_combination",
     });
+    await queryInterface.addIndex("news", ["school_id"], {
+      name: "news_school_id_idx",
+    });
+    await queryInterface.addIndex("news", ["title"], {
+      name: "news_title_idx",
+    });
+    await queryInterface.addIndex("news", ["date"], {
+      name: "news_date_idx",
+    });
+    await queryInterface.addIndex("news", ["trash"], {
+      name: "news_trash_idx",
+    });
   },
   down: async (queryInterface) => {
     await queryInterface.dropTable("news");
+    await queryInterface.removeIndex("news", "news_school_id_idx");
+    await queryInterface.removeIndex("news", "news_title_idx");
+    await queryInterface.removeIndex("news", "news_date_idx");
+    await queryInterface.removeIndex("news", "news_trash_idx");
   },
 };

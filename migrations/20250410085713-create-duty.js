@@ -28,8 +28,24 @@ module.exports = {
       type: "unique",
       name: "unique_duty_combination",
     });
+    await queryInterface.addIndex("duties", ["school_id"], {
+      name: "duties_school_id_idx",
+    });
+    await queryInterface.addIndex("duties", ["title"], {
+      name: "duties_title_idx",
+    });
+    await queryInterface.addIndex("duties", ["deadline"], {
+      name: "duties_deadline_idx",
+    });
+    await queryInterface.addIndex("duties", ["trash"], {
+      name: "duties_trash_idx",
+    });
   },
   down: async (queryInterface) => {
     await queryInterface.dropTable("duties");
+    await queryInterface.removeIndex("duties", "duties_school_id_idx");
+    await queryInterface.removeIndex("duties", "duties_title_idx");
+    await queryInterface.removeIndex("duties", "duties_deadline_idx");
+    await queryInterface.removeIndex("duties", "duties_trash_idx");
   },
 };

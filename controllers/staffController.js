@@ -2238,7 +2238,19 @@ const createParentNote = async (req, res) => {
     const school_id = req.user.school_id;
     const recorded_by = req.user.user_id;
 
-    const { note_title, note_content, studentIds } = req.body; // pass selected student ids
+    const { note_title, note_content, studentIds } = req.body;
+    const existingNote = await ParentNote.findOne({
+      where: {
+        school_id,
+        note_title,
+        note_content,
+        recorded_by,
+      },
+    });
+
+    if (existingNote) {
+      return res.status(400).json({ error: "Note already exists" });
+    }
     let fileName = null;
     if (req.file) {
       const uploadPath = "uploads/parent_notes/";
@@ -2370,6 +2382,19 @@ const updateParentNote = async (req, res) => {
     const school_id = req.user.school_id;
     const recorded_by = req.user.user_id;
 
+    const { note_title, note_content } = req.body;
+    const existingNote = await ParentNote.findOne({
+      where: {
+        school_id,
+        recorded_by,
+        note_title,
+        note_content,
+        id: { [Op.ne]: noteId },
+      },
+    });
+    if (existingNote) {
+      return res.status(400).json({ error: "Note with same content exists" });
+    }
     const note = await ParentNote.findOne({
       where: { id: noteId, school_id, recorded_by },
     });
@@ -2378,7 +2403,6 @@ const updateParentNote = async (req, res) => {
       return res.status(404).json({ error: "Parent note not found" });
     }
 
-    const { note_title, note_content } = req.body;
     let fileName = note.note_attachment;
     if (req.file) {
       const uploadPath = "uploads/parent_notes/";

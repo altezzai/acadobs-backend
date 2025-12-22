@@ -69,8 +69,16 @@ module.exports = {
         ),
       },
     });
+    await queryInterface.addIndex("guardians", ["user_id"], {
+      name: "guardians_user_id_idx",
+    });
+    await queryInterface.addIndex("guardians", ["trash"], {
+      name: "guardians_trash_idx",
+    });
   },
   down: async (queryInterface, Sequelize) => {
     await queryInterface.dropTable("guardians");
+    await queryInterface.removeIndex("guardians", "guardians_user_id_idx");
+    await queryInterface.removeIndex("guardians", "guardians_trash_idx");
   },
 };
