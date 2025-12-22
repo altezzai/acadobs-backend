@@ -3339,7 +3339,7 @@ const getDonations = async (req, res) => {
       include: [
         {
           model: Student,
-          attributes: ["id", "full_name", "roll_number", "class_id"],
+          attributes: ["id", "full_name", "reg_no", "roll_number", "class_id"],
           where: whereStudent,
           include: [
             {
@@ -3544,7 +3544,7 @@ const getTrashedPayments = async (req, res) => {
       include: [
         {
           model: Student,
-          attributes: ["id", "full_name", "roll_number", "class_id"],
+          attributes: ["id", "full_name", "roll_number", "reg_no", "class_id"],
           where: whereStudent,
           include: [
             {
@@ -3639,7 +3639,7 @@ const getTrashedDonations = async (req, res) => {
       include: [
         {
           model: Student,
-          attributes: ["id", "full_name", "roll_number", "class_id"],
+          attributes: ["id", "full_name", "reg_no", "roll_number", "class_id"],
           where: whereStudent,
           include: [
             {
