@@ -264,7 +264,7 @@ router.post(
   "/news",
   uploadWithErrorHandler(
     upload.fields([
-      { name: "file", maxCount: 1 },
+      // { name: "file", maxCount: 1 },
       { name: "images", maxCount: 10 },
     ])
   ),
@@ -276,7 +276,7 @@ router.get("/news/:id", schoolAdminController.getNewsById);
 router.put(
   "/news/:id",
   upload.fields([
-    { name: "file", maxCount: 1 },
+    // { name: "file", maxCount: 1 },
     { name: "images", maxCount: 10 },
   ]),
   schoolAdminController.updateNews

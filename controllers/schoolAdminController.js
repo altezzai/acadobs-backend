@@ -4627,7 +4627,7 @@ const getAllStudentLeaveRequests = async (req, res) => {
   }
 };
 const newsimagePath = "uploads/news_images/";
-const newsfilePath = "uploads/news_files/";
+// const newsfilePath = "uploads/news_files/";
 const createNews = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -4645,12 +4645,12 @@ const createNews = async (req, res) => {
         .status(400)
         .json({ error: "news with the same title already exists" });
     }
-    let fileName = null;
-    if (req.files?.file?.[0]) {
-      fileName = req.files.file[0];
-      const uploadPath = newsfilePath;
-      fileName = await compressAndSaveFile(fileName, uploadPath);
-    }
+    // let fileName = null;
+    // if (req.files?.file?.[0]) {
+    //   fileName = req.files.file[0];
+    //   const uploadPath = newsfilePath;
+    //   fileName = await compressAndSaveFile(fileName, uploadPath);
+    // }
 
     const news = await News.create({
       school_id,
@@ -4658,8 +4658,7 @@ const createNews = async (req, res) => {
       content,
       date,
       user_id,
-
-      file: fileName ? fileName : null,
+      // file: fileName,
     });
 
     if (req.files?.images) {
@@ -4767,7 +4766,7 @@ const updateNews = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const { title, content, file } = req.body;
+    const { title, content } = req.body;
     const news = await News.findOne({
       where: { id: id, school_id: school_id, trash: false },
     });
@@ -4782,12 +4781,12 @@ const updateNews = async (req, res) => {
         .status(409)
         .json({ error: "News with the same title already exists" });
     }
-    let fileName = news.file;
-    if (req.file) {
-      const uploadPath = newsfilePath;
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-    }
-    await news.update({ title, content, file: fileName });
+    // let fileName = news.file;
+    // if (req.file) {
+    //   const uploadPath = newsfilePath;
+    //   fileName = await compressAndSaveFile(req.file, uploadPath);
+    // }
+    await news.update({ title, content });
 
     if (req.files?.images) {
       const imageRecords = [];
@@ -4887,10 +4886,10 @@ const permanentDeleteNews = async (req, res) => {
     const { id } = req.params;
     const news = await News.findOne({ where: { id, trash: true } });
     if (!news) return res.status(404).json({ error: "Not found" });
-    if (news.file) {
-      const uploadPath = newsfilePath;
-      await deletefilewithfoldername(news.file, uploadPath);
-    }
+    // if (news.file) {
+    //   const uploadPath = newsfilePath;
+    //   await deletefilewithfoldername(news.file, uploadPath);
+    // }
     const newsImages = await NewsImage.findAll({ where: { news_id: id } });
     for (const img of newsImages) {
       if (img.image_url) {
