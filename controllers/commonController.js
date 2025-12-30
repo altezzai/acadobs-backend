@@ -618,7 +618,7 @@ const getLatestNews = async (req, res) => {
     const limit = parseInt(req.query.limit) || 3;
     const offset = (page - 1) * limit;
     const { count, rows: news } = await News.findAndCountAll({
-      where: { school_id: school_id },
+      where: { school_id: school_id, trash: false },
       include: [
         {
           model: NewsImage,
