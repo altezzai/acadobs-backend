@@ -4769,7 +4769,7 @@ const updateNews = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const { title, content } = req.body;
+    const { title, content, date } = req.body;
     const news = await News.findOne({
       where: { id: id, school_id: school_id, trash: false },
     });
@@ -4789,7 +4789,7 @@ const updateNews = async (req, res) => {
     //   const uploadPath = newsfilePath;
     //   fileName = await compressAndSaveFile(req.file, uploadPath);
     // }
-    await news.update({ title, content });
+    await news.update({ title, content, date });
 
     if (req.files?.images) {
       const imageRecords = [];
