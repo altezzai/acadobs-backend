@@ -622,7 +622,7 @@ const getLatestNews = async (req, res) => {
       include: [
         {
           model: NewsImage,
-          attributes: ["id", "image"],
+          attributes: ["id", "image_url", "caption"],
         },
       ],
       order: [["createdAt", "DESC"]],

@@ -4843,6 +4843,7 @@ const getTrashedNews = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const school_id = req.user.school_id;
+    const searchQuery = req.query.search || "";
     let whereClause = {
       trash: false,
       school_id: school_id,
