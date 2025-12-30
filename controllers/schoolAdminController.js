@@ -4688,12 +4688,14 @@ const createNews = async (req, res) => {
 
 const getAllNews = async (req, res) => {
   try {
+    const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    const whereClause = {
+    let whereClause = {
       trash: false,
+      school_id: school_id,
     };
     if (searchQuery) {
       whereClause[Op.or] = [
@@ -4714,6 +4716,7 @@ const getAllNews = async (req, res) => {
           required: false,
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -4840,11 +4843,30 @@ const getTrashedNews = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const school_id = req.user.school_id;
+    let whereClause = {
+      trash: false,
+      school_id: school_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
     const { count, rows: news } = await News.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: { trash: true, school_id: school_id },
+      where: whereClause,
+      include: [
+        {
+          model: NewsImage,
+          where: { trash: false },
+          attributes: ["id", "image_url", "caption"],
+          required: false,
+        },
+      ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({

@@ -20,6 +20,7 @@ const News = require("../models/news");
 const Payment = require("../models/payment");
 const AccountDelete = require("../models/accountdelete");
 const Syllabus = require("../models/syllabus");
+const NewsImage = require("../models/newsimage");
 
 const { Class } = require("../models");
 
@@ -618,6 +619,12 @@ const getLatestNews = async (req, res) => {
     const offset = (page - 1) * limit;
     const { count, rows: news } = await News.findAndCountAll({
       where: { school_id: school_id },
+      include: [
+        {
+          model: NewsImage,
+          attributes: ["id", "image"],
+        },
+      ],
       order: [["createdAt", "DESC"]],
       limit: limit,
       offset,
