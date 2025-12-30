@@ -4845,7 +4845,7 @@ const getTrashedNews = async (req, res) => {
     const school_id = req.user.school_id;
     const searchQuery = req.query.search || "";
     let whereClause = {
-      trash: false,
+      trash: true,
       school_id: school_id,
     };
     if (searchQuery) {
