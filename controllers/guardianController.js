@@ -813,6 +813,15 @@ const updateProfileDetails = async (req, res) => {
       guardian2_contact,
       father_name,
       mother_name,
+      house_name,
+      street,
+      city,
+      landmark,
+      district,
+      state,
+      country,
+      post,
+      pincode,
     } = req.body;
     const guardian = await Guardian.findOne({
       where: { user_id: userId },
@@ -846,6 +855,15 @@ const updateProfileDetails = async (req, res) => {
       guardian2_contact,
       father_name,
       mother_name,
+      house_name,
+      street,
+      city,
+      landmark,
+      district,
+      state,
+      country,
+      post,
+      pincode,
     });
     res.status(200).json({ message: "Guardian profile updated", guardian });
   } catch (err) {
@@ -915,6 +933,15 @@ const getProfileDetails = async (req, res) => {
         "guardian2_relation",
         "father_name",
         "mother_name",
+        "house_name",
+        "street",
+        "city",
+        "landmark",
+        "district",
+        "state",
+        "country",
+        "post",
+        "pincode",
       ],
     });
     if (!guardian) return res.status(404).json({ error: "Guardian not found" });

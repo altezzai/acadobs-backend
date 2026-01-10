@@ -1230,6 +1230,15 @@ const createGuardian = async (req, res) => {
       guardian2_contact,
       father_name,
       mother_name,
+      house_name,
+      street,
+      city,
+      landmark,
+      district,
+      state,
+      country,
+      post,
+        pincode,
     } = req.body;
     if (!guardian_name || !guardian_contact) {
       return res.status(400).json({ error: "Required fields are missing" });
@@ -1287,6 +1296,15 @@ const createGuardian = async (req, res) => {
       guardian2_contact,
       father_name,
       mother_name,
+      house_name,
+      street,
+      city,
+      landmark,
+      district,
+      state,
+      country,
+      post,
+      pincode,
     });
 
     res.status(201).json({ user, guardian });
@@ -1316,6 +1334,15 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
       father_name,
       mother_name,
       school_id,
+      house_name,
+      street,
+      city,
+      landmark,
+      district,
+      state,
+      country,
+      post,
+      pincode,
     } = guardianData;
 
     if (!guardian_name || !guardian_contact) {
@@ -1364,6 +1391,15 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
       guardian2_contact,
       father_name,
       mother_name,
+      house_name,
+      street,
+      city,
+      landmark,
+      district,
+      state,
+      country,
+      post,
+      pincode,
     });
     console.log("Guardian created with ID:", guardian);
 
@@ -1451,6 +1487,15 @@ const updateGuardian = async (req, res) => {
       guardian2_contact,
       father_name,
       mother_name,
+      house_name,
+      street,
+      city,
+      landmark,
+      district,
+      state,
+      country,
+      post,
+      pincode,
     } = req.body;
     const guardian = await Guardian.findOne({
       where: { id, trash: false },
@@ -1499,6 +1544,15 @@ const updateGuardian = async (req, res) => {
       guardian2_contact,
       father_name,
       mother_name,
+      house_name,
+      street,
+      city,
+      landmark,
+      district,
+      state,
+      country,
+      post,
+      pincode,
     });
 
     const user = await User.findOne({
@@ -1612,7 +1666,9 @@ const createStudent = async (req, res) => {
       class_id,
       address,
       admission_date,
+      second_language,
       status,
+
 
       // Guardian Data (all inside req.body)
 
@@ -1625,6 +1681,16 @@ const createStudent = async (req, res) => {
       guardian2_job,
       father_name,
       mother_name,
+
+      house_name,
+      street,
+      city,
+      landmark,
+      district,
+      state,
+      country,
+      post,
+      pincode,
     } = req.body;
     const guardian_email = req.body.guardian_email || null;
     const guardian_relation = req.body.guardian_relation || "father";
@@ -1702,6 +1768,15 @@ const createStudent = async (req, res) => {
         father_name,
         mother_name,
         school_id,
+        house_name,
+        street,
+        city,
+        landmark,
+        district,
+        state,
+        country,
+        post,
+        pincode,
       };
 
       const newGuardian = await createGuardianService(
@@ -1727,6 +1802,7 @@ const createStudent = async (req, res) => {
       class_id,
       admission_date,
       address,
+      second_language,
       status,
       image: fileName ? fileName : null,
     });
@@ -1769,6 +1845,7 @@ const bulkCreateStudents = async (req, res) => {
         address,
         admission_date,
         status,
+        second_language,
 
         // guardian
         guardian_email,
@@ -1782,6 +1859,16 @@ const bulkCreateStudents = async (req, res) => {
         guardian2_job,
         father_name,
         mother_name,
+
+        house_name,
+        street,
+        city,
+        landmark,
+        district,
+        state,
+        country,
+        post,
+        pincode,
       } = studentObj;
 
       if (!guardian_contact || !full_name || !reg_no || !roll_number) {
@@ -1834,7 +1921,7 @@ const bulkCreateStudents = async (req, res) => {
           });
           if (existingEmail && guardian_email !== "") {
             throw new Error(
-              `Guardian email number ${existingEmail.email} already exists`
+              `Guardian email  ${existingEmail.email} already exists with other phone number `
             );
           }
         }
@@ -1858,6 +1945,15 @@ const bulkCreateStudents = async (req, res) => {
           father_name,
           mother_name,
           school_id,
+            house_name,
+        street,
+        city,
+        landmark,
+        district,
+        state,
+        country,
+        post,
+        pincode,
         };
 
         // Guardian dp upload (if any) -> expect req.files keyed by something like `dp_${index}`
@@ -1891,6 +1987,7 @@ const bulkCreateStudents = async (req, res) => {
         admission_date,
         address,
         status,
+        second_language,
         // image: fileName,
       });
     }
@@ -2001,6 +2098,7 @@ const updateStudent = async (req, res) => {
       address,
       admission_date,
       status,
+      second_language,
     } = req.body;
     if (reg_no) {
       const existingRegNo = await Student.findOne({

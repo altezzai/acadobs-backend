@@ -23,6 +23,7 @@ const Student = schoolSequelize.define(
     },
     image: { type: DataTypes.STRING },
     alumni: { type: DataTypes.BOOLEAN, defaultValue: false },
+    second_language: { type: DataTypes.STRING },
     trash: { type: DataTypes.BOOLEAN, defaultValue: false },
     createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },

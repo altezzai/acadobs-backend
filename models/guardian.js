@@ -71,6 +71,33 @@ const Guardian = schoolSequelize.define(
     mother_name: {
       type: DataTypes.STRING,
     },
+    house_name: {
+      type: DataTypes.STRING,
+    },
+    street: {
+      type: DataTypes.STRING,
+    },
+    city: {
+      type: DataTypes.STRING,
+    },
+    landmark: {
+      type: DataTypes.STRING,
+    },
+    district: {
+      type: DataTypes.STRING,
+    },
+    state: {
+      type: DataTypes.STRING,
+    },
+    country: {
+      type: DataTypes.STRING,
+    },
+    post: {
+      type: DataTypes.STRING,
+    },
+    pincode: {
+      type: DataTypes.STRING,
+    },
     trash: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
