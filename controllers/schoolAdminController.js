@@ -7,6 +7,7 @@ const {
   deletefilewithfoldername,
   compressAndSaveMultiFile,
 } = require("../utils/fileHandler");
+const {normalizeGender} = require("../utils/supportingFunction");
 const Staff = require("../models/staff");
 const StaffPermission = require("../models/staff_permissions");
 const StaffSubject = require("../models/staffsubject");
@@ -1798,7 +1799,7 @@ const createStudent = async (req, res) => {
       roll_number,
       full_name,
       date_of_birth,
-      gender,
+      gender: normalizeGender(gender),
       class_id,
       admission_date,
       address,
@@ -1982,7 +1983,7 @@ const bulkCreateStudents = async (req, res) => {
         roll_number,
         full_name,
         date_of_birth,
-        gender,
+        gender: normalizeGender(gender),
         class_id,
         admission_date,
         address,
@@ -2134,11 +2135,12 @@ const updateStudent = async (req, res) => {
       roll_number,
       full_name,
       date_of_birth,
-      gender,
+      gender: normalizeGender(gender),
       class_id,
       address,
       admission_date,
       status,
+      second_language,
       image: studentImageFilename,
     });
 
