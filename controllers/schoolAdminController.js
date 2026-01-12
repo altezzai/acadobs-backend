@@ -7,7 +7,7 @@ const {
   deletefilewithfoldername,
   compressAndSaveMultiFile,
 } = require("../utils/fileHandler");
-const {normalizeGender} = require("../utils/supportingFunction");
+const {normalizeGender, normalizeGuardianRelation} = require("../utils/supportingFunction");
 const Staff = require("../models/staff");
 const StaffPermission = require("../models/staff_permissions");
 const StaffSubject = require("../models/staffsubject");
@@ -1364,7 +1364,11 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
       const uploadPath = "uploads/dp/";
       fileName = await compressAndSaveFile(file, uploadPath);
     }
-    const password = guardian_name.slice(0, 3) + guardian_contact.slice(0, 5);
+const contactStr = String(guardian_contact);
+
+const password =
+  guardian_name.slice(0, 3) + contactStr.slice(0, 5);
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
@@ -1534,12 +1538,12 @@ const updateGuardian = async (req, res) => {
     }
 
     await guardian.update({
-      guardian_relation,
+      guardian_relation: guardian_relation ? normalizeGuardianRelation(guardian_relation) : null,
       guardian_name,
       guardian_contact,
       guardian_email,
       guardian_job,
-      guardian2_relation,
+      guardian2_relation: guardian2_relation ? normalizeGuardianRelation(guardian2_relation)  : null,
       guardian2_name,
       guardian2_job,
       guardian2_contact,
@@ -1760,10 +1764,10 @@ const createStudent = async (req, res) => {
         guardian_email,
         guardian_name,
         guardian_contact,
-        guardian_relation,
+        guardian_relation:guardian_relation?normalizeGuardianRelation(guardian_relation) : null,
         guardian_job,
         guardian2_name,
-        guardian2_relation,
+        guardian2_relation:guardian2_relation?normalizeGuardianRelation(guardian2_relation) : null,
         guardian2_contact,
         guardian2_job,
         father_name,
@@ -1937,10 +1941,10 @@ const bulkCreateStudents = async (req, res) => {
           guardian_email,
           guardian_name,
           guardian_contact,
-          guardian_relation,
+          guardian_relation: guardian_relation ?normalizeGuardianRelation(guardian_relation) : null,
           guardian_job,
           guardian2_name,
-          guardian2_relation,
+          guardian2_relation: guardian2_relation ?normalizeGuardianRelation(guardian2_relation) : null,
           guardian2_contact,
           guardian2_job,
           father_name,
