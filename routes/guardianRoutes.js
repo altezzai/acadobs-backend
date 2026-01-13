@@ -67,6 +67,7 @@ router.put(
   guardianController.updateStudentProfile
 );
 router.put("/updateProfileDetails", guardianController.updateProfileDetails);
+router.put("/changeIdentifiersAndName", guardianController.changeIdentifiersAndName);
 router.get("/getProfileDetails", guardianController.getProfileDetails);
 
 router.get("/getHomeworkById/:id", guardianController.getHomeworkById);
