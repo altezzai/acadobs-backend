@@ -1308,7 +1308,7 @@ const createGuardian = async (req, res) => {
       pincode,
     });
 
-    res.status(201).json({ user, guardian });
+    res.status(201).json({ success: true, data: guardian ,user: user});
   } catch (error) {
     logger.error(
       "schoolId:",
@@ -1417,6 +1417,7 @@ const password =
 const getAllGuardians = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
+    const school_id = req.user.school_id;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -1433,9 +1434,10 @@ const getAllGuardians = async (req, res) => {
         {
           model: User,
           attributes: ["name", "email", "phone", "dp"],
-          where: { school_id: req.user.school_id },
+          where: { school_id },
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
 
     const totalPages = Math.ceil(count / limit);
