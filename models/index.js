@@ -32,6 +32,10 @@ const StaffPermission = require("./staff_permissions");
 const StaffAttendance = require("./staff_attendance");
 const AccountDelete = require("../models/accountdelete");
 const Syllabus = require("../models/syllabus");
+const Driver = require("./driver");
+const Vehicle = require("./vehicle");
+const route = require("./studentroutes");
+const stop = require("./stop");
 
 // Relations
 
@@ -143,6 +147,11 @@ TimetableSubstitution.belongsTo(Subject, { foreignKey: "subject_id" });
 
 AccountDelete.belongsTo(User, { foreignKey: "user_id" });
 
+Driver.hasMany(Vehicle, { foreignKey: "driver_id", as: "vehicles" });
+Vehicle.belongsTo(Driver, { foreignKey: "driver_id", as: "driver" });
+
+route.hasMany(stop, { foreignKey: "route_id", as: "stop" });
+
 module.exports = {
   Homework,
   HomeworkAssignment,
@@ -173,4 +182,8 @@ module.exports = {
   Attendance,
   Duty,
   DutyAssignment,
+  Driver,
+  Vehicle,
+  route,
+  stop,
 };

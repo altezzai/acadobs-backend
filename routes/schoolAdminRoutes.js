@@ -16,7 +16,7 @@ router.patch("/classes/:id", schoolAdminController.restoreClass);
 router.get("/getTrashedClasses", schoolAdminController.getTrashedClasses);
 router.delete(
   "/permanentDeleteClass/:id",
-  schoolAdminController.permanentDeleteClass
+  schoolAdminController.permanentDeleteClass,
 );
 //common controller
 router.get("/getClassesByYear/:year", commonController.getClassesByYear); // Get classes by year
@@ -32,27 +32,27 @@ router.get("/getSubjectsForFilter", schoolAdminController.getSubjectsForFilter);
 router.get("/getTrashedSubjects", schoolAdminController.getTrashedSubjects);
 router.delete(
   "/permanentDeleteSubject/:id",
-  schoolAdminController.permanentDeleteSubject
+  schoolAdminController.permanentDeleteSubject,
 );
 
 //staff routes
 router.post(
   "/staffs",
   uploadWithErrorHandler(upload.single("dp")),
-  schoolAdminController.createStaff
+  schoolAdminController.createStaff,
 );
 router.get("/staffs", schoolAdminController.getAllStaff);
 router.get("/staffs/:staff_id", schoolAdminController.getStaffById);
 router.put(
   "/staffs/:staff_id",
   uploadWithErrorHandler(upload.single("dp")),
-  schoolAdminController.updateStaff
+  schoolAdminController.updateStaff,
 );
 router.get("/getStaffs", schoolAdminController.getStaffs);
 router.put(
   "/updateStaffUser/:user_id",
   uploadWithErrorHandler(upload.single("dp")),
-  schoolAdminController.updateStaffUser
+  schoolAdminController.updateStaffUser,
 );
 router.delete("/staffs/:staff_id", schoolAdminController.deleteStaff);
 router.patch("/staffs/:staff_id", schoolAdminController.restoredStaff);
@@ -62,35 +62,35 @@ router.get("/getTrashedStaffs", schoolAdminController.getTrashedStaffs);
 //staff permissions
 router.get(
   "/staffPermissions/:user_id",
-  schoolAdminController.getStaffPermissionByUser
+  schoolAdminController.getStaffPermissionByUser,
 );
 router.get("/staffPermissions", schoolAdminController.getAllStaffPermissions);
 router.put(
   "/staffPermissions/:user_id",
-  schoolAdminController.updateStaffPermission
+  schoolAdminController.updateStaffPermission,
 );
 
 // Guardian routes
 router.post(
   "/guardian",
   uploadWithErrorHandler(upload.single("dp")),
-  schoolAdminController.createGuardian
+  schoolAdminController.createGuardian,
 );
 router.get("/guardian", schoolAdminController.getAllGuardians);
 router.get("/guardian/:id", schoolAdminController.getGuardianById);
 router.put(
   "/guardian/:id",
   uploadWithErrorHandler(upload.single("dp")),
-  schoolAdminController.updateGuardian
+  schoolAdminController.updateGuardian,
 );
 router.delete("/guardian/:id", schoolAdminController.deleteGuardian);
 router.get(
   "/getGuardianBySchoolId",
-  schoolAdminController.getGuardianBySchoolId
+  schoolAdminController.getGuardianBySchoolId,
 );
 router.put(
   "/updateGuardianUserPassword/:user_id",
-  schoolAdminController.updateGuardianUserPassword
+  schoolAdminController.updateGuardianUserPassword,
 );
 
 // Student routes
@@ -100,9 +100,9 @@ router.post(
     upload.fields([
       { name: "dp", maxCount: 1 }, // guardian image
       { name: "image", maxCount: 1 }, // student image
-    ])
+    ]),
   ),
-  schoolAdminController.createStudent
+  schoolAdminController.createStudent,
 );
 router.post("/bulkCreateStudents", schoolAdminController.bulkCreateStudents);
 router.get("/students", schoolAdminController.getAllStudents);
@@ -110,48 +110,48 @@ router.get("/students/:id", schoolAdminController.getStudentById);
 router.put(
   "/students/:id",
   uploadWithErrorHandler(upload.single("image")),
-  schoolAdminController.updateStudent
+  schoolAdminController.updateStudent,
 );
 router.delete("/students/:id", schoolAdminController.deleteStudent);
 //common controller
 router.get(
   "/getStudentsByClassId/:class_id",
-  commonController.getStudentsByClassId
+  commonController.getStudentsByClassId,
 );
 
 //duty
 router.post(
   "/duties",
   uploadWithErrorHandler(upload.single("file")),
-  schoolAdminController.createDutyWithAssignments
+  schoolAdminController.createDutyWithAssignments,
 );
 router.get("/duties", schoolAdminController.getAllDuties);
 router.get("/duties/:id", schoolAdminController.getDutyById);
 router.put(
   "/duties/:id",
   uploadWithErrorHandler(upload.single("file")),
-  schoolAdminController.updateDuty
+  schoolAdminController.updateDuty,
 );
 router.delete("/duties/:id", schoolAdminController.deleteDuty);
 router.patch("/duties/:id", schoolAdminController.restoreDuty);
 router.get("/getTrashedDuties", schoolAdminController.getTrashedDuties);
 router.delete(
   "/permanentDeleteDuty/:id",
-  schoolAdminController.permanentDeleteDuty
+  schoolAdminController.permanentDeleteDuty,
 );
 router.put(
   "/updateDutyAssigned/:id",
   uploadWithErrorHandler(upload.single("solved_file")),
-  schoolAdminController.updateDutyAssigned
+  schoolAdminController.updateDutyAssigned,
 );
 router.put(
   "/bulkUpdateDutyAssignments/",
-  schoolAdminController.bulkUpdateDutyAssignments
+  schoolAdminController.bulkUpdateDutyAssignments,
 );
 router.post(
   "/achievements",
   uploadWithErrorHandler(upload.any()),
-  schoolAdminController.createAchievementWithStudents
+  schoolAdminController.createAchievementWithStudents,
 );
 router.get("/getAllAchievements", schoolAdminController.getAllAchievements);
 router.get("/achievements/:id", schoolAdminController.getAchievementById);
@@ -160,32 +160,32 @@ router.delete("/achievements/:id", schoolAdminController.deleteAchievement);
 router.patch("/achievements/:id", schoolAdminController.restoreAchievement);
 router.get(
   "/getTrashedAchievements",
-  schoolAdminController.getTrashedAchievements
+  schoolAdminController.getTrashedAchievements,
 );
 router.put(
   "/updateStudentAchievement/:id",
   uploadWithErrorHandler(upload.single("proof_document")),
-  schoolAdminController.updateStudentAchievement
+  schoolAdminController.updateStudentAchievement,
 );
 //events
 router.post(
   "/events",
   uploadWithErrorHandler(upload.single("file")),
-  schoolAdminController.createEvent
+  schoolAdminController.createEvent,
 );
 router.get("/events", schoolAdminController.getAllEvents);
 router.get("/events/:id", schoolAdminController.getEventById);
 router.put(
   "/events/:id",
   uploadWithErrorHandler(upload.single("file")),
-  schoolAdminController.updateEvent
+  schoolAdminController.updateEvent,
 );
 router.delete("/events/:id", schoolAdminController.deleteEvent);
 router.patch("/events/:id", schoolAdminController.restoreEvent);
 router.get("/getTrashedEvents", schoolAdminController.getTrashedEvents);
 router.delete(
   "/permanentDeleteEvent/:id",
-  schoolAdminController.permanentDeleteEvent
+  schoolAdminController.permanentDeleteEvent,
 );
 //payment
 router.post("/payments", schoolAdminController.createPayment);
@@ -199,13 +199,13 @@ router.get("/getTrashedPayments", schoolAdminController.getTrashedPayments);
 router.get("/getTrashedDonations", schoolAdminController.getTrashedDonations);
 router.delete(
   "/permanentDeletePayment/:id",
-  schoolAdminController.permanentDeletePayment
+  schoolAdminController.permanentDeletePayment,
 );
 //invoice
 router.post("/invoices", schoolAdminController.createInvoice);
 router.post(
   "/addInvoiceStudentsbyInvoiceId/:id",
-  schoolAdminController.addInvoiceStudentsbyInvoiceId
+  schoolAdminController.addInvoiceStudentsbyInvoiceId,
 );
 router.get("/invoices", schoolAdminController.getAllInvoices);
 router.get("/invoices/:id", schoolAdminController.getInvoiceById);
@@ -214,7 +214,7 @@ router.delete("/invoices/:id", schoolAdminController.deleteInvoice);
 router.patch("/invoices/:id", schoolAdminController.restoreInvoice);
 router.delete(
   "/permanentDeleteInvoiceStudent/:id",
-  schoolAdminController.permanentDeleteInvoiceStudent
+  schoolAdminController.permanentDeleteInvoiceStudent,
 );
 router.get("/getTrashedInvoices", schoolAdminController.getTrashedInvoices);
 
@@ -222,7 +222,7 @@ router.get("/getTrashedInvoices", schoolAdminController.getTrashedInvoices);
 router.post(
   "/leaveRequest",
   uploadWithErrorHandler(upload.single("attachment")),
-  schoolAdminController.createLeaveRequest
+  schoolAdminController.createLeaveRequest,
 );
 router.get("/leaveRequest", schoolAdminController.getAllLeaveRequests);
 router.get("/leaveRequest/:id", schoolAdminController.getLeaveRequestById);
@@ -230,34 +230,34 @@ router.delete("/leaveRequest/:id", schoolAdminController.deleteLeaveRequest);
 router.patch("/leaveRequest/:id", schoolAdminController.restoreLeaveRequest);
 router.delete(
   "/permanentDeleteLeaveRequest/:id",
-  schoolAdminController.permanentDeleteLeaveRequest
+  schoolAdminController.permanentDeleteLeaveRequest,
 );
 router.put(
   "/leaveRequest/:id",
   uploadWithErrorHandler(upload.single("attachment")),
-  schoolAdminController.updateLeaveRequest
+  schoolAdminController.updateLeaveRequest,
 );
 router.patch(
   "/leaveRequestpermission/:id",
-  schoolAdminController.leaveRequestPermission
+  schoolAdminController.leaveRequestPermission,
 );
 router.patch(
   "/staffLeaveRequestPermission/:id",
-  schoolAdminController.staffLeaveRequestPermission
+  schoolAdminController.staffLeaveRequestPermission,
 );
 
 router.get(
   "/getAllStaffLeaveRequests",
-  schoolAdminController.getAllStaffLeaveRequests
+  schoolAdminController.getAllStaffLeaveRequests,
 );
 router.get(
   "/getAllTeacherLeaveRequests",
-  schoolAdminController.getAllTeacherLeaveRequests
+  schoolAdminController.getAllTeacherLeaveRequests,
 );
 
 router.get(
   "/getAllStudentLeaveRequests",
-  schoolAdminController.getAllStudentLeaveRequests
+  schoolAdminController.getAllStudentLeaveRequests,
 );
 //news
 router.post(
@@ -266,9 +266,9 @@ router.post(
     upload.fields([
       // { name: "file", maxCount: 1 },
       { name: "images", maxCount: 10 },
-    ])
+    ]),
   ),
-  schoolAdminController.createNews
+  schoolAdminController.createNews,
 );
 
 router.get("/news", schoolAdminController.getAllNews);
@@ -279,14 +279,14 @@ router.put(
     // { name: "file", maxCount: 1 },
     { name: "images", maxCount: 10 },
   ]),
-  schoolAdminController.updateNews
+  schoolAdminController.updateNews,
 );
 router.delete("/news/:id", schoolAdminController.deleteNews);
 router.patch("/news/:id", schoolAdminController.restoreNews);
 router.get("/getTrashedNews", schoolAdminController.getTrashedNews);
 router.delete(
   "/permanentDeleteNews/:id",
-  schoolAdminController.permanentDeleteNews
+  schoolAdminController.permanentDeleteNews,
 );
 router.delete("/deleteNewsImage/:id", schoolAdminController.deleteNewsImage);
 
@@ -294,20 +294,20 @@ router.delete("/deleteNewsImage/:id", schoolAdminController.deleteNewsImage);
 router.post(
   "/notices",
   uploadWithErrorHandler(upload.single("file")),
-  schoolAdminController.createNotice
+  schoolAdminController.createNotice,
 );
 router.get("/notices", schoolAdminController.getAllNotices);
 router.get("/notices/:id", schoolAdminController.getNoticeById);
 router.put(
   "/notices/:id",
   uploadWithErrorHandler(upload.single("file")),
-  schoolAdminController.updateNotice
+  schoolAdminController.updateNotice,
 );
 router.delete("/notices/:id", schoolAdminController.deleteNotice);
 router.patch("/notices/:id", schoolAdminController.restoreNotice);
 router.delete(
   "/permanentDeleteNotice/:id",
-  schoolAdminController.permanentDeleteNotice
+  schoolAdminController.permanentDeleteNotice,
 );
 router.get("/getTrashedNotices", schoolAdminController.getTrashedNotices);
 router.get("/getLatestNotices", schoolAdminController.getLatestNotices);
@@ -318,68 +318,68 @@ router.get("/timetables/:id", schoolAdminController.getTimetableById);
 router.delete("/timetables/:id", schoolAdminController.deleteTimetableEntry);
 router.get(
   "/getTimetablesWithClassId/:class_id",
-  schoolAdminController.getTimetablesWithClassId
+  schoolAdminController.getTimetablesWithClassId,
 );
 router.get(
   "/getTimetablesConflicts",
-  schoolAdminController.getTimetablesConflicts
+  schoolAdminController.getTimetablesConflicts,
 );
 router.get(
   "/getTimetableByTeacherId/:teacher_id",
-  schoolAdminController.getTimetableByTeacherId
+  schoolAdminController.getTimetableByTeacherId,
 );
 
 router.get(
   "/getAllTeacherLeaveRequestsforSubstitution",
-  schoolAdminController.getAllTeacherLeaveRequestsforSubstitution
+  schoolAdminController.getAllTeacherLeaveRequestsforSubstitution,
 );
 router.get(
   "/getPeriodsForleaveRequestedTeacher/:leaveRequest_id",
-  schoolAdminController.getPeriodsForleaveRequestedTeacher
+  schoolAdminController.getPeriodsForleaveRequestedTeacher,
 );
 router.get(
   "/getFreeStaffForPeriod",
-  schoolAdminController.getFreeStaffForPeriod
+  schoolAdminController.getFreeStaffForPeriod,
 );
 //substitution routes
 router.post(
   "/timetableSubstitutions",
-  schoolAdminController.createSubstitution
+  schoolAdminController.createSubstitution,
 );
 router.post(
   "/bulkTimetableSubstitutions",
-  schoolAdminController.bulkCreateSubstitution
+  schoolAdminController.bulkCreateSubstitution,
 );
 router.get(
   "/timetableSubstitutions",
-  schoolAdminController.getAllSubstitutions
+  schoolAdminController.getAllSubstitutions,
 );
 router.get(
   "/timetableSubstitutions/:id",
-  schoolAdminController.getSubstitutionById
+  schoolAdminController.getSubstitutionById,
 );
 router.put(
   "/timetableSubstitutions/:id",
-  schoolAdminController.updateSubstitution
+  schoolAdminController.updateSubstitution,
 );
 router.delete(
   "/timetableSubstitutions/:id",
-  schoolAdminController.deleteSubstitution
+  schoolAdminController.deleteSubstitution,
 );
 
 router.get(
   "/getSchoolAttendanceSummary",
-  schoolAdminController.getSchoolAttendanceSummary
+  schoolAdminController.getSchoolAttendanceSummary,
 );
 
 router.get(
   "/getNavigationBarCounts",
-  schoolAdminController.getNavigationBarCounts
+  schoolAdminController.getNavigationBarCounts,
 );
 router.get("/dashboardCounts", schoolAdminController.dashboardCounts);
 router.get(
   "/getInternalmarkById/:id",
-  schoolAdminController.getInternalmarkById
+  schoolAdminController.getInternalmarkById,
 );
 router.get("/getHomeworkById/:id", schoolAdminController.getHomeworkById);
 router.get("/getAttendanceById/:id", schoolAdminController.getAttendanceById);
@@ -388,20 +388,20 @@ router.post("/staffAttendance", schoolAdminController.createStaffAttendance);
 router.get("/staffAttendance", schoolAdminController.getAllStaffAttendance);
 router.get(
   "/staffAttendance/:id",
-  schoolAdminController.getStaffAttendanceById
+  schoolAdminController.getStaffAttendanceById,
 );
 router.put("/staffAttendance/:id", schoolAdminController.updateStaffAttendance);
 router.delete(
   "/staffAttendance/:id",
-  schoolAdminController.deleteStaffAttendance
+  schoolAdminController.deleteStaffAttendance,
 );
 router.post(
   "/bulkCreateStaffAttendance",
-  schoolAdminController.bulkCreateStaffAttendance
+  schoolAdminController.bulkCreateStaffAttendance,
 );
 router.get(
   "/staffAttendanceByDate",
-  schoolAdminController.getStaffAttendanceByDate
+  schoolAdminController.getStaffAttendanceByDate,
 );
 
 //common Controller
@@ -411,34 +411,34 @@ router.get("/students/:id", commonController.getStudentById);
 
 router.get(
   "/getHomeworkByStudentId/:student_id",
-  commonController.getHomeworkByStudentId
+  commonController.getHomeworkByStudentId,
 );
 router.get(
   "/getAttendanceByStudentId/:student_id",
-  commonController.getAttendanceByStudentId
+  commonController.getAttendanceByStudentId,
 );
 router.get(
   "/getStudentAttendanceByDate/:student_id",
-  commonController.getStudentAttendanceByDate
+  commonController.getStudentAttendanceByDate,
 );
 router.get("/allAchievements", commonController.allAchievements);
 router.get(
   "/achievementByStudentId/:student_id",
-  commonController.achievementByStudentId
+  commonController.achievementByStudentId,
 );
 router.get(
   "/getInternalMarkByStudentId/:student_id",
-  commonController.getInternalMarkByStudentId
+  commonController.getInternalMarkByStudentId,
 );
 router.get(
   "/getLeaveRequestByStudentId/:student_id",
-  commonController.getLeaveRequestByStudentId
+  commonController.getLeaveRequestByStudentId,
 );
 router.get("/getStaffsForFilter", commonController.getStaffsForFilter);
 router.get("/getClassesByYear/:year", commonController.getClassesByYear);
 router.get(
   "/getStudentsByClassId/:class_id",
-  commonController.getStudentsByClassId
+  commonController.getStudentsByClassId,
 );
 
 //REPORTS
@@ -448,8 +448,30 @@ router.get("/attendanceReport", reportController.getAttendanceReport);
 router.get("/homeworkReport", reportController.getHomeworkReport);
 router.get(
   "/studentReport/:student_id",
-  reportController.getStudentReportByStudentId
+  reportController.getStudentReportByStudentId,
 );
 router.get("/internalmarksReport", reportController.getInternalmarksReport);
+
+/////////////////tracker//////////////////////////////////////
+
+//create driver
+router.post(
+  "/driver",
+  uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
+  schoolAdminController.createDriver,
+);
+
+//create vehicle
+router.post(
+  "/vehicle",
+  uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
+  schoolAdminController.createVehicle,
+);
+
+//create stop
+router.post("/stop", schoolAdminController.createStop);
+
+//create routes
+router.post("/route", upload.none(), schoolAdminController.createRoute);
 
 module.exports = router;

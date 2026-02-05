@@ -11,6 +11,7 @@ require("dotenv").config();
 const PORT = process.env.PORT || 4444;
 const { auth, socketAuth } = require("./middlewares/authMiddleware");
 const limiter = require("./middlewares/rateLimitMiddleware");
+const PaymentRoutes = require("./routes/paymentRoutes");
 
 const server = http.createServer(app); // Wrap Express with HTTP server
 const io = new Server(server, {
@@ -35,7 +36,7 @@ app.use(helmet());
 app.use(
   cors({
     origin: "*",
-  })
+  }),
 );
 app.use(morgan("dev"));
 app.use(express.json());
@@ -49,7 +50,7 @@ app.use(
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
     },
-  })
+  }),
 );
 app.use((req, res, next) => {
   req.io = io;
@@ -62,6 +63,7 @@ app.use(`${versionPath}schooladmin`, auth, verifyAdmin, SchooladminRoutes);
 app.use(`${versionPath}staff`, auth, verifyStaff, StaffRoutes);
 app.use(`${versionPath}guardian`, auth, verifyGuardian, GuardianRoutes);
 app.use(`${versionPath}public`, PublicRoutes);
+app.use(`${versionPath}payments`, PaymentRoutes);
 // app.use(`${versionPath}superadmin`, auth, SuperadminRoutes);
 // app.use(`${versionPath}schooladmin`, auth, SchooladminRoutes);
 // app.use(`${versionPath}staff`, auth, StaffRoutes);
@@ -77,7 +79,7 @@ io.use(async (socket, next) => {
     if (socket.user && socket.user.user_id) {
       socket.join(`user_${socket.user.user_id}`);
       console.log(
-        `User ${socket.user.user_id} joined room user_${socket.user.user_id}`
+        `User ${socket.user.user_id} joined room user_${socket.user.user_id}`,
       );
     }
   } catch (error) {
@@ -88,7 +90,7 @@ io.use(async (socket, next) => {
 
 io.on("connection", (socket) => {
   console.log(
-    `⚡ User Connected: ${socket.id} (User ID: ${socket.user?.user_id})`
+    `⚡ User Connected: ${socket.id} (User ID: ${socket.user?.user_id})`,
   );
   socketHandlers(io, socket);
 
