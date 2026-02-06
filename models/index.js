@@ -152,6 +152,8 @@ Vehicle.belongsTo(Driver, { foreignKey: "driver_id", as: "driver" });
 
 route.hasMany(stop, { foreignKey: "route_id", as: "stop" });
 
+route.hasMany(Student, { foreignKey: "route_id", as: "Student" });
+
 module.exports = {
   Homework,
   HomeworkAssignment,

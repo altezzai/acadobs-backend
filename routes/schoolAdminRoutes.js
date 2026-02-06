@@ -474,4 +474,16 @@ router.post("/stop", schoolAdminController.createStop);
 //create routes
 router.post("/route", upload.none(), schoolAdminController.createRoute);
 
+//add students to route
+router.post(
+  "/assign-student-route",
+  upload.none(),
+  schoolAdminController.assignStudentToRoute,
+);
+
+router.get(
+  "/getStudentWithRouteId",
+  schoolAdminController.getRouteWithStudents,
+);
+
 module.exports = router;

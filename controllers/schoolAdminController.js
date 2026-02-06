@@ -1317,7 +1317,7 @@ const createGuardian = async (req, res) => {
       pincode,
     });
 
-    res.status(201).json({ success: true, data: guardian ,user: user});
+    res.status(201).json({ success: true, data: guardian, user: user });
   } catch (error) {
     logger.error(
       "schoolId:",
@@ -7349,7 +7349,7 @@ const createRoute = async (req, res) => {
       }
     }
 
-    const route = await studentRoutes.create({
+    const route = await studentroutes.create({
       route_name,
       vehicle_id: vehicle_id || null,
       driver_id: driver_id || null,
@@ -7367,6 +7367,65 @@ const createRoute = async (req, res) => {
     console.error("Error creating route:", error);
     res.status(500).json({ error: "Failed to create route" });
   }
+};
+
+//adding students to route
+const assignStudentToRoute = async (req, res) => {
+  try {
+    const { student_id, route_id } = req.body;
+
+    if (!student_id || !route_id) {
+      return res
+        .status(400)
+        .json({ message: "student_id and route_id required" });
+    }
+
+    const route = await studentroutes.findOne({
+      where: { id: route_id, trash: false },
+    });
+
+    if (!route) {
+      return res.status(404).json({ message: "Route not found" });
+    }
+
+    const student = await Student.findOne({
+      where: { id: student_id, trash: false },
+    });
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    student.route_id = route_id;
+    await student.save();
+
+    res.json({
+      message: "Student assigned to route successfully",
+      student,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to assign student" });
+  }
+};
+
+//get the students with the route
+const getRouteWithStudents = async (req, res) => {
+  const { route_id } = req.params;
+
+  const route = await studentroutes.findOne({
+    where: { id: route_id, trash: false },
+    include: {
+      model: Student,
+      as: "students",
+    },
+  });
+
+  if (!route) {
+    return res.status(404).json({ message: "Route not found" });
+  }
+
+  res.json(route);
 };
 
 module.exports = {
@@ -7547,4 +7606,6 @@ module.exports = {
   createVehicle,
   createDriver,
   createStop,
+  assignStudentToRoute,
+  getRouteWithStudents,
 };
