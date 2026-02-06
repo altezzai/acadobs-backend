@@ -1,55 +1,53 @@
-const express = require("express");
-const Razorpay = require("razorpay");
-const crypto = require("crypto");
+// const express = require("express");
+// const Razorpay = require("razorpay");
+// const crypto = require("crypto");
 
-const router = express.Router();
+// const router = express.Router();
 
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+// const razorpay = new Razorpay({
+//     key_id: process.env.RAZORPAY_KEY_ID,
+//     key_secret: process.env.RAZORPAY_KEY_SECRET,
+// });
 
+// //   CREATE ORDER
 
-//   CREATE ORDER
+// router.post("/create-order", async (req, res) => {
+//     try {
+//         const { amount } = req.body;
 
-router.post("/create-order", async (req, res) => {
-    try {
-        const { amount } = req.body;
+//         const order = await razorpay.orders.create({
+//             amount: amount * 100, // paise
+//             currency: "INR",
+//             receipt: `receipt_${Date.now()}`,
+//         });
 
-        const order = await razorpay.orders.create({
-            amount: amount * 100, // paise
-            currency: "INR",
-            receipt: `receipt_${Date.now()}`,
-        });
+//         res.status(200).json(order);
+//     } catch (error) {
+//         res.status(500).json({ message: error.message });
+//     }
+// });
 
-        res.status(200).json(order);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
+// //  VERIFY PAYMENT
 
+// router.post("/verify", (req, res) => {
+//     const {
+//         razorpay_order_id,
+//         razorpay_payment_id,
+//         razorpay_signature,
+//     } = req.body;
 
-//  VERIFY PAYMENT
+//     const body = razorpay_order_id + "|" + razorpay_payment_id;
 
-router.post("/verify", (req, res) => {
-    const {
-        razorpay_order_id,
-        razorpay_payment_id,
-        razorpay_signature,
-    } = req.body;
+//     const expectedSignature = crypto
+//         .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+//         .update(body)
+//         .digest("hex");
 
-    const body = razorpay_order_id + "|" + razorpay_payment_id;
+//     if (expectedSignature === razorpay_signature) {
+//         return res.json({ success: true });
+//     } else {
+//         return res.status(400).json({ success: false });
+//     }
+// });
 
-    const expectedSignature = crypto
-        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-        .update(body)
-        .digest("hex");
-
-    if (expectedSignature === razorpay_signature) {
-        return res.json({ success: true });
-    } else {
-        return res.status(400).json({ success: false });
-    }
-});
-
-module.exports = router;
+// module.exports = router;
