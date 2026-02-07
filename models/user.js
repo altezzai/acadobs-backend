@@ -42,7 +42,8 @@ const User = schoolSequelize.define(
         "admin",
         "teacher",
         "staff",
-        "guardian"
+        "guardian",
+        "driver"
       ),
       allowNull: false,
     },

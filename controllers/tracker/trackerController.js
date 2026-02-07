@@ -85,7 +85,7 @@ const deleteDriverById = async (req, res) => {
   }
 };
 
-//driver sees their assinged routes
+//admin sees driver assinged routes
 const getDriverAssignedRoutes = async (req, res) => {
   try {
     const { driverId } = req.params;
@@ -111,6 +111,47 @@ const getDriverAssignedRoutes = async (req, res) => {
     if (!driver) {
       return res.status(404).json({
         message: "Driver not found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Assigned routes fetched successfully",
+      data: driver.routes,
+    });
+  } catch (error) {
+    console.error("Error fetching driver routes:", error);
+    return res.status(500).json({
+      error: "Failed to fetch assigned routes",
+    });
+  }
+};
+
+//driver sees thier assigned routes
+const DriverAssignedRoutes = async (req, res) => {
+  try {
+    const user_id = req.user.id;
+
+    const driver = await Driver.findOne({
+      where: {
+        user_id,
+        trash: false,
+      },
+      attributes: ["name", "phone"],
+      include: [
+        {
+          model: StudentRoutes,
+          as: "routes",
+          attributes: ["id", "route_name", "vehicle_id", "type"],
+          through: {
+            attributes: [],
+          },
+        },
+      ],
+    });
+
+    if (!driver) {
+      return res.status(404).json({
+        message: "Driver profile not found",
       });
     }
 
@@ -181,4 +222,5 @@ module.exports = {
   deleteDriverById,
   getDriverAssignedRoutes,
   assignDriverToRoutes,
+  DriverAssignedRoutes,
 };

@@ -54,19 +54,7 @@ const Driver = schoolSequelize.define(
   {
     tableName: "driver",
     timestamps: false,
-  },
-  {
-    tableName: "role",
-    type: DataTypes.ENUM(
-      "superadmin",
-      "admin",
-      "teacher",
-      "staff",
-      "guardian",
-      "driver",
-    ),
-    timestamps: false,
-  },
+  }
 );
 
 // // Associations

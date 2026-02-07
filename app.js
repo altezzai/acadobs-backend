@@ -25,11 +25,13 @@ const SchooladminRoutes = require("./routes/schoolAdminRoutes");
 const StaffRoutes = require("./routes/staffRoutes");
 const GuardianRoutes = require("./routes/guardianRoutes");
 const PublicRoutes = require("./routes/publicRoutes");
+const DriverRoutes = require("./routes/driverRoutes");
 
 const verifyAdmin = require("./middlewares/adminMiddleware");
 const verifySuperAdmin = require("./middlewares/superAdminMiddleware");
 const verifyStaff = require("./middlewares/staffMiddleware");
 const verifyGuardian = require("./middlewares/guardianMiddleware");
+const verifyDriver = require("./middlewares/driverMiddleware");
 
 // Apply Middleware
 app.use(helmet());
@@ -63,6 +65,7 @@ app.use(`${versionPath}schooladmin`, auth, verifyAdmin, SchooladminRoutes);
 app.use(`${versionPath}staff`, auth, verifyStaff, StaffRoutes);
 app.use(`${versionPath}guardian`, auth, verifyGuardian, GuardianRoutes);
 app.use(`${versionPath}public`, PublicRoutes);
+app.use(`${versionPath}driver`, auth, verifyDriver, DriverRoutes);
 // app.use(`${versionPath}payments`, PaymentRoutes);
 // app.use(`${versionPath}superadmin`, auth, SuperadminRoutes);
 // app.use(`${versionPath}schooladmin`, auth, SchooladminRoutes);
