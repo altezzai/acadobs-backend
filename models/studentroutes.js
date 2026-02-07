@@ -21,11 +21,6 @@ const StudentRoutes = schoolSequelize.define(
       allowNull: true,
     },
 
-    driver_id: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-
     createdAt: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
@@ -45,6 +40,8 @@ const StudentRoutes = schoolSequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
+
+    
   },
   {
     tableName: "route",

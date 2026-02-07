@@ -36,6 +36,7 @@ const Driver = require("./driver");
 const Vehicle = require("./vehicle");
 const route = require("./studentroutes");
 const stop = require("./stop");
+const StudentRoutes = require("./studentroutes");
 
 // Relations
 
@@ -151,6 +152,19 @@ Driver.hasMany(Vehicle, { foreignKey: "driver_id", as: "vehicles" });
 Vehicle.belongsTo(Driver, { foreignKey: "driver_id", as: "driver" });
 
 route.hasMany(stop, { foreignKey: "route_id", as: "stop" });
+// route.hasMany(Driver, { foreignKey: "route_id", as: "Driver" });
+route.belongsToMany(Driver, {
+  through: "route_drivers",
+  foreignKey: "route_id",
+  otherKey: "driver_id",
+  as: "drivers",
+});
+Driver.belongsToMany(route, {
+  through: "route_drivers",
+  foreignKey: "driver_id",
+  otherKey: "route_id",
+  as: "routes",
+});
 
 route.hasMany(Student, { foreignKey: "route_id", as: "Student" });
 
@@ -188,4 +202,5 @@ module.exports = {
   Vehicle,
   route,
   stop,
+  StudentRoutes,
 };

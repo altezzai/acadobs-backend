@@ -25,7 +25,7 @@ const socketAuth = (socket, next) => {
     jwt.verify(token, secretKey, (err, decoded) => {
       if (err) {
         return next(
-          new Error("Authentication error: Invalid or Expired Token")
+          new Error("Authentication error: Invalid or Expired Token"),
         );
       }
       socket.user = decoded;

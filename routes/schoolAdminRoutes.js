@@ -1,6 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const schoolAdminController = require("../controllers/schoolAdminController");
+const trackerController = require("../controllers/tracker/trackerController");
+const stopController = require("../controllers/tracker/stopController");
+const routeController = require("../controllers/tracker/routeController");
 const commonController = require("../controllers/commonController");
 const reportController = require("../controllers/reportController");
 
@@ -468,22 +471,41 @@ router.post(
   schoolAdminController.createVehicle,
 );
 
+//getAllVehicles
+router.get("/getAllVehicles", schoolAdminController.getAllVehicles);
+//getVehicleById
+router.get("/getVehicleById/:id", schoolAdminController.getVehicleById);
+//deleteVehicle
+router.get("/deleteVehicle/:id", schoolAdminController.deleteVehicle);
+
+//getAllRoute
+router.get("/getAllRoutes", schoolAdminController.getAllRoutes);
+
+//getDriverById
+router.get("/getDriverById/:id", trackerController.getDriverById);
+router.put(
+  "/updateDriverById/:id",
+  uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
+  trackerController.updateDriverById,
+);
+router.delete("/deleteDriverById", trackerController.deleteDriverById);
 //create stop
 router.post("/stop", schoolAdminController.createStop);
+router.get("/getStopById/:id", stopController.getStopById);
+router.put("/updateStopById/:id", stopController.updateStopById);
+router.delete("/deleteStop/:id", stopController.deleteStop);
 
 //create routes
 router.post("/route", upload.none(), schoolAdminController.createRoute);
+router.get("/getRouteById/:id", routeController.getRouteById);
+router.put("/updateRouteById/:id", routeController.updateRouteById);
+router.delete("/deleteRoute/:id", routeController.deleteRoute);
 
 //add students to route
 router.post(
   "/assign-student-route",
   upload.none(),
   schoolAdminController.assignStudentToRoute,
-);
-
-router.get(
-  "/getStudentWithRouteId",
-  schoolAdminController.getRouteWithStudents,
 );
 
 module.exports = router;

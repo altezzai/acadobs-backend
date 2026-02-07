@@ -49,6 +49,7 @@ const Stop = require("../models/stop");
 const { Driver } = require("../models");
 const { Vehicle } = require("../models");
 const studentroutes = require("../models/studentroutes");
+const { error } = require("winston");
 
 // CREATE
 const createClass = async (req, res) => {
@@ -7320,6 +7321,84 @@ const createVehicle = async (req, res) => {
   }
 };
 
+//getAllVehicles✅
+const getAllVehicles = async (req, res) => {
+  try {
+    const vehicles = await Vehicle.findAll({
+      where: { trash: false },
+      include: [
+        {
+          model: Driver,
+          as: "driver",
+          attributes: ["id", "name", "phone"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    res.status(200).json({
+      message: "Vehicles fetched successfully",
+      vehicles,
+    });
+  } catch (error) {
+    console.error("Error fetching vehicles:", error);
+    res.status(500).json({ error: "Failed to fetch vehicles" });
+  }
+};
+
+//getVehicleById✅
+const getVehicleById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const vehicle = await Vehicle.findOne({
+      where: { id, trash: false },
+      include: [
+        {
+          model: Driver,
+          as: "driver",
+          attributes: ["id", "name", "phone"],
+        },
+      ],
+    });
+
+    if (!vehicle) {
+      return res.status(404).json({ message: "Vehicle not found" });
+    }
+
+    res.status(200).json({
+      message: "Vehicle fetched successfully",
+      vehicle,
+    });
+  } catch (error) {
+    console.error("Error fetching vehicle:", error);
+    res.status(500).json({ error: "Failed to fetch vehicle" });
+  }
+};
+
+//delete vehicle✅
+const deleteVehicle = async (res, req) => {
+  try {
+    const { id } = req.params;
+    const vehicle = await Vehicle.findOne({
+      where: {
+        id,
+        trash: false,
+      },
+    });
+
+    if (!vehicle) {
+      return res.status(404).json({ message: "vehicle not found" });
+    }
+
+    await vehicle.update({ trash: true });
+    res.status(200).json({ message: "Vehicle deleted successfully" });
+  } catch {
+    console.error("Error deleting vehicle:", error);
+    res.status(500).json({ error: "Failed to delete vehicle" });
+  }
+};
+
 //create route✅
 const createRoute = async (req, res) => {
   try {
@@ -7369,6 +7448,27 @@ const createRoute = async (req, res) => {
   }
 };
 
+//getAllRoute
+const getAllRoutes = async (req, res) => {
+  try {
+    const routes = await studentroutes.findAll({
+      where: {
+        trash: false,
+      },
+
+      order: [["createdAt", "DESC"]],
+    });
+
+    res.status(200).json({
+      message: "Routes fetched successfully",
+      routes,
+    });
+  } catch (error) {
+    console.error("Error fetching routes:", error);
+    res.status(500).json({ error: "Failed to fetch routes" });
+  }
+};
+
 //adding students to route
 const assignStudentToRoute = async (req, res) => {
   try {
@@ -7407,25 +7507,6 @@ const assignStudentToRoute = async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Failed to assign student" });
   }
-};
-
-//get the students with the route
-const getRouteWithStudents = async (req, res) => {
-  const { route_id } = req.params;
-
-  const route = await studentroutes.findOne({
-    where: { id: route_id, trash: false },
-    include: {
-      model: Student,
-      as: "students",
-    },
-  });
-
-  if (!route) {
-    return res.status(404).json({ message: "Route not found" });
-  }
-
-  res.json(route);
 };
 
 module.exports = {
@@ -7607,5 +7688,8 @@ module.exports = {
   createDriver,
   createStop,
   assignStudentToRoute,
-  getRouteWithStudents,
+  getAllVehicles,
+  getVehicleById,
+  deleteVehicle,
+  getAllRoutes,
 };
