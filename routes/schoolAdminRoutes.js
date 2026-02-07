@@ -500,6 +500,15 @@ router.post("/route", upload.none(), schoolAdminController.createRoute);
 router.get("/getRouteById/:id", routeController.getRouteById);
 router.put("/updateRouteById/:id", routeController.updateRouteById);
 router.delete("/deleteRoute/:id", routeController.deleteRoute);
+router.get(
+  "/getDriverAssignedRoutes/:driverId",
+  trackerController.getDriverAssignedRoutes,
+);
+router.post(
+  "/assignDriverToRoutes/:driverId",
+
+  trackerController.assignDriverToRoutes,
+);
 
 //add students to route
 router.post(

@@ -70,25 +70,25 @@ const Driver = schoolSequelize.define(
 );
 
 // // Associations
-Driver.associate = (models) => {
-  // Driver → User
-  Driver.belongsTo(models.User, {
-    foreignKey: "user_id",
-    as: "user",
-  });
+// Driver.associate = (models) => {
+//   // Driver → User
+//   Driver.belongsTo(models.User, {
+//     foreignKey: "user_id",
+//     as: "user",
+//   });
 
-  // Driver → Vehicles (One-to-Many)
-  Driver.hasMany(models.Vehicle, {
-    foreignKey: "driver_id",
-    as: "vehicles",
-  });
+//   // Driver → Vehicles (One-to-Many)
+//   Driver.hasMany(models.Vehicle, {
+//     foreignKey: "driver_id",
+//     as: "vehicles",
+//   });
 
-  // Driver ↔ Route (Many-to-Many)
-  Driver.belongsToMany(models.Route, {
-    through: "route_drivers",
-    foreignKey: "driver_id",
-    otherKey: "route_id",
-    as: "routes",
-  });
-};
+//   // Driver ↔ Route (Many-to-Many)
+//   Driver.belongsToMany(models.Route, {
+//     through: "route_drivers",
+//     foreignKey: "driver_id",
+//     otherKey: "route_id",
+//     as: "routes",
+//   });
+// };
 module.exports = Driver;
