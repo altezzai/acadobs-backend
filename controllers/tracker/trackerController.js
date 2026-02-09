@@ -2,14 +2,6 @@ const { Driver } = require("../../models");
 const { StudentRoutes } = require("../../models");
 const { stop: Stop } = require("../../models");
 const { Student } = require("../../models");
-
-console.log({
-  Driver: !!Driver,
-  Stop: !!Stop,
-  StudentRoutes: !!StudentRoutes,
-  Student: !!Student,
-});
-
 // getDriverById
 const getDriverById = async (req, res) => {
   try {
@@ -291,17 +283,18 @@ const createStopForDriver = async (req, res) => {
 
 
 // driver assigns student to a stop
-const assignStudentToStop = async (req, res) => {
+const assignStudentsToStop = async (req, res) => {
   try {
-    const { student_id, stop_id } = req.body;
+    const { student_ids, stop_id } = req.body;
     const user_id = req.user.user_id;
-    console.log("user id:", user_id);
 
-    if (!student_id || !stop_id) {
+    if (!Array.isArray(student_ids) || student_ids.length === 0 || !stop_id) {
       return res.status(400).json({
-        message: "student_id and stop_id are required",
+        message: "student_ids (array) and stop_id are required",
       });
     }
+
+
     const driver = await Driver.findOne({
       where: { user_id, trash: false },
     });
@@ -311,6 +304,7 @@ const assignStudentToStop = async (req, res) => {
         message: "Driver profile not found",
       });
     }
+
 
     const stop = await Stop.findOne({
       where: { id: stop_id, trash: false },
@@ -336,31 +330,43 @@ const assignStudentToStop = async (req, res) => {
       });
     }
 
-    const student = await Student.findOne({
-      where: { id: student_id, trash: false },
+
+    const students = await Student.findAll({
+      where: {
+        id: student_ids,
+        trash: false,
+      },
     });
 
-    if (!student) {
+    if (students.length !== student_ids.length) {
       return res.status(404).json({
-        message: "Student not found",
+        message: "One or more students not found",
       });
     }
 
-    student.stop_id = stop_id;
-    student.route_id = stop.route_id;
-    await student.save();
+
+    await Student.update(
+      {
+        stop_id: stop_id,
+        route_id: stop.route_id,
+      },
+      {
+        where: { id: student_ids },
+      }
+    );
 
     return res.status(200).json({
-      message: "Student assigned to stop successfully",
-      student,
+      message: "Students assigned to stop successfully",
+      assigned_count: students.length,
     });
   } catch (error) {
-    console.error("Error assigning student to stop:", error);
+    console.error("Error assigning students to stop:", error);
     res.status(500).json({
-      error: "Failed to assign student to stop",
+      error: "Failed to assign students to stop",
     });
   }
 };
+
 
 
 module.exports = {
@@ -371,5 +377,5 @@ module.exports = {
   assignDriverToRoutes,
   DriverAssignedRoutes,
   createStopForDriver,
-  assignStudentToStop,
+  assignStudentsToStop,
 };
