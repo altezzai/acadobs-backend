@@ -1,5 +1,5 @@
 "use strict";
-const { DataTypes } = require("sequelize");
+
 const { schoolSequelize } = require("../config/connection");
 
 const RouteDrivers = schoolSequelize.define(

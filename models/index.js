@@ -167,6 +167,11 @@ Driver.belongsToMany(route, {
   as: "routes",
 });
 
+// Route ↔ Stop association (BOTH SIDES REQUIRED)
+route.hasMany(stop, { foreignKey: "route_id", as: "stops" });
+stop.belongsTo(route, { foreignKey: "route_id", as: "route" });
+
+
 route.hasMany(Student, { foreignKey: "route_id", as: "Student" });
 
 module.exports = {

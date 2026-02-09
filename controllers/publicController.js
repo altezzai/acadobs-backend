@@ -18,6 +18,8 @@ const login = async (req, res) => {
     const user = await User.findOne({
       where: {
         [Op.or]: [{ email: identifier }, { phone: identifier }],
+        trash: false,
+
       },
     });
 
@@ -29,6 +31,8 @@ const login = async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
+
+
     const token = jwt.sign(
       {
         user_id: user.id,
@@ -36,6 +40,7 @@ const login = async (req, res) => {
         school_id: user.school_id,
         name: user.name,
         dp: user.dp,
+
       },
       secretKey,
       { expiresIn: "360h" }
@@ -48,6 +53,7 @@ const login = async (req, res) => {
       role: user.role,
       school_id: user.school_id,
       dp: user.dp,
+
     };
     res.status(200).json({ message: "Login successful", token, userData });
   } catch (err) {
