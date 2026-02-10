@@ -508,7 +508,6 @@ router.get(
 );
 router.post(
   "/assignDriverToRoutes/:driverId",
-
   schoolAdminController.assignDriverToRoutes,
 );
 

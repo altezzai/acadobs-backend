@@ -7535,9 +7535,9 @@ const assignStudentToRoute = async (req, res) => {
 const assignDriverToRoutes = async (req, res) => {
   try {
     const { driverId } = req.params;
-    const { routeIds } = req.body;
+    const { routeIds } = req.body || {};
 
-    if (!Array.isArray(routeIds) || routeIds.length === 0) {
+    if (!routeIds || !Array.isArray(routeIds) || routeIds.length === 0) {
       return res.status(400).json({
         message: "routeIds must be a non-empty array",
       });
@@ -7555,7 +7555,7 @@ const assignDriverToRoutes = async (req, res) => {
     }
 
     // check routes
-    const routes = await StudentRoutes.findAll({
+    const routes = await studentroutes.findAll({
       where: {
         id: routeIds,
       },

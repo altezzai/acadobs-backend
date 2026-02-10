@@ -321,42 +321,42 @@ const assignStudentsToStop = async (req, res) => {
 };
 
 //driver creates route
-const createRouteForDriver = async (req, res) => {
-  try {
-    const { route_name, vehicle_id, type } = req.body;
-    const user_id = req.user.user_id;
+// const createRouteForDriver = async (req, res) => {
+//   try {
+//     const { route_name, vehicle_id, type } = req.body;
+//     const user_id = req.user.user_id;
 
-    if (!route_name || !vehicle_id || !type) {
-      return res.status(400).json({ message: "Fields are missing" });
-    }
-    const driver = await Driver.findOne({
-      where: {
-        user_id,
-        trash: false,
-      },
-    });
+//     if (!route_name || !vehicle_id || !type) {
+//       return res.status(400).json({ message: "Fields are missing" });
+//     }
+//     const driver = await Driver.findOne({
+//       where: {
+//         user_id,
+//         trash: false,
+//       },
+//     });
 
 
-    if (!driver) {
-      return res.status(404).json({ message: "Driver not found" });
-    }
+//     if (!driver) {
+//       return res.status(404).json({ message: "Driver not found" });
+//     }
 
-    const route = await StudentRoutes.create({
-      route_name,
-      vehicle_id,
-      type,
-      trash: false,
-    });
+//     const route = await StudentRoutes.create({
+//       route_name,
+//       vehicle_id,
+//       type,
+//       trash: false,
+//     });
 
-    res.status(201).json({
-      message: "Route created successfully",
-      route,
-    });
-  } catch (error) {
-    console.error("Error creating route:", error);
-    res.status(500).json({ error: "Failed to create route" });
-  }
-};
+//     res.status(201).json({
+//       message: "Route created successfully",
+//       route,
+//     });
+//   } catch (error) {
+//     console.error("Error creating route:", error);
+//     res.status(500).json({ error: "Failed to create route" });
+//   }
+// };
 
 
 module.exports = {
@@ -367,5 +367,5 @@ module.exports = {
   DriverAssignedRoutes,
   createStopForDriver,
   assignStudentsToStop,
-  createRouteForDriver,
+  // createRouteForDriver,
 };
