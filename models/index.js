@@ -42,6 +42,9 @@ const RouteDrivers = require("./route_drivers");
 // Relations
 
 // Associations
+Class.belongsTo(School, { foreignKey: "school_id" });
+Class.hasMany(Student, { foreignKey: "class_id" });
+
 Homework.hasMany(HomeworkAssignment, { foreignKey: "homework_id" });
 Homework.belongsTo(Class, { foreignKey: "class_id" });
 Homework.belongsTo(Subject, { foreignKey: "subject_id" });
@@ -77,6 +80,7 @@ staffsubject.belongsTo(Staff, { foreignKey: "staff_id" });
 staffsubject.belongsTo(Subject, { foreignKey: "subject_id" });
 Subject.hasMany(staffsubject, { foreignKey: "subject_id" });
 Subject.belongsTo(Syllabus, { foreignKey: "syllabus_id" });
+Subject.belongsTo(School, { foreignKey: "school_id" });
 
 Syllabus.hasMany(Subject, { foreignKey: "syllabus_id" });
 Syllabus.hasMany(School, { foreignKey: "syllabus_id" });
@@ -181,6 +185,16 @@ Student.belongsTo(stop, {
   foreignKey: "stop_id",
   as: "stop",
 });
+
+Student.belongsTo(Guardian, {
+  foreignKey: "guardian_id",
+  as: "guardian",
+});
+Guardian.hasMany(Student, {
+  foreignKey: "guardian_id",
+  as: "students",
+});
+
 
 
 route.hasMany(Student, { foreignKey: "route_id", as: "Student" });

@@ -1,4 +1,5 @@
-const { Driver } = require("../../models");
+const { where } = require("sequelize");
+const { Driver, Guardian } = require("../../models");
 const { StudentRoutes } = require("../../models");
 const { stop: Stop } = require("../../models");
 const { Student } = require("../../models");
@@ -234,6 +235,36 @@ const createStopForDriver = async (req, res) => {
   }
 };
 
+//to get all stops for a driver
+const getStopsForDriver = async (req, res) => {
+  try {
+    const user_id = req.user.user_id;
+    const driver = await Driver.findOne({
+      where: {
+        user_id,
+        trash: false,
+      },
+    });
+    if (!driver) {
+      return res.status(404).json({ message: "Driver not found" });
+    }
+    const stops = await Stop.findAll({
+      where: { trash: false, },
+      attributes: ["stop_name"]
+    })
+
+    return res.status(200).json({
+      message: "Stops fetched successfully",
+      data: stops,
+    });
+  } catch (error) {
+    console.error("Error fetching stops:", error);
+    return res.status(500).json({
+      error: "Failed to fetch stops",
+    });
+  }
+};
+
 
 // driver assigns student to a stop
 const assignStudentsToStop = async (req, res) => {
@@ -333,7 +364,7 @@ const getMyStudents = async (req, res) => {
     }
 
     const students = await Student.findAll({
-      attributes: ["full_name", "reg_no"],
+      attributes: ["full_name", "reg_no", "id"],
       where: { trash: false },
       include: [
         {
@@ -357,13 +388,23 @@ const getMyStudents = async (req, res) => {
               ],
             },
           ],
+
         },
+        {
+          model: Guardian,
+          as: "guardian",
+          attributes: ["guardian_name"],
+          required: false,
+        }
+
       ],
     });
 
     const result = students.map((s) => ({
+      id: s.id,
       full_name: s.full_name,
       reg_no: s.reg_no,
+      guardian_name: s.guardian?.guardian_name || null,
       stop_name: s.stop?.stop_name || null,
     }));
 
@@ -437,5 +478,6 @@ module.exports = {
   createStopForDriver,
   assignStudentsToStop,
   getMyStudents,
+  getStopsForDriver,
   // createRouteForDriver,
 };
