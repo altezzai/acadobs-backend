@@ -483,6 +483,8 @@ router.get("/getAllRoutes", schoolAdminController.getAllRoutes);
 
 //getDriverById
 router.get("/getDriverById/:id", trackerController.getDriverById);
+//getAllDrivers
+router.get("/getAllDrivers", schoolAdminController.getAllDrivers);
 router.put(
   "/updateDriverById/:id",
   uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
@@ -507,7 +509,7 @@ router.get(
 router.post(
   "/assignDriverToRoutes/:driverId",
 
-  trackerController.assignDriverToRoutes,
+  schoolAdminController.assignDriverToRoutes,
 );
 
 //add students to route

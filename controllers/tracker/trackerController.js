@@ -33,6 +33,7 @@ const getDriverById = async (req, res) => {
   }
 };
 
+
 //updateById
 const updateDriverById = async (req, res) => {
   try {
@@ -168,54 +169,6 @@ const DriverAssignedRoutes = async (req, res) => {
   }
 };
 
-//assign drivers to routes
-const assignDriverToRoutes = async (req, res) => {
-  try {
-    const { driverId } = req.params;
-    const { routeIds } = req.body;
-
-    if (!Array.isArray(routeIds) || routeIds.length === 0) {
-      return res.status(400).json({
-        message: "routeIds must be a non-empty array",
-      });
-    }
-
-    // check driver
-    const driver = await Driver.findOne({
-      where: { id: driverId, trash: false },
-    });
-
-    if (!driver) {
-      return res.status(404).json({
-        message: "Driver not found",
-      });
-    }
-
-    // check routes
-    const routes = await StudentRoutes.findAll({
-      where: {
-        id: routeIds,
-      },
-    });
-
-    if (routes.length !== routeIds.length) {
-      return res.status(404).json({
-        message: "One or more routes not found",
-      });
-    }
-
-    await driver.addRoutes(routeIds);
-
-    return res.status(200).json({
-      message: "Driver assigned to routes successfully",
-    });
-  } catch (error) {
-    console.error("Error assigning driver to routes:", error);
-    return res.status(500).json({
-      error: "Failed to assign driver to routes",
-    });
-  }
-};
 
 //create stop for driver
 const createStopForDriver = async (req, res) => {
@@ -374,7 +327,6 @@ module.exports = {
   updateDriverById,
   deleteDriverById,
   getDriverAssignedRoutes,
-  assignDriverToRoutes,
   DriverAssignedRoutes,
   createStopForDriver,
   assignStudentsToStop,

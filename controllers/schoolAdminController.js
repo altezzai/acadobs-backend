@@ -7281,6 +7281,28 @@ const createDriver = async (req, res) => {
   }
 };
 
+//get all drivers
+const getAllDrivers = async (req, res) => {
+  try {
+    const drivers = await Driver.findAll({
+      where: {
+        trash: false,
+      },
+      attributes: ["id", "name", "phone", "email", "photo"],
+    });
+
+    return res.status(200).json({
+      message: "Fetched successfully",
+      data: drivers,
+    });
+  } catch (error) {
+    console.error("Error fetching drivers:", error);
+    return res.status(500).json({
+      error: "Failed to fetch drivers",
+    });
+  }
+};
+
 //create vechicle✅
 const createVehicle = async (req, res) => {
   try {
@@ -7509,6 +7531,56 @@ const assignStudentToRoute = async (req, res) => {
   }
 };
 
+//assign drivers to routes
+const assignDriverToRoutes = async (req, res) => {
+  try {
+    const { driverId } = req.params;
+    const { routeIds } = req.body;
+
+    if (!Array.isArray(routeIds) || routeIds.length === 0) {
+      return res.status(400).json({
+        message: "routeIds must be a non-empty array",
+      });
+    }
+
+    // check driver
+    const driver = await Driver.findOne({
+      where: { id: driverId, trash: false },
+    });
+
+    if (!driver) {
+      return res.status(404).json({
+        message: "Driver not found",
+      });
+    }
+
+    // check routes
+    const routes = await StudentRoutes.findAll({
+      where: {
+        id: routeIds,
+      },
+    });
+
+    if (routes.length !== routeIds.length) {
+      return res.status(404).json({
+        message: "One or more routes not found",
+      });
+    }
+
+    await driver.addRoutes(routeIds);
+
+    return res.status(200).json({
+      message: "Driver assigned to routes successfully",
+    });
+  } catch (error) {
+    console.error("Error assigning driver to routes:", error);
+    return res.status(500).json({
+      error: "Failed to assign driver to routes",
+    });
+  }
+};
+
+
 module.exports = {
   createClass,
   getAllClasses,
@@ -7692,4 +7764,6 @@ module.exports = {
   getVehicleById,
   deleteVehicle,
   getAllRoutes,
+  assignDriverToRoutes,
+  getAllDrivers
 };
