@@ -20,18 +20,19 @@ router.put(
   superAdminController.updateSchool
 );
 router.delete("/schools/:id", superAdminController.deleteSchool);
+router.get("/schools/trashed", superAdminController.getTrashedSchools);
 router.get("/schools/:id", superAdminController.getSchoolById);
 router.patch("/schools/:id/restore", superAdminController.restoreSchool);
 router.delete(
   "/schools/:id/permanent",
   superAdminController.permanentlyDeleteSchool
 );
-router.get("/schools/trashed", superAdminController.getTrashedSchools);
 
 //class
 // Class routes
 router.post("/classes", superAdminController.createClass); // Create a new class
 router.get("/classes", superAdminController.getAllClasses); // Get all classes
+router.get("/classes/trashed", superAdminController.getTrashedClasses);
 router.get("/classes/:id", superAdminController.getClassById); // Get single class by ID
 router.put("/classes/:id", superAdminController.updateClass); // Update a class
 router.delete("/classes/:id", superAdminController.deleteClass); // Soft delete a class
@@ -40,11 +41,11 @@ router.delete(
   "/classes/:id/permanent",
   superAdminController.permanentDeleteClass
 ); // Permanently delete a class
-router.get("/classes/trashed", superAdminController.getTrashedClasses);
 
 // Subject routes
 router.post("/subjects", superAdminController.createSubject);
 router.get("/subjects", superAdminController.getSubjects);
+router.get("/subjects/trashed", superAdminController.getTrashedSubjects);
 router.get("/subjects/:id", superAdminController.getSubjectById);
 router.put("/subjects/:id", superAdminController.updateSubject);
 router.delete("/subjects/:id", superAdminController.deleteSubject);
@@ -53,7 +54,6 @@ router.delete(
   "/subjects/:id/permanent",
   superAdminController.permanentlyDeleteSubject
 );
-router.get("/subjects/trashed", superAdminController.getTrashedSubjects);
 
 // Account Delete Request routes
 router.get(
@@ -68,6 +68,7 @@ router.put(
 // Syllabus routes
 router.post("/syllabus", superAdminController.createSyllabus);
 router.get("/syllabus", superAdminController.getSyllabuses);
+router.get("/syllabus/trashed", superAdminController.getTrashedSyllabuses);
 router.get("/syllabus/:id", superAdminController.getSyllabusById);
 router.put("/syllabus/:id", superAdminController.updateSyllabus);
 router.delete("/syllabus/:id", superAdminController.deleteSyllabus);
@@ -76,5 +77,4 @@ router.delete(
   "/syllabus/:id/permanent",
   superAdminController.permanentlyDeleteSyllabus
 );
-router.get("/syllabus/trashed", superAdminController.getTrashedSyllabuses);
 module.exports = router;
