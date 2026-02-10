@@ -171,6 +171,17 @@ Driver.belongsToMany(route, {
 route.hasMany(stop, { foreignKey: "route_id", as: "stops" });
 stop.belongsTo(route, { foreignKey: "route_id", as: "route" });
 
+// Stop → Student
+stop.hasMany(Student, {
+  foreignKey: "stop_id",
+  as: "students",
+});
+
+Student.belongsTo(stop, {
+  foreignKey: "stop_id",
+  as: "stop",
+});
+
 
 route.hasMany(Student, { foreignKey: "route_id", as: "Student" });
 

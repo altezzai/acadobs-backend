@@ -320,6 +320,75 @@ const assignStudentsToStop = async (req, res) => {
   }
 };
 
+//driver sees students under a routes assigned to them
+const getMyStudents = async (req, res) => {
+  try {
+    const { route_id } = req.params;
+    const user_id = req.user.user_id;
+
+    if (!route_id) {
+      return res.status(404).json({
+        error: "Route id is required",
+      });
+    }
+
+    const students = await Student.findAll({
+      attributes: ["full_name", "reg_no"],
+      where: { trash: false },
+      include: [
+        {
+          model: Stop,
+          as: "stop",
+          attributes: ["stop_name"],
+          include: [
+            {
+              model: StudentRoutes,
+              as: "route",
+              attributes: [],
+              where: { id: route_id },
+              include: [
+                {
+                  model: Driver,
+                  as: "drivers",
+                  attributes: [],
+                  where: { user_id, trash: false },
+                  through: { attributes: [] },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = students.map((s) => ({
+      full_name: s.full_name,
+      reg_no: s.reg_no,
+      stop_name: s.stop?.stop_name || null,
+    }));
+
+    if (!students) {
+      return res.status(404).json({
+        message: "Students not found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Students fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error fetching students:", error);
+    return res.status(500).json({
+      error: "Failed to fetch students",
+    });
+  }
+};
+
+
+
+
+
 //driver creates route
 // const createRouteForDriver = async (req, res) => {
 //   try {
@@ -367,5 +436,6 @@ module.exports = {
   DriverAssignedRoutes,
   createStopForDriver,
   assignStudentsToStop,
+  getMyStudents,
   // createRouteForDriver,
 };

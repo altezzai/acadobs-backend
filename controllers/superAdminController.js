@@ -347,6 +347,12 @@ const getAllClasses = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
+      include: [
+        {
+          model: School,
+          attributes: ["id", "name"],
+        },
+      ],
       order: [["id", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
@@ -365,7 +371,14 @@ const getAllClasses = async (req, res) => {
 const getClassById = async (req, res) => {
   try {
     const id = req.params.id;
-    const classData = await Class.findByPk(id);
+    const classData = await Class.findByPk(id, {
+      include: [
+        {
+          model: School,
+          attributes: ["id", "name"],
+        },
+      ],
+    });
     if (!classData) return res.status(404).json({ message: "Class not found" });
     res.status(200).json(classData);
   } catch (err) {
@@ -546,6 +559,10 @@ const getSubjects = async (req, res) => {
           model: Syllabus,
           attributes: ["name"],
         },
+        {
+          model: School,
+          attributes: ["id", "name"],
+        },
       ],
       order: [["id", "DESC"]],
     });
@@ -564,7 +581,18 @@ const getSubjects = async (req, res) => {
 const getSubjectById = async (req, res) => {
   try {
     const id = req.params.id;
-    const subject = await Subject.findByPk(id);
+    const subject = await Subject.findByPk(id, {
+      include: [
+        {
+          model: Syllabus,
+          attributes: ["name"],
+        },
+        {
+          model: School,
+          attributes: ["id", "name"],
+        },
+      ],
+    });
     if (!subject) return res.status(404).json({ message: "Subject not found" });
     res.status(200).json(subject);
   } catch (err) {
@@ -679,6 +707,10 @@ const getTrashedSubjects = async (req, res) => {
         {
           model: Syllabus,
           attributes: ["name"],
+        },
+        {
+          model: School,
+          attributes: ["id", "name"],
         },
       ],
       order: [["id", "DESC"]],

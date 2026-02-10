@@ -579,7 +579,8 @@ const getTrashedSubjects = async (req, res) => {
 const restoreSubject = async (req, res) => {
   try {
     const { id } = req.params;
-    const subject = await Subject.findByPk(id);
+    const school_id = req.user.school_id;
+    const subject = await Subject.findOne({ where: { id, school_id } });
     if (!subject || !subject.trash)
       return res.status(404).json({ error: "Subject not found" });
 
