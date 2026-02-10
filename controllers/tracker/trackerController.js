@@ -247,9 +247,10 @@ const createStopForDriver = async (req, res) => {
   }
 };
 
-//to get all stops for a driver
+//to get stops details with students for a driver
 const getStopsForDriver = async (req, res) => {
   try {
+    const { route_id } = req.params;
     const user_id = req.user.user_id;
     const driver = await Driver.findOne({
       where: {
@@ -261,13 +262,39 @@ const getStopsForDriver = async (req, res) => {
       return res.status(404).json({ message: "Driver not found" });
     }
     const stops = await Stop.findAll({
-      where: { trash: false, },
-      attributes: ["stop_name"]
+      where: { route_id, trash: false, },
+      attributes: ["stop_name", "priority", "longitude", "latitude"],
+      include: [
+        {
+          model: StudentRoutes,
+
+          as: "route",
+          attributes: ["route_name",],
+
+        },
+        {
+          model: Student,
+          as: "students",
+          attributes: ["id", "full_name", "reg_no", "admission_date"]
+        }
+      ],
+
+    });
+
+    const result = stops.map((s) => {
+      return {
+        stop_name: s.stop_name,
+        priority: s.priority,
+        longitude: s.longitude,
+        latitude: s.latitude,
+        route_name: s.route.route_name,
+        students: s.students,
+      }
     })
 
     return res.status(200).json({
       message: "Stops fetched successfully",
-      data: stops,
+      data: result,
     });
   } catch (error) {
     console.error("Error fetching stops:", error);

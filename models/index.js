@@ -197,6 +197,9 @@ Guardian.hasMany(Student, {
 
 
 
+
+
+
 route.hasMany(Student, { foreignKey: "route_id", as: "Student" });
 
 module.exports = {
