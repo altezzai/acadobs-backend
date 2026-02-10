@@ -207,13 +207,25 @@ const createStopForDriver = async (req, res) => {
       ],
     });
 
+    if (!route) {
+      return res.status(404).json({
+        message: "Route not found",
+      });
+    }
+
     const existingStop = await Stop.findOne({
       where: {
         route_id,
         stop_name,
+        priority,
         trash: false,
       },
     });
+    if (existingStop) {
+      return res.status(400).json({
+        message: "Stop name and priority already exists for this route",
+      });
+    }
 
     // Create stop
     const stop = await Stop.create({

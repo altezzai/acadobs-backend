@@ -23,6 +23,7 @@ const Stop = schoolSequelize.define(
 
     priority: {
       type: DataTypes.INTEGER,
+      unique: true,
       allowNull: true,
     },
 
