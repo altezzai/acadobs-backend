@@ -546,7 +546,7 @@ const getSubjects = async (req, res) => {
       whereClause.school_id = school_id;
     }
     if (trash) {
-      whereClause.trash = trash;
+      whereClause.trash = false;
     }
 
     const { count, rows: subjects } = await Subject.findAndCountAll({

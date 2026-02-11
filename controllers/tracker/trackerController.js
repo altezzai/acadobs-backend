@@ -275,7 +275,14 @@ const getStopsForDriver = async (req, res) => {
         {
           model: Student,
           as: "students",
-          attributes: ["id", "full_name", "reg_no", "admission_date"]
+          attributes: ["id", "full_name", "reg_no"],
+          include: [
+            {
+              model: Guardian,
+              as: "guardian",
+              attributes: ["guardian_name", "guardian_contact"]
+            }
+          ]
         }
       ],
 
@@ -289,7 +296,13 @@ const getStopsForDriver = async (req, res) => {
         longitude: s.longitude,
         latitude: s.latitude,
         route_name: s.route.route_name,
-        students: s.students,
+        students: s.students.map((student) => ({
+          id: student.id,
+          full_name: student.full_name,
+          reg_no: student.reg_no,
+          guardian_name: student.guardian?.guardian_name || null,
+          guardian_contact: student.guardian?.guardian_contact || null,
+        })),
       }
     })
 
@@ -526,9 +539,25 @@ const getStopDetailsForDriver = async (req, res) => {
       });
     }
 
+    const result = {
+      id: singlestop.id,
+      priority: singlestop.priority,
+      stop_name: singlestop.stop_name,
+      longitude: singlestop.longitude,
+      latitude: singlestop.latitude,
+      route_id: singlestop.route?.id || null,
+      students: singlestop.students.map((student) => ({
+        id: student.id,
+        full_name: student.full_name,
+        reg_no: student.reg_no,
+        guardian_name: student.guardian?.guardian_name || null,
+      })),
+    };
+
+
     return res.status(200).json({
       message: "Stop details fetched successfully",
-      data: singlestop,
+      data: result,
     });
 
   } catch (error) {
