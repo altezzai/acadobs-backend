@@ -465,6 +465,73 @@ const getMyStudents = async (req, res) => {
   }
 };
 
+//get each stop details for driver 
+const getStopDetailsForDriver = async (req, res) => {
+  try {
+    const { stop_id } = req.params;
+    const user_id = req.user.user_id;
+    if (!stop_id) {
+      return res.status(400).json({
+        message: "stop id required"
+      });
+    }
+
+
+    const driver = await Driver.findOne({
+      where: {
+        user_id,
+        trash: false,
+      },
+    });
+
+    if (!driver) {
+      return res.status(403).json({
+        message: "Driver profile not found",
+      });
+    }
+    const singlestop = await Stop.findOne({
+      where: {
+        id: stop_id,
+        trash: false,
+
+      },
+      attributes: ["id", "priority", "stop_name", "longitude", "latitude",],
+      include: [
+        {
+          model: Student,
+          as: "students",
+          attributes: ["id", "full_name", "reg_no"],
+          include: [
+            {
+              model: Guardian,
+              as: "guardian",
+              attributes: ["guardian_name"],
+              required: false,
+            }
+          ]
+
+        }
+      ]
+
+    });
+    if (!singlestop) {
+      return res.status(404).json({
+        message: "stop not found"
+      });
+    }
+
+    return res.status(200).json({
+      message: "Stop details fetched successfully",
+      data: singlestop,
+    });
+
+  } catch (error) {
+    console.log("Error in fetching stop details: ", error);
+    return res.status(500).json({
+      error: "Failed to fetch stop details"
+    });
+  }
+}
 
 
 
@@ -518,5 +585,6 @@ module.exports = {
   assignStudentsToStop,
   getMyStudents,
   getStopsForDriver,
+  getStopDetailsForDriver,
   // createRouteForDriver,
 };

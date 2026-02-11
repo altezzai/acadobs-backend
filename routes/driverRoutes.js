@@ -7,5 +7,6 @@ router.post("/createStopForDriver", trackerController.createStopForDriver);
 router.post("/assignStudentToStop", trackerController.assignStudentsToStop);
 router.get("/getMyStudents/:route_id", trackerController.getMyStudents);
 router.get("/getStopsForDriver/:route_id", trackerController.getStopsForDriver);
+router.get("/getStopDetailsForDriver/:stop_id", trackerController.getStopDetailsForDriver);
 // router.post("/createRouteForDriver", trackerController.createRouteForDriver);
 module.exports = router;
