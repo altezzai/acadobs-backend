@@ -416,33 +416,39 @@ const getMyStudents = async (req, res) => {
       });
     }
 
+    // Verify if the route exists and is assigned to the driver
+    const route = await StudentRoutes.findOne({
+      where: { id: route_id, trash: false },
+      include: [
+        {
+          model: Driver,
+          as: "drivers",
+          where: { user_id, trash: false },
+          attributes: [],
+          through: { attributes: [] },
+        },
+      ],
+    });
+
+    if (!route) {
+      return res.status(404).json({
+        message: "Route not found or not assigned to you",
+      });
+    }
+
+    // Fetch students assigned to this route
     const students = await Student.findAll({
       attributes: ["full_name", "reg_no", "id"],
-      where: { trash: false },
+      where: {
+        route_id: route_id,
+        trash: false
+      },
       include: [
         {
           model: Stop,
           as: "stop",
           attributes: ["stop_name"],
-          required: true,
-          include: [
-            {
-              model: StudentRoutes,
-              as: "route",
-              attributes: [],
-              where: { id: route_id },
-              include: [
-                {
-                  model: Driver,
-                  as: "drivers",
-                  attributes: [],
-                  where: { user_id, trash: false },
-                  through: { attributes: [] },
-                },
-              ],
-            },
-          ],
-
+          required: false,
         },
         {
           model: Guardian,
@@ -450,7 +456,6 @@ const getMyStudents = async (req, res) => {
           attributes: ["guardian_name"],
           required: false,
         }
-
       ],
     });
 
