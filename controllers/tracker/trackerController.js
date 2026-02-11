@@ -510,6 +510,11 @@ const getStopDetailsForDriver = async (req, res) => {
             }
           ]
 
+        },
+        {
+          model: StudentRoutes,
+          as: "route",
+          attributes: ["id"],
         }
       ]
 
