@@ -424,6 +424,7 @@ const getMyStudents = async (req, res) => {
           model: Stop,
           as: "stop",
           attributes: ["stop_name"],
+          required: true,
           include: [
             {
               model: StudentRoutes,
@@ -461,9 +462,9 @@ const getMyStudents = async (req, res) => {
       stop_name: s.stop?.stop_name || null,
     }));
 
-    if (!students) {
+    if (!students || students.length === 0) {
       return res.status(404).json({
-        message: "Students not found",
+        message: "Students not found in this route",
       });
     }
 
