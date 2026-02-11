@@ -7495,9 +7495,9 @@ const getAllRoutes = async (req, res) => {
 //adding students to route
 const assignStudentToRoute = async (req, res) => {
   try {
-    const { student_id, route_id } = req.body;
+    const { student_ids, route_id } = req.body;
 
-    if (!student_id || !route_id) {
+    if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
       return res
         .status(400)
         .json({ message: "student_id and route_id required" });
@@ -7511,20 +7511,19 @@ const assignStudentToRoute = async (req, res) => {
       return res.status(404).json({ message: "Route not found" });
     }
 
-    const student = await Student.findOne({
-      where: { id: student_id, trash: false },
+    const students = await Student.findAll({
+      where: { id: student_ids, trash: false },
     });
 
-    if (!student) {
+    if (students.length !== student_ids.length) {
       return res.status(404).json({ message: "Student not found" });
     }
 
-    student.route_id = route_id;
-    await student.save();
+    await Student.update({ route_id }, { where: { id: student_ids } });
 
     res.json({
       message: "Student assigned to route successfully",
-      student,
+      students,
     });
   } catch (error) {
     console.error(error);
