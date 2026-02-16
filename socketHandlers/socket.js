@@ -34,6 +34,24 @@ module.exports = (io, socket) => {
     personalHandlers.toggleBlock(io, socket, data)
   );
 
+  socket.on("joinRouteRoom", ({ route_id }) => {
+    socket.join(`route_${route_id}`);
+    console.log(`User ${socket.user.user_id} joined route_${route_id}`);
+  });
+
+  // Vehicle live tracking
+  socket.on("vehicleLocationUpdate", (data) =>
+    vehicleHandlers.vehicleLocationUpdate(io, socket, data)
+  );
+
+  socket.on("stopArrived", (data) =>
+    vehicleHandlers.stopArrived(io, socket, data)
+  );
+
+  socket.on("routeCompleted", (data) =>
+    vehicleHandlers.routeCompleted(io, socket, data)
+  );
+
   //  Disconnect Event
   socket.on("disconnect", () => {
     console.log(`User disconnected: ${socket.user.user_id}`);

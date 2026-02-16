@@ -103,7 +103,7 @@ const getDriverAssignedRoutes = async (req, res) => {
         {
           model: StudentRoutes,
           as: "routes",
-          attributes: ["id", "route_name", "vehicle_id", "type"],
+          attributes: ["id", "route_name", "vehicle_id", "type", "active", "activated_at"],
           through: {
             attributes: [],
           },
