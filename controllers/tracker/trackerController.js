@@ -3,6 +3,7 @@ const { Driver, Guardian } = require("../../models");
 const { StudentRoutes } = require("../../models");
 const { stop: Stop } = require("../../models");
 const { Student } = require("../../models");
+const { Sequelize } = require("sequelize");
 // getDriverById
 const getDriverById = async (req, res) => {
   try {
@@ -144,7 +145,7 @@ const DriverAssignedRoutes = async (req, res) => {
         {
           model: StudentRoutes,
           as: "routes",
-          attributes: ["id", "route_name", "vehicle_id", "type"],
+          attributes: ["id", "route_name", "vehicle_id", "type", "active", "activated_at"],
           through: {
             attributes: [],
           },
@@ -156,6 +157,16 @@ const DriverAssignedRoutes = async (req, res) => {
       return res.status(404).json({
         message: "Driver profile not found",
       });
+    }
+
+    for (const route of driver.routes) {
+      const totalStudents = await Student.count({
+        where: {
+          route_id: route.id,
+          trash: false,
+        },
+      });
+      route.dataValues.total_students = totalStudents;
     }
 
     return res.status(200).json({

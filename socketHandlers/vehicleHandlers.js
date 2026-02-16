@@ -1,4 +1,5 @@
-exports.vehicleLocationUpdate = async (io, socket, data) => {
+
+const vehicleLocationUpdate = async (io, socket, data) => {
     try {
         const { route_id, latitude, longitude } = data;
 
@@ -14,14 +15,15 @@ exports.vehicleLocationUpdate = async (io, socket, data) => {
 };
 
 
-exports.stopArrived = async (io, socket, data) => {
+const stopArrived = async (io, socket, data) => {
     try {
         const { route_id, stop_id, stop_name } = data;
 
         io.to(`route_${route_id}`).emit("stopReached", {
+            route_id,
             stop_id,
             stop_name,
-            time: new Date(),
+            reached_at: new Date(),
         });
 
     } catch (error) {
@@ -29,8 +31,7 @@ exports.stopArrived = async (io, socket, data) => {
     }
 };
 
-
-exports.routeCompleted = async (io, socket, data) => {
+const routeCompleted = async (io, socket, data) => {
     try {
         const { route_id } = data;
 
@@ -42,4 +43,10 @@ exports.routeCompleted = async (io, socket, data) => {
     } catch (error) {
         console.error("Route complete error:", error);
     }
+};
+
+module.exports = {
+    vehicleLocationUpdate,
+    stopArrived,
+    routeCompleted,
 };

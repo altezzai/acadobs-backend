@@ -1,5 +1,6 @@
 const messageHandlers = require("./messageHandlers");
 const messageStatusHandlers = require("./messageStatusHandlers");
+const vehicleHandlers = require("./vehicleHandlers");
 
 module.exports = (io, socket) => {
   console.log(`User connected: ${socket.user.user_id}`);
