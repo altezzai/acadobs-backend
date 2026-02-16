@@ -27,6 +27,10 @@ const Student = schoolSequelize.define(
     trash: { type: DataTypes.BOOLEAN, defaultValue: false },
     createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    student_status: {
+      type: DataTypes.ENUM("PICKED", "DROPPED", "ABSENT"),
+      defaultValue: null,
+    },
   },
   {
     tableName: "students",

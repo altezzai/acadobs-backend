@@ -32,7 +32,7 @@ const StudentRoutes = schoolSequelize.define(
     },
 
     type: {
-      type: DataTypes.STRING,
+      type: DataTypes.ENUM("PICKUP", "DROP"),
       allowNull: true,
     },
 
@@ -40,8 +40,20 @@ const StudentRoutes = schoolSequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
+    active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    activated_by_driver_id: {
+      type: DataTypes.INTEGER,
+      defaultValue: null,
+    },
+    activated_at: {
+      type: DataTypes.DATE,
+      defaultValue: null,
+    },
 
-    
+
   },
   {
     tableName: "route",

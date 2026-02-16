@@ -49,6 +49,14 @@ const Stop = schoolSequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    arrived: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    arrived_time: {
+      type: DataTypes.DATE,
+      defaultValue: null,
+    }
   },
   {
     tableName: "stop",

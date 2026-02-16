@@ -7,8 +7,8 @@ const {
   compressAndSaveFile,
   deletefilewithfoldername,
 } = require("../utils/fileHandler");
-const {normalizeGuardianRelation} = require("../utils/supportingFunction");
-const { Class } = require("../models");
+const { normalizeGuardianRelation } = require("../utils/supportingFunction");
+const { Class, StudentRoutes, stop } = require("../models");
 const HomeworkAssignment = require("../models/homeworkassignment");
 const Student = require("../models/student");
 const School = require("../models/school");
@@ -827,11 +827,11 @@ const updateProfileDetails = async (req, res) => {
     });
 
     if (!guardian) return res.status(404).json({ error: "Guardian not found" });
-    
+
     await guardian.update({
-      guardian_relation:normalizeGuardianRelation(guardian_relation),
+      guardian_relation: normalizeGuardianRelation(guardian_relation),
       guardian_job,
-      guardian2_relation:normalizeGuardianRelation(guardian2_relation),
+      guardian2_relation: normalizeGuardianRelation(guardian2_relation),
       guardian2_name,
       guardian2_job,
       guardian2_contact,
@@ -844,7 +844,7 @@ const updateProfileDetails = async (req, res) => {
       district,
       state,
       country,
-      post, 
+      post,
       pincode,
     });
     res.status(200).json({ message: "Guardian profile updated", guardian });
@@ -862,7 +862,7 @@ const updateProfileDetails = async (req, res) => {
 const changeIdentifiersAndName = async (req, res) => {
   try {
     const userId = req.user.user_id;
-    const {  guardian_email,
+    const { guardian_email,
       guardian_name,
       guardian_contact, } = req.body;
 
@@ -887,27 +887,27 @@ const changeIdentifiersAndName = async (req, res) => {
       await User.update({ phone: guardian_contact }, { where: { id: userId } });
     }
     if (guardian_email) {
-    const existingEmail = await User.findOne({
-      where: {
-        email: guardian_email,
-        id: { [Op.ne]: userId },
-      },
-    });
+      const existingEmail = await User.findOne({
+        where: {
+          email: guardian_email,
+          id: { [Op.ne]: userId },
+        },
+      });
 
-    if (existingEmail) {
-      return res
-        .status(400)
-        .json({ error: "Guardian email already exists in user table" });
+      if (existingEmail) {
+        return res
+          .status(400)
+          .json({ error: "Guardian email already exists in user table" });
+      }
+      await User.update({ email: guardian_email }, {
+        where: { id: userId }
+      })
     }
-    await User.update({ email: guardian_email }, {
-      where: { id: userId }
-    })
-  }
-if(guardian_name){
-  await User.update({ name: guardian_name }, {
-    where: { id: userId }
-  })
-}
+    if (guardian_name) {
+      await User.update({ name: guardian_name }, {
+        where: { id: userId }
+      })
+    }
     await guardian.update({
       guardian_email,
       guardian_name,
@@ -923,8 +923,8 @@ if(guardian_name){
     );
     console.error("Error updating guardian profile:", err);
     res.status(500).json({ error: err.message });
+  }
 }
-    }
 
 
 //update ownstudent profile details in student table
