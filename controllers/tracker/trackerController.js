@@ -733,6 +733,73 @@ const updateStopandStudent = async (req, res) => {
   }
 };
 
+//driver sets route as inactive if he visits every stops
+const routeInactive = async (req, res) => {
+  try {
+    const { route_id } = req.body;
+    const user_id = req.user.user_id;
+    const driver = await Driver.findOne({
+      where: { user_id, trash: false },
+    });
+
+    if (!driver) {
+      return res.status(403).json({
+        message: "Driver profile not found",
+      });
+    }
+    const inactiveroute = await StudentRoutes.findOne({
+      where: {
+        id: route_id,
+        activated_by_driver_id: driver.id,
+        active: true,
+        trash: false,
+      }
+    });
+    if (!inactiveroute) {
+      return res.status(404).json({
+        message: "No active routes found"
+      });
+    }
+
+    const totalStops = await Stop.count({
+      where: {
+        route_id: inactiveroute.id,
+        trash: false,
+      },
+    });
+
+    const visitedStops = await Stop.count({
+      where: {
+        route_id: inactiveroute.id,
+        arrived: true,
+        trash: false,
+      },
+    });
+
+
+    if (totalStops !== visitedStops) {
+      return res.status(400).json({
+        message: "Cannot stop route. All stops are not completed.",
+        totalStops,
+        visitedStops,
+      });
+    }
+
+    inactiveroute.active = false;
+    await inactiveroute.save();
+    return res.status(200).json({
+      message: "Route has inactivated", route_id: inactiveroute.id,
+      completed_at: inactiveroute.completed_at,
+    });
+
+  } catch (error) {
+    console.log("Failed to inactivate the route: ", error);
+    return res.status(500).json({
+      error: "Internal server error"
+    })
+  }
+}
+
 
 module.exports = {
   getDriverById,
@@ -747,4 +814,5 @@ module.exports = {
   getStopDetailsForDriver,
   updateRouteActive,
   updateStopandStudent,
+  routeInactive,
 };

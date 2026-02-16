@@ -10,5 +10,6 @@ router.get("/getStopsForDriver/:route_id", trackerController.getStopsForDriver);
 router.get("/getStopDetailsForDriver/:stop_id", trackerController.getStopDetailsForDriver);
 router.post("/updateRouteActive", trackerController.updateRouteActive);
 router.post("/updateStopandStudent", trackerController.updateStopandStudent);
+router.post("/routeInactive", trackerController.routeInactive);
 // router.post("/createRouteForDriver", trackerController.createRouteForDriver);
 module.exports = router;
