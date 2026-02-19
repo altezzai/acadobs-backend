@@ -490,7 +490,7 @@ router.put(
   uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
   trackerController.updateDriverById,
 );
-router.delete("/deleteDriverById", trackerController.deleteDriverById);
+router.delete("/deleteDriverById/:id", trackerController.deleteDriverById);
 //create stop
 router.post("/stop", schoolAdminController.createStop);
 router.get("/getStopById/:id", stopController.getStopById);
