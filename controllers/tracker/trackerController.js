@@ -81,8 +81,12 @@ const deleteDriverById = async (req, res) => {
         trash: false,
       },
     });
-
-    await Driver.update({ trash: true });
+    if (!driver) {
+      return res.status(404).json({
+        error: "Driver not found",
+      });
+    }
+    await driver.update({ trash: true });
     res.status(200).json({ message: "Driver deleted successfully" });
   } catch (error) {
     console.log("Error in deleting driver: ", error);
