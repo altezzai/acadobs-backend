@@ -282,9 +282,8 @@ const getStopsForDriver = async (req, res) => {
       include: [
         {
           model: StudentRoutes,
-
           as: "route",
-          attributes: ["route_name",],
+          attributes: ["route_name", "type"],
 
         },
         {
@@ -311,6 +310,7 @@ const getStopsForDriver = async (req, res) => {
         longitude: s.longitude,
         latitude: s.latitude,
         route_name: s.route.route_name,
+        route_type: s.route.type,
         students: s.students.map((student) => ({
           id: student.id,
           full_name: student.full_name,
