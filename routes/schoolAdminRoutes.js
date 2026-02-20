@@ -487,7 +487,7 @@ router.get("/getDriverById/:id", trackerController.getDriverById);
 router.get("/getAllDrivers", schoolAdminController.getAllDrivers);
 router.put(
   "/updateDriverById/:id",
-  uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
+  uploadWithErrorHandler(upload.single("photo")),
   trackerController.updateDriverById,
 );
 router.delete("/deleteDriverById/:id", trackerController.deleteDriverById);
