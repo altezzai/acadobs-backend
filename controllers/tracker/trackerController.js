@@ -40,7 +40,9 @@ const getDriverById = async (req, res) => {
 const updateDriverById = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, phone, photo, email } = req.body;
+    // const { name, phone, photo, email } = req.body;
+    const body = req.body || {};
+    const { name, phone, email, photo } = body;
     const driver = await Driver.findOne({
       where: {
         id,
