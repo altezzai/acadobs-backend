@@ -504,7 +504,7 @@ router.put("/updateRouteById/:id", routeController.updateRouteById);
 router.delete("/deleteRoute/:id", routeController.deleteRoute);
 router.get(
   "/getDriverAssignedRoutes/:driverId",
-  trackerController.getDriverAssignedRoutes,
+  trackerController.getDriverAssignedRoutesAdmin,
 );
 router.post(
   "/assignDriverToRoutes/:driverId",

@@ -94,7 +94,7 @@ const deleteDriverById = async (req, res) => {
 };
 
 //admin sees driver assinged routes
-const getDriverAssignedRoutes = async (req, res) => {
+const getDriverAssignedRoutesAdmin = async (req, res) => {
   try {
     const { driverId } = req.params;
 
@@ -820,7 +820,7 @@ module.exports = {
   getDriverById,
   updateDriverById,
   deleteDriverById,
-  getDriverAssignedRoutes,
+  getDriverAssignedRoutesAdmin,
   DriverAssignedRoutes,
   createStopForDriver,
   assignStudentsToStop,
