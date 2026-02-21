@@ -32,6 +32,7 @@ const Achievement = require("../models/achievement");
 const StudentAchievement = require("../models/studentachievement");
 
 const { getschoolIdByStudentId } = require("../controllers/commonController");
+// StudentRoutes is already imported above from "../models" on line 11
 
 const updateHomeworkAssignment = async (req, res) => {
   try {
@@ -1115,6 +1116,71 @@ const getAchievementById = async (req, res) => {
   }
 };
 
+//get routes with student name and route name
+const getRoutesForGuardian = async (req, res) => {
+  try {
+    const guardianId = req.user.user_id;
+    const school_id = req.user.school_id;
+
+    if (!guardianId || !school_id) {
+      return res.status(400).json({
+        error: "Invalid user id or school id",
+      });
+    }
+
+    const students = await Student.findAll({
+      where: {
+        guardian_id: guardianId,
+        school_id,
+        trash: false,
+      },
+      attributes: [
+        "id",
+        "full_name",
+        "reg_no",
+      ],
+      include: [
+        {
+          model: StudentRoutes,
+          as: "route",
+          attributes: [
+            "id",
+            "route_name",
+            "type",
+          ],
+          required: true,
+        },
+      ],
+    });
+
+    // if (!students.length) {
+    //   return res.status(404).json({
+    //     message: "No routes found for this guardian",
+    //   });
+    // }
+    const result = students.map((student) => {
+      return {
+        id: student.id,
+        full_name: student.full_name,
+        reg_no: student.reg_no,
+        route_name: student.route.route_name,
+        type: student.route.type,
+      };
+    });
+
+    return res.status(200).json({
+      message: "Routes fetched successfully",
+      data: result,
+    });
+
+  } catch (error) {
+    console.log("Guardian route fetch error:", error);
+    return res.status(500).json({
+      error: "Internal server error",
+    });
+  }
+};
+
 module.exports = {
   updateHomeworkAssignment,
 
@@ -1145,4 +1211,5 @@ module.exports = {
 
   getHomeworkById,
   getAchievementById,
+  getRoutesForGuardian
 };

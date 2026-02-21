@@ -122,4 +122,7 @@ router.post("/accountDeleteRequests", commonController.accountDeleteRequests);
 
 router.get("/getSchoolDetails", commonController.getSchoolDetails);
 
+//parents see their students route
+router.get("/getRoutesForGuardian", guardianController.getRoutesForGuardian);
+
 module.exports = router;
