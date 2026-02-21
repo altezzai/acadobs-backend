@@ -124,5 +124,6 @@ router.get("/getSchoolDetails", commonController.getSchoolDetails);
 
 //parents see their students route
 router.get("/getRoutesForGuardian", guardianController.getRoutesForGuardian);
+router.get("/getGuardianRouteCount", guardianController.getGuardianRouteCount);
 
-module.exports = router;
+module.exports = router;  

@@ -1181,6 +1181,52 @@ const getRoutesForGuardian = async (req, res) => {
   }
 };
 
+//get total count of routes
+const getGuardianRouteCount = async (req, res) => {
+  try {
+    const guardianId = req.user.user_id;
+    const school_id = req.user.school_id;
+
+    if (!guardianId || !school_id) {
+      return res.status(400).json({
+        error: "Invalid user id or school id",
+      });
+    }
+
+    const students = await Student.findAll({
+      where: {
+        guardian_id: guardianId,
+        school_id,
+        trash: false,
+      },
+      attributes: [],
+      include: [
+        {
+          model: StudentRoutes,
+          as: "route",
+          attributes: ["id"],
+          required: true,
+        },
+      ],
+    });
+
+    const uniqueRoutes = new Set(
+      students.map(student => student.route.id)
+    );
+
+    return res.status(200).json({
+      message: "Route count fetched successfully",
+      total_routes: uniqueRoutes.size,
+    });
+
+  } catch (error) {
+    console.log("Guardian route count error:", error);
+    return res.status(500).json({
+      error: "Internal server error",
+    });
+  }
+};
+
 module.exports = {
   updateHomeworkAssignment,
 
@@ -1211,5 +1257,6 @@ module.exports = {
 
   getHomeworkById,
   getAchievementById,
-  getRoutesForGuardian
+  getRoutesForGuardian,
+  getGuardianRouteCount
 };
