@@ -6,26 +6,26 @@ const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 router.put(
   "/updateHomeworkAssignment/:id",
   uploadWithErrorHandler(upload.single("file")),
-  guardianController.updateHomeworkAssignment
+  guardianController.updateHomeworkAssignment,
 );
 
 router.get(
   "/getNoticeByStudentId/:student_id",
-  guardianController.getNoticeByStudentId
+  guardianController.getNoticeByStudentId,
 );
 router.get(
   "/getPaymentByStudentId/:student_id",
-  guardianController.getPaymentByStudentId
+  guardianController.getPaymentByStudentId,
 );
 router.get(
   "/getInvoiceByStudentId/:student_id",
-  guardianController.getInvoiceByStudentId
+  guardianController.getInvoiceByStudentId,
 );
 
 router.post(
   "/leaveRequest",
   uploadWithErrorHandler(upload.single("attachment")),
-  guardianController.createLeaveRequest
+  guardianController.createLeaveRequest,
 );
 router.get("/leaveRequest", guardianController.getAllLeaveRequests);
 router.get("/leaveRequest/:id", guardianController.getLeaveRequestById);
@@ -33,41 +33,44 @@ router.get("/leaveRequest/:id", guardianController.getLeaveRequestById);
 router.put(
   "/leaveRequest/:id",
   uploadWithErrorHandler(upload.single("attachment")),
-  guardianController.updateLeaveRequest
+  guardianController.updateLeaveRequest,
 );
 router.delete("/leaveRequest/:id", guardianController.deleteLeaveRequest);
 
 router.get("/getSchoolsByUser", guardianController.getSchoolsByUser);
 router.get(
   "/getStudentsUnderGuardianBySchoolId/:school_id",
-  guardianController.getStudentsUnderGuardianBySchoolId
+  guardianController.getStudentsUnderGuardianBySchoolId,
 );
 
 router.get(
   "/getStaffsBySchoolId/:school_id",
-  guardianController.getStaffsBySchoolId
+  guardianController.getStaffsBySchoolId,
 );
 
 router.get(
   "/getTodayTimetableByStudentId/:student_id",
-  guardianController.getTodayTimetableByStudentId
+  guardianController.getTodayTimetableByStudentId,
 );
 router.get(
   "/getAllDayTimetableByStudentId/:student_id",
-  guardianController.getAllDayTimetableByStudentId
+  guardianController.getAllDayTimetableByStudentId,
 );
 
 router.get(
   "/getNavigationBarCounts",
-  guardianController.getNavigationBarCounts
+  guardianController.getNavigationBarCounts,
 );
 router.put(
   "/updateStudentProfile/:student_id",
   uploadWithErrorHandler(upload.single("image")),
-  guardianController.updateStudentProfile
+  guardianController.updateStudentProfile,
 );
 router.put("/updateProfileDetails", guardianController.updateProfileDetails);
-router.put("/changeIdentifiersAndName", guardianController.changeIdentifiersAndName);
+router.put(
+  "/changeIdentifiersAndName",
+  guardianController.changeIdentifiersAndName,
+);
 router.get("/getProfileDetails", guardianController.getProfileDetails);
 
 router.get("/getHomeworkById/:id", guardianController.getHomeworkById);
@@ -79,28 +82,28 @@ router.get("/getLatestNews", commonController.getLatestNews);
 router.get("/students/:id", commonController.getStudentById);
 router.get(
   "/getHomeworkByStudentId/:student_id",
-  commonController.getHomeworkByStudentId
+  commonController.getHomeworkByStudentId,
 );
 router.get(
   "/getAttendanceByStudentId/:student_id",
-  commonController.getAttendanceByStudentId
+  commonController.getAttendanceByStudentId,
 );
 router.get(
   "/getStudentAttendanceByDate/:student_id",
-  commonController.getStudentAttendanceByDate
+  commonController.getStudentAttendanceByDate,
 );
 router.get("/allAchievements", commonController.allAchievements);
 router.get(
   "/achievementByStudentId/:student_id",
-  commonController.achievementByStudentId
+  commonController.achievementByStudentId,
 );
 router.get(
   "/getInternalMarkByStudentId/:student_id",
-  commonController.getInternalMarkByStudentId
+  commonController.getInternalMarkByStudentId,
 );
 router.get(
   "/getLeaveRequestByStudentId/:student_id",
-  commonController.getLeaveRequestByStudentId
+  commonController.getLeaveRequestByStudentId,
 );
 
 router.put("/changePassword", commonController.changePassword);
@@ -109,13 +112,13 @@ router.put("/updateFcmToken", commonController.updateFcmToken);
 router.put(
   "/updateDp",
   uploadWithErrorHandler(upload.single("dp")),
-  commonController.updateDp
+  commonController.updateDp,
 );
 
 router.get("/getPaymentById/:id", commonController.getPaymentById);
 router.get(
   "/getAchievementsBySchool",
-  commonController.getAchievementsBySchool
+  commonController.getAchievementsBySchool,
 );
 
 router.post("/accountDeleteRequests", commonController.accountDeleteRequests);
@@ -125,5 +128,6 @@ router.get("/getSchoolDetails", commonController.getSchoolDetails);
 //parents see their students route
 router.get("/getRoutesForGuardian", guardianController.getRoutesForGuardian);
 router.get("/getGuardianRouteCount", guardianController.getGuardianRouteCount);
+router.get("/stop/:route_id", guardianController.getStopsByRouteId);
 
-module.exports = router;  
+module.exports = router;
