@@ -7180,12 +7180,13 @@ const createStop = async (req, res) => {
     const existingStop = await Stop.findOne({
       where: {
         route_id,
+        priority,
         trash: false,
       },
     });
 
-    if (!route) {
-      return res.status(404).json({ message: "Route not found" });
+    if (existingStop) {
+      return res.status(404).json({ message: "Stop already exists" });
     }
 
     // Create stop
