@@ -7426,7 +7426,7 @@ const deleteVehicle = async (res, req) => {
 //create route✅(2 routes will be created one for pickup and one for drop)
 const createRoute = async (req, res) => {
   try {
-    const { start, stop, vehicle_id, driver_id, type, isLock } = req.body;
+    const { start, stop, route_no, vehicle_id, driver_id, type, isLock } = req.body;
 
     if (!start || !stop) {
       return res.status(400).json({ message: "start and stop are required" });
@@ -7452,8 +7452,8 @@ const createRoute = async (req, res) => {
       }
     }
 
-    const pickupRouteName = `${start}-${stop}`;
-    const dropRouteName = `${stop}-${start}`;
+    const pickupRouteName = `${start}-${stop}-${route_no}`;
+    const dropRouteName = `${stop}-${start}-${route_no}`;
 
     const pickup_route = await studentroutes.create({
       route_name: pickupRouteName,
