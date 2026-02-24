@@ -7465,7 +7465,7 @@ const createRoute = async (req, res) => {
       route_name,
       vehicle_id: vehicle_id || null,
       driver_id: driver_id || null,
-      type,
+      type: "drop",
       isLock: isLock ?? true,
       trash: false,
     });
