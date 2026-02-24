@@ -7290,7 +7290,7 @@ const getAllDrivers = async (req, res) => {
       where: {
         trash: false,
       },
-      attributes: ["id", "name", "phone", "email", "photo"],
+      attributes: ["id", "name", "phone", "email", "photo", "address"],
     });
 
     return res.status(200).json({
@@ -7423,7 +7423,7 @@ const deleteVehicle = async (res, req) => {
   }
 };
 
-//create route✅
+//create route✅(2 routes will be created one for pickup and one for drop)
 const createRoute = async (req, res) => {
   try {
     const { route_name, vehicle_id, driver_id, type, isLock } = req.body;
@@ -7452,7 +7452,16 @@ const createRoute = async (req, res) => {
       }
     }
 
-    const route = await studentroutes.create({
+    const pickup_route = await studentroutes.create({
+      route_name,
+      vehicle_id: vehicle_id || null,
+      driver_id: driver_id || null,
+      type,
+      isLock: isLock ?? true,
+      trash: false,
+    });
+
+    const drop_route = await studentroutes.create({
       route_name,
       vehicle_id: vehicle_id || null,
       driver_id: driver_id || null,
@@ -7463,7 +7472,7 @@ const createRoute = async (req, res) => {
 
     res.status(201).json({
       message: "Route created successfully",
-      route,
+      pickup_route, drop_route,
     });
   } catch (error) {
     logger.error("Error creating route:", error);

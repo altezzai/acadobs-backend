@@ -14,7 +14,7 @@ const getDriverById = async (req, res) => {
         id,
         trash: false,
       },
-      attributes: ["id", "name", "phone", "email", "photo"],
+      attributes: ["id", "name", "phone", "email", "photo", "address"],
     });
 
     if (!driver) {
