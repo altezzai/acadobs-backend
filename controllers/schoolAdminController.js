@@ -7308,7 +7308,7 @@ const getAllDrivers = async (req, res) => {
 //create vechicle✅
 const createVehicle = async (req, res) => {
   try {
-    const { type, model, vehicle_number, photo, driver_id } = req.body;
+    const { type, model, vehicle_number, driver_id } = req.body;
 
     if (!vehicle_number) {
       return res.status(400).json({ message: "Vehicle number is required" });
@@ -7325,11 +7325,19 @@ const createVehicle = async (req, res) => {
       }
     }
 
+    let photoPath = null;
+    const vehiclePhoto = req.files?.photo?.[0];
+
+    if (vehiclePhoto) {
+      const uploadPath = "uploads/vehicle_images/";
+      photoPath = await compressAndSaveFile(vehiclePhoto, uploadPath);
+    }
+
     const vehicle = await Vehicle.create({
       type,
       model,
       vehicle_number,
-      photo,
+      photo: photoPath,
       driver_id,
       trash: false,
     });
@@ -7452,8 +7460,8 @@ const createRoute = async (req, res) => {
       }
     }
 
-    const pickupRouteName = `${start}-${stop}-${route_no}`;
-    const dropRouteName = `${stop}-${start}-${route_no}`;
+    const pickupRouteName = route_no ? `${start}-${stop}-${route_no}` : `${start}-${stop}`;
+    const dropRouteName = route_no ? `${stop}-${start}-${route_no}` : `${stop}-${start}`;
 
     const pickup_route = await studentroutes.create({
       route_name: pickupRouteName,
