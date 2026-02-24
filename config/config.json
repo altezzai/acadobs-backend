@@ -2,7 +2,7 @@
   "development": {
     "username": "root",
     "password": "niju",
-    "database": "bustracker",
+    "database": "acadobs",
     "host": "127.0.0.1",
     "dialect": "mysql"
   },
