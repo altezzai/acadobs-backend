@@ -4,6 +4,7 @@ const { StudentRoutes } = require("../../models");
 const { stop: Stop } = require("../../models");
 const { Student } = require("../../models");
 const { Sequelize } = require("sequelize");
+const { compressAndSaveFile } = require("../../utils/fileHandler");
 // getDriverById
 const getDriverById = async (req, res) => {
   try {
@@ -41,8 +42,12 @@ const updateDriverById = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, phone, email, address } = req.body || {};
-    const photo = req.file ? req.file.originalname : undefined;
-    console.log("BODY:", req.body);
+
+    let photoPath = undefined;
+    if (req.file) {
+      const uploadPath = "uploads/driver_images/";
+      photoPath = await compressAndSaveFile(req.file, uploadPath);
+    }
     const driver = await Driver.findOne({
       where: {
         id,
@@ -59,7 +64,7 @@ const updateDriverById = async (req, res) => {
       phone: phone ?? driver.phone,
       email: email ?? driver.email,
       address: address ?? driver.address,
-      photo: photo ?? driver.photo,
+      photo: photoPath ?? driver.photo,
     });
 
     return res.status(200).json({
