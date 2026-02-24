@@ -7409,7 +7409,7 @@ const getVehicleById = async (req, res) => {
 };
 
 //delete vehicle✅
-const deleteVehicle = async (res, req) => {
+const deleteVehicle = async (req, res) => {
   try {
     const { id } = req.params;
     const vehicle = await Vehicle.findOne({

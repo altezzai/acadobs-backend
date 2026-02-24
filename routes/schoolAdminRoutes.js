@@ -476,7 +476,7 @@ router.get("/getAllVehicles", schoolAdminController.getAllVehicles);
 //getVehicleById
 router.get("/getVehicleById/:id", schoolAdminController.getVehicleById);
 //deleteVehicle
-router.get("/deleteVehicle/:id", schoolAdminController.deleteVehicle);
+router.delete("/deleteVehicle/:id", schoolAdminController.deleteVehicle);
 
 //getAllRoute
 router.get("/getAllRoutes", schoolAdminController.getAllRoutes);
