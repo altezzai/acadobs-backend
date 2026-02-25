@@ -7469,6 +7469,7 @@ const createRoute = async (req, res) => {
       driver_id: driver_id || null,
       type,
       isLock: isLock ?? true,
+      pickId: null,
       trash: false,
     });
 
@@ -7478,6 +7479,7 @@ const createRoute = async (req, res) => {
       driver_id: driver_id || null,
       type: "drop",
       isLock: isLock ?? true,
+      pickId: pickup_route.id,
       trash: false,
     });
 

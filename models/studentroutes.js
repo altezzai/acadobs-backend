@@ -20,6 +20,10 @@ const StudentRoutes = schoolSequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    driver_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
 
     createdAt: {
       type: DataTypes.DATE,
@@ -50,6 +54,10 @@ const StudentRoutes = schoolSequelize.define(
     },
     activated_at: {
       type: DataTypes.DATE,
+      defaultValue: null,
+    },
+    pickId: {
+      type: DataTypes.INTEGER,
       defaultValue: null,
     },
 
