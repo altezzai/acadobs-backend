@@ -7434,7 +7434,7 @@ const deleteVehicle = async (req, res) => {
 //create route✅(2 routes will be created one for pickup and one for drop)
 const createRoute = async (req, res) => {
   try {
-    const { start, stop, route_no, vehicle_id, driver_id, type, isLock } = req.body;
+    const { start, stop, route_no, vehicle_id, driver_id, type, isLock, hasDropRoute } = req.body;
 
     if (!start || !stop) {
       return res.status(400).json({ message: "start and stop are required" });
@@ -7467,22 +7467,24 @@ const createRoute = async (req, res) => {
       route_name: pickupRouteName,
       vehicle_id: vehicle_id || null,
       driver_id: driver_id || null,
-      type,
+      type: "pickup",
       isLock: isLock ?? true,
       pickId: null,
       trash: false,
     });
 
-    const drop_route = await studentroutes.create({
-      route_name: dropRouteName,
-      vehicle_id: vehicle_id || null,
-      driver_id: driver_id || null,
-      type: "drop",
-      isLock: isLock ?? true,
-      pickId: pickup_route.id,
-      trash: false,
-    });
-
+    let drop_route = null;
+    if (hasDropRoute) {
+      drop_route = await studentroutes.create({
+        route_name: dropRouteName,
+        vehicle_id: vehicle_id ?? null,
+        driver_id: driver_id ?? null,
+        type: "drop",
+        isLock: isLock ?? true,
+        pickId: pickup_route.id,
+        trash: false,
+      });
+    }
     res.status(201).json({
       message: "Route created successfully",
       pickup_route, drop_route,
@@ -7518,7 +7520,7 @@ const getAllRoutes = async (req, res) => {
 //adding students to route
 const assignStudentToRoute = async (req, res) => {
   try {
-    const { student_ids, route_id } = req.body;
+    const { student_ids, route_id, hasAssignToDropRoute } = req.body;
 
     if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
       return res
@@ -7542,7 +7544,18 @@ const assignStudentToRoute = async (req, res) => {
       return res.status(404).json({ message: "Student not found" });
     }
 
-    await Student.update({ route_id }, { where: { id: student_ids } });
+    let dropRouteId = null;
+    if (hasAssignToDropRoute) {
+      const dropRoute = await studentroutes.findOne({
+        where: { pickId: route_id, trash: false },
+      });
+      if (!dropRoute) {
+        return res.status(404).json({ message: "Drop route not found" });
+      }
+      dropRouteId = dropRoute.id;
+    }
+
+    await Student.update({ route_id, dropRouteId }, { where: { id: student_ids } });
 
     res.json({
       message: "Student assigned to route successfully",
