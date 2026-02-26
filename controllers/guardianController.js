@@ -1242,6 +1242,57 @@ const getStopsByRouteId = async (req, res) => {
   }
 };
 
+//fetch all arrived route for their student for guardian
+const getStopsForParent = async (req, res) => {
+  try {
+    const { route_id } = req.params;
+    const user_id = req.user.user_id;
+    const guardian = await Guardian.findOne({
+      where: {
+        user_id,
+        trash: false,
+      },
+    });
+    if (!guardian) {
+      return res.status(404).json({ message: "guardian not found" });
+    }
+    const stops = await stop.findAll({
+      where: { route_id, trash: false, },
+      attributes: ["id", "stop_name", "priority", "arrived"],
+      include: [
+        {
+          model: StudentRoutes,
+          as: "route",
+          attributes: ["route_name", "type"],
+
+        },
+
+      ],
+
+    });
+
+    const result = stops.map((s) => {
+      return {
+        id: s.id,
+        stop_name: s.stop_name,
+        priority: s.priority,
+        route_name: s.route.route_name,
+        route_type: s.route.type,
+        arrived: s.arrived,
+      }
+    })
+
+    return res.status(200).json({
+      message: "Stops fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error fetching stops:", error);
+    return res.status(500).json({
+      error: "Failed to fetch stops",
+    });
+  }
+};
 
 module.exports = {
   updateHomeworkAssignment,
@@ -1276,4 +1327,5 @@ module.exports = {
   getRoutesForGuardian,
   getGuardianRouteCount,
   getStopsByRouteId,
+  getStopsForParent,
 };

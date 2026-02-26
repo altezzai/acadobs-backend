@@ -129,5 +129,7 @@ router.get("/getSchoolDetails", commonController.getSchoolDetails);
 router.get("/getRoutesForGuardian", guardianController.getRoutesForGuardian);
 router.get("/getGuardianRouteCount", guardianController.getGuardianRouteCount);
 router.get("/stop/:route_id", guardianController.getStopsByRouteId);
+//parent sees every stop of their student
+router.get("/getStopsForParent/:route_id", guardianController.getStopsForParent);
 
 module.exports = router;
