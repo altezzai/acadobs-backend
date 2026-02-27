@@ -7549,9 +7549,6 @@ const assignStudentToRoute = async (req, res) => {
       const dropRoute = await studentroutes.findOne({
         where: { pickId: route_id, trash: false },
       });
-      if (!dropRoute) {
-        return res.status(404).json({ message: "Drop route not found" });
-      }
       dropRouteId = dropRoute.id;
     }
 
