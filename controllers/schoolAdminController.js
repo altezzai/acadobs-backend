@@ -7567,6 +7567,129 @@ const assignStudentToRoute = async (req, res) => {
   }
 };
 
+//update the students to route
+const updateStudentToRoute = async (req, res) => {
+  try {
+    const { route_id } = req.params;
+    const { student_ids } = req.body;
+
+    // Validate input
+    if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
+      return res.status(400).json({
+        message: "student_ids array is required",
+      });
+    }
+
+    // Check route exists
+    const route = await studentroutes.findOne({
+      where: { id: route_id, trash: false },
+    });
+
+    if (!route) {
+      return res.status(404).json({
+        message: "Route not found",
+      });
+    }
+
+    // Fetch students
+    const students = await Student.findAll({
+      where: {
+        id: student_ids,
+        trash: false,
+      },
+    });
+
+    if (students.length === 0) {
+      return res.status(404).json({
+        message: "No valid students found",
+      });
+    }
+
+    // Update all students at once (BEST PRACTICE)
+    await Student.update(
+      { route_id: route_id },
+      {
+        where: {
+          id: student_ids,
+          trash: false,
+        },
+      }
+    );
+
+    return res.status(200).json({
+      message: "Students updated to route successfully",
+      updated_count: students.length,
+    });
+
+  } catch (error) {
+    console.error("Update Student To Route Error:", error);
+    return res.status(500).json({
+      error: "Failed to update student",
+    });
+  }
+};
+
+//delete students from route
+const deleteStudentFromRoute = async (req, res) => {
+
+  try {
+    const { route_id } = req.params;
+    const { student_ids } = req.body;
+
+    if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
+      return res.status(400).json({
+        message: "student_ids array is required",
+      });
+    }
+    const route = await studentroutes.findOne({
+      where: {
+        id: route_id,
+        trash: false,
+      }
+    });
+    if (!route) {
+      return res.status(404).json({
+        message: "Route not found"
+      });
+    }
+    const students = await Student.findAll({
+      where: {
+        id: student_ids,
+        route_id: route_id,
+        trash: false,
+      },
+    });
+    if (students.length === 0) {
+      return res.status(404).json({
+        message: "No students found in this route",
+      });
+    }
+
+
+    // Remove students from route
+    await Student.update(
+      { route_id: null },
+      {
+        where: {
+          id: student_ids,
+          route_id: route_id,
+        },
+      }
+    );
+
+    return res.status(200).json({
+      message: "Students removed from route successfully",
+      removed_count: students.length,
+    });
+
+  } catch (error) {
+    console.log("error occured: ", error);
+    return res.status(500).json({
+      message: "Internal server error"
+    });
+  }
+
+}
 //assign drivers to routes
 const assignDriverToRoutes = async (req, res) => {
   try {
@@ -7801,5 +7924,7 @@ module.exports = {
   deleteVehicle,
   getAllRoutes,
   assignDriverToRoutes,
-  getAllDrivers
+  getAllDrivers,
+  updateStudentToRoute,
+  deleteStudentFromRoute
 };

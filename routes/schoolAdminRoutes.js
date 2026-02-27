@@ -518,4 +518,13 @@ router.post(
   schoolAdminController.assignStudentToRoute,
 );
 
+//update students to route
+router.put(
+  "/update-student-route/:route_id",
+  schoolAdminController.updateStudentToRoute,
+);
+
+//delete student from route
+router.delete("/deleteStudentFromRoute/:route_id", schoolAdminController.deleteStudentFromRoute);
+
 module.exports = router;
