@@ -50,6 +50,7 @@ const { Driver } = require("../models");
 const { Vehicle } = require("../models");
 const studentroutes = require("../models/studentroutes");
 const { error } = require("winston");
+const StudentRouteAssignment = require("../models/student_route_assignment");
 
 // CREATE
 const createClass = async (req, res) => {
@@ -7528,14 +7529,16 @@ const assignStudentToRoute = async (req, res) => {
         .json({ message: "student_id and route_id required" });
     }
 
-    const route = await studentroutes.findOne({
+    // Validate pickup route
+    const pickupRoute = await studentroutes.findOne({
       where: { id: route_id, trash: false },
     });
 
-    if (!route) {
+    if (!pickupRoute) {
       return res.status(404).json({ message: "Route not found" });
     }
 
+    // Validate students
     const students = await Student.findAll({
       where: { id: student_ids, trash: false },
     });
@@ -7543,20 +7546,23 @@ const assignStudentToRoute = async (req, res) => {
     if (students.length !== student_ids.length) {
       return res.status(404).json({ message: "Student not found" });
     }
-
-    let dropRouteId = null;
+    await pickupRoute.addStudents(students);
     if (hasAssignToDropRoute) {
       const dropRoute = await studentroutes.findOne({
         where: { pickId: route_id, trash: false },
       });
-      dropRouteId = dropRoute.id;
+
+      if (!dropRoute) {
+        return res.status(404).json({ message: "Drop route not found for this pickup route" });
+      }
+
+      await dropRoute.addStudents(students);
     }
 
-    await Student.update({ route_id, dropRouteId }, { where: { id: student_ids } });
-
-    res.json({
-      message: "Student assigned to route successfully",
-      students,
+    return res.json({
+      message: "Students assigned to route successfully",
+      assignedCount: students.length,
+      students: students.map((s) => ({ id: s.id, name: s.full_name })),
     });
   } catch (error) {
     console.error(error);
@@ -7626,53 +7632,54 @@ const updateStudentToRoute = async (req, res) => {
   }
 };
 
-//delete students from route
+//delete students from route 
 const deleteStudentFromRoute = async (req, res) => {
   try {
     const { route_id } = req.params;
     const { student_ids } = req.body;
+
     if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
       return res.status(400).json({
         message: "student_ids array is required",
       });
     }
-    const route = await studentroutes.findOne({
-      where: {
-        id: route_id,
-        trash: false,
-      },
+
+    const routeInstance = await studentroutes.findOne({
+      where: { id: route_id, trash: false },
     });
 
-    if (!route) {
+    if (!routeInstance) {
       return res.status(404).json({
         message: "Route not found",
       });
     }
-
-    const [affectedRows] = await Student.update(
+    const existingAssignments = await StudentRouteAssignment.findAll({
+      where: {
+        route_id: route_id,
+        student_id: student_ids,
+      },
+    });
+    if (existingAssignments.length === 0) {
+      return res.status(404).json({
+        message: "Students not found in this route",
+      });
+    }
+    //Soft delete ONLY from junction table
+    const [affectedRows] = await StudentRouteAssignment.update(
       { trash: true },
       {
         where: {
-          id: student_ids,
           route_id: route_id,
-          trash: false,
+          student_id: student_ids,
         },
       }
     );
-
-    if (affectedRows === 0) {
-      return res.status(404).json({
-        message: "No students found in this route",
-      });
-    }
-
     return res.status(200).json({
-      message: "Students moved to trash successfully",
+      message: "Students removed from route successfully",
       removed_count: affectedRows,
     });
-
   } catch (error) {
-    console.error("Error occurred:", error);
+    console.error(error);
     return res.status(500).json({
       message: "Internal server error",
     });

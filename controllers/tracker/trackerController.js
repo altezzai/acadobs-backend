@@ -705,15 +705,23 @@ const updateStopandStudent = async (req, res) => {
     stop.arrived = true;
     stop.arrived_time = new Date();
     await stop.save();
-    if (activeRoute.type === "DROP") {
-      student_status = "DROPPED";
+    let finalStatus;
+
+    if (student_status) {
+      finalStatus = student_status;
+    } else if (activeRoute.type === "DROP") {
+      finalStatus = "DROPPED";
     } else if (activeRoute.type === "PICKUP") {
-      student_status = "PICKED";
-    } else if (activeRoute.type === "ABSENT") {
-      student_status = "ABSENT";
+      finalStatus = "PICKED";
+    }
+
+    if (!finalStatus) {
+      return res.status(400).json({
+        message: "Invalid student status",
+      });
     }
     await Student.update(
-      { student_status: student_status },
+      { student_status: finalStatus },
       {
         where: {
           id: student_ids,
@@ -722,7 +730,6 @@ const updateStopandStudent = async (req, res) => {
         },
       }
     );
-
     const students = await Student.findAll({
       where: { id: student_ids },
       attributes: ["id", "full_name", "reg_no", "student_status"],
@@ -743,7 +750,7 @@ const updateStopandStudent = async (req, res) => {
     }));
 
     return res.status(200).json({
-      message: `${student_status} updated successfully`,
+      message: `${finalStatus} updated successfully`,
       route_type: activeRoute.type,
       data: result,
     });

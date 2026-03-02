@@ -37,6 +37,7 @@ const Vehicle = require("./vehicle");
 const route = require("./studentroutes");
 const stop = require("./stop");
 const StudentRoutes = require("./studentroutes");
+const StudentRouteAssignment = require("./student_route_assignment");
 const RouteDrivers = require("./route_drivers");
 
 // Relations
@@ -200,10 +201,24 @@ Guardian.hasMany(Student, {
 
 
 
-route.hasMany(Student, { foreignKey: "route_id", as: "Student" });
-Student.belongsTo(route, {
+// route.hasMany(Student, { foreignKey: "route_id", as: "Student" });
+// Student.belongsTo(route, {
+//   foreignKey: "route_id",
+//   as: "route",
+// });
+// Route ↔ Student (Many-to-Many using junction table)
+route.belongsToMany(Student, {
+  through: StudentRouteAssignment,
   foreignKey: "route_id",
-  as: "route",
+  otherKey: "student_id",
+  as: "students",
+});
+
+Student.belongsToMany(route, {
+  through: StudentRouteAssignment,
+  foreignKey: "student_id",
+  otherKey: "route_id",
+  as: "routes",
 });
 
 module.exports = {
@@ -241,5 +256,6 @@ module.exports = {
   route,
   stop,
   StudentRoutes,
+  StudentRouteAssignment,
   RouteDrivers,
 };
