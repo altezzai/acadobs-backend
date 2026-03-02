@@ -656,7 +656,7 @@ const updateRouteActive = async (req, res) => {
 //Update current stop and Mark which students got down at that stop
 const updateStopandStudent = async (req, res) => {
   try {
-    const { stop_id, student_ids, student_status } = req.body;
+    const { stop_id, student_ids } = req.body;
     const user_id = req.user.user_id;
 
     if (!stop_id || !Array.isArray(student_ids) || student_ids.length === 0) {
@@ -707,46 +707,35 @@ const updateStopandStudent = async (req, res) => {
     await stop.save();
     let finalStatus;
 
-    if (student_status) {
-      finalStatus = student_status;
-    } else if (activeRoute.type === "DROP") {
+    if (activeRoute.type === "DROP") {
       finalStatus = "DROPPED";
     } else if (activeRoute.type === "PICKUP") {
       finalStatus = "PICKED";
-    }
-
-    if (!finalStatus) {
+    } else {
       return res.status(400).json({
-        message: "Invalid student status",
+        message: `Invalid route type: ${activeRoute.type}`,
       });
     }
+
     await Student.update(
       { student_status: finalStatus },
       {
         where: {
           id: student_ids,
-          stop_id: stop_id,
-          trash: false,
         },
       }
     );
     const students = await Student.findAll({
       where: { id: student_ids },
       attributes: ["id", "full_name", "reg_no", "student_status"],
-      include: [
-        {
-          model: Stop,
-          as: "stop",
-          attributes: ["arrived_time"]
-        }
-      ]
     });
+
     const result = students.map((r) => ({
       id: r.id,
       full_name: r.full_name,
       reg_no: r.reg_no,
       student_status: r.student_status,
-      arrived_time: r.stop?.arrived_time || null,
+      arrived_time: stop.arrived_time || null,
     }));
 
     return res.status(200).json({
