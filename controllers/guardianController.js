@@ -544,7 +544,7 @@ const getSchoolsByUser = async (req, res) => {
     });
     if (!schools || schools.length === 0) {
       console.log("No schools found for the given user ID");
-      return null;
+      return res.status(404).json({ error: "No schools found" });
     }
     res.status(200).json({
       totalcontent: schools.length,
