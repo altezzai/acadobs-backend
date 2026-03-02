@@ -1,4 +1,4 @@
-const { StudentRoutes } = require("../../models");
+const { StudentRoutes, Student, Guardian } = require("../../models");
 
 //getRouteById
 const getRouteById = async (req, res) => {
@@ -9,6 +9,18 @@ const getRouteById = async (req, res) => {
         id: id,
       },
       attributes: ["route_name", "vehicle_id", "type"],
+      include: {
+        model: Student,
+        as: "Student",
+        attributes: [
+          "id", "class_id", "reg_no", "full_name", "address"
+        ],
+        include: {
+          model: Guardian,
+          as: "guardian",
+          attributes: ["id", "guardian_name", "guardian_contact"]
+        }
+      }
     });
     if (!studentroute) {
       return res.status(404).json({ message: "No route found" });
