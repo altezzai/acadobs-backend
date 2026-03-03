@@ -201,11 +201,11 @@ Guardian.hasMany(Student, {
 
 
 
-// route.hasMany(Student, { foreignKey: "route_id", as: "Student" });
-// Student.belongsTo(route, {
-//   foreignKey: "route_id",
-//   as: "route",
-// });
+route.hasMany(Student, { foreignKey: "route_id", as: "Student" });
+Student.belongsTo(route, {
+  foreignKey: "route_id",
+  as: "route",
+});
 // Route ↔ Student (Many-to-Many using junction table)
 route.belongsToMany(Student, {
   through: StudentRouteAssignment,
