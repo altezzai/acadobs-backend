@@ -1,4 +1,4 @@
-const { StudentRoutes, Student, Guardian } = require("../../models");
+const { StudentRoutes, Student, Guardian, StudentRouteAssignment } = require("../../models");
 
 //getRouteById
 const getRouteById = async (req, res) => {
@@ -8,13 +8,18 @@ const getRouteById = async (req, res) => {
       where: {
         id: id,
       },
-      attributes: ["route_name", "vehicle_id", "type"],
+      attributes: ["id", "route_name", "vehicle_id", "type"],
       include: {
         model: Student,
-        as: "Student",
+        as: "students",
         attributes: [
           "id", "class_id", "reg_no", "full_name", "address"
         ],
+        through: {
+          model: StudentRouteAssignment,
+          attributes: [],
+          where: { trash: false },
+        },
         include: {
           model: Guardian,
           as: "guardian",
@@ -30,6 +35,7 @@ const getRouteById = async (req, res) => {
       .json({ message: "Route fetched successfully", data: studentroute });
   } catch (error) {
     console.log("Error has occured: ", error);
+    return res.status(500).json({ error: "Failed to fetch route" });
   }
 };
 
