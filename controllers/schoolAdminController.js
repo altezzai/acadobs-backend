@@ -45,6 +45,7 @@ const Syllabus = require("../models/syllabus");
 const { School } = require("../models");
 const { schoolSequelize } = require("../config/connection");
 const studentRoutes = require("../models/studentroutes");
+const RouteDrivers = require("../models/route_drivers");
 const Stop = require("../models/stop");
 const { Driver } = require("../models");
 const { Vehicle } = require("../models");
@@ -7409,6 +7410,62 @@ const getVehicleById = async (req, res) => {
   }
 };
 
+//update vehicle
+const updateVehicle = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { type, model, vehicle_number, driver_id } = req.body;
+
+    if (!vehicle_number) {
+      return res.status(400).json({ message: "Vehicle number is required" });
+    }
+
+    // Validate driver (if provided)
+    if (driver_id) {
+      const driver = await Driver.findOne({
+        where: { id: driver_id, trash: false },
+      });
+
+      if (!driver) {
+        return res.status(404).json({ message: "Driver not found" });
+      }
+    }
+
+    let photoPath = null;
+    const vehiclePhoto = req.files?.photo?.[0];
+
+    if (vehiclePhoto) {
+      const uploadPath = "uploads/vehicle_images/";
+      photoPath = await compressAndSaveFile(vehiclePhoto, uploadPath);
+    }
+
+    const vehicle = await Vehicle.findOne({
+      where: { id, trash: false },
+    });
+
+    if (!vehicle) {
+      return res.status(404).json({ message: "Vehicle not found" });
+    }
+
+    await vehicle.update({
+      type,
+      model,
+      vehicle_number,
+      photo: photoPath,
+      driver_id,
+    });
+
+    res.status(200).json({
+      message: "Vehicle updated successfully",
+      vehicle,
+    });
+  } catch (error) {
+    logger.error("Error updating vehicle:", error);
+    console.error("Error updating vehicle:", error);
+    res.status(500).json({ error: "Failed to update vehicle" });
+  }
+};
+
 //delete vehicle✅
 const deleteVehicle = async (req, res) => {
   try {
@@ -7466,25 +7523,37 @@ const createRoute = async (req, res) => {
 
     const pickup_route = await studentroutes.create({
       route_name: pickupRouteName,
-      vehicle_id: vehicle_id || null,
+      // vehicle_id: vehicle_id || null,
       driver_id: driver_id || null,
       type: "PICKUP",
       isLock: isLock ?? true,
       pickId: null,
       trash: false,
     });
+    if (driver_id) {
+      await RouteDrivers.create({
+        route_id: pickup_route.id,
+        driver_id: driver_id,
+      });
+    }
 
     let drop_route = null;
     if (hasDropRoute) {
       drop_route = await studentroutes.create({
         route_name: dropRouteName,
         vehicle_id: vehicle_id ?? null,
-        driver_id: driver_id ?? null,
+        // driver_id: driver_id ?? null,
         type: "DROP",
         isLock: isLock ?? true,
         pickId: pickup_route.id,
         trash: false,
       });
+      if (driver_id) {
+        await RouteDrivers.create({
+          route_id: drop_route.id,
+          driver_id: driver_id,
+        });
+      }
     }
     res.status(201).json({
       message: "Route created successfully",
@@ -7922,5 +7991,6 @@ module.exports = {
   assignDriverToRoutes,
   getAllDrivers,
   updateStudentToRoute,
-  deleteStudentFromRoute
+  deleteStudentFromRoute,
+  updateVehicle,
 };

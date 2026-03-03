@@ -527,4 +527,7 @@ router.put(
 //delete student from route
 router.delete("/deleteStudentFromRoute/:route_id", schoolAdminController.deleteStudentFromRoute);
 
+//update vehicle
+router.put("/updateVehicle/:id", uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])), schoolAdminController.updateVehicle);
+
 module.exports = router;
