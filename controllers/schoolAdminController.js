@@ -7573,13 +7573,34 @@ const getAllRoutes = async (req, res) => {
       where: {
         trash: false,
       },
+      include: [
+        {
+          model: Driver,
+          as: "drivers",
+          attributes: ["id", "name"],
+          through: { attributes: [] },
+        },
+        {
+          model: Vehicle,
+          as: "vehicle",
+          attributes: ["vehicle_number"],
+        },
+      ],
 
       order: [["createdAt", "DESC"]],
     });
 
+    const cleanRoutes = routes.map((route) => ({
+      id: route.id,
+      route_name: route.route_name,
+      type: route.type,
+      vehicle_number: route.vehicle?.vehicle_number || null,
+      drivers: route.drivers.map((d) => { return { id: d.id, name: d.name } }),
+    }));
+
     res.status(200).json({
       message: "Routes fetched successfully",
-      routes,
+      routes: cleanRoutes,
     });
   } catch (error) {
     console.error("Error fetching routes:", error);

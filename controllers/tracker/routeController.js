@@ -1,38 +1,73 @@
-const { StudentRoutes, Student, Guardian, StudentRouteAssignment } = require("../../models");
+const { StudentRoutes, Student, Guardian, StudentRouteAssignment, Driver } = require("../../models");
 
 //getRouteById
 const getRouteById = async (req, res) => {
   try {
     const { id } = req.params;
     const studentroute = await StudentRoutes.findOne({
-      where: {
-        id: id,
-      },
+      where: { id },
       attributes: ["id", "route_name", "vehicle_id", "type"],
-      include: {
-        model: Student,
-        as: "students",
-        attributes: [
-          "id", "class_id", "reg_no", "full_name", "address"
-        ],
-        through: {
-          model: StudentRouteAssignment,
-          attributes: [],
-          where: { trash: false },
+      include: [
+        {
+          model: Driver,
+          as: "drivers",
+          attributes: ["name"],
         },
-        include: {
-          model: Guardian,
-          as: "guardian",
-          attributes: ["id", "guardian_name", "guardian_contact"]
-        }
-      }
+        {
+          model: Student,
+          as: "students",
+          attributes: [
+            "id",
+            "class_id",
+            "reg_no",
+            "full_name",
+            "address",
+          ],
+          through: {
+            model: StudentRouteAssignment,
+            attributes: [],
+            where: { trash: false },
+          },
+          include: [
+            {
+              model: Guardian,
+              as: "guardian",
+              attributes: ["id", "guardian_name", "guardian_contact"],
+            },
+          ],
+        },
+      ],
     });
     if (!studentroute) {
       return res.status(404).json({ message: "No route found" });
     }
+
+    const result = {
+      id: studentroute.id,
+      route_name: studentroute.route_name,
+      vehicle_id: studentroute.vehicle_id,
+      type: studentroute.type,
+
+      driver: studentroute.drivers?.[0]?.name || null,
+
+      students: studentroute.students?.map(student => ({
+        id: student.id,
+        class_id: student.class_id,
+        reg_no: student.reg_no,
+        full_name: student.full_name,
+        address: student.address,
+        guardian: student.guardian
+          ? {
+            id: student.guardian.id,
+            guardian_name: student.guardian.guardian_name,
+            guardian_contact: student.guardian.guardian_contact,
+          }
+          : null
+      })) ?? []
+    };
     return res
       .status(200)
-      .json({ message: "Route fetched successfully", data: studentroute });
+      .json({ message: "Route fetched successfully", data: result });
   } catch (error) {
     console.log("Error has occured: ", error);
     return res.status(500).json({ error: "Failed to fetch route" });

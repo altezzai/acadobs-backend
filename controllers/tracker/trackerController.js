@@ -471,7 +471,14 @@ const getMyStudents = async (req, res) => {
           where: { trash: false },
           required: false,
           through: { attributes: [] },
-        },
+          include: [
+            {
+              model: Guardian,
+              as: "guardian",
+              attributes: ["guardian_name", "guardian_contact"]
+            }
+          ]
+        }
       ],
     });
 
@@ -491,6 +498,8 @@ const getMyStudents = async (req, res) => {
       id: s.id,
       full_name: s.full_name,
       reg_no: s.reg_no,
+      guardian_name: s.guardian?.guardian_name || null,
+      guardian_contact: s.guardian?.guardian_contact || null,
     }));
 
     if (!students || students.length === 0) {
