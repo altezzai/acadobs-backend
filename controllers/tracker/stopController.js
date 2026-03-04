@@ -1,4 +1,4 @@
-const { stop } = require("../../models");
+const { stop, Driver, StudentRoutes } = require("../../models");
 
 // getStopById
 const getStopById = async (req, res) => {
@@ -66,6 +66,70 @@ const updateStopById = async (req, res) => {
   }
 };
 
+//update stop for driver if the isLock in route is false
+const updateStopForDriver = async (req, res) => {
+  try {
+    const { stopId } = req.params;
+    const driverId = req.user.user_id;
+    const { stop_name, longitude, latitude, priority } = req.body;
+    const driverData = await Driver.findOne({
+      where: {
+        user_id: driverId,
+        trash: false,
+      },
+    });
+
+    if (!driverData) {
+      return res.status(404).json({
+        message: "Driver not found",
+      });
+    }
+
+    const stopData = await stop.findOne({
+      where: {
+        id: stopId,
+        trash: false,
+      },
+      include: [
+        {
+          model: StudentRoutes,
+          as: "route",
+          attributes: ["id", "isLock"],
+        },
+      ],
+    });
+
+    if (!stopData) {
+      return res.status(404).json({
+        message: "Stop not found",
+      });
+    }
+
+    if (stopData.route?.isLock === true) {
+      return res.status(403).json({
+        message: "This route is locked. You cannot edit stops.",
+      });
+    }
+    await stopData.update({
+      stop_name: stop_name ?? stopData.stop_name,
+      longitude: longitude ?? stopData.longitude,
+      latitude: latitude ?? stopData.latitude,
+      priority: priority ?? stopData.priority,
+    });
+
+    return res.status(200).json({
+      message: "Stop updated successfully",
+      stop: stopData,
+    });
+
+  } catch (error) {
+    console.log("error in updating stop for driver", error);
+    return res.status(500).json({
+      error: "Failed to update stop for driver",
+    });
+  }
+};
+
 //deleteStop
 const deleteStop = async (req, res) => {
   try {
@@ -89,4 +153,4 @@ const deleteStop = async (req, res) => {
   }
 };
 
-module.exports = { getStopById, updateStopById, deleteStop };
+module.exports = { getStopById, updateStopById, deleteStop, updateStopForDriver };

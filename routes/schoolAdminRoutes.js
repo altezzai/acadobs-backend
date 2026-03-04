@@ -494,7 +494,7 @@ router.delete("/deleteDriverById/:id", trackerController.deleteDriverById);
 //create stop
 router.post("/stop", schoolAdminController.createStop);
 router.get("/getStopById/:id", stopController.getStopById);
-router.put("/updateStopById/:id", stopController.updateStopById);
+// router.put("/updateStopById/:id", stopController.updateStopById);
 router.delete("/deleteStop/:id", stopController.deleteStop);
 
 //create routes
