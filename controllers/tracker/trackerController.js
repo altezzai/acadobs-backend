@@ -465,6 +465,13 @@ const getMyStudents = async (req, res) => {
           attributes: [],
           through: { attributes: [] },
         },
+        {
+          model: Student,
+          as: "students",
+          where: { trash: false },
+          required: false,
+          through: { attributes: [] },
+        },
       ],
     });
 
@@ -473,36 +480,17 @@ const getMyStudents = async (req, res) => {
         message: "Route not found or not assigned to you",
       });
     }
+    if (!route.students || route.students.length === 0) {
+      return res.status(404).json({
+        message: "Students not found in this route",
+      });
+    }
 
-    // Fetch students assigned to this route
-    const students = await Student.findAll({
-      attributes: ["full_name", "reg_no", "id"],
-      where: {
-        route_id: route_id,
-        trash: false
-      },
-      include: [
-        {
-          model: Stop,
-          as: "stop",
-          attributes: ["stop_name"],
-          required: false,
-        },
-        {
-          model: Guardian,
-          as: "guardian",
-          attributes: ["guardian_name"],
-          required: false,
-        }
-      ],
-    });
 
-    const result = students.map((s) => ({
+    const students = route.students.map((s) => ({
       id: s.id,
       full_name: s.full_name,
       reg_no: s.reg_no,
-      guardian_name: s.guardian?.guardian_name || null,
-      stop_name: s.stop?.stop_name || null,
     }));
 
     if (!students || students.length === 0) {
@@ -513,7 +501,7 @@ const getMyStudents = async (req, res) => {
 
     return res.status(200).json({
       message: "Students fetched successfully",
-      data: result,
+      data: students,
     });
   } catch (error) {
     console.error("Error fetching students:", error);
