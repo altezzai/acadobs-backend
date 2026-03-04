@@ -530,4 +530,6 @@ router.delete("/deleteStudentFromRoute/:route_id", schoolAdminController.deleteS
 //update vehicle
 router.put("/updateVehicle/:id", uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])), schoolAdminController.updateVehicle);
 
+router.get("/getDriversAssignedToRoutes", schoolAdminController.getDriversAssignedToRoutes);
+
 module.exports = router;

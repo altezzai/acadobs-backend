@@ -7804,6 +7804,32 @@ const assignDriverToRoutes = async (req, res) => {
   }
 };
 
+//admin sees drivers who assigned to routes
+const getDriversAssignedToRoutes = async (req, res) => {
+  try {
+    const drivers = await Driver.findAll({
+      where: { trash: false },
+      include: [
+        {
+          model: studentroutes,
+          as: "routes",
+          attributes: ["id", "route_name"],
+        },
+      ],
+    });
+
+    return res.status(200).json({
+      message: "Drivers assigned to routes fetched successfully",
+      data: drivers,
+    });
+  } catch (error) {
+    console.error("Error fetching drivers assigned to routes:", error);
+    return res.status(500).json({
+      error: "Failed to fetch drivers assigned to routes",
+    });
+  }
+};
+
 
 module.exports = {
   createClass,
@@ -7993,4 +8019,5 @@ module.exports = {
   updateStudentToRoute,
   deleteStudentFromRoute,
   updateVehicle,
+  getDriversAssignedToRoutes,
 };
