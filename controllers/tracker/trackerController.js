@@ -442,6 +442,86 @@ const assignStudentsToStop = async (req, res) => {
   }
 };
 
+//driver deletes the students from the stop
+const deleteStudentsFromStop = async (req, res) => {
+  try {
+    const stop_id = req.params.stop_id;
+    const { student_id } = req.body;
+    const user_id = req.user.user_id;
+
+    const driver = await Driver.findOne({
+      where: { user_id, trash: false },
+    });
+
+    if (!driver) {
+      return res.status(403).json({
+        message: "Driver profile not found",
+      });
+    }
+
+    const stop = await Stop.findOne({
+      where: { id: stop_id, trash: false },
+      include: [
+        {
+          model: StudentRoutes,
+          as: "route",
+          attributes: ["id", "isLock"],
+          include: [
+            {
+              model: Driver,
+              as: "drivers",
+              where: { id: driver.id },
+              attributes: [],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!stop) {
+      return res.status(404).json({
+        message: "Stop not found or not assigned to this driver",
+      });
+    }
+
+    if (stop.route?.isLock === true) {
+      return res.status(403).json({
+        message: "This route is locked. You cannot modify students.",
+      });
+    }
+
+    // ✅ USE findOne INSTEAD OF findAll
+    const student = await Student.findOne({
+      where: {
+        id: student_id,
+        stop_id: stop_id,
+        trash: false,
+      },
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found in this stop",
+      });
+    }
+
+    // ✅ Now this works because it's a model instance
+    await student.update({
+      trash: true,
+    });
+
+    return res.status(200).json({
+      message: "Student marked as deleted successfully",
+    });
+
+  } catch (error) {
+    console.error("Error deleting students from stop:", error);
+    return res.status(500).json({
+      error: "Failed to delete students from stop",
+    });
+  }
+};
+
 //driver sees students under a routes assigned to them
 const getMyStudents = async (req, res) => {
   try {
@@ -825,4 +905,5 @@ module.exports = {
   updateRouteActive,
   updateStopandStudent,
   routeInactive,
+  deleteStudentsFromStop,
 };

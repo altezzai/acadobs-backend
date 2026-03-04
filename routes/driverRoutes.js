@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const trackerController = require("../controllers/tracker/trackerController");
 const stopController = require("../controllers/tracker/stopController");
+const { route } = require("./schoolAdminRoutes");
 
 
 router.get("/getDriverAssignedRoutes", trackerController.DriverAssignedRoutes);
@@ -13,6 +14,7 @@ router.get("/getStopDetailsForDriver/:stop_id", trackerController.getStopDetails
 router.post("/updateRouteActive", trackerController.updateRouteActive);
 router.put("/updateStopandStudent", trackerController.updateStopandStudent);
 router.post("/routeInactive", trackerController.routeInactive);
-router.put("/updateStopForDriver/:stopId", stopController.updateStopForDriver)
+router.put("/updateStopForDriver/:stopId", stopController.updateStopForDriver);
+router.delete("/deleteStudentsFromStop/:stop_id", trackerController.deleteStudentsFromStop);
 // router.post("/createRouteForDriver", trackerController.createRouteForDriver);
 module.exports = router;
