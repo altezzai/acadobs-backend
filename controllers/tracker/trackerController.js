@@ -3,6 +3,7 @@ const { Driver, Guardian } = require("../../models");
 const { StudentRoutes } = require("../../models");
 const { stop: Stop } = require("../../models");
 const { Student } = require("../../models");
+const StudentRouteAssignment = require("../../models/student_route_assignment");
 const { Sequelize } = require("sequelize");
 const { compressAndSaveFile } = require("../../utils/fileHandler");
 // getDriverById
@@ -157,10 +158,24 @@ const DriverAssignedRoutes = async (req, res) => {
         {
           model: StudentRoutes,
           as: "routes",
-          attributes: ["id", "route_name", "vehicle_id", "type", "active", "activated_at"],
-          through: {
-            attributes: [],
-          },
+          attributes: [
+            "id",
+            "route_name",
+            "vehicle_id",
+            "type",
+            "active",
+            "activated_at",
+          ],
+          through: { attributes: [] },
+          include: [
+            {
+              model: Student,
+              as: "students",
+              attributes: [],
+              where: { trash: false },
+              required: false,
+            },
+          ],
         },
       ],
     });
@@ -172,7 +187,7 @@ const DriverAssignedRoutes = async (req, res) => {
     }
 
     for (const route of driver.routes) {
-      const totalStudents = await Student.count({
+      const totalStudents = await StudentRouteAssignment.count({
         where: {
           route_id: route.id,
           trash: false,
