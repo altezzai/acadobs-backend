@@ -7523,7 +7523,7 @@ const createRoute = async (req, res) => {
 
     const pickup_route = await studentroutes.create({
       route_name: pickupRouteName,
-      // vehicle_id: vehicle_id || null,
+      vehicle_id: vehicle_id || null,
       driver_id: driver_id || null,
       type: "PICKUP",
       isLock: isLock ?? true,
@@ -7542,7 +7542,7 @@ const createRoute = async (req, res) => {
       drop_route = await studentroutes.create({
         route_name: dropRouteName,
         vehicle_id: vehicle_id ?? null,
-        // driver_id: driver_id ?? null,
+        driver_id: driver_id ?? null,
         type: "DROP",
         isLock: isLock ?? true,
         pickId: pickup_route.id,
