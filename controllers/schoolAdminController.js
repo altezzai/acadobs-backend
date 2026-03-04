@@ -7416,10 +7416,6 @@ const updateVehicle = async (req, res) => {
     const { id } = req.params;
     const { type, model, vehicle_number, driver_id } = req.body;
 
-    if (!vehicle_number) {
-      return res.status(400).json({ message: "Vehicle number is required" });
-    }
-
     // Validate driver (if provided)
     if (driver_id) {
       const driver = await Driver.findOne({
@@ -7447,14 +7443,18 @@ const updateVehicle = async (req, res) => {
       return res.status(404).json({ message: "Vehicle not found" });
     }
 
-    await vehicle.update({
+    const updateData = {
       type,
       model,
       vehicle_number,
-      photo: photoPath,
       driver_id,
-    });
+    };
 
+    if (photoPath) {
+      updateData.photo = photoPath;
+    }
+
+    await vehicle.update(updateData);
     res.status(200).json({
       message: "Vehicle updated successfully",
       vehicle,
