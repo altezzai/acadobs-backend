@@ -7851,6 +7851,41 @@ const getDriversAssignedToRoutes = async (req, res) => {
   }
 };
 
+//admins to update the isLock true or false
+const updateIsLock = async (req, res) => {
+  try {
+    const { route_id } = req.params;
+    const { isLock } = req.body;
+
+    const route = await studentRoutes.findOne({
+      where: {
+        id: route_id,
+        trash: false,
+      },
+    });
+
+    if (!route) {
+      return res.status(404).json({
+        message: "No route found",
+      });
+    }
+
+    route.isLock = isLock;
+    await route.save();
+
+    return res.status(200).json({
+      message: "Route lock status updated successfully",
+      data: route,
+    });
+
+  } catch (error) {
+    console.log("Error occurred:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};
+
 
 module.exports = {
   createClass,
@@ -8041,4 +8076,5 @@ module.exports = {
   deleteStudentFromRoute,
   updateVehicle,
   getDriversAssignedToRoutes,
+  updateIsLock,
 };

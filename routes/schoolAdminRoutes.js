@@ -532,4 +532,7 @@ router.put("/updateVehicle/:id", uploadWithErrorHandler(upload.fields([{ name: "
 
 router.get("/getDriversAssignedToRoutes", schoolAdminController.getDriversAssignedToRoutes);
 
+//admin makes islock true or false
+router.put("/updateIsLock/:route_id", schoolAdminController.updateIsLock);
+
 module.exports = router;
