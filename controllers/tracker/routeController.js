@@ -78,7 +78,7 @@ const getRouteById = async (req, res) => {
 const updateRouteById = async (req, res) => {
   try {
     const { id } = req.params;
-    const { start, stop, route_no, type, vehicle_id, driver_id, isLock, hasDropRoute } = req.body;
+    const { start, stop, route_no, vehicle_id, driver_id, isLock, hasDropRoute } = req.body;
     const pickupRoute = await StudentRoutes.findOne({
       where: {
         id: id,
@@ -99,7 +99,7 @@ const updateRouteById = async (req, res) => {
     await pickupRoute.update({
       route_name: pickupRouteName ?? pickupRoute.route_name,
       vehicle_id: vehicle_id ?? pickupRoute.vehicle_id,
-      type: type ?? pickupRoute.type,
+      type: "PICKUP",
       isLock: isLock ?? pickupRoute.isLock,
     });
     if (driver_id) {
@@ -114,27 +114,29 @@ const updateRouteById = async (req, res) => {
       await dropRoute.update({
         route_name: dropRouteName,
         vehicle_id: vehicle_id ?? dropRoute.vehicle_id,
+        type: "DROP",
         isLock: isLock ?? dropRoute.isLock,
       });
       if (driver_id) {
         await dropRoute.setDrivers(Array.isArray(driver_id) ? driver_id : [driver_id]);
       }
-      //creates drop route if not exists
-      if (hasDropRoute && !dropRoute) {
-        await StudentRoutes.create({
-          route_name: dropRouteName,
-          vehicle_id: vehicle_id ?? pickupRoute.vehicle_id,
-          type: "DROP",
-          pickId: pickupRoute.id,
-          isLock: isLock ?? pickupRoute.isLock,
-        });
 
-      }
+    }
+    //creates drop route if not exists
+    if (hasDropRoute && !dropRoute) {
+      await StudentRoutes.create({
+        route_name: dropRouteName,
+        vehicle_id: vehicle_id ?? pickupRoute.vehicle_id,
+        type: "DROP",
+        pickId: pickupRoute.id,
+        isLock: isLock ?? pickupRoute.isLock,
+      });
+
     }
 
     return res.status(200).json({
       message: "Route updated successfully",
-      data: pickupRouteName, dropRouteName
+      data: { pickupRouteName, dropRouteName }
     });
   } catch (error) {
     console.error("Error updating route:", error);
