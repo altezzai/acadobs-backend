@@ -52,6 +52,7 @@ const { Vehicle } = require("../models");
 const studentroutes = require("../models/studentroutes");
 const { error } = require("winston");
 const StudentRouteAssignment = require("../models/student_route_assignment");
+const { Console } = require("winston/lib/winston/transports");
 
 // CREATE
 const createClass = async (req, res) => {
@@ -7589,7 +7590,6 @@ const getAllRoutes = async (req, res) => {
 
       order: [["createdAt", "DESC"]],
     });
-
     const cleanRoutes = routes.map((route) => ({
       id: route.id,
       route_name: route.route_name,

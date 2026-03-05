@@ -99,10 +99,12 @@ const updateRouteById = async (req, res) => {
     await pickupRoute.update({
       route_name: pickupRouteName ?? pickupRoute.route_name,
       vehicle_id: vehicle_id ?? pickupRoute.vehicle_id,
-      driver_id: driver_id ?? pickupRoute.driver_id,
       type: type ?? pickupRoute.type,
       isLock: isLock ?? pickupRoute.isLock,
     });
+    if (driver_id) {
+      await pickupRoute.setDrivers(Array.isArray(driver_id) ? driver_id : [driver_id]);
+    }
 
     const dropRoute = await StudentRoutes.findOne({
       where: { pickId: pickupRoute.id }
@@ -112,13 +114,15 @@ const updateRouteById = async (req, res) => {
       await dropRoute.update({
         route_name: dropRouteName,
         vehicle_id: vehicle_id ?? dropRoute.vehicle_id,
-        driver_id: driver_id ?? dropRoute.driver_id,
         isLock: isLock ?? dropRoute.isLock,
       });
+      if (driver_id) {
+        await dropRoute.setDrivers(Array.isArray(driver_id) ? driver_id : [driver_id]);
+      }
     }
 
     return res.status(200).json({
-      message: "Stop updated successfully",
+      message: "Route updated successfully",
       data: pickupRouteName, dropRouteName
     });
   } catch (error) {
