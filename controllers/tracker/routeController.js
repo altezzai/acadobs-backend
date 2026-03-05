@@ -78,7 +78,7 @@ const getRouteById = async (req, res) => {
 const updateRouteById = async (req, res) => {
   try {
     const { id } = req.params;
-    const { start, stop, route_no, type, vehicle_id, driver_id, isLock } = req.body;
+    const { start, stop, route_no, type, vehicle_id, driver_id, isLock, hasDropRoute } = req.body;
     const pickupRoute = await StudentRoutes.findOne({
       where: {
         id: id,
@@ -118,6 +118,17 @@ const updateRouteById = async (req, res) => {
       });
       if (driver_id) {
         await dropRoute.setDrivers(Array.isArray(driver_id) ? driver_id : [driver_id]);
+      }
+      //creates drop route if not exists
+      if (hasDropRoute && !dropRoute) {
+        await StudentRoutes.create({
+          route_name: dropRouteName,
+          vehicle_id: vehicle_id ?? pickupRoute.vehicle_id,
+          type: "DROP",
+          pickId: pickupRoute.id,
+          isLock: isLock ?? pickupRoute.isLock,
+        });
+
       }
     }
 
