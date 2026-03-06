@@ -117,7 +117,7 @@ const updateRouteById = async (req, res) => {
     }
 
     const dropRoute = await StudentRoutes.findOne({
-      where: { pickId: pickupRoute.id }
+      where: { pickId: pickupRoute.id, trash: false }
     });
 
     if (dropRoute) {
@@ -173,7 +173,8 @@ const deleteRoute = async (req, res) => {
     if (!studentroute) {
       return res.status(404).json({ message: "No route found" });
     }
-    await studentroute.update({ trash: true });
+    await studentroute.destroy();
+
     res.status(200).json({ message: "Route deleted successfully" });
   } catch (error) {
     console.error("Error deleting route:", error);
