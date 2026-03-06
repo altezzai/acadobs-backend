@@ -1,4 +1,5 @@
 const { StudentRoutes, Student, Guardian, StudentRouteAssignment, Driver } = require("../../models");
+const Stop = require("../../models/stop");
 
 //getRouteById
 const getRouteById = async (req, res) => {
@@ -36,6 +37,11 @@ const getRouteById = async (req, res) => {
             },
           ],
         },
+        {
+          model: Stop,
+          as: "stops",
+          attributes: ["id", "stop_name", "priority"]
+        }
       ],
     });
     if (!studentroute) {
@@ -49,7 +55,11 @@ const getRouteById = async (req, res) => {
       type: studentroute.type,
 
       driver: studentroute.drivers?.[0]?.name || null,
-
+      stops: studentroute.stops?.map(stop => ({
+        id: stop.id,
+        stop_name: stop.stop_name,
+        priority: stop.priority
+      })) || [],
       students: studentroute.students?.map(student => ({
         id: student.id,
         class_id: student.class_id,

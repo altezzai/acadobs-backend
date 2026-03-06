@@ -7598,7 +7598,7 @@ const getAllRoutes = async (req, res) => {
     });
     // get all drop routes
     const dropRoutes = await studentroutes.findAll({
-      where: { type: "DROP" },
+      where: { type: "DROP", trash: false },
       attributes: ["pickId"],
     });
     const dropRouteSet = new Set(dropRoutes.map(r => r.pickId));
