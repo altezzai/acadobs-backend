@@ -99,7 +99,7 @@ const updateRouteById = async (req, res) => {
     await pickupRoute.update({
       route_name: pickupRouteName ?? pickupRoute.route_name,
       vehicle_id: vehicle_id ?? pickupRoute.vehicle_id,
-      type: "PICKUP",
+      // type: pickupRoute.type,
       isLock: isLock ?? pickupRoute.isLock,
     });
     if (driver_id) {
