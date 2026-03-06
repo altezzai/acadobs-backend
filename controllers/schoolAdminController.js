@@ -7596,10 +7596,17 @@ const getAllRoutes = async (req, res) => {
 
       order: [["createdAt", "DESC"]],
     });
+    // get all drop routes
+    const dropRoutes = await studentroutes.findAll({
+      where: { type: "DROP" },
+      attributes: ["pickId"],
+    });
+    const dropRouteSet = new Set(dropRoutes.map(r => r.pickId));
     const cleanRoutes = routes.map((route) => ({
       id: route.id,
       route_name: route.route_name,
       type: route.type,
+      hasDropRoute: dropRouteSet.has(route.id),
       isLock: route.isLock,
       vehicle_number: route.vehicle?.vehicle_number || null,
       drivers: route.drivers.map((d) => { return { id: d.id, name: d.name } }),
