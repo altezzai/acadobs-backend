@@ -1394,7 +1394,6 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
       status: "active",
       password: hashedPassword,
     });
-    console.log("User created with ID:", user.id);
 
     const guardian = await Guardian.create({
       user_id: user.id,
@@ -1419,9 +1418,8 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
       post,
       pincode,
     });
-    console.log("Guardian created with ID:", guardian);
 
-    return user.id;
+    return user.user_id;
   } catch (error) {
     logger.error("Error creating guardian service:", error);
     throw error;
@@ -1743,20 +1741,23 @@ const createStudent = async (req, res) => {
     let guardianUserId;
     const guardianDpFile = req.files?.dp?.[0];
     const studentImageFile = req.files?.image?.[0];
-    console.log("existingUser:", existingUser);
 
     if (existingUser) {
-      const existingGuardian = await Guardian.findOne({
-        where: { user_id: existingUser.id },
-      });
+      if (existingUser.role === 'guardian') {
+        const existingGuardian = await Guardian.findOne({
+          where: { user_id: existingUser.id },
+        });
 
-      if (!existingGuardian) {
-        return res
-          .status(400)
-          .json({ error: "User exists but no guardian record found." });
+        if (!existingGuardian) {
+          return res
+            .status(400)
+            .json({ error: "User exists but no guardian record found." });
+        }
+        guardianUserId = existingUser.id;
+      } else {
+        return res.status(400).json({ error: "User is already exists and not a guardian.User is a " + existingUser.role });
       }
 
-      guardianUserId = existingGuardian.user_id;
     } else {
       if (guardian_email) {
         const existingEmail = await User.findOne({
@@ -1922,16 +1923,20 @@ const bulkCreateStudents = async (req, res) => {
       });
 
       if (existingUser) {
-        const existingGuardian = await Guardian.findOne({
-          where: { user_id: existingUser.id },
-          transaction,
-        });
-        if (!existingGuardian) {
-          throw new Error(
-            `Guardian user exists but no guardian record found for phone ${guardian_contact}`,
-          );
+        if (existingUser.role === 'guardian') {
+          const existingGuardian = await Guardian.findOne({
+            where: { user_id: existingUser.id },
+            transaction,
+          });
+          if (!existingGuardian) {
+            throw new Error(
+              `Guardian user exists but no guardian record found for phone ${guardian_contact}`,
+            );
+          }
+          guardianUserId = existingGuardian.user_id;
+        } else {
+          return res.status(400).json({ error: "User is already exists and not a guardian.User is a " + existingUser.role });
         }
-        guardianUserId = existingGuardian.user_id;
       } else {
         if (guardian_email) {
           const existingEmail = await User.findOne({
@@ -1939,16 +1944,17 @@ const bulkCreateStudents = async (req, res) => {
             transaction,
           });
           if (existingEmail && guardian_email !== "") {
-            throw new Error(
-              `Guardian email  ${existingEmail.email} already exists with other phone number `,
-            );
+            return res.status(400).json({
+              error: `Guardian email  ${existingEmail.email} already exists with other phone number`,
+            });
           }
         }
 
         if (!guardian_name || !guardian_contact) {
-          throw new Error(
-            `Required guardian fields missing for student: ${full_name}'s guardian details`,
-          );
+          return res.status(400).json({
+            error: `Required guardian fields missing for student: ${full_name}'s guardian details`,
+          });
+
         }
 
         const guardianData = {
