@@ -124,7 +124,7 @@ const updateRouteById = async (req, res) => {
     }
     //creates drop route if not exists
     if (hasDropRoute && !dropRoute) {
-      await StudentRoutes.create({
+      const newDropRoute = await StudentRoutes.create({
         route_name: dropRouteName,
         vehicle_id: vehicle_id ?? pickupRoute.vehicle_id,
         type: "DROP",
@@ -132,6 +132,11 @@ const updateRouteById = async (req, res) => {
         isLock: isLock ?? pickupRoute.isLock,
       });
 
+      if (driver_id) {
+        await newDropRoute.setDrivers(
+          Array.isArray(driver_id) ? driver_id : [driver_id]
+        );
+      }
     }
 
     return res.status(200).json({

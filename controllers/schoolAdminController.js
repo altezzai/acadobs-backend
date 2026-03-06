@@ -7594,6 +7594,7 @@ const getAllRoutes = async (req, res) => {
       id: route.id,
       route_name: route.route_name,
       type: route.type,
+      isLock: route.isLock,
       vehicle_number: route.vehicle?.vehicle_number || null,
       drivers: route.drivers.map((d) => { return { id: d.id, name: d.name } }),
     }));
