@@ -534,5 +534,7 @@ router.get("/getDriversAssignedToRoutes", schoolAdminController.getDriversAssign
 
 //admin makes islock true or false
 router.put("/updateIsLock/:route_id", schoolAdminController.updateIsLock);
+//get getDriverLocation
+router.get("/getDriverLocation/:driver_id", schoolAdminController.getDriverLocation);
 
 module.exports = router;

@@ -157,7 +157,7 @@ AccountDelete.belongsTo(User, { foreignKey: "user_id" });
 Driver.hasMany(Vehicle, { foreignKey: "driver_id", as: "vehicles" });
 Vehicle.belongsTo(Driver, { foreignKey: "driver_id", as: "driver" });
 
-route.hasMany(stop, { foreignKey: "route_id", as: "stop" });
+// route.hasMany(stop, { foreignKey: "route_id", as: "stop" });//
 // route.hasMany(Driver, { foreignKey: "route_id", as: "Driver" });
 route.belongsToMany(Driver, {
   through: RouteDrivers,
@@ -173,7 +173,7 @@ Driver.belongsToMany(route, {
 });
 
 // Route ↔ Stop association (BOTH SIDES REQUIRED)
-route.hasMany(stop, { foreignKey: "route_id", as: "stops" });
+route.hasMany(stop, { foreignKey: "route_id", as: "stops" });  //
 stop.belongsTo(route, { foreignKey: "route_id", as: "route" });
 
 // Stop → Student

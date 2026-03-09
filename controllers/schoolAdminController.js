@@ -42,7 +42,7 @@ const Homework = require("../models/homework");
 const HomeworkAssignment = require("../models/homeworkassignment");
 const StaffAttendance = require("../models/staff_attendance");
 const Syllabus = require("../models/syllabus");
-const { School } = require("../models");
+const { School, StudentRoutes } = require("../models");
 const { schoolSequelize } = require("../config/connection");
 const studentRoutes = require("../models/studentroutes");
 const RouteDrivers = require("../models/route_drivers");
@@ -7900,6 +7900,81 @@ const updateIsLock = async (req, res) => {
   }
 };
 
+//admin sees the where the driver reached
+const getDriverLocation = async (req, res) => {
+  try {
+    const { driver_id } = req.params;
+
+    const driver = await Driver.findOne({
+      where: {
+        id: driver_id,
+        trash: false,
+      },
+      include: [
+        {
+          model: studentroutes,
+          as: "routes",
+          attributes: ["id", "route_name", "active", "activated_by_driver_id"],
+          include: [
+            {
+              model: Stop,
+              as: "stops",
+              attributes: ["id", "stop_name", "latitude", "longitude", "arrived", "arrived_time"],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!driver) {
+      return res.status(404).json({
+        error: "Driver not found",
+      });
+    }
+
+    let currentStop = null;
+    let activeRoute = null;
+
+    if (driver.routes && driver.routes.length > 0) {
+      activeRoute = driver.routes.find((route) => route.active && route.activated_by_driver_id === driver.id);
+      if (!activeRoute) {
+        activeRoute = driver.routes[0];
+      }
+
+      const stops = activeRoute.stops;
+
+      if (stops && stops.length > 0) {
+        const arrivedStops = stops.filter((stop) => stop.arrived);
+
+        if (arrivedStops.length > 0) {
+          arrivedStops.sort((a, b) => {
+            const timeA = a.arrived_time ? new Date(a.arrived_time).getTime() : 0;
+            const timeB = b.arrived_time ? new Date(b.arrived_time).getTime() : 0;
+            return timeB - timeA;
+          });
+          currentStop = arrivedStops[0];
+        }
+      }
+    }
+
+    return res.status(200).json({
+      message: "Driver location fetched successfully",
+      data: {
+        driver_id: driver.id,
+        driver_name: driver.name,
+        route_id: activeRoute ? activeRoute.id : null,
+        route_name: activeRoute ? activeRoute.route_name : null,
+        current_stop: currentStop,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching driver:", error);
+    return res.status(500).json({
+      error: "Failed to fetch driver",
+    });
+  }
+};
+
 
 module.exports = {
   createClass,
@@ -8091,4 +8166,5 @@ module.exports = {
   updateVehicle,
   getDriversAssignedToRoutes,
   updateIsLock,
+  getDriverLocation,
 };
