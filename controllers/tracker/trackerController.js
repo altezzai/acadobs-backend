@@ -17,6 +17,16 @@ const getDriverById = async (req, res) => {
         trash: false,
       },
       attributes: ["id", "name", "phone", "email", "photo", "address"],
+      include: [
+        {
+          model: StudentRoutes,
+          as: "routes",
+          attributes: ["id", "route_name", "vehicle_id", "type", "active", "activated_at"],
+          through: {
+            attributes: [],
+          },
+        },
+      ],
     });
 
     if (!driver) {
