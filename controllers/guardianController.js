@@ -1196,7 +1196,7 @@ const getGuardianRouteCount = async (req, res) => {
       include: [
         {
           model: StudentRoutes,
-          as: "route",
+          as: "routes",
           attributes: ["id"],
           required: true,
         },
