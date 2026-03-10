@@ -16,5 +16,6 @@ router.put("/updateStopandStudent", trackerController.updateStopandStudent);
 router.post("/routeInactive", trackerController.routeInactive);
 router.put("/updateStopForDriver/:stopId", stopController.updateStopForDriver);
 router.delete("/deleteStudentsFromStop/:stop_id", trackerController.deleteStudentsFromStop);
+router.post("/bulkStopCreation", trackerController.bulkStopCreation);
 // router.post("/createRouteForDriver", trackerController.createRouteForDriver);
 module.exports = router;

@@ -6,6 +6,7 @@ const { Student } = require("../../models");
 const StudentRouteAssignment = require("../../models/student_route_assignment");
 const { Sequelize } = require("sequelize");
 const { compressAndSaveFile } = require("../../utils/fileHandler");
+const { Op } = require("sequelize");
 // getDriverById
 const getDriverById = async (req, res) => {
   try {
@@ -901,6 +902,87 @@ const routeInactive = async (req, res) => {
   }
 };
 
+//assign bulk of stops to the route if route isLOck is false
+const bulkStopCreation = async (req, res) => {
+  try {
+    const { route_id, stops } = req.body;
+    const user_id = req.user.user_id;
+
+    if (!route_id || !stops || !Array.isArray(stops) || stops.length === 0) {
+      return res.status(400).json({ message: "Fields are missing or stops must be a non-empty array" });
+    }
+
+
+    const driver = await Driver.findOne({
+      where: {
+        user_id,
+        trash: false,
+      },
+    });
+
+
+    if (!driver) {
+      return res.status(404).json({ message: "Driver not found" });
+    }
+
+    const route = await StudentRoutes.findOne({
+      where: {
+        id: route_id,
+        trash: false,
+      },
+      include: [
+        {
+          model: Driver,
+          as: "drivers",
+          where: { id: driver.id },
+          through: { attributes: [] },
+        },
+      ],
+    });
+
+    if (!route) {
+      return res.status(404).json({
+        message: "Route not found",
+      });
+    }
+
+    const existingStops = await Stop.findAll({
+      where: {
+        route_id,
+        trash: false,
+        [Op.or]: stops.map(s => ({ stop_name: s.stop_name, priority: s.priority })),
+      },
+    });
+    if (existingStops.length > 0) {
+      const conflictDetails = existingStops.map(s => `"${s.stop_name}" (priority: ${s.priority})`).join(", ");
+      return res.status(400).json({
+        message: `The following stops already exist for this route: ${conflictDetails}`,
+      });
+    }
+
+    // Create stop
+    const stopsToCreate = stops.map(stop => ({
+      route_id,
+      stop_name: stop.stop_name,
+      priority: stop.priority,
+      latitude: stop.latitude,
+      longitude: stop.longitude,
+      trash: false,
+    }));
+
+    const createdStops = await Stop.bulkCreate(stopsToCreate, { returning: true });
+
+    res.status(201).json({
+      message: `${createdStops.length} stops created successfully`,
+      stops: createdStops,
+    });
+  } catch (error) {
+    console.error("Error creating stop:", error);
+    res.status(500).json({ error: "Failed to create stop" });
+  }
+};
+
+
 
 module.exports = {
   getDriverById,
@@ -917,4 +999,5 @@ module.exports = {
   updateStopandStudent,
   routeInactive,
   deleteStudentsFromStop,
+  bulkStopCreation,
 };
