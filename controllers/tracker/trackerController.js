@@ -188,6 +188,13 @@ const DriverAssignedRoutes = async (req, res) => {
               where: { trash: false },
               required: false,
             },
+            {
+              model: Stop,
+              as: "stops",
+              attributes: [],
+              where: { trash: false },
+              required: false,
+            },
           ],
         },
       ],
@@ -200,15 +207,24 @@ const DriverAssignedRoutes = async (req, res) => {
     }
 
     for (const route of driver.routes) {
+
       const totalStudents = await StudentRouteAssignment.count({
         where: {
           route_id: route.id,
           trash: false,
         },
       });
-      route.dataValues.total_students = totalStudents;
-    }
 
+      const totalStops = await Stop.count({
+        where: {
+          route_id: route.id,
+          trash: false,
+        },
+      });
+
+      route.dataValues.total_students = totalStudents;
+      route.dataValues.total_stops = totalStops;
+    }
     return res.status(200).json({
       message: "Assigned routes fetched successfully",
       data: driver.routes,
