@@ -177,6 +177,7 @@ const DriverAssignedRoutes = async (req, res) => {
             "active",
             "activated_at",
             "isLock",
+            "pickId"
           ],
           through: { attributes: [] },
           include: [
