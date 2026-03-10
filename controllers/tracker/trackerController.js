@@ -318,7 +318,7 @@ const getStopsForDriver = async (req, res) => {
         {
           model: StudentRoutes,
           as: "route",
-          attributes: ["route_name", "type"],
+          attributes: ["route_name", "type", "isLock"],
 
         },
         {
