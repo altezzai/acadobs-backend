@@ -1141,25 +1141,24 @@ const getRoutesForGuardian = async (req, res) => {
       include: [
         {
           model: StudentRoutes,
-          as: "route",
+          as: "routes",
           attributes: ["id", "route_name", "type"],
+          through: { attributes: [] },
           required: true,
         },
       ],
     });
 
-    // if (!students.length) {
-    //   return res.status(404).json({
-    //     message: "No routes found for this guardian",
-    //   });
-    // }
     const result = students.map((student) => {
       return {
         id: student.id,
         full_name: student.full_name,
         reg_no: student.reg_no,
-        route_name: student.route.route_name,
-        type: student.route.type,
+        routes: student.routes.map((route) => ({
+          id: route.id,
+          route_name: route.route_name,
+          type: route.type,
+        })),
       };
     });
 
