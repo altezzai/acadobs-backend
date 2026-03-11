@@ -7500,9 +7500,16 @@ const deleteVehicle = async (req, res) => {
 const createRoute = async (req, res) => {
   try {
     const { start, stop, route_no, vehicle_id, driver_id, type, isLock, hasDropRoute } = req.body;
+    const school_id = req.user.school_id;
 
     if (!start || !stop) {
       return res.status(400).json({ message: "start and stop are required" });
+    }
+
+    if (!school_id) {
+      return res.status(404).json({
+        message: "school not found"
+      });
     }
 
     // Validate vehicle
@@ -7529,6 +7536,7 @@ const createRoute = async (req, res) => {
     const dropRouteName = route_no ? `${stop}-${start}-${route_no}` : `${stop}-${start}`;
 
     const pickup_route = await studentroutes.create({
+      school_id: school_id,
       route_name: pickupRouteName,
       vehicle_id: vehicle_id || null,
       driver_id: driver_id || null,
@@ -7547,6 +7555,7 @@ const createRoute = async (req, res) => {
     let drop_route = null;
     if (hasDropRoute) {
       drop_route = await studentroutes.create({
+        school_id: school_id,
         route_name: dropRouteName,
         vehicle_id: vehicle_id ?? null,
         driver_id: driver_id ?? null,
@@ -7576,9 +7585,12 @@ const createRoute = async (req, res) => {
 //getAllRoute
 const getAllRoutes = async (req, res) => {
   try {
+    const school_id = req.user.school_id;
     const routes = await studentroutes.findAll({
       where: {
         trash: false,
+        school_id: school_id,
+
       },
       include: [
         {

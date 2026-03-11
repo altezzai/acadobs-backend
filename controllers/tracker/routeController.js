@@ -5,8 +5,14 @@ const Stop = require("../../models/stop");
 const getRouteById = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
+    if (!school_id) {
+      return res.status(404).json({
+        message: "school not found"
+      });
+    }
     const studentroute = await StudentRoutes.findOne({
-      where: { id },
+      where: { id: id, school_id: school_id, trash: false },
       attributes: ["id", "route_name", "vehicle_id", "type"],
       include: [
         {
@@ -88,10 +94,12 @@ const getRouteById = async (req, res) => {
 const updateRouteById = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const { start, stop, route_no, vehicle_id, driver_id, isLock, hasDropRoute } = req.body;
     const pickupRoute = await StudentRoutes.findOne({
       where: {
         id: id,
+        school_id: school_id, trash: false,
       },
     });
     if (!pickupRoute) {
@@ -117,7 +125,7 @@ const updateRouteById = async (req, res) => {
     }
 
     const dropRoute = await StudentRoutes.findOne({
-      where: { pickId: pickupRoute.id, trash: false }
+      where: { pickId: pickupRoute.id, school_id: school_id, trash: false }
     });
 
     if (dropRoute) {
@@ -135,6 +143,7 @@ const updateRouteById = async (req, res) => {
     //creates drop route if not exists
     if (hasDropRoute && !dropRoute) {
       const newDropRoute = await StudentRoutes.create({
+        school_id: school_id,
         route_name: dropRouteName,
         vehicle_id: vehicle_id ?? pickupRoute.vehicle_id,
         type: "DROP",
@@ -165,9 +174,12 @@ const updateRouteById = async (req, res) => {
 const deleteRoute = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const studentroute = await StudentRoutes.findOne({
       where: {
         id: id,
+        school_id: school_id,
+        trash: false,
       },
     });
     if (!studentroute) {
