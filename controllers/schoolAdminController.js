@@ -1729,7 +1729,7 @@ const createStudent = async (req, res) => {
       where: { phone: guardian_contact },
     });
     const existingRegNo = await Student.findOne({
-      where: { reg_no },
+      where: { reg_no, school_id },
     });
 
     if (existingRegNo) {
@@ -1908,7 +1908,7 @@ const bulkCreateStudents = async (req, res) => {
 
       // ✅ Check duplicate reg_no
       const existingReg = await Student.findOne({
-        where: { reg_no },
+        where: { reg_no, school_id },
         transaction,
       });
       if (existingReg) {
@@ -2127,7 +2127,7 @@ const updateStudent = async (req, res) => {
     } = req.body;
     if (reg_no) {
       const existingRegNo = await Student.findOne({
-        where: { reg_no, id: { [Op.ne]: id } },
+        where: { reg_no, school_id, id: { [Op.ne]: id } },
       });
 
       if (existingRegNo) {

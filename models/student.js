@@ -9,7 +9,7 @@ const Student = schoolSequelize.define(
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     school_id: { type: DataTypes.INTEGER, allowNull: false },
     guardian_id: { type: DataTypes.INTEGER, allowNull: false },
-    reg_no: { type: DataTypes.STRING, unique: true },
+    reg_no: { type: DataTypes.STRING },
     roll_number: { type: DataTypes.INTEGER, allowNull: true },
     full_name: { type: DataTypes.STRING, allowNull: false },
     date_of_birth: { type: DataTypes.DATE },

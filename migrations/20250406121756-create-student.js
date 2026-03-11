@@ -29,7 +29,7 @@ module.exports = {
         },
         onDelete: "CASCADE",
       },
-      reg_no: { type: Sequelize.STRING, unique: true },
+      reg_no: { type: Sequelize.STRING },
       roll_number: { type: Sequelize.INTEGER, allowNull: false },
       full_name: { type: Sequelize.STRING, allowNull: false },
       date_of_birth: { type: Sequelize.DATE },
