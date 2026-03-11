@@ -1220,6 +1220,7 @@ const getGuardianRouteCount = async (req, res) => {
 // fetches stops for a specific route from your database.
 const getStopsByRouteId = async (req, res) => {
   try {
+    const school_id = req.user.school_id;
     const { route_id } = req.query;
 
     if (!route_id) {
@@ -1227,7 +1228,7 @@ const getStopsByRouteId = async (req, res) => {
     }
 
     const stops = await stop.findAll({
-      where: { route_id },
+      where: { route_id, school_id, trash: false },
       order: [["priority", "ASC"]],
     });
 
@@ -1246,6 +1247,7 @@ const getStopsForParent = async (req, res) => {
   try {
     const { route_id } = req.params;
     const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
     const guardian = await Guardian.findOne({
       where: {
         user_id,
@@ -1263,11 +1265,18 @@ const getStopsForParent = async (req, res) => {
           model: StudentRoutes,
           as: "route",
           attributes: ["route_name", "type"],
-
+          include: [
+            {
+              model: School,
+              as: "school",
+              attributes: ["id"],
+              where: {
+                id: school_id,
+              }
+            }
+          ]
         },
-
       ],
-
     });
 
     const result = stops.map((s) => {
