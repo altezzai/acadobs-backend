@@ -60,6 +60,10 @@ const StudentRoutes = schoolSequelize.define(
       type: DataTypes.INTEGER,
       defaultValue: null,
     },
+    school_id: {
+      type: DataTypes.INTEGER,
+      defaultValue: null,
+    }
 
 
   },

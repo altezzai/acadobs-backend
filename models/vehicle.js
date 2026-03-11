@@ -45,6 +45,10 @@ const Vehicle = schoolSequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    school_id: {
+      type: DataTypes.INTEGER,
+      defaultValue: null,
+    }
   },
   {
     tableName: "vehicle",

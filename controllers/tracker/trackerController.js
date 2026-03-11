@@ -11,11 +11,12 @@ const { Op } = require("sequelize");
 const getDriverById = async (req, res) => {
   try {
     const { id } = req.params;
-
+    const school_id = req.user.school_id;
     const driver = await Driver.findOne({
       where: {
         id,
         trash: false,
+        school_id: school_id,
       },
       attributes: ["id", "name", "phone", "email", "photo", "address"],
       include: [
@@ -53,6 +54,7 @@ const getDriverById = async (req, res) => {
 const updateDriverById = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const { name, phone, email, address } = req.body || {};
 
     let photoPath = undefined;
@@ -64,6 +66,7 @@ const updateDriverById = async (req, res) => {
       where: {
         id,
         trash: false,
+        school_id: school_id,
       },
     });
     if (!driver) {
@@ -94,10 +97,12 @@ const updateDriverById = async (req, res) => {
 //deleteDriverById
 const deleteDriverById = async (req, res) => {
   try {
+    const school_id = req.user.school_id;
     const { id } = req.params;
     const driver = await Driver.findOne({
       where: {
-        id,
+        id: id,
+        school_id: school_id,
         trash: false,
       },
     });
@@ -117,11 +122,12 @@ const deleteDriverById = async (req, res) => {
 const getDriverAssignedRoutesAdmin = async (req, res) => {
   try {
     const { driverId } = req.params;
-
+    const school_id = req.user.school_id;
     const driver = await Driver.findOne({
       where: {
         id: driverId,
         trash: false,
+        school_id: school_id
       },
       attributes: ["id", "name", "phone"],
       include: [
@@ -158,11 +164,12 @@ const getDriverAssignedRoutesAdmin = async (req, res) => {
 const DriverAssignedRoutes = async (req, res) => {
   try {
     const user_id = req.user.user_id;
-
+    const school_id = req.user.school_id;
     const driver = await Driver.findOne({
       where: {
         user_id,
         trash: false,
+        school_id: school_id,
       },
       attributes: ["name", "phone"],
       include: [

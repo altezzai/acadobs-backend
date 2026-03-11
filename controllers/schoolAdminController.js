@@ -7295,9 +7295,11 @@ const createDriver = async (req, res) => {
 //get all drivers
 const getAllDrivers = async (req, res) => {
   try {
+    const school_id = req.user.school_id;
     const drivers = await Driver.findAll({
       where: {
         trash: false,
+        school_id
       },
       attributes: ["id", "name", "phone", "email", "photo", "address"],
     });
@@ -7318,6 +7320,7 @@ const getAllDrivers = async (req, res) => {
 const createVehicle = async (req, res) => {
   try {
     const { type, model, vehicle_number, driver_id } = req.body;
+    const school_id = req.user.school_id;
 
     if (!vehicle_number) {
       return res.status(400).json({ message: "Vehicle number is required" });
@@ -7326,7 +7329,7 @@ const createVehicle = async (req, res) => {
     // Validate driver (if provided)
     if (driver_id) {
       const driver = await Driver.findOne({
-        where: { id: driver_id, trash: false },
+        where: { id: driver_id, trash: false, school_id: school_id },
       });
 
       if (!driver) {
@@ -7349,6 +7352,7 @@ const createVehicle = async (req, res) => {
       photo: photoPath,
       driver_id,
       trash: false,
+      school_id: school_id,
     });
 
     res.status(201).json({
@@ -7365,8 +7369,9 @@ const createVehicle = async (req, res) => {
 //getAllVehicles✅
 const getAllVehicles = async (req, res) => {
   try {
+    const school_id = req.user.school_id;
     const vehicles = await Vehicle.findAll({
-      where: { trash: false },
+      where: { trash: false, school_id: school_id, },
       include: [
         {
           model: Driver,
@@ -7391,9 +7396,9 @@ const getAllVehicles = async (req, res) => {
 const getVehicleById = async (req, res) => {
   try {
     const { id } = req.params;
-
+    const school_id = req.user.school_id;
     const vehicle = await Vehicle.findOne({
-      where: { id, trash: false },
+      where: { id, trash: false, school_id: school_id, },
       include: [
         {
           model: Driver,
@@ -7421,12 +7426,13 @@ const getVehicleById = async (req, res) => {
 const updateVehicle = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const { type, model, vehicle_number, driver_id } = req.body;
 
     // Validate driver (if provided)
     if (driver_id) {
       const driver = await Driver.findOne({
-        where: { id: driver_id, trash: false },
+        where: { id: driver_id, trash: false, school_id: school_id },
       });
 
       if (!driver) {
@@ -7443,7 +7449,7 @@ const updateVehicle = async (req, res) => {
     }
 
     const vehicle = await Vehicle.findOne({
-      where: { id, trash: false },
+      where: { id, trash: false, school_id: school_id, },
     });
 
     if (!vehicle) {
@@ -7477,10 +7483,12 @@ const updateVehicle = async (req, res) => {
 const deleteVehicle = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const vehicle = await Vehicle.findOne({
       where: {
         id,
         trash: false,
+        school_id: school_id,
       },
     });
 
@@ -7515,7 +7523,7 @@ const createRoute = async (req, res) => {
     // Validate vehicle
     if (vehicle_id) {
       const vehicle = await Vehicle.findOne({
-        where: { id: vehicle_id, trash: false },
+        where: { id: vehicle_id, trash: false, school_id: school_id },
       });
       if (!vehicle) {
         return res.status(404).json({ message: "Vehicle not found" });
@@ -7525,7 +7533,7 @@ const createRoute = async (req, res) => {
     // Validate driver
     if (driver_id) {
       const driver = await Driver.findOne({
-        where: { id: driver_id, trash: false },
+        where: { id: driver_id, trash: false, school_id: school_id, },
       });
       if (!driver) {
         return res.status(404).json({ message: "Driver not found" });
@@ -7610,7 +7618,7 @@ const getAllRoutes = async (req, res) => {
     });
     // get all drop routes
     const dropRoutes = await studentroutes.findAll({
-      where: { type: "DROP", trash: false },
+      where: { type: "DROP", trash: false, school_id: school_id, },
       attributes: ["pickId"],
     });
     const dropRouteSet = new Set(dropRoutes.map(r => r.pickId));
@@ -7637,6 +7645,7 @@ const getAllRoutes = async (req, res) => {
 //adding students to route
 const assignStudentToRoute = async (req, res) => {
   try {
+    const school_id = req.user.school_id;
     const { student_ids, route_id, hasAssignToDropRoute } = req.body;
 
     if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
@@ -7647,7 +7656,7 @@ const assignStudentToRoute = async (req, res) => {
 
     // Validate pickup route
     const pickupRoute = await studentroutes.findOne({
-      where: { id: route_id, trash: false },
+      where: { id: route_id, trash: false, school_id: school_id },
     });
 
     if (!pickupRoute) {
@@ -7656,7 +7665,7 @@ const assignStudentToRoute = async (req, res) => {
 
     // Validate students
     const students = await Student.findAll({
-      where: { id: student_ids, trash: false },
+      where: { id: student_ids, trash: false, school_id: school_id },
     });
 
     if (students.length !== student_ids.length) {
@@ -7665,7 +7674,7 @@ const assignStudentToRoute = async (req, res) => {
     await pickupRoute.addStudents(students);
     if (hasAssignToDropRoute) {
       const dropRoute = await studentroutes.findOne({
-        where: { pickId: route_id, trash: false },
+        where: { pickId: route_id, trash: false, school_id: school_id, },
       });
 
       if (!dropRoute) {
@@ -7689,6 +7698,7 @@ const assignStudentToRoute = async (req, res) => {
 //update the students to route
 const updateStudentToRoute = async (req, res) => {
   try {
+    const school_id = req.user.school_id;
     const { route_id } = req.params;
     const { student_ids } = req.body;
 
@@ -7701,7 +7711,7 @@ const updateStudentToRoute = async (req, res) => {
 
     // Check route exists
     const route = await studentroutes.findOne({
-      where: { id: route_id, trash: false },
+      where: { id: route_id, trash: false, school_id: school_id, },
     });
 
     if (!route) {
@@ -7715,6 +7725,7 @@ const updateStudentToRoute = async (req, res) => {
       where: {
         id: student_ids,
         trash: false,
+        school_id: school_id,
       },
     });
 
@@ -7731,6 +7742,7 @@ const updateStudentToRoute = async (req, res) => {
         where: {
           id: student_ids,
           trash: false,
+          school_id: school_id,
         },
       }
     );
@@ -7753,6 +7765,7 @@ const deleteStudentFromRoute = async (req, res) => {
   try {
     const { route_id } = req.params;
     const { student_ids } = req.body;
+    const school_id = req.user.school_id;
 
     if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
       return res.status(400).json({
@@ -7761,7 +7774,7 @@ const deleteStudentFromRoute = async (req, res) => {
     }
 
     const routeInstance = await studentroutes.findOne({
-      where: { id: route_id, trash: false },
+      where: { id: route_id, trash: false, school_id: school_id, },
     });
 
     if (!routeInstance) {
@@ -7807,6 +7820,7 @@ const assignDriverToRoutes = async (req, res) => {
   try {
     const { driverId } = req.params;
     const { routeIds } = req.body || {};
+    const school_id = req.user.school_id;
 
     if (!routeIds || !Array.isArray(routeIds) || routeIds.length === 0) {
       return res.status(400).json({
@@ -7816,7 +7830,7 @@ const assignDriverToRoutes = async (req, res) => {
 
     // check driver
     const driver = await Driver.findOne({
-      where: { id: driverId, trash: false },
+      where: { id: driverId, trash: false, school_id: school_id, },
     });
 
     if (!driver) {
@@ -7829,6 +7843,7 @@ const assignDriverToRoutes = async (req, res) => {
     const routes = await studentroutes.findAll({
       where: {
         id: routeIds,
+        school_id: school_id,
       },
     });
 
@@ -7854,8 +7869,9 @@ const assignDriverToRoutes = async (req, res) => {
 //admin sees drivers who assigned to routes
 const getDriversAssignedToRoutes = async (req, res) => {
   try {
+    const school_id = req.user.school_id;
     const drivers = await Driver.findAll({
-      where: { trash: false },
+      where: { trash: false, school_id: school_id },
       include: [
         {
           model: studentroutes,
@@ -7882,11 +7898,12 @@ const updateIsLock = async (req, res) => {
   try {
     const { route_id } = req.params;
     const { isLock } = req.body;
-
+    const school_id = req.user.school_id;
     const route = await studentRoutes.findOne({
       where: {
         id: route_id,
         trash: false,
+        school_ids: school_id,
       },
     });
 
@@ -7916,11 +7933,12 @@ const updateIsLock = async (req, res) => {
 const getDriverLocation = async (req, res) => {
   try {
     const { driver_id } = req.params;
-
+    const school_id = req.user.school_id;
     const driver = await Driver.findOne({
       where: {
         id: driver_id,
         trash: false,
+        school_id: school_id,
       },
       include: [
         {
