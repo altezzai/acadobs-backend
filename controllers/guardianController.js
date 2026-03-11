@@ -1145,6 +1145,16 @@ const getRoutesForGuardian = async (req, res) => {
           attributes: ["id", "route_name", "type"],
           through: { attributes: [] },
           required: true,
+          include: [
+            {
+              model: School,
+              as: "school",
+              attributes: ["id"],
+              where: {
+                id: school_id,
+              }
+            }
+          ]
         },
       ],
     });
@@ -1199,6 +1209,16 @@ const getGuardianRouteCount = async (req, res) => {
           as: "routes",
           attributes: ["id"],
           required: true,
+          include: [
+            {
+              model: School,
+              as: "school",
+              attributes: ["id"],
+              where: {
+                id: school_id,
+              }
+            }
+          ]
         },
       ],
     });
