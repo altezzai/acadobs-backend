@@ -1134,7 +1134,7 @@ const getRoutesForGuardian = async (req, res) => {
     const students = await Student.findAll({
       where: {
         guardian_id: guardianId,
-        school_id,
+        school_id: school_id,
         trash: false,
       },
       attributes: ["id", "full_name", "reg_no"],
