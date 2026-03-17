@@ -1142,7 +1142,7 @@ const getRoutesForGuardian = async (req, res) => {
         {
           model: StudentRoutes,
           as: "routes",
-          attributes: ["id", "route_name", "type"],
+          attributes: ["id", "route_name", "type", "active"],
           through: { attributes: [] },
           required: true,
           where: {
