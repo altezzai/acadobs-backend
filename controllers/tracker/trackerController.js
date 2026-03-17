@@ -748,6 +748,20 @@ const updateRouteActive = async (req, res) => {
       });
     }
 
+    const existingActiveRoute = await StudentRoutes.findOne({
+      where: {
+        active: true,
+        activated_by_driver_id: driver.id,
+        trash: false,
+      },
+    });
+
+    if (existingActiveRoute) {
+      return res.status(400).json({
+        message: "You already have an active route. Deactivate it first.",
+      });
+    }
+
     const route = await StudentRoutes.findOne({
       where: { id: route_id, trash: false },
       include: [
