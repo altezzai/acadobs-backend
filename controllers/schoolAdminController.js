@@ -1419,7 +1419,7 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
       pincode,
     });
 
-    return user.user_id;
+    return user.id;
   } catch (error) {
     logger.error("Error creating guardian service:", error);
     throw error;
