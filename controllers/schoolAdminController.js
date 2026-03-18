@@ -47,11 +47,8 @@ const { schoolSequelize } = require("../config/connection");
 const studentRoutes = require("../models/studentroutes");
 const RouteDrivers = require("../models/route_drivers");
 const Stop = require("../models/stop");
-const { Driver } = require("../models");
-const { Vehicle } = require("../models");
-const studentroutes = require("../models/studentroutes");
+const { Driver, Vehicle, StudentRouteAssignment } = require("../models");
 const { error } = require("winston");
-const StudentRouteAssignment = require("../models/student_route_assignment");
 const { Console } = require("winston/lib/winston/transports");
 
 // CREATE
@@ -7744,7 +7741,7 @@ const assignStudentToRoute = async (req, res) => {
     }
 
     // Validate pickup route
-    const pickupRoute = await studentroutes.findOne({
+    const pickupRoute = await StudentRoutes.findOne({
       where: { id: route_id, trash: false, school_id: school_id },
     });
 
@@ -7760,19 +7757,18 @@ const assignStudentToRoute = async (req, res) => {
     if (students.length !== student_ids.length) {
       return res.status(404).json({ message: "Student not found" });
     }
-    // Upsert students into pickup route:(here)
-    for (const student of students) {
-      const [assignment, created] = await StudentRouteAssignment.findOrCreate({
-        where: { student_id: student.id, route_id: route_id },
-        defaults: { student_id: student.id, route_id: route_id, trash: false },
-      });
-      if (!created && assignment.trash) {
-        await assignment.update({ trash: false });
-      }
-    }
+    // Explicitly insert into the junction table to bypass ambiguous addStudents
+    const pickupAssignments = students.map(s => ({
+      student_id: s.id,
+      route_id: route_id,
+      trash: false
+    }));
+    await StudentRouteAssignment.bulkCreate(pickupAssignments, {
+      updateOnDuplicate: ["trash"]
+    });
 
     if (hasAssignToDropRoute) {
-      const dropRoute = await studentroutes.findOne({
+      const dropRoute = await StudentRoutes.findOne({
         where: { pickId: route_id, trash: false, school_id: school_id, },
       });
 
@@ -7780,16 +7776,14 @@ const assignStudentToRoute = async (req, res) => {
         return res.status(404).json({ message: "Drop route not found for this pickup route" });
       }
 
-      // Same upsert logic for drop route(here)
-      for (const student of students) {
-        const [assignment, created] = await StudentRouteAssignment.findOrCreate({
-          where: { student_id: student.id, route_id: dropRoute.id },
-          defaults: { student_id: student.id, route_id: dropRoute.id, trash: false },
-        });
-        if (!created && assignment.trash) {
-          await assignment.update({ trash: false });
-        }
-      }
+      const dropAssignments = students.map(s => ({
+        student_id: s.id,
+        route_id: dropRoute.id,
+        trash: false
+      }));
+      await StudentRouteAssignment.bulkCreate(dropAssignments, {
+        updateOnDuplicate: ["trash"]
+      });
     }
 
     return res.json({
