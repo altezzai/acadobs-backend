@@ -47,8 +47,11 @@ const { schoolSequelize } = require("../config/connection");
 const studentRoutes = require("../models/studentroutes");
 const RouteDrivers = require("../models/route_drivers");
 const Stop = require("../models/stop");
-const { Driver, Vehicle, StudentRouteAssignment } = require("../models");
+const { Driver } = require("../models");
+const { Vehicle } = require("../models");
+const studentroutes = require("../models/studentroutes");
 const { error } = require("winston");
+const StudentRouteAssignment = require("../models/student_route_assignment");
 const { Console } = require("winston/lib/winston/transports");
 
 // CREATE
@@ -1416,7 +1419,7 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
       pincode,
     });
 
-    return user.id;
+    return user.user_id;
   } catch (error) {
     logger.error("Error creating guardian service:", error);
     throw error;
@@ -7741,7 +7744,7 @@ const assignStudentToRoute = async (req, res) => {
     }
 
     // Validate pickup route
-    const pickupRoute = await StudentRoutes.findOne({
+    const pickupRoute = await studentroutes.findOne({
       where: { id: route_id, trash: false, school_id: school_id },
     });
 
@@ -7757,18 +7760,9 @@ const assignStudentToRoute = async (req, res) => {
     if (students.length !== student_ids.length) {
       return res.status(404).json({ message: "Student not found" });
     }
-    // Explicitly insert into the junction table to bypass ambiguous addStudents
-    const pickupAssignments = students.map(s => ({
-      student_id: s.id,
-      route_id: route_id,
-      trash: false
-    }));
-    await StudentRouteAssignment.bulkCreate(pickupAssignments, {
-      updateOnDuplicate: ["trash"]
-    });
-
+    await pickupRoute.addStudents(students);
     if (hasAssignToDropRoute) {
-      const dropRoute = await StudentRoutes.findOne({
+      const dropRoute = await studentroutes.findOne({
         where: { pickId: route_id, trash: false, school_id: school_id, },
       });
 
@@ -7776,14 +7770,7 @@ const assignStudentToRoute = async (req, res) => {
         return res.status(404).json({ message: "Drop route not found for this pickup route" });
       }
 
-      const dropAssignments = students.map(s => ({
-        student_id: s.id,
-        route_id: dropRoute.id,
-        trash: false
-      }));
-      await StudentRouteAssignment.bulkCreate(dropAssignments, {
-        updateOnDuplicate: ["trash"]
-      });
+      await dropRoute.addStudents(students);
     }
 
     return res.json({
