@@ -2287,7 +2287,7 @@ const createDutyWithAssignments = async (req, res) => {
   }
 };
 
-const getAllDuties = async (req, res) => {
+const getAllTeacherDuties = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
@@ -2317,20 +2317,24 @@ const getAllDuties = async (req, res) => {
         { description: { [Op.like]: `%${searchQuery}%` } },
       ];
     }
+
     const totalCount = await Duty.count({ where: whereClause });
     const duties = await Duty.findAll({
       offset,
       distinct: true,
-      limit,
       where: whereClause,
       include: [
         {
           model: DutyAssignment,
           attributes: ["id", "remarks", "status", "solved_file"],
+          required:true,
           include: [
             {
               model: User,
-              attributes: ["id", "name", "dp"],
+              attributes: ["id", "name", "dp","role"],
+              required:true,
+              where:{ role: "teacher" },
+            
             },
           ],
         },
@@ -2356,9 +2360,94 @@ const getAllDuties = async (req, res) => {
       };
     });
 
-    const totalPages = Math.ceil(totalCount / limit);
+    const totalPages = Math.ceil(duties.length / limit);
     res.status(200).json({
-      totalcontent: totalCount,
+      totalcontent: duties.length,
+      totalPages: download === "true" ? null : totalPages,
+      currentPage: download === "true" ? null : page,
+      duties: formattedData,
+    });
+  } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "getAllDuties →", err);
+    res.status(500).json({ error: "Failed to fetch duties" });
+  }
+};
+const getAllStaffDuties = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const deadline = req.query.deadline || "";
+    const download = req.query.download || "";
+    let { page = 1, limit = 10 } = req.query;
+    if (download === "true") {
+      page = null;
+      limit = null;
+    } else {
+      page = parseInt(page) || 1;
+      limit = parseInt(limit) || 10;
+    }
+
+    const offset = page && limit ? (page - 1) * limit : 0;
+    const whereClause = {
+      trash: false,
+      school_id,
+    };
+
+    if (deadline) {
+      whereClause.deadline = deadline;
+    }
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+
+    const totalCount = await Duty.count({ where: whereClause });
+    const duties = await Duty.findAll({
+      offset,
+      distinct: true,
+      where: whereClause,
+      include: [
+        {
+          model: DutyAssignment,
+          attributes: ["id", "remarks", "status", "solved_file"],
+          required:true,
+          include: [
+            {
+              model: User,
+              attributes: ["id", "name", "dp","role"],
+              required:true,
+              where:{ role: "staff" },
+            
+            },
+          ],
+        },
+      ],
+    });
+    const formattedData = duties.map((record) => {
+      const total_staff = record.DutyAssignments?.length || 0;
+      const pending_count =
+        record.AttendanceMarkeds?.filter((m) => m.status === "pending")
+          .length || 0;
+      const in_progress_count =
+        record.AttendanceMarkeds?.filter((m) => m.status === "in_progress")
+          .length || 0;
+      const completed_count =
+        record.AttendanceMarkeds?.filter((m) => m.status === "completed")
+          .length || 0;
+      return {
+        ...record.toJSON(),
+        total_staff,
+        pending_count,
+        in_progress_count,
+        completed_count,
+      };
+    });
+
+    const totalPages = Math.ceil(duties.length / limit);
+    res.status(200).json({
+      totalcontent: duties.length,
       totalPages: download === "true" ? null : totalPages,
       currentPage: download === "true" ? null : page,
       duties: formattedData,
@@ -8062,7 +8151,8 @@ module.exports = {
 
   createDutyWithAssignments,
   getDutyById,
-  getAllDuties,
+  getAllTeacherDuties,
+  getAllStaffDuties,
   updateDuty,
   deleteDuty,
   getTrashedDuties,

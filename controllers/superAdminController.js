@@ -531,7 +531,7 @@ const getSubjects = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    let whereClause = {};
+    let whereClause = {trash: false};
 
     if (searchQuery) {
       whereClause.subject_name = { [Op.like]: `%${searchQuery}%` };
@@ -683,7 +683,7 @@ const getTrashedSubjects = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    let whereClause = {};
+    let whereClause = {trash: true};
 
     if (searchQuery) {
       whereClause.subject_name = { [Op.like]: `%${searchQuery}%` };
@@ -702,7 +702,7 @@ const getTrashedSubjects = async (req, res) => {
       offset,
       distinct: true,
       limit,
-      where: { ...whereClause, trash: true },
+      where: whereClause,
       include: [
         {
           model: Syllabus,

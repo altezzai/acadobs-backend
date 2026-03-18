@@ -128,7 +128,9 @@ router.post(
   uploadWithErrorHandler(upload.single("file")),
   schoolAdminController.createDutyWithAssignments,
 );
-router.get("/duties", schoolAdminController.getAllDuties);
+router.get("/duties", schoolAdminController.getAllTeacherDuties);
+router.get("/getStaffDuties", schoolAdminController.getAllStaffDuties);
+
 router.get("/duties/:id", schoolAdminController.getDutyById);
 router.put(
   "/duties/:id",
