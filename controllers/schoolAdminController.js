@@ -2327,14 +2327,14 @@ const getAllTeacherDuties = async (req, res) => {
         {
           model: DutyAssignment,
           attributes: ["id", "remarks", "status", "solved_file"],
-          required:true,
+          required: true,
           include: [
             {
               model: User,
-              attributes: ["id", "name", "dp","role"],
-              required:true,
-              where:{ role: "teacher" },
-            
+              attributes: ["id", "name", "dp", "role"],
+              required: true,
+              where: { role: "teacher" },
+
             },
           ],
         },
@@ -2412,14 +2412,14 @@ const getAllStaffDuties = async (req, res) => {
         {
           model: DutyAssignment,
           attributes: ["id", "remarks", "status", "solved_file"],
-          required:true,
+          required: true,
           include: [
             {
               model: User,
-              attributes: ["id", "name", "dp","role"],
-              required:true,
-              where:{ role: "staff" },
-            
+              attributes: ["id", "name", "dp", "role"],
+              required: true,
+              where: { role: "staff" },
+
             },
           ],
         },
@@ -7760,7 +7760,17 @@ const assignStudentToRoute = async (req, res) => {
     if (students.length !== student_ids.length) {
       return res.status(404).json({ message: "Student not found" });
     }
-    await pickupRoute.addStudents(students);
+    // Upsert students into pickup route:(here)
+    for (const student of students) {
+      const [assignment, created] = await StudentRouteAssignment.findOrCreate({
+        where: { student_id: student.id, route_id: route_id },
+        defaults: { student_id: student.id, route_id: route_id, trash: false },
+      });
+      if (!created && assignment.trash) {
+        await assignment.update({ trash: false });
+      }
+    }
+
     if (hasAssignToDropRoute) {
       const dropRoute = await studentroutes.findOne({
         where: { pickId: route_id, trash: false, school_id: school_id, },
@@ -7770,7 +7780,16 @@ const assignStudentToRoute = async (req, res) => {
         return res.status(404).json({ message: "Drop route not found for this pickup route" });
       }
 
-      await dropRoute.addStudents(students);
+      // Same upsert logic for drop route(here)
+      for (const student of students) {
+        const [assignment, created] = await StudentRouteAssignment.findOrCreate({
+          where: { student_id: student.id, route_id: dropRoute.id },
+          defaults: { student_id: student.id, route_id: dropRoute.id, trash: false },
+        });
+        if (!created && assignment.trash) {
+          await assignment.update({ trash: false });
+        }
+      }
     }
 
     return res.json({
