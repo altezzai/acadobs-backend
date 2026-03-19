@@ -6,6 +6,7 @@ const Class = require("../models/class");
 const Subject = require("../models/subject");
 const AccountDelete = require("../models/accountdelete");
 const Syllabus = require("../models/syllabus");
+const { schoolSequelize } = require("../config/connection");
 const {
   compressAndSaveFile,
   deletefilewithfoldername,
@@ -13,6 +14,7 @@ const {
 const { Op } = require("sequelize");
 
 const createSchool = async (req, res) => {
+    const transaction = await schoolSequelize.transaction();
   try {
     const {
       name,
@@ -42,6 +44,16 @@ const createSchool = async (req, res) => {
         .status(400)
         .json({ error: "SchoolAdmin email already exists in user table" });
     }
+
+    const existingPhone = await User.findOne({
+      where: { phone: phone },
+    });
+    if (existingPhone) {
+      return res
+        .status(400)
+        .json({ error: "SchoolAdmin phone already exists in user table" });
+    }
+
     let fileName = null;
     if (req.files?.logo) {
       const uploadPath = "uploads/school_logos/";
@@ -72,7 +84,7 @@ const createSchool = async (req, res) => {
       bg_image: bgImageFileName,
       primary_colour,
       secondary_colour,
-    });
+    }, { transaction });
 
     const hashedPassword = await bcrypt.hash(admin_password, 10);
 
@@ -85,7 +97,9 @@ const createSchool = async (req, res) => {
       dp: fileName,
       role: "admin",
       status: "active",
-    });
+    }, { transaction });
+
+    await transaction.commit();
 
     res
       .status(201)
@@ -93,6 +107,7 @@ const createSchool = async (req, res) => {
   } catch (error) {
     console.error("Create school error:", error);
     logger.error("Create school error:", error);
+      await transaction.rollback();
     res.status(500).json({ error: error.message });
   }
 };
