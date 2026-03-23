@@ -12,6 +12,8 @@ const {
   deletefilewithfoldername,
 } = require("../utils/fileHandler");
 const { Op } = require("sequelize");
+const { Payment } = require("../models");
+const Invoice = require("../models/invoice");
 
 const createSchool = async (req, res) => {
     const transaction = await schoolSequelize.transaction();
@@ -1030,6 +1032,81 @@ const getTrashedSyllabuses = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const dashboardCounts = async (req, res) => {
+  try {
+    const totalSchools = await School.count({ where: { trash: false } });
+    const totalStudents = await User.count({ where: { role: "student", status: "active" } });
+    const totalTeachers = await User.count({ where: { role: "teacher", status: "active" } });
+    const totalStaff = await User.count({ where: { role: "staff", status: "active" } });
+    const totalGuardians = await User.count({ where: { role: "guardian", status: "active" } });
+    const totalDrivers = await User.count({ where: { role: "driver", status: "active" } });
+
+    const totalClasses = await Class.count({ where: { trash: false } });
+    const totalSubjects = await Subject.count({ where: { trash: false } });
+    const totalSyllabuses = await Syllabus.count({ where: { trash: false } });
+
+    const totalAccountDeleteRequests = await AccountDelete.count();
+    const pendingAccountDeleteRequests = await AccountDelete.count({ where: { status: "pending" } });
+    
+    const totalPayments = await Payment.count();
+    const totalInvoices = await Invoice.count();
+
+    res.status(200).json({
+      totalSchools,
+      totalStudents,
+      totalTeachers,
+      totalStaff,
+      totalGuardians,
+      totalDrivers,
+      totalClasses,
+      totalSubjects,
+      totalSyllabuses,
+      totalAccountDeleteRequests,
+      pendingAccountDeleteRequests,
+      totalPayments,
+      totalInvoices,
+     
+    });
+  } catch (err) {
+    logger.error("Error getting dashboard stats:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+const recentActivities = async (req, res) => {
+  try {
+      const recentSchools = await School.findAll({
+      where: { trash: false },
+      order: [["createdAt", "DESC"]],
+      limit: 3,
+    });
+    const recentStudents = await User.findAll({
+      where: { role: "student", status: "active" },
+      order: [["createdAt", "DESC"]],
+      limit: 3,
+    });
+    const recentTeachers = await User.findAll({
+      where: { role: "teacher", status: "active" },
+      order: [["createdAt", "DESC"]],
+      limit: 3,
+    });
+    const recentGuardians = await User.findAll({
+      where: { role: "guardian", status: "active" },
+      order: [["createdAt", "DESC"]],
+      limit: 3,
+    });
+
+res.status(200).json({
+      recentSchools,
+      recentStudents,
+      recentTeachers,
+      recentGuardians,
+    });
+  } catch (err) {
+    logger.error("Error getting recent activities:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 
 module.exports = {
   createSchool,
@@ -1070,4 +1147,7 @@ module.exports = {
   restoreSyllabus,
   permanentlyDeleteSyllabus,
   getTrashedSyllabuses,
+  
+  dashboardCounts,
+  recentActivities,
 };
