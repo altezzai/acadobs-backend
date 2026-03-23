@@ -219,7 +219,76 @@ const updateSchool = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const updateSchoolCredentials = async (req, res) => {
+    const transaction = await schoolSequelize.transaction();
+  try {
+    const { id } = req.params;
+    const { name, email, phone , admin_password} = req.body;
+    const school = await School.findByPk(id);
+    if (!school) return res.status(404).json({ error: "School not found" });
 
+  const existingUser = await User.findOne({
+      where: {
+        email: email,
+        role: "admin",
+        school_id: { [Op.ne]: id },
+      },
+    });
+  if (existingUser) {
+      return res
+        .status(400)
+        .json({ error: "Email already exists in user table" });
+    }
+    const existingPhone = await User.findOne({
+      where: {
+        phone: phone,
+        role: "admin",
+        school_id: { [Op.ne]: id },
+      },
+    });
+    if (existingPhone) {
+      return res
+        .status(400)
+        .json({ error: "Phone number already exists in user table" });
+    }
+
+    const adminUser = await User.findOne({
+      where: { school_id: id, role: "admin" },
+    });
+    if (!adminUser) {
+      return res
+        .status(404)
+        .json({ error: "Admin user for this school not found" });
+
+    }
+   let updateData = {};
+    if (name) {
+      updateData.name = name;
+    }
+    if (email) {
+      updateData.email = email;
+    }
+    if (phone) {
+      updateData.phone = phone;
+    }
+    if (admin_password) {
+      const hashedPassword = await bcrypt.hash(admin_password, 10);
+      updateData.password = hashedPassword;
+    }
+    await adminUser.update(updateData, { transaction });
+    await school.update(updateData, { transaction });
+
+    await transaction.commit();
+
+    res.status(200).json({ message: "School credentials updated successfully"});
+
+
+  } catch (error) {
+    logger.error("Error updating school credentials:", error);
+    res.status(500).json({ error: error.message });
+
+  }
+};
 const deleteSchool = async (req, res) => {
   try {
     const { id } = req.params;
@@ -967,6 +1036,7 @@ module.exports = {
   getAllSchools,
   getSchoolById,
   updateSchool,
+  updateSchoolCredentials,
   deleteSchool,
   restoreSchool,
   permanentlyDeleteSchool,
