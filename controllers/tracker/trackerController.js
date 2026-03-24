@@ -415,10 +415,17 @@ const getStopsForDriver = async (req, res) => {
     const route = await StudentRoutes.findOne({
       where: {
         id: route_id,
-        activated_by_driver_id: driver.id,
-        active: true,
         trash: false,
       },
+      include: [
+        {
+          model: Driver,
+          as: "drivers",
+          where: { id: driver.id },
+          attributes: [],
+          through: { attributes: [] },
+        },
+      ],
     });
 
     if (!route) {
