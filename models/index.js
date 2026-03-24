@@ -319,4 +319,5 @@ module.exports = {
   StudentRoutes,
   StudentRouteAssignment,
   RouteDrivers,
+  RouteStopLog,
 };

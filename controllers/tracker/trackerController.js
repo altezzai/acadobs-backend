@@ -7,7 +7,7 @@ const StudentRouteAssignment = require("../../models/student_route_assignment");
 const { Sequelize } = require("sequelize");
 const { compressAndSaveFile } = require("../../utils/fileHandler");
 const { Op } = require("sequelize");
-const RouteStopLog = require("../../models");
+const { RouteStopLog } = require("../../models");
 // getDriverById
 const getDriverById = async (req, res) => {
   try {
