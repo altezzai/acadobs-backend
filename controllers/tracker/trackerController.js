@@ -323,71 +323,200 @@ const createStopForDriver = async (req, res) => {
 };
 
 //to get stops details with students for a driver
+// const getStopsForDriver = async (req, res) => {
+//   try {
+//     const { route_id } = req.params;
+//     const user_id = req.user.user_id;
+//     const driver = await Driver.findOne({
+//       where: {
+//         user_id,
+//         trash: false,
+//       },
+//     });
+//     if (!driver) {
+//       return res.status(404).json({ message: "Driver not found" });
+//     }
+//     const stops = await Stop.findAll({
+//       where: { route_id, trash: false, },
+//       attributes: ["id", "stop_name", "priority", "longitude", "latitude", "arrived", "arrived_time",],
+//       include: [
+//         {
+//           model: StudentRoutes,
+//           as: "route",
+//           attributes: ["route_name", "type", "isLock"],
+
+//         },
+//         {
+//           model: Student,
+//           as: "students",
+//           attributes: ["id", "full_name", "reg_no"],
+//           include: [
+//             {
+//               model: Guardian,
+//               as: "guardian",
+//               attributes: ["guardian_name", "guardian_contact"]
+//             }
+//           ]
+//         }
+//       ],
+
+//     });
+
+//     const result = stops.map((s) => {
+//       return {
+//         id: s.id,
+//         stop_name: s.stop_name,
+//         priority: s.priority,
+//         longitude: s.longitude,
+//         latitude: s.latitude,
+//         route_name: s.route.route_name,
+//         route_type: s.route.type,
+//         isLock: s.route.isLock,
+//         arrived: s.arrived,
+//         arrived_time: s.arrived_time,
+//         students: s.students.map((student) => ({
+//           id: student.id,
+//           full_name: student.full_name,
+//           reg_no: student.reg_no,
+//           guardian_name: student.guardian?.guardian_name || null,
+//           guardian_contact: student.guardian?.guardian_contact || null,
+//         })),
+//       }
+//     })
+
+//     return res.status(200).json({
+//       message: "Stops fetched successfully",
+//       data: result,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching stops:", error);
+//     return res.status(500).json({
+//       error: "Failed to fetch stops",
+//     });
+//   }
+// };
+
 const getStopsForDriver = async (req, res) => {
   try {
     const { route_id } = req.params;
     const user_id = req.user.user_id;
+
     const driver = await Driver.findOne({
       where: {
         user_id,
         trash: false,
       },
     });
+
     if (!driver) {
       return res.status(404).json({ message: "Driver not found" });
     }
+
+    const route = await StudentRoutes.findOne({
+      where: {
+        id: route_id,
+        activated_by_driver_id: driver.id,
+        active: true,
+        trash: false,
+      },
+    });
+
+    if (!route) {
+      return res.status(403).json({
+        message: "You are not assigned to this route",
+      });
+    }
+
+    const logs = await RouteStopLog.findAll({
+      where: {
+        route_id,
+        driver_id: driver.id,
+      },
+    });
+
+    const stopLogMap = {};
+
+    logs.forEach((log) => {
+      if (!stopLogMap[log.stop_id]) {
+        stopLogMap[log.stop_id] = {
+          arrived: log.arrived,
+          arrived_at: log.arrived_at,
+          students: [],
+        };
+      }
+
+      stopLogMap[log.stop_id].students.push(log.student_id);
+    });
+
     const stops = await Stop.findAll({
-      where: { route_id, trash: false, },
-      attributes: ["id", "stop_name", "priority", "longitude", "latitude", "arrived", "arrived_time",],
+      where: { route_id, trash: false },
+      order: [["priority", "ASC"]],
+      attributes: ["id", "stop_name", "priority", "longitude", "latitude"],
       include: [
         {
           model: StudentRoutes,
           as: "route",
           attributes: ["route_name", "type", "isLock"],
-
         },
         {
           model: Student,
           as: "students",
-          attributes: ["id", "full_name", "reg_no"],
+          attributes: [
+            "id",
+            "full_name",
+            "reg_no",
+            "student_status",
+          ],
           include: [
             {
               model: Guardian,
               as: "guardian",
-              attributes: ["guardian_name", "guardian_contact"]
-            }
-          ]
-        }
+              attributes: ["guardian_name", "guardian_contact"],
+            },
+          ],
+        },
       ],
-
     });
 
     const result = stops.map((s) => {
+      const logData = stopLogMap[s.id] || {};
+
       return {
         id: s.id,
         stop_name: s.stop_name,
         priority: s.priority,
         longitude: s.longitude,
         latitude: s.latitude,
-        route_name: s.route.route_name,
-        route_type: s.route.type,
-        isLock: s.route.isLock,
-        arrived: s.arrived,
-        arrived_time: s.arrived_time,
+
+        route_name: s.route?.route_name || null,
+        route_type: s.route?.type || null,
+        isLock: s.route?.isLock || null,
+
+        // ✅ FROM LOG TABLE
+        arrived: logData.arrived || false,
+        arrived_time: logData.arrived_at || null,
+
         students: s.students.map((student) => ({
           id: student.id,
           full_name: student.full_name,
           reg_no: student.reg_no,
+          student_status: student.student_status,
+
+          // ✅ CHECK IF STUDENT COMPLETED AT THIS STOP
+          is_completed:
+            logData.students?.includes(student.id) || false,
+
           guardian_name: student.guardian?.guardian_name || null,
           guardian_contact: student.guardian?.guardian_contact || null,
         })),
-      }
-    })
+      };
+    });
 
     return res.status(200).json({
       message: "Stops fetched successfully",
       data: result,
     });
+
   } catch (error) {
     console.error("Error fetching stops:", error);
     return res.status(500).json({
