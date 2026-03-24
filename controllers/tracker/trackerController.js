@@ -371,6 +371,8 @@ const getStopsForDriver = async (req, res) => {
         route_name: s.route.route_name,
         route_type: s.route.type,
         isLock: s.route.isLock,
+        arrived: s.arrived,
+        arrived_time: s.arrived_time,
         students: s.students.map((student) => ({
           id: student.id,
           full_name: student.full_name,
