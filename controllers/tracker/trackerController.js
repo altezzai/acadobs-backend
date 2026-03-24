@@ -337,7 +337,7 @@ const getStopsForDriver = async (req, res) => {
     }
     const stops = await Stop.findAll({
       where: { route_id, trash: false, },
-      attributes: ["id", "stop_name", "priority", "longitude", "latitude", "arrived", "arrived_time"],
+      attributes: ["id", "stop_name", "priority", "longitude", "latitude", "arrived", "arrived_time",],
       include: [
         {
           model: StudentRoutes,
