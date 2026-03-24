@@ -6,13 +6,17 @@ const Class = require("../models/class");
 const Subject = require("../models/subject");
 const AccountDelete = require("../models/accountdelete");
 const Syllabus = require("../models/syllabus");
+const { schoolSequelize } = require("../config/connection");
 const {
   compressAndSaveFile,
   deletefilewithfoldername,
 } = require("../utils/fileHandler");
 const { Op } = require("sequelize");
+const { Payment } = require("../models");
+const Invoice = require("../models/invoice");
 
 const createSchool = async (req, res) => {
+    const transaction = await schoolSequelize.transaction();
   try {
     const {
       name,
@@ -42,6 +46,16 @@ const createSchool = async (req, res) => {
         .status(400)
         .json({ error: "SchoolAdmin email already exists in user table" });
     }
+
+    const existingPhone = await User.findOne({
+      where: { phone: phone },
+    });
+    if (existingPhone) {
+      return res
+        .status(400)
+        .json({ error: "SchoolAdmin phone already exists in user table" });
+    }
+
     let fileName = null;
     if (req.files?.logo) {
       const uploadPath = "uploads/school_logos/";
@@ -72,7 +86,7 @@ const createSchool = async (req, res) => {
       bg_image: bgImageFileName,
       primary_colour,
       secondary_colour,
-    });
+    }, { transaction });
 
     const hashedPassword = await bcrypt.hash(admin_password, 10);
 
@@ -85,7 +99,9 @@ const createSchool = async (req, res) => {
       dp: fileName,
       role: "admin",
       status: "active",
-    });
+    }, { transaction });
+
+    await transaction.commit();
 
     res
       .status(201)
@@ -93,6 +109,7 @@ const createSchool = async (req, res) => {
   } catch (error) {
     console.error("Create school error:", error);
     logger.error("Create school error:", error);
+      await transaction.rollback();
     res.status(500).json({ error: error.message });
   }
 };
@@ -204,7 +221,76 @@ const updateSchool = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const updateSchoolCredentials = async (req, res) => {
+    const transaction = await schoolSequelize.transaction();
+  try {
+    const { id } = req.params;
+    const { name, email, phone , admin_password} = req.body;
+    const school = await School.findByPk(id);
+    if (!school) return res.status(404).json({ error: "School not found" });
 
+  const existingUser = await User.findOne({
+      where: {
+        email: email,
+        role: "admin",
+        school_id: { [Op.ne]: id },
+      },
+    });
+  if (existingUser) {
+      return res
+        .status(400)
+        .json({ error: "Email already exists in user table" });
+    }
+    const existingPhone = await User.findOne({
+      where: {
+        phone: phone,
+        role: "admin",
+        school_id: { [Op.ne]: id },
+      },
+    });
+    if (existingPhone) {
+      return res
+        .status(400)
+        .json({ error: "Phone number already exists in user table" });
+    }
+
+    const adminUser = await User.findOne({
+      where: { school_id: id, role: "admin" },
+    });
+    if (!adminUser) {
+      return res
+        .status(404)
+        .json({ error: "Admin user for this school not found" });
+
+    }
+   let updateData = {};
+    if (name) {
+      updateData.name = name;
+    }
+    if (email) {
+      updateData.email = email;
+    }
+    if (phone) {
+      updateData.phone = phone;
+    }
+    if (admin_password) {
+      const hashedPassword = await bcrypt.hash(admin_password, 10);
+      updateData.password = hashedPassword;
+    }
+    await adminUser.update(updateData, { transaction });
+    await school.update(updateData, { transaction });
+
+    await transaction.commit();
+
+    res.status(200).json({ message: "School credentials updated successfully"});
+
+
+  } catch (error) {
+    logger.error("Error updating school credentials:", error);
+    res.status(500).json({ error: error.message });
+
+  }
+};
 const deleteSchool = async (req, res) => {
   try {
     const { id } = req.params;
@@ -946,12 +1032,88 @@ const getTrashedSyllabuses = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const dashboardCounts = async (req, res) => {
+  try {
+    const totalSchools = await School.count({ where: { trash: false } });
+    const totalStudents = await User.count({ where: { role: "student", status: "active" } });
+    const totalTeachers = await User.count({ where: { role: "teacher", status: "active" } });
+    const totalStaff = await User.count({ where: { role: "staff", status: "active" } });
+    const totalGuardians = await User.count({ where: { role: "guardian", status: "active" } });
+    const totalDrivers = await User.count({ where: { role: "driver", status: "active" } });
+
+    const totalClasses = await Class.count({ where: { trash: false } });
+    const totalSubjects = await Subject.count({ where: { trash: false } });
+    const totalSyllabuses = await Syllabus.count({ where: { trash: false } });
+
+    const totalAccountDeleteRequests = await AccountDelete.count();
+    const pendingAccountDeleteRequests = await AccountDelete.count({ where: { status: "pending" } });
+    
+    const totalPayments = await Payment.count();
+    const totalInvoices = await Invoice.count();
+
+    res.status(200).json({
+      totalSchools,
+      totalStudents,
+      totalTeachers,
+      totalStaff,
+      totalGuardians,
+      totalDrivers,
+      totalClasses,
+      totalSubjects,
+      totalSyllabuses,
+      totalAccountDeleteRequests,
+      pendingAccountDeleteRequests,
+      totalPayments,
+      totalInvoices,
+     
+    });
+  } catch (err) {
+    logger.error("Error getting dashboard stats:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+const recentActivities = async (req, res) => {
+  try {
+      const recentSchools = await School.findAll({
+      where: { trash: false },
+      order: [["createdAt", "DESC"]],
+      limit: 3,
+    });
+    const recentStudents = await User.findAll({
+      where: { role: "student", status: "active" },
+      order: [["createdAt", "DESC"]],
+      limit: 3,
+    });
+    const recentTeachers = await User.findAll({
+      where: { role: "teacher", status: "active" },
+      order: [["createdAt", "DESC"]],
+      limit: 3,
+    });
+    const recentGuardians = await User.findAll({
+      where: { role: "guardian", status: "active" },
+      order: [["createdAt", "DESC"]],
+      limit: 3,
+    });
+
+res.status(200).json({
+      recentSchools,
+      recentStudents,
+      recentTeachers,
+      recentGuardians,
+    });
+  } catch (err) {
+    logger.error("Error getting recent activities:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 
 module.exports = {
   createSchool,
   getAllSchools,
   getSchoolById,
   updateSchool,
+  updateSchoolCredentials,
   deleteSchool,
   restoreSchool,
   permanentlyDeleteSchool,
@@ -985,4 +1147,7 @@ module.exports = {
   restoreSyllabus,
   permanentlyDeleteSyllabus,
   getTrashedSyllabuses,
+  
+  dashboardCounts,
+  recentActivities,
 };

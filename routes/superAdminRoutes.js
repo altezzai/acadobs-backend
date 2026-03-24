@@ -19,6 +19,9 @@ router.put(
   uploadWithErrorHandler(upload.fields(schoolUploads)),
   superAdminController.updateSchool
 );
+router.put(
+  "/updateSchoolCredentials/:id",
+  superAdminController.updateSchoolCredentials);
 router.delete("/schools/:id", superAdminController.deleteSchool);
 router.get("/schools/trashed", superAdminController.getTrashedSchools);
 router.get("/schools/:id", superAdminController.getSchoolById);
