@@ -7,6 +7,7 @@ const StudentRouteAssignment = require("../../models/student_route_assignment");
 const { Sequelize } = require("sequelize");
 const { compressAndSaveFile } = require("../../utils/fileHandler");
 const { Op } = require("sequelize");
+const RouteStopLog = require("../../models");
 // getDriverById
 const getDriverById = async (req, res) => {
   try {
@@ -847,9 +848,19 @@ const updateStopandStudent = async (req, res) => {
       });
     }
 
-    stop.arrived = true;
-    stop.arrived_time = new Date();
-    await stop.save();
+    // stop.arrived = true;
+    // stop.arrived_time = new Date();
+    // await stop.save();
+
+    const logs = student_ids.map((student_id) => ({
+      route_id: activeRoute.id,
+      stop_id: stop.id,
+      driver_id: driver.id,
+      student_id,
+      arrived: true,
+      arrived_at: new Date(),
+    }));
+    await RouteStopLog.bulkCreate(logs);////
     let finalStatus;
 
     if (activeRoute.type === "DROP") {
