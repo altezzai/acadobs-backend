@@ -30,7 +30,7 @@ const normalizeGender = (gender) => {
   return genderMap[value];
 };
 const normalizeGuardianRelation = (relation) => {
-  if (!relation) return "father";
+  if (!relation) return "other";
 
   const value = relation.toString().toLowerCase().trim();
 
