@@ -39,6 +39,7 @@ const stop = require("./stop");
 const StudentRoutes = require("./studentroutes");
 const StudentRouteAssignment = require("./student_route_assignment");
 const RouteDrivers = require("./route_drivers");
+const RouteStopLog = require("./route_stop_log");
 
 // Relations
 
@@ -233,6 +234,49 @@ StudentRoutes.belongsTo(School, {
   foreignKey: "school_id",
   as: "school",
 });
+//route stop log assovciations
+RouteStopLog.belongsTo(StudentRoutes, {
+  foreignKey: "route_id",
+  as: "route",
+});
+
+StudentRoutes.hasMany(RouteStopLog, {
+  foreignKey: "route_id",
+  as: "routeLogs",
+});
+
+RouteStopLog.belongsTo(stop, {
+  foreignKey: "stop_id",
+  as: "stop",
+});
+
+stop.hasMany(RouteStopLog, {
+  foreignKey: "stop_id",
+  as: "stopLogs",
+});
+
+RouteStopLog.belongsTo(Driver, {
+  foreignKey: "driver_id",
+  as: "driver",
+});
+
+Driver.hasMany(RouteStopLog, {
+  foreignKey: "driver_id",
+  as: "driverLogs",
+});
+
+RouteStopLog.belongsTo(Student, {
+  foreignKey: "student_id",
+  as: "student",
+});
+
+Student.hasMany(RouteStopLog, {
+  foreignKey: "student_id",
+  as: "studentLogs",
+});
+// RouteStopLog.belongsTo(stop, { foreignKey: "stop_id", as: "stop" });
+// RouteStopLog.belongsTo(route, { foreignKey: "route_id", as: "route" });
+// RouteStopLog.belongsTo(Driver, { foreignKey: "driver_id", as: "driver" });
 
 // School.hasMany(StudentRoutes, {
 //   foreignKey: "school_id",
@@ -275,4 +319,5 @@ module.exports = {
   StudentRoutes,
   StudentRouteAssignment,
   RouteDrivers,
+  RouteStopLog,
 };
