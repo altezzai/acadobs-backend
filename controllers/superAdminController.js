@@ -129,6 +129,7 @@ const getAllSchools = async (req, res) => {
         name: { [Op.like]: `%${searchQuery}%` },
         trash: false,
       },
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
