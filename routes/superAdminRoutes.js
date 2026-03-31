@@ -80,4 +80,7 @@ router.delete(
   "/syllabus/:id/permanent",
   superAdminController.permanentlyDeleteSyllabus
 );
+router.get("/dashboardCounts", superAdminController.dashboardCounts);
+router.get("/recentActivities", superAdminController.recentActivities);
+
 module.exports = router;
