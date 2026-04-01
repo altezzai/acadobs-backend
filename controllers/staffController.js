@@ -384,6 +384,16 @@ const getAllHomework = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const teacher_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const whereClause = {
+      trash: false,
+      teacher_id,
+      school_id,
+    };
+    if (searchQuery) {
+      whereClause.title = { [Op.like]: `%${searchQuery}%` };
+    }
 
     const { count, rows: homework } = await Homework.findAndCountAll({
       offset,
@@ -534,7 +544,11 @@ const updateHomeworkAssignment = async (req, res) => {
 const deleteHomework = async (req, res) => {
   try {
     const { id } = req.params;
-    const homework = await Homework.findByPk(id);
+    const school_id = req.user.school_id;
+    const teacher_id = req.user.user_id;
+    const homework = await Homework.findOne({
+      where: { id: id, school_id: school_id, teacher_id: teacher_id },
+    });
     if (!homework || homework.trash)
       return res.status(404).json({ error: "Not found" });
 
@@ -550,7 +564,11 @@ const deleteHomework = async (req, res) => {
 const permanentDeleteHomework = async (req, res) => {
   try {
     const { id } = req.params;
-    const homework = await Homework.findByPk(id);
+    const school_id = req.user.school_id;
+    const teacher_id = req.user.user_id;
+    const homework = await Homework.findOne({
+      where: { id: id, school_id: school_id, teacher_id: teacher_id },
+    });
     if (!homework || homework.trash)
       return res.status(404).json({ error: "Not found" });
 
@@ -573,7 +591,11 @@ const permanentDeleteHomework = async (req, res) => {
 const restoreHomework = async (req, res) => {
   try {
     const { id } = req.params;
-    const homework = await Homework.findByPk(id);
+    const school_id = req.user.school_id;
+    const teacher_id = req.user.user_id;
+    const homework = await Homework.findOne({
+      where: { id: id, school_id: school_id, teacher_id: teacher_id },
+    });
     if (!homework) return res.status(404).json({ error: "Not found" });
 
     await Homework.update({ trash: false }, { where: { id: id } });
@@ -867,8 +889,12 @@ const getAllAttendance = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const school_id = req.user.school_id;
+    const teacher_id = req.user.user_id;
     const whereClause = {
       trash: false,
+      school_id,
+      teacher_id,
     };
 
     if (date) {
@@ -906,8 +932,9 @@ const getAllAttendance = async (req, res) => {
 const getAttendanceById = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const attendance = await Attendance.findOne({
-      where: { id, trash: false },
+      where: { id, trash: false, school_id },
       include: [
         {
           model: AttendanceMarked,
@@ -950,11 +977,12 @@ const getAttendanceById = async (req, res) => {
 const updateAttendance = async (req, res) => {
   try {
     const { id } = req.params;
-    const school_id = req.user.school_id || "";
+    const teacher_id = req.user.user_id ;
+    const school_id = req.user.school_id ;
     const { subject_id, period, date } = req.body;
 
     const attendance = await Attendance.findOne({
-      where: { id, trash: false },
+      where: { id, trash: false, school_id, teacher_id },
     });
     const existingAttendance = await Attendance.findOne({
       where: {
@@ -979,8 +1007,18 @@ const updateAttendance = async (req, res) => {
 const updateAttendanceMarkedById = async (req, res) => {
   try {
     const { id } = req.params;
+     const teacher_id = req.user.user_id ;
+    const school_id = req.user.school_id ;
     const { status, remarks } = req.body;
+      const attendanceMarked = await AttendanceMarked.findByPk(id);
+    if (!attendanceMarked) return res.status(404).json({ error: "Not found" });
+      const attendance = await Attendance.findOne({
+      where: { id: attendanceMarked.attendance_id, trash: false, school_id, teacher_id },
+    });
+    if (!attendance) return res.status(404).json({ error: "Attendance Not found" });
+
     await AttendanceMarked.update({ status, remarks }, { where: { id } });
+
     res.json({ message: "Updated" });
   } catch (err) {
     logger.error(
@@ -996,12 +1034,18 @@ const updateAttendanceMarkedById = async (req, res) => {
 const bulkUpdateAttendanceById = async (req, res) => {
   try {
     const { attendance_id } = req.params;
+     const teacher_id = req.user.user_id ;
+    const school_id = req.user.school_id ;
     const { data } = req.body;
     if (!attendance_id || !Array.isArray(data)) {
       return res
         .status(400)
         .json({ error: "attendance_id and data array are required" });
     }
+      const attendance = await Attendance.findOne({
+      where: { id: attendance_id, trash: false, school_id, teacher_id },
+    });
+    if (!attendance) return res.status(404).json({ error: "Attendance Not found" });
 
     const updatePromises = data.map(async (item) => {
       return AttendanceMarked.update(
@@ -1191,8 +1235,12 @@ const getAllClassesAttendanceStatus = async (req, res) => {
 const deleteAttendance = async (req, res) => {
   try {
     const { id } = req.params;
-    const attendance = await Attendance.findByPk(id);
-    if (!attendance || attendance.trash)
+     const teacher_id = req.user.user_id ;
+    const school_id = req.user.school_id ;
+    const attendance = await Attendance.findOne({
+      where: { id, trash: false, school_id, teacher_id },
+    });
+    if (!attendance )
       return res.status(404).json({ error: "Not found" });
 
     await Attendance.update({ trash: true }, { where: { id: id } });
@@ -1213,7 +1261,11 @@ const deleteAttendance = async (req, res) => {
 const restoreAttendance = async (req, res) => {
   try {
     const { id } = req.params;
-    const attendance = await Attendance.findByPk(id);
+      const teacher_id = req.user.user_id ;
+    const school_id = req.user.school_id ;
+    const attendance = await Attendance.findOne({
+      where: { id, trash: false, school_id, teacher_id },
+    });
     if (!attendance) return res.status(404).json({ error: "Not found" });
 
     await Attendance.update({ trash: false }, { where: { id: id } });
@@ -1236,6 +1288,13 @@ const restoreAttendance = async (req, res) => {
 const permanentDeleteAttendance = async (req, res) => {
   try {
     const { id } = req.params;
+      const teacher_id = req.user.user_id ;
+    const school_id = req.user.school_id ;
+    const attendance = await Attendance.findOne({
+      where: { id, trash: true, school_id, teacher_id },
+    });
+    if (!attendance) return res.status(404).json({ error: "Not found" });
+    
     await AttendanceMarked.destroy({ where: { attendance_id: id } });
     await Attendance.destroy({ where: { id } });
     res.json({ message: "Peremently Deleted" });
@@ -1254,9 +1313,11 @@ const getTrashedAttendanceByTeacher = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    const teacher_id = req.query.teacher_id || "";
+    const teacher_id = req.user.user_id ;
+    const school_id = req.user.school_id ;
     const whereClause = {
       trash: true,
+      school_id,
     };
     if (teacher_id) {
       whereClause.teacher_id = teacher_id;
@@ -1297,7 +1358,8 @@ const getTrashedAttendanceByTeacher = async (req, res) => {
 };
 const getAttendanceByTeacher = async (req, res) => {
   try {
-    const { teacher_id } = req.query;
+     const teacher_id = req.user.user_id ;
+    const school_id = req.user.school_id ;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -1305,6 +1367,7 @@ const getAttendanceByTeacher = async (req, res) => {
     const whereClause = {
       trash: false,
       teacher_id,
+      school_id,
     };
     if (date) {
       whereClause.date = date;
@@ -1690,6 +1753,15 @@ const updateAchievement = async (req, res) => {
 };
 const deleteAchievement = async (req, res) => {
   try {
+    const recorded_by = req.user.user_id;
+    const school_id = req.user.school_id;
+    const achievement = await Achievement.findOne({
+      where: { id: req.params.id, recorded_by, school_id },
+    });
+    if (!achievement) {
+      return res.status(404).json({ error: "Achievement not found" });
+    }
+
     await Achievement.update({ trash: true }, { where: { id: req.params.id } });
     res.status(200).json({ message: "Achievement trashed successfully" });
   } catch (error) {
@@ -1704,8 +1776,10 @@ const deleteAchievement = async (req, res) => {
 };
 const restoreAchievement = async (req, res) => {
   try {
+      const recorded_by = req.user.user_id;
+    const school_id = req.user.school_id;
     await Achievement.update(
-      { trash: false },
+      { trash: false, recorded_by, school_id },
       { where: { id: req.params.id } }
     );
     res.status(200).json({ message: "Achievement restored successfully" });

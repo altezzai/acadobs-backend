@@ -3254,7 +3254,8 @@ const restoreEvent = async (req, res) => {
 };
 const permanentDeleteEvent = async (req, res) => {
   try {
-    const event = await Event.findOne({ where: { id: req.params.id } });
+    const school_id = req.user.school_id;
+    const event = await Event.findOne({ where: { id: req.params.id , school_id} });
     if (!event) return res.status(404).json({ error: "Event not found" });
     const uploadPath = "uploads/event_files/";
     await deletefilewithfoldername(event.file, uploadPath);
@@ -4134,10 +4135,17 @@ const restoreInvoice = async (req, res) => {
 };
 const permanentDeleteInvoiceStudent = async (req, res) => {
   try {
-    const { id } = req.params; // invoice_student_id
+    const { id } = req.params;
+    const school_id = req.user.school_id; 
     const invoiceStudent = await InvoiceStudent.findByPk(id);
     if (!invoiceStudent) {
       return res.status(404).json({ error: "Not found" });
+    }
+    const invoice = await Invoice.findOne({
+      where: { id: invoiceStudent.invoice_id, school_id },
+    });
+    if (!invoice) {
+      return res.status(404).json({ error: "Invoice not found" });
     }
     await invoiceStudent.destroy();
     res.status(200).json({ message: "Invoice student deleted" });
@@ -4650,8 +4658,9 @@ const restoreLeaveRequest = async (req, res) => {
 const permanentDeleteLeaveRequest = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const leave = await LeaveRequest.findOne({
-      where: { id: id, trash: true },
+      where: { id: id, trash: true, school_id },
     });
     if (!leave) return res.status(404).json({ error: "Not found" });
     if (leave.attachment) {
@@ -5149,7 +5158,12 @@ const permanentDeleteNews = async (req, res) => {
 const deleteNewsImage = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const newsImage = await NewsImage.findOne({ where: { id, trash: false } });
+    const news = await News.findOne({
+      where: { id: newsImage.news_id, school_id, trash: false },
+    });
+    if (!news) return res.status(404).json({ error: "Not found" });
     if (!newsImage) return res.status(404).json({ error: "Not found" });
     if (newsImage.image_url) {
       const uploadPath = newsimagePath;
@@ -5369,7 +5383,8 @@ const updateNotice = async (req, res) => {
 const deleteNotice = async (req, res) => {
   try {
     const { id } = req.params;
-    const [rows] = await Notice.update({ trash: true }, { where: { id: id } });
+    const school_id = req.user.school_id;
+    const [rows] = await Notice.update({ trash: true }, { where: { id: id, school_id } });
     if (!rows) return res.status(404).json({ error: "Not found" });
     res.json({ message: "Notice soft-deleted" });
   } catch (err) {
@@ -5385,7 +5400,8 @@ const deleteNotice = async (req, res) => {
 const permanentDeleteNotice = async (req, res) => {
   try {
     const { id } = req.params;
-    const notice = await Notice.findOne({ where: { id: id, trash: true } });
+    const school_id = req.user.school_id;
+    const notice = await Notice.findOne({ where: { id: id, trash: true, school_id } });
     if (!notice) return res.status(404).json({ error: "Not found" });
     if (notice.file) {
       const uploadPath = noticeFilePath;
