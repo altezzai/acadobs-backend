@@ -194,7 +194,17 @@ const updateClass = async (req, res) => {
 const deleteClass = async (req, res) => {
   try {
     const id = req.params.id;
-    await Class.update({ trash: true }, { where: { id } });
+    const school_id = req.user.school_id;
+    const classData = await Class.findOne({
+      where: {
+        id,
+        school_id,
+        trash: false,
+      },
+    });
+    if (!classData) return res.status(404).json({ message: "Class not found" });
+    
+    await Class.update({ trash: true }, { where: { id, school_id } });
     res.status(200).json({ message: "Class soft-deleted" });
   } catch (err) {
     logger.error("schoolId:", req.user.school_id, "Error deleting class:", err);
@@ -799,10 +809,12 @@ const getAllStaff = async (req, res) => {
 const getStaffById = async (req, res) => {
   try {
     const { staff_id } = req.params;
+    const school_id = req.user.school_id;
     const staff = await Staff.findOne({
       where: {
         id: staff_id,
         trash: false,
+        school_id: school_id,
       },
       include: [
         {
@@ -996,8 +1008,11 @@ const updateStaffUser = async (req, res) => {
 const deleteStaff = async (req, res) => {
   try {
     const { staff_id } = req.params;
-    const staff = await Staff.findByPk(staff_id);
-    if (!staff || staff.trash)
+    const school_id = req.user.school_id;
+    const staff = await Staff.findOne({
+      where: { id: staff_id, school_id , trash: false},
+    });
+    if (!staff)
       return res.status(404).json({ error: "Staff not found" });
     const user = await User.findByPk(staff.user_id);
     if (!user && user.trash)
@@ -1019,8 +1034,11 @@ const deleteStaff = async (req, res) => {
 const restoredStaff = async (req, res) => {
   try {
     const { staff_id } = req.params;
-    const staff = await Staff.findByPk(staff_id);
-    if (staff && !staff.trash)
+    const school_id = req.user.school_id;
+    const staff = await Staff.findOne({
+      where: { id: staff_id, school_id , trash: true},
+    });
+    if (staff )
       return res.status(404).json({ error: "Staff not found" });
     const user = await User.findByPk(staff.user_id);
     if (!user && user.trash)
@@ -1038,14 +1056,24 @@ const getTrashedStaffs = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+let whereClause = {
+      trash: true,
+      school_id: school_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { name: { [Op.like]: `%${searchQuery}%` } },  
+      ];
+    }
 
     const { count, rows: staffs } = await Staff.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: {
-        trash: true,
-      },
+      where: whereClause,
+   
     });
     res.status(200).json({
       totalcontent: count,
@@ -1160,7 +1188,17 @@ const getAllStaffPermissions = async (req, res) => {
 const getStaffPermissionByUser = async (req, res) => {
   try {
     const { user_id } = req.params;
-    const permission = await StaffPermission.findOne({ where: { user_id } });
+    const school_id = req.user.school_id;
+    const permission = await StaffPermission.findOne({
+       where: { user_id },
+       include: [
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone", "dp", "school_id"],
+          where: school_id, 
+        },
+      ],
+       });
 
     if (!permission) {
       return res.status(404).json({ error: "Permissions not found" });
@@ -1182,6 +1220,7 @@ const getStaffPermissionByUser = async (req, res) => {
 const updateStaffPermission = async (req, res) => {
   try {
     const { user_id } = req.params;
+    const school_id = req.user.school_id;
     const {
       leave_request,
       attendance,
@@ -1197,7 +1236,14 @@ const updateStaffPermission = async (req, res) => {
       payments,
     } = req.body;
 
-    const permission = await StaffPermission.findOne({ where: { user_id } });
+    const permission = await StaffPermission.findOne({ where: { user_id },
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone", "dp", "school_id"],
+          where: school_id,
+         },
+      ]});
     if (!permission) {
       return res.status(404).json({ error: "Permissions not found" });
     }
@@ -1336,6 +1382,7 @@ const createGuardian = async (req, res) => {
 };
 const createGuardianService = async (guardianData, fileBuffer, req) => {
   try {
+    const school_id = req.user.school_id;
     const {
       guardian_relation,
       guardian_name,
@@ -1348,7 +1395,6 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
       guardian2_contact,
       father_name,
       mother_name,
-      school_id,
       house_name,
       street,
       city,
@@ -1605,7 +1651,11 @@ const updateGuardian = async (req, res) => {
 const deleteGuardian = async (req, res) => {
   try {
     const { id } = req.params;
-    const guardian = await Guardian.findByPk(id);
+    const school_id = req.user.school_id;
+    const guardian = await Guardian.findOne({
+      where: { id, trash: false },
+      include: [{ model: User, where: { school_id } }],
+    });
     if (!guardian) return res.status(404).json({ error: "Guardian not found" });
 
     await guardian.update({ trash: true });
@@ -2459,7 +2509,10 @@ const getAllStaffDuties = async (req, res) => {
 };
 const getDutyById = async (req, res) => {
   try {
-    const duty = await Duty.findByPk(req.params.id, {
+    const school_id = req.user.school_id;
+    const { id } = req.params;
+    const duty = await Duty.findOne({
+      where: { id,school_id },
       include: [
         {
           model: DutyAssignment,
@@ -2523,15 +2576,21 @@ const updateDuty = async (req, res) => {
 const updateDutyAssigned = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const { remarks, status } = req.body;
 
     const assignedDuty = await DutyAssignment.findByPk(id);
     if (!assignedDuty) {
       return res.status(404).json({ error: "Not found" });
     }
+    const duty = await Duty.findOne({
+      where: { id: assignedDuty.duty_id, school_id },
+    });
+    if (!duty) return res.status(404).json({ error: "Duty not found" });
+    
     let fileName = assignedDuty.solved_file;
     if (req.file) {
-      uploadPath = "uploads/solved_duties/";
+      const uploadPath = "uploads/solved_duties/";
       await deletefilewithfoldername(fileName, uploadPath);
       fileName = await compressAndSaveFile(req.file, uploadPath);
     }
@@ -2549,6 +2608,7 @@ const updateDutyAssigned = async (req, res) => {
 const bulkUpdateDutyAssignments = async (req, res) => {
   const transaction = await schoolSequelize.transaction();
   try {
+    const school_id = req.user.school_id;
     const { duty_id, updates } = req.body;
 
     if (!duty_id || !Array.isArray(updates)) {
@@ -2556,6 +2616,10 @@ const bulkUpdateDutyAssignments = async (req, res) => {
         .status(400)
         .json({ error: "duty_id and updates array are required" });
     }
+    const duty = await Duty.findOne({
+      where: { id: duty_id, school_id ,trash: false},
+    });
+    if (!duty) return res.status(404).json({ error: "Duty not found" });
 
     const newStaffIds = updates.map((u) => u.staff_id);
 
@@ -2669,7 +2733,10 @@ const getTrashedDuties = async (req, res) => {
 const restoreDuty = async (req, res) => {
   try {
     const { id } = req.params;
-    const duty = await Duty.findByPk(id);
+    const school_id = req.user.school_id;
+    const duty = await Duty.findOne({
+      where: { id, school_id, trash: true },
+    })
     if (!duty) return res.status(404).json({ error: "Not found" });
 
     await Duty.update({ trash: false }, { where: { id: id } });
@@ -2683,13 +2750,17 @@ const restoreDuty = async (req, res) => {
   }
 };
 const permanentDeleteDuty = async (req, res) => {
+  const transaction = await schoolSequelize.transaction();
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    await DutyAssignment.destroy({ where: { duty_id: id, school_id } });
-    await Duty.destroy({ where: { id } });
+    await DutyAssignment.destroy({ where: { duty_id: id} }, { transaction });
+    await Duty.destroy({ where: { id, school_id ,trash: true} }, { transaction });
+    await transaction.commit();
     res.json({ message: "Peremently Deleted Duty" });
   } catch (err) {
+    await transaction.rollback();
+    logger.error("schoolId:", req.user.school_id, "permanentDeleteDuty →", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -2888,7 +2959,9 @@ const getAchievementById = async (req, res) => {
 
 const updateAchievement = async (req, res) => {
   try {
-    const achievement = await Achievement.findByPk(req.params.id, {
+    const school_id = req.user.school_id;
+    const achievement = await Achievement.findOne({
+      where: { id: req.params.id, school_id },
       attributes: ["id", "title", "description", "category", "level", "date"],
     });
     if (!achievement) {
@@ -2925,6 +2998,12 @@ const updateAchievement = async (req, res) => {
 const deleteAchievement = async (req, res) => {
   try {
     const school_id = req.user.school_id;
+    const achievement = await Achievement.findOne({
+      where: { id: req.params.id, school_id, trash: false },
+    })
+    if (!achievement) {
+      return res.status(404).json({ error: "Achievement not found" });
+    }
     await Achievement.update(
       { trash: true },
       { where: { id: req.params.id, school_id } },
@@ -2966,9 +3045,16 @@ const getTrashedAchievements = async (req, res) => {
 };
 const restoreAchievement = async (req, res) => {
   try {
+    const school_id = req.user.school_id;
+    const achievement = await Achievement.findOne({
+      where: { id: req.params.id, school_id, trash: true },
+    });
+    if (!achievement) {
+      return res.status(404).json({ error: "Achievement not found" });
+    }
     await Achievement.update(
       { trash: false },
-      { where: { id: req.params.id } },
+      { where: { id: req.params.id, school_id } },
     );
     res.status(200).json({ message: "Achievement restored successfully" });
   } catch (error) {
@@ -2995,12 +3081,13 @@ const updateStudentAchievement = async (req, res) => {
       return res.status(400).json({ error: "Invalid status" });
     }
     const StudentAchievementData = await StudentAchievement.findOne({
-      where: { id: req.params.id, school_id },
+      where: { id: req.params.id},
       attributes: ["id", "status", "proof_document", "remarks"],
       include: [
         {
           model: Achievement,
-          attributes: ["id", "title"],
+          attributes: ["id", "title","student_id"],
+            where: { school_id },
         },
       ],
     });
@@ -3225,11 +3312,12 @@ const getTrashedEvents = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const school_id = req.user.school_id;
     const { count, rows: events } = await Event.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: { trash: true },
+      where: { trash: true, school_id },
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -3245,7 +3333,10 @@ const getTrashedEvents = async (req, res) => {
 };
 const restoreEvent = async (req, res) => {
   try {
-    await Event.update({ trash: false }, { where: { id: req.params.id } });
+    const school_id = req.user.school_id;
+    const event = await Event.findOne({ where: { id: req.params.id, school_id, trash: true } });
+    if (!event) return res.status(404).json({ error: "Event not found" });
+    await Event.update({ trash: false }, { where: { id: req.params.id, school_id } });
     res.status(200).json({ message: "Event restored successfully" });
   } catch (error) {
     logger.error("schoolId:", req.user.school_id, "restoreEvent :", error);
@@ -3963,12 +4054,15 @@ const createInvoice = async (req, res) => {
 };
 const addInvoiceStudentsbyInvoiceId = async (req, res) => {
   try {
-    const { id } = req.params; // invoice_id
+    const { id } = req.params;
+    const school_id = req.user.school_id;
     const {
       student_ids, // array of student_ids to attach
     } = req.body;
 
-    const invoice = await Invoice.findByPk(id);
+    const invoice = await Invoice.findOne({
+      where: { id, school_id, trash: false },
+    });
     if (!invoice) {
       return res.status(404).json({ error: "Invoice not found" });
     }
@@ -4126,7 +4220,12 @@ const getTrashedInvoices = async (req, res) => {
 };
 const restoreInvoice = async (req, res) => {
   try {
-    await Invoice.update({ trash: false }, { where: { id: req.params.id } });
+    const school_id = req.user.school_id;
+    const invoice = await Invoice.findOne({
+      where: { id: req.params.id, school_id, trash: true },
+    });
+    if (!invoice) return res.status(404).json({ error: "Invoice not found" });
+    await invoice.update({ trash: false });
     res.status(200).json({ message: "Invoice restored" });
   } catch (err) {
     logger.error("schoolId:", req.user.school_id, "restoreInvoice :", err);
@@ -4636,9 +4735,10 @@ const getTrashedLeaveRequests = async (req, res) => {
 const restoreLeaveRequest = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
 
     const leave = await LeaveRequest.findOne({
-      where: { id: id, trash: true },
+      where: { id: id, trash: true, school_id },
     });
     if (!leave) return res.status(404).json({ error: "Not found" });
 
@@ -5111,8 +5211,9 @@ const getTrashedNews = async (req, res) => {
 };
 const restoreNews = async (req, res) => {
   try {
+    const school_id = req.user.school_id;
     const { id } = req.params;
-    const news = await News.findOne({ where: { id, trash: true } });
+    const news = await News.findOne({ where: { id, trash: true, school_id } });
     if (!news) return res.status(404).json({ error: "Not found" });
     await news.update({ trash: false });
     res.json({ message: "Restored" });
@@ -5129,7 +5230,8 @@ const restoreNews = async (req, res) => {
 const permanentDeleteNews = async (req, res) => {
   try {
     const { id } = req.params;
-    const news = await News.findOne({ where: { id, trash: true } });
+    const school_id = req.user.school_id;
+    const news = await News.findOne({ where: { id, trash: true, school_id } });
     if (!news) return res.status(404).json({ error: "Not found" });
     // if (news.file) {
     //   const uploadPath = newsfilePath;
@@ -5465,8 +5567,10 @@ const getTrashedNotices = async (req, res) => {
 const restoreNotice = async (req, res) => {
   try {
     const { id } = req.params;
-    const [rows] = await Notice.update({ trash: false }, { where: { id: id } });
-    if (!rows) return res.status(404).json({ error: "Not found" });
+    const school_id = req.user.school_id;
+    const notice = await Notice.findOne({ where: { id, trash: true, school_id } });
+    if (!notice) return res.status(404).json({ error: "Not found" });
+    await notice.update({ trash: false });
     res.json({ message: "Notice restored" });
   } catch (err) {
     logger.error(
@@ -6409,8 +6513,9 @@ const getAllSubstitutions = async (req, res) => {
 const getSubstitutionById = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const substitution = await TimetableSubstitution.findOne({
-      where: { id },
+      where: { id, school_id },
       include: [
         {
           model: Timetable,
@@ -6441,9 +6546,17 @@ const getSubstitutionById = async (req, res) => {
 const updateSubstitution = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const { sub_staff_id, subject_id, reason } = req.body;
     if (!id || !sub_staff_id || !subject_id) {
       return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const substitution = await TimetableSubstitution.findOne({
+      where: { id, school_id },
+    });
+    if (!substitution) {
+      return res.status(404).json({ error: "Substitution not found" });
     }
 
     const updated = await TimetableSubstitution.update(
@@ -6463,6 +6576,13 @@ const updateSubstitution = async (req, res) => {
 const deleteSubstitution = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
+    const substitution = await TimetableSubstitution.findOne({
+      where: { id, school_id },
+    })
+    if (!substitution) {
+      return res.status(404).json({ error: "Substitution not found" });
+    }
     await TimetableSubstitution.destroy({ where: { id } });
     res.json({ message: "Substitution deleted" });
   } catch (err) {
@@ -6839,10 +6959,11 @@ const getInternalmarkById = async (req, res) => {
 const getHomeworkById = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
 
     const homework = await Homework.findOne({
       attributes: ["id", "title", "description", "due_date", "file"],
-      where: { id, trash: false },
+      where: { id, trash: false, school_id },
       include: [
         { model: Class, attributes: ["id", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
