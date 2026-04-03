@@ -40,6 +40,7 @@ const StudentRoutes = require("./studentroutes");
 const StudentRouteAssignment = require("./student_route_assignment");
 const RouteDrivers = require("./route_drivers");
 const RouteStopLog = require("./route_stop_log");
+const Session = require("./session");
 
 // Relations
 
@@ -104,6 +105,8 @@ Student.belongsTo(School, { foreignKey: "school_id" });
 Student.belongsTo(User, { foreignKey: "guardian_id" });
 User.hasOne(Student, { foreignKey: "guardian_id" });
 User.hasOne(Guardian, { foreignKey: "user_id" });
+Session.belongsTo(User, { foreignKey: "user_id" });
+User.hasMany(Session, { foreignKey: "user_id" });
 InternalMark.belongsTo(School, { foreignKey: "school_id" });
 InternalMark.belongsTo(Class, { foreignKey: "class_id" });
 InternalMark.belongsTo(Subject, { foreignKey: "subject_id" });
@@ -320,4 +323,5 @@ module.exports = {
   StudentRouteAssignment,
   RouteDrivers,
   RouteStopLog,
+  Session,
 };

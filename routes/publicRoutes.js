@@ -13,5 +13,7 @@ const loginRateLimiter = rateLimit({
 
 // Public Routes
 router.post("/login", loginRateLimiter, publicController.login);
+router.post("/refresh-token", publicController.refreshToken);
+router.post("/logout", publicController.logout);
 
 module.exports = router;
