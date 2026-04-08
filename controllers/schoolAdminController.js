@@ -442,6 +442,16 @@ const updateSubject = async (req, res) => {
     const { id } = req.params;
     const school_id = req.user.school_id;
     const { subject_name, class_range } = req.body;
+    const subject = await Subject.findOne({
+      where: {
+        id,
+        trash: false,
+        school_id,
+      },
+    });
+    if (!subject) {
+      return res.status(404).json({ message: "Subject not found" });
+    }
 
     const exists = await Subject.findOne({
       where: {
@@ -458,10 +468,6 @@ const updateSubject = async (req, res) => {
         error: "Another subject with the same details already exists.",
       });
     }
-
-    const subject = await Subject.findByPk(id);
-    if (!subject || subject.trash)
-      return res.status(404).json({ error: "Subject not found" });
 
     await subject.update({ subject_name, class_range, school_id });
     res.status(200).json(subject);
@@ -3971,10 +3977,20 @@ const getTrashedDonations = async (req, res) => {
 };
 const restorePayment = async (req, res) => {
   try {
-    await Payment.update({ trash: false }, { where: { id: req.params.id } });
+    const school_id = req.user.school_id;
+    const payment = await Payment.findOne({
+      where: { id: req.params.id, school_id, trash: true },
+    });
+    if (!payment) {
+      return res.status(404).json({ error: "Payment not found" });
+    }
+    await Payment.update(
+      { trash: false },
+      { where: { id: req.params.id, school_id, trash: true } },
+    );
     res.status(200).json({ message: "Payment restored successfully" });
   } catch (err) {
-    exi;
+    logger.error("schoolId:", req.user.school_id, "restorePayment :", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -4066,7 +4082,15 @@ const addInvoiceStudentsbyInvoiceId = async (req, res) => {
     if (!invoice) {
       return res.status(404).json({ error: "Invoice not found" });
     }
-    if (student_ids && Array.isArray(student_ids)) {
+    
+  if (student_ids && Array.isArray(student_ids)) {
+      const students = await Student.findAll({
+        where: { id: student_ids, school_id ,trash: false},
+      });
+      if(!students || students.length !== student_ids.length){
+        return res.status(400).json({ error: "One or more students not found in this school" });
+      }
+    
       const invoiceStudents = student_ids.map((student_id) => ({
         invoice_id: id,
         student_id,
@@ -5621,6 +5645,11 @@ const bulkUpsertTimetable = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     let { records } = req.body;
+    const staffIds = records.map((record) => record.staff_id);
+    const staff = await Staff.findAll({ where: { user_id: staffIds, school_id } });
+    if (staff.length !== staffIds.length) {
+      return res.status(400).json({ error: "Invalid staff_ids" });
+    }
 
     if (!records || !Array.isArray(records)) {
       return res.status(400).json({ error: "Invalid records format" });
@@ -7075,11 +7104,16 @@ const createStaffAttendance = async (req, res) => {
     const school_id = req.user.school_id;
     const { staff_id, date, status, check_in_time, check_out_time, remarks } =
       req.body;
-
+  const staff = await Staff.findOne({
+      where: { id: staff_id, school_id, trash: false },
+    });
+    if (!staff) {
+      return res.status(404).json({ error: "Staff not found" });
+    }
     const existing = await StaffAttendance.findOne({
       where: { school_id, staff_id, date, trash: false },
     });
-
+  
     if (existing)
       return res
         .status(400)
@@ -7302,6 +7336,14 @@ const bulkCreateStaffAttendance = async (req, res) => {
     const processedRecords = [];
     for (const record of records) {
       const { staff_id, date, status, remarks } = record;
+      // check the staff id is the same school
+        const staff = await Staff.findOne({
+      where: { id: staff_id, school_id, trash: false },
+    });
+    if (!staff) {
+      return res.status(404).json({ error: "Staff not found" });
+    }
+
       const check_in_time =
         record.check_in_time || record.status === "present"
           ? new Date().toISOString()
