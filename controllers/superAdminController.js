@@ -14,9 +14,10 @@ const {
 const { Op } = require("sequelize");
 const { Payment } = require("../models");
 const Invoice = require("../models/invoice");
+const { deleteFile } = require("../middlewares/storageUploads");
 
 const createSchool = async (req, res) => {
-    const transaction = await schoolSequelize.transaction();
+  const transaction = await schoolSequelize.transaction();
   try {
     const {
       name,
@@ -46,6 +47,9 @@ const createSchool = async (req, res) => {
         .status(400)
         .json({ error: "SchoolAdmin email already exists in user table" });
     }
+
+    const logoUrl = req.uploadedFiles?.logo?.[0]?.url || null;
+    const bgImageUrl = req.uploadedFiles?.image?.[0]?.url || null;
 
     const existingPhone = await User.findOne({
       where: { phone: phone },
@@ -77,13 +81,13 @@ const createSchool = async (req, res) => {
       phone,
       address,
       period_count,
-      logo: fileName,
+      logo: logoUrl,
       syllabus_id,
       attendance_count,
       education_year_start,
       location,
       pass_percent,
-      bg_image: bgImageFileName,
+      bg_image: bgImageUrl,
       primary_colour,
       secondary_colour,
     }, { transaction });
@@ -96,7 +100,7 @@ const createSchool = async (req, res) => {
       phone,
       password: hashedPassword,
       school_id: school.id,
-      dp: fileName,
+      dp: logoUrl,
       role: "admin",
       status: "active",
     }, { transaction });
@@ -109,7 +113,7 @@ const createSchool = async (req, res) => {
   } catch (error) {
     console.error("Create school error:", error);
     logger.error("Create school error:", error);
-      await transaction.rollback();
+    await transaction.rollback();
     res.status(500).json({ error: error.message });
   }
 };
@@ -175,27 +179,25 @@ const updateSchool = async (req, res) => {
     const school = await School.findByPk(id);
     if (!school) return res.status(404).json({ error: "School not found" });
 
-    let fileName = school.logo;
-    if (req.files?.logo) {
-      const uploadPath = "uploads/school_logos/";
-      fileName = await compressAndSaveFile(req.files.logo[0], uploadPath);
-      const oldFileName = school.logo;
-      if (oldFileName) {
-        await deletefilewithfoldername(oldFileName, uploadPath);
+    const newLogoUrl = req.uploadedFiles?.logo?.[0]?.url || null;
+    const newBgImageUrl = req.uploadedFiles?.image?.[0]?.url || null;
+
+
+    let finalLogo = school.logo;
+    let finalBgImage = school.bg_image;
+
+    if (newLogoUrl) {
+      if (school.logo) {
+        await deleteFile(school.logo);
       }
+      finalLogo = newLogoUrl;
     }
 
-    let bgImageFileName = school.bg_image;
-    if (req.files?.image) {
-      const uploadPath = "uploads/school_image/";
-      bgImageFileName = await compressAndSaveFile(
-        req.files.image[0],
-        uploadPath
-      );
-      const oldFileName = school.bg_image;
-      if (oldFileName) {
-        await deletefilewithfoldername(oldFileName, uploadPath);
+    if (newBgImageUrl) {
+      if (school.bg_image) {
+        await deleteFile(school.bg_image);
       }
+      finalBgImage = newBgImageUrl;
     }
     await school.update({
       name,
@@ -203,14 +205,14 @@ const updateSchool = async (req, res) => {
       phone,
       address,
       period_count,
-      logo: fileName,
+      logo: finalLogo,
+      bg_image: finalBgImage,
       status,
       syllabus_id,
       attendance_count,
       education_year_start,
       location,
       pass_percent,
-      bg_image: bgImageFileName,
       primary_colour,
       secondary_colour,
     });
@@ -222,21 +224,21 @@ const updateSchool = async (req, res) => {
   }
 };
 const updateSchoolCredentials = async (req, res) => {
-    const transaction = await schoolSequelize.transaction();
+  const transaction = await schoolSequelize.transaction();
   try {
     const { id } = req.params;
-    const { name, email, phone , admin_password} = req.body;
+    const { name, email, phone, admin_password } = req.body;
     const school = await School.findByPk(id);
     if (!school) return res.status(404).json({ error: "School not found" });
 
-  const existingUser = await User.findOne({
+    const existingUser = await User.findOne({
       where: {
         email: email,
         role: "admin",
         school_id: { [Op.ne]: id },
       },
     });
-  if (existingUser) {
+    if (existingUser) {
       return res
         .status(400)
         .json({ error: "Email already exists in user table" });
@@ -263,7 +265,7 @@ const updateSchoolCredentials = async (req, res) => {
         .json({ error: "Admin user for this school not found" });
 
     }
-   let updateData = {};
+    let updateData = {};
     if (name) {
       updateData.name = name;
     }
@@ -282,7 +284,7 @@ const updateSchoolCredentials = async (req, res) => {
 
     await transaction.commit();
 
-    res.status(200).json({ message: "School credentials updated successfully"});
+    res.status(200).json({ message: "School credentials updated successfully" });
 
 
   } catch (error) {
@@ -617,7 +619,7 @@ const getSubjects = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    let whereClause = {trash: false};
+    let whereClause = { trash: false };
 
     if (searchQuery) {
       whereClause.subject_name = { [Op.like]: `%${searchQuery}%` };
@@ -769,7 +771,7 @@ const getTrashedSubjects = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    let whereClause = {trash: true};
+    let whereClause = { trash: true };
 
     if (searchQuery) {
       whereClause.subject_name = { [Op.like]: `%${searchQuery}%` };
@@ -1047,7 +1049,7 @@ const dashboardCounts = async (req, res) => {
 
     const totalAccountDeleteRequests = await AccountDelete.count();
     const pendingAccountDeleteRequests = await AccountDelete.count({ where: { status: "pending" } });
-    
+
     const totalPayments = await Payment.count();
     const totalInvoices = await Invoice.count();
 
@@ -1065,7 +1067,7 @@ const dashboardCounts = async (req, res) => {
       pendingAccountDeleteRequests,
       totalPayments,
       totalInvoices,
-     
+
     });
   } catch (err) {
     logger.error("Error getting dashboard stats:", err);
@@ -1074,7 +1076,7 @@ const dashboardCounts = async (req, res) => {
 };
 const recentActivities = async (req, res) => {
   try {
-      const recentSchools = await School.findAll({
+    const recentSchools = await School.findAll({
       where: { trash: false },
       order: [["createdAt", "DESC"]],
       limit: 3,
@@ -1095,7 +1097,7 @@ const recentActivities = async (req, res) => {
       limit: 3,
     });
 
-res.status(200).json({
+    res.status(200).json({
       recentSchools,
       recentStudents,
       recentTeachers,
@@ -1147,7 +1149,7 @@ module.exports = {
   restoreSyllabus,
   permanentlyDeleteSyllabus,
   getTrashedSyllabuses,
-  
+
   dashboardCounts,
   recentActivities,
 };

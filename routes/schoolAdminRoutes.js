@@ -8,6 +8,7 @@ const commonController = require("../controllers/commonController");
 const reportController = require("../controllers/reportController");
 
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
+const { storageUploadMiddleware } = require("../middlewares/storageUploads");
 
 // Class routes
 router.post("/classes", schoolAdminController.createClass); // Create a new class
@@ -42,6 +43,7 @@ router.delete(
 router.post(
   "/staffs",
   uploadWithErrorHandler(upload.single("dp")),
+  storageUploadMiddleware("staffs"),
   schoolAdminController.createStaff,
 );
 router.get("/staffs", schoolAdminController.getAllStaff);
@@ -49,12 +51,14 @@ router.get("/staffs/:staff_id", schoolAdminController.getStaffById);
 router.put(
   "/staffs/:staff_id",
   uploadWithErrorHandler(upload.single("dp")),
+  storageUploadMiddleware("staffs"),
   schoolAdminController.updateStaff,
 );
 router.get("/getStaffs", schoolAdminController.getStaffs);
 router.put(
   "/updateStaffUser/:user_id",
   uploadWithErrorHandler(upload.single("dp")),
+  storageUploadMiddleware("staffs"),
   schoolAdminController.updateStaffUser,
 );
 router.delete("/staffs/:staff_id", schoolAdminController.deleteStaff);
@@ -77,6 +81,7 @@ router.put(
 router.post(
   "/guardian",
   uploadWithErrorHandler(upload.single("dp")),
+  storageUploadMiddleware("guardians"),
   schoolAdminController.createGuardian,
 );
 router.get("/guardian", schoolAdminController.getAllGuardians);
@@ -105,6 +110,7 @@ router.post(
       { name: "image", maxCount: 1 }, // student image
     ]),
   ),
+  storageUploadMiddleware("students"),
   schoolAdminController.createStudent,
 );
 router.post("/bulkCreateStudents", schoolAdminController.bulkCreateStudents);
@@ -176,6 +182,7 @@ router.put(
 router.post(
   "/events",
   uploadWithErrorHandler(upload.single("file")),
+  storageUploadMiddleware("events"),
   schoolAdminController.createEvent,
 );
 router.get("/events", schoolAdminController.getAllEvents);
@@ -183,6 +190,7 @@ router.get("/events/:id", schoolAdminController.getEventById);
 router.put(
   "/events/:id",
   uploadWithErrorHandler(upload.single("file")),
+  storageUploadMiddleware("events"),
   schoolAdminController.updateEvent,
 );
 router.delete("/events/:id", schoolAdminController.deleteEvent);
@@ -227,6 +235,7 @@ router.get("/getTrashedInvoices", schoolAdminController.getTrashedInvoices);
 router.post(
   "/leaveRequest",
   uploadWithErrorHandler(upload.single("attachment")),
+  storageUploadMiddleware("leaverequests"),
   schoolAdminController.createLeaveRequest,
 );
 router.get("/leaveRequest", schoolAdminController.getAllLeaveRequests);
@@ -240,6 +249,7 @@ router.delete(
 router.put(
   "/leaveRequest/:id",
   uploadWithErrorHandler(upload.single("attachment")),
+  storageUploadMiddleware("leaverequests"),
   schoolAdminController.updateLeaveRequest,
 );
 router.patch(
@@ -273,6 +283,7 @@ router.post(
       { name: "images", maxCount: 10 },
     ]),
   ),
+  storageUploadMiddleware("news"),
   schoolAdminController.createNews,
 );
 
@@ -284,6 +295,7 @@ router.put(
     // { name: "file", maxCount: 1 },
     { name: "images", maxCount: 10 },
   ]),
+  storageUploadMiddleware("news"),
   schoolAdminController.updateNews,
 );
 router.delete("/news/:id", schoolAdminController.deleteNews);
@@ -299,6 +311,7 @@ router.delete("/deleteNewsImage/:id", schoolAdminController.deleteNewsImage);
 router.post(
   "/notices",
   uploadWithErrorHandler(upload.single("file")),
+  storageUploadMiddleware("notices"),
   schoolAdminController.createNotice,
 );
 router.get("/notices", schoolAdminController.getAllNotices);
@@ -306,6 +319,7 @@ router.get("/notices/:id", schoolAdminController.getNoticeById);
 router.put(
   "/notices/:id",
   uploadWithErrorHandler(upload.single("file")),
+  storageUploadMiddleware("notices"),
   schoolAdminController.updateNotice,
 );
 router.delete("/notices/:id", schoolAdminController.deleteNotice);
@@ -463,6 +477,7 @@ router.get("/internalmarksReport", reportController.getInternalmarksReport);
 router.post(
   "/driver",
   uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
+  storageUploadMiddleware("drivers"),
   schoolAdminController.createDriver,
 );
 
@@ -470,6 +485,7 @@ router.post(
 router.post(
   "/vehicle",
   uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
+  storageUploadMiddleware("vehicles"),
   schoolAdminController.createVehicle,
 );
 
@@ -489,7 +505,8 @@ router.get("/getDriverById/:id", trackerController.getDriverById);
 router.get("/getAllDrivers", schoolAdminController.getAllDrivers);
 router.put(
   "/updateDriverById/:id",
-  uploadWithErrorHandler(upload.single("photo")),
+  uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
+  storageUploadMiddleware("drivers"),
   trackerController.updateDriverById,
 );
 router.delete("/deleteDriverById/:id", trackerController.deleteDriverById);
@@ -530,7 +547,9 @@ router.put(
 router.delete("/deleteStudentFromRoute/:route_id", schoolAdminController.deleteStudentFromRoute);
 
 //update vehicle
-router.put("/updateVehicle/:id", uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])), schoolAdminController.updateVehicle);
+router.put("/updateVehicle/:id", uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
+  storageUploadMiddleware("vehicles"),
+  schoolAdminController.updateVehicle);
 
 router.get("/getDriversAssignedToRoutes", schoolAdminController.getDriversAssignedToRoutes);
 

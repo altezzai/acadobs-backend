@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "aws-sdk": "^2.1693.0",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
@@ -34,6 +35,7 @@
     "sequelize-cli": "^6.6.2",
     "sharp": "^0.34.0",
     "socket.io": "^4.8.1",
+    "uuid": "^13.0.0",
     "winston": "^3.18.3"
   },
   "devDependencies": {

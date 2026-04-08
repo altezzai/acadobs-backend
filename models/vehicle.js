@@ -35,6 +35,10 @@ const Vehicle = schoolSequelize.define(
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
+    updatedAt: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+    },
 
     driver_id: {
       type: DataTypes.INTEGER,
