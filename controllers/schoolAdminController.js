@@ -3758,6 +3758,12 @@ const updatePayment = async (req, res) => {
 const deletePayment = async (req, res) => {
   try {
     const school_id = req.user.school_id;
+    const payment = await Payment.findOne({
+      where: { id: req.params.id, school_id, trash: false },
+    })
+    if (!payment) {
+      return res.status(404).json({ error: "Payment not found" });
+    }
     await Payment.update(
       { trash: true },
       { where: { id: req.params.id, school_id } },
@@ -7357,6 +7363,7 @@ const bulkCreateStaffAttendance = async (req, res) => {
       if (existing) {
         processedRecords.push({
           staff_id,
+          school_id,
           date,
           status: "Skipped",
           message: "Attendance already exists for this staff on the date",
