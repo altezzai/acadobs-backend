@@ -7344,7 +7344,7 @@ const bulkCreateStaffAttendance = async (req, res) => {
       const { staff_id, date, status, remarks } = record;
       // check the staff id is the same school
         const staff = await Staff.findOne({
-      where: { id: staff_id, school_id, trash: false },
+      where: { user_id: staff_id, school_id, trash: false },
     });
     if (!staff) {
       return res.status(404).json({ error: "Staff not found" });
