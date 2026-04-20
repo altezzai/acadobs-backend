@@ -486,8 +486,9 @@ const updateSubject = async (req, res) => {
 const deleteSubject = async (req, res) => {
   try {
     const { id } = req.params;
-    const subject = await Subject.findByPk(id);
-    if (!subject || subject.trash)
+    const school_id = req.user.school_id;
+    const subject = await Subject.findOne({ where: { id, school_id, trash: false } });
+    if (!subject)
       return res.status(404).json({ error: "Subject not found" });
 
     subject.trash = true;
@@ -599,10 +600,10 @@ const restoreSubject = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const subject = await Subject.findOne({ where: { id, school_id } });
-    if (!subject || !subject.trash)
+    const subject = await Subject.findOne({ where: { id, school_id , trash: true} });
+    if (!subject){
       return res.status(404).json({ error: "Subject not found" });
-
+    }
     subject.trash = false;
     await subject.save();
 
