@@ -1390,7 +1390,7 @@ const createGuardian = async (req, res) => {
 const createGuardianService = async (guardianData, fileBuffer, req) => {
   try {
     const {
-      school_id
+      school_id,
       guardian_relation,
       guardian_name,
       guardian_contact,
