@@ -1389,8 +1389,8 @@ const createGuardian = async (req, res) => {
 };
 const createGuardianService = async (guardianData, fileBuffer, req) => {
   try {
-    const school_id = req.user.school_id;
     const {
+      school_id
       guardian_relation,
       guardian_name,
       guardian_contact,
@@ -1411,6 +1411,7 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
       country,
       post,
       pincode,
+
     } = guardianData;
 
     if (!guardian_name || !guardian_contact) {
@@ -1833,6 +1834,7 @@ const createStudent = async (req, res) => {
       }
 
       const guardianData = {
+        school_id,
         guardian_email,
         guardian_name,
         guardian_contact,
@@ -2015,6 +2017,7 @@ const bulkCreateStudents = async (req, res) => {
         }
 
         const guardianData = {
+          school_id,
           guardian_email,
           guardian_name,
           guardian_contact,
