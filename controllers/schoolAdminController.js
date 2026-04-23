@@ -2103,16 +2103,27 @@ const getAllStudents = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const classId = req.query.class_id;
+
+     const whereClause = {
+      trash: false,
+      school_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { reg_no: { [Op.like]: `%${searchQuery}%` } },
+        { full_name: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if (classId) {
+      whereClause.class_id = classId;
+    }
 
     const { count, rows: students } = await Student.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: {
-        school_id,
-        full_name: { [Op.like]: `%${searchQuery}%` },
-        trash: false,
-      },
+      where: whereClause,
 
       include: [
         { model: User, attributes: ["name", "email", "phone", "dp"] },
@@ -2184,6 +2195,7 @@ const updateStudent = async (req, res) => {
       admission_date,
       status,
       second_language,
+      alumni,
     } = req.body;
     if (reg_no) {
       const existingRegNo = await Student.findOne({
@@ -2226,6 +2238,7 @@ const updateStudent = async (req, res) => {
       status,
       second_language,
       image: studentImageFilename,
+      alumni,
     });
 
     res.status(200).json({ message: "Student updated successfully", updated });
@@ -2266,6 +2279,106 @@ const deleteStudent = async (req, res) => {
     res.status(500).json({ error: "Failed to delete student" });
   }
 };
+const restoreStudent = async (req, res) => {
+  try {  
+    const school_id = req.user.school_id;
+    const { id } = req.params;
+    const student = await Student.findByPk(id);
+    if (!student || !student.trash) {
+      return res.status(404).json({ error: "Student not found or not in trash" });
+    }
+    await student.update({ trash: false });
+    res.status(200).json({ message: "Student restored successfully" });
+  } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error restoring student:",
+      err,
+    );
+    console.error("Error restoring student:", err);
+    res.status(500).json({ error: "Failed to restore student" });
+  }
+};
+const getTrashedStudents = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;          
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: true,
+      school_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { reg_no: { [Op.like]: `%${searchQuery}%` } },
+        { full_name: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: students } = await Student.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [ { model: User, attributes: ["name", "email", "phone", "dp"] },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({ totalcontent: count, totalPages, currentPage: page, students });
+  } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching trashed students:",
+      err,  
+    );
+    console.error("Error fetching trashed students:", err);
+    res.status(500).json({ error: "Failed to fetch trashed students" });
+  }
+};
+
+const bulkUpdateStudentsToAlumni = async (req, res) => {
+  try {    const school_id = req.user.school_id;
+    const { studentIds } = req.body;
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ error: "No student IDs provided" });
+    }
+
+    const transaction = await schoolSequelize.transaction();
+    try {
+      const result = await Student.update(
+        { alumni: true },
+        { where: { id: studentIds }, transaction },
+      );
+
+      await transaction.commit();
+      res.status(200).json({ message: `${result[0]} students updated to alumni` });
+    } catch (err) {
+      await transaction.rollback();
+      logger.error(
+        "schoolId:",
+        req.user.school_id,
+        "Error updating students to alumni:",
+        err
+      );
+      console.error("Error updating students to alumni:", err);
+      res.status(500).json({ error: "Failed to update students to alumni" });
+    }
+  } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error in bulkUpdateStudentsToAlumni:",
+      err
+    );
+    console.error("Error in bulkUpdateStudentsToAlumni:", err);
+    res.status(500).json({ error: "Failed to update students to alumni" });
+  }
+};
+
 
 const createDutyWithAssignments = async (req, res) => {
   const transaction = await schoolSequelize.transaction();
@@ -2874,19 +2987,22 @@ const getAllAchievements = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
+    const class_id = req.query.class_id || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+
     const whereClause = {
       trash: false,
       school_id: school_id,
     };
     if (searchQuery) {
       whereClause[Op.or] = [
-        { title: { [Op.like]: `%${searchQuery}%` } },
-        { description: { [Op.like]: `%${searchQuery}%` } },
+        { title: { [Op.like]: `%${searchQuery}%` } }, // Corrected syntax
+        { description: { [Op.like]: `%${searchQuery}%` } }, // Corrected syntax
       ];
     }
+
     const { count, rows: achievements } = await Achievement.findAndCountAll({
       offset,
       distinct: true,
@@ -2895,23 +3011,24 @@ const getAllAchievements = async (req, res) => {
       attributes: ["id", "title", "description", "category", "level", "date"],
       include: [
         {
-          model: StudentAchievement,
-          attributes: ["student_id", "status", "proof_document", "remarks"],
+          model: Student,
+          attributes: ["id", "full_name", "reg_no", "image", "class_id"],
+          where: class_id ? { class_id } : undefined,
+          required: true,
+          through: {
+            model: StudentAchievement,
+            attributes: ["status", "proof_document", "remarks"],
+          },
           include: [
             {
-              model: Student,
-              attributes: ["id", "full_name", "reg_no", "image"],
-              include: [
-                {
-                  model: Class,
-                  attributes: ["id", "classname", "year", "division"],
-                },
-              ],
+              model: Class,
+              attributes: ["id", "classname", "year", "division"],
             },
           ],
         },
       ],
     });
+
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
@@ -2920,12 +3037,7 @@ const getAllAchievements = async (req, res) => {
       achievements,
     });
   } catch (error) {
-    logger.error(
-      "schoolId:",
-      req.user.school_id,
-      "getAllAchievements →",
-      error,
-    );
+    console.error("Error fetching achievements:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -4360,73 +4472,73 @@ const createLeaveRequest = async (req, res) => {
   }
 };
 
-const getAllLeaveRequests = async (req, res) => {
-  try {
-    const school_id = req.user.school_id;
-    if (!school_id) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-    const searchQuery = req.query.q || "";
-    const date = req.query.date || "";
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
-    const whereClause = {
-      trash: false,
-      school_id: school_id,
-    };
-    if (searchQuery) {
-      whereClause[Op.or] = [{ reason: { [Op.like]: `%${searchQuery}%` } }];
-    }
-    if (date) {
-      whereClause[Op.or] = [
-        { from_date: { [Op.like]: `%${date}%` } },
-        { to_date: { [Op.like]: `%${date}%` } },
-      ];
-    }
-    const { count, rows: leaves } = await LeaveRequest.findAndCountAll({
-      offset,
-      distinct: true,
-      limit,
-      where: whereClause,
-      attributes: [
-        "id",
-        "from_date",
-        "to_date",
-        "leave_type",
-        "leave_duration",
-        "reason",
-        "attachment",
-        "leave_duration",
-        "status",
-        "admin_remarks",
-      ],
-      order: [["createdAt", "DESC"]],
-      include: [
-        {
-          model: User,
-          attributes: ["id", "name", "email", "phone"],
-        },
-      ],
-    });
-    const totalPages = Math.ceil(count / limit);
-    res.status(200).json({
-      totalcontent: count,
-      totalPages,
-      currentPage: page,
-      leaves,
-    });
-  } catch (error) {
-    logger.error(
-      "schoolId:",
-      req.user.school_id,
-      "getAllLeaveRequests :",
-      error,
-    );
-    console.error("Fetch Error:", error);
-    res.status(500).json({ error: "Failed to fetch leave requests" });
-  }
-};
+// const getAllLeaveRequests = async (req, res) => {
+//   try {
+//     const school_id = req.user.school_id;
+//     if (!school_id) {
+//       return res.status(400).json({ error: "Missing required fields" });
+//     }
+//     const searchQuery = req.query.q || "";
+//     const date = req.query.date || "";
+//     const page = parseInt(req.query.page) || 1;
+//     const limit = parseInt(req.query.limit) || 10;
+//     const offset = (page - 1) * limit;
+//     const whereClause = {
+//       trash: false,
+//       school_id: school_id,
+//     };
+//     if (searchQuery) {
+//       whereClause[Op.or] = [{ reason: { [Op.like]: `%${searchQuery}%` } }];
+//     }
+//     if (date) {
+//       whereClause[Op.or] = [
+//         { from_date: { [Op.like]: `%${date}%` } },
+//         { to_date: { [Op.like]: `%${date}%` } },
+//       ];
+//     }
+//     const { count, rows: leaves } = await LeaveRequest.findAndCountAll({
+//       offset,
+//       distinct: true,
+//       limit,
+//       where: whereClause,
+//       attributes: [
+//         "id",
+//         "from_date",
+//         "to_date",
+//         "leave_type",
+//         "leave_duration",
+//         "reason",
+//         "attachment",
+//         "leave_duration",
+//         "status",
+//         "admin_remarks",
+//       ],
+//       order: [["createdAt", "DESC"]],
+//       include: [
+//         {
+//           model: User,
+//           attributes: ["id", "name", "email", "phone"],
+//         },
+//       ],
+//     });
+//     const totalPages = Math.ceil(count / limit);
+//     res.status(200).json({
+//       totalcontent: count,
+//       totalPages,
+//       currentPage: page,
+//       leaves,
+//     });
+//   } catch (error) {
+//     logger.error(
+//       "schoolId:",
+//       req.user.school_id,
+//       "getAllLeaveRequests :",
+//       error,
+//     );
+//     console.error("Fetch Error:", error);
+//     res.status(500).json({ error: "Failed to fetch leave requests" });
+//   }
+// };
 
 const getLeaveRequestById = async (req, res) => {
   try {
@@ -4930,6 +5042,7 @@ const getAllStudentLeaveRequests = async (req, res) => {
     const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
     const date = req.query.date || "";
+    const class_id = req.query.class_id || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -4952,10 +5065,27 @@ const getAllStudentLeaveRequests = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
+      attributes: [
+        "id",
+        "from_date",
+        "to_date",
+        "leave_type",
+        "leave_duration",
+        "reason",
+        "leave_duration",
+        "status",
+      ],
       include: [
         {
           model: Student,
           attributes: ["id", "full_name", "reg_no", "image"],
+          where: class_id ? { class_id } : {},
+          include: [
+            {
+              model: Class,
+              attributes: ["id", "classname"],
+            },
+          ],
         },
         {
           model: User,
@@ -8336,8 +8466,10 @@ module.exports = {
   getAllStudents,
   getStudentById,
   updateStudent,
+  bulkUpdateStudentsToAlumni,
   deleteStudent,
-  // getStudentsByClassId,
+  getTrashedStudents,
+  restoreStudent,
 
   createDutyWithAssignments,
   getDutyById,
@@ -8392,7 +8524,7 @@ module.exports = {
   getTrashedInvoices,
 
   createLeaveRequest,
-  getAllLeaveRequests,
+  // getAllLeaveRequests,
   getLeaveRequestById,
   updateLeaveRequest,
   leaveRequestPermission,

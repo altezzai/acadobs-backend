@@ -96,6 +96,11 @@ Duty.belongsTo(School, { foreignKey: "school_id" });
 DutyAssignment.belongsTo(Duty, { foreignKey: "duty_id" });
 DutyAssignment.belongsTo(User, { foreignKey: "staff_id" });
 
+Achievement.belongsToMany(Student, {
+  through: StudentAchievement,
+  foreignKey: 'achievement_id',
+  otherKey: 'student_id'
+});
 Achievement.hasMany(StudentAchievement, { foreignKey: "achievement_id" });
 StudentAchievement.belongsTo(Achievement, { foreignKey: "achievement_id" });
 StudentAchievement.belongsTo(Student, { foreignKey: "student_id" });
