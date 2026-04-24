@@ -119,6 +119,9 @@ router.delete("/students/:id", schoolAdminController.deleteStudent);
 router.patch("/students/:id", schoolAdminController.restoreStudent);
 router.get("/getTrashedStudents", schoolAdminController.getTrashedStudents);
 router.put("/bulkUpdateStudentsToAlumni", schoolAdminController.bulkUpdateStudentsToAlumni);
+router.get("/getAlumniStudents", schoolAdminController.getAlumniStudents);
+router.get("/getTrashedAlumniStudents", schoolAdminController.getTrashedAlumniStudents);
+
 
 //common controller
 router.get(

@@ -2108,6 +2108,7 @@ const getAllStudents = async (req, res) => {
      const whereClause = {
       trash: false,
       school_id,
+      alumni: false,
     };
     if (searchQuery) {
       whereClause[Op.or] = [
@@ -2378,7 +2379,101 @@ const bulkUpdateStudentsToAlumni = async (req, res) => {
     res.status(500).json({ error: "Failed to update students to alumni" });
   }
 };
+const getAlumniStudents = async (req, res) => {
+  try {
+  const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const classId = req.query.class_id;
 
+     const whereClause = {
+      trash: false,
+      school_id,
+      alumni: true,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { reg_no: { [Op.like]: `%${searchQuery}%` } },
+        { full_name: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if (classId) {
+      whereClause.class_id = classId;
+    }
+
+    const { count, rows: students } = await Student.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+
+      include: [
+        { model: User, attributes: ["name", "email", "phone", "dp"] },
+        {
+          model: Class,
+          attributes: ["id", "year", "division", "classname"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    res
+      .status(200)
+      .json({ totalcontent: count, totalPages, currentPage: page, students });
+  } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching students:",
+      err,
+    );
+    console.error("Error fetching students:", err);
+    res.status(500).json({ error: "Failed to fetch students" });
+  }
+};
+const getTrashedAlumniStudents = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;          
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: true,
+      school_id,
+      alumni: true,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { reg_no: { [Op.like]: `%${searchQuery}%` } },
+        { full_name: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: students } = await Student.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [ { model: User, attributes: ["name", "email", "phone", "dp"] },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({ totalcontent: count, totalPages, currentPage: page, students });
+  } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching trashed students:",
+      err,  
+    );
+    console.error("Error fetching trashed students:", err);
+    res.status(500).json({ error: "Failed to fetch trashed students" });
+  }
+};
 
 const createDutyWithAssignments = async (req, res) => {
   const transaction = await schoolSequelize.transaction();
@@ -6894,7 +6989,7 @@ const dashboardCounts = async (req, res) => {
     const endDate = req.query.endDate || moment().endOf("day").toDate();
 
     const totalStudents = await Student.count({
-      where: { school_id, trash: false },
+      where: { school_id, trash: false ,alumni: false, },
     });
 
     const totalTeachers = await Staff.count({
@@ -8467,9 +8562,11 @@ module.exports = {
   getStudentById,
   updateStudent,
   bulkUpdateStudentsToAlumni,
+  getAlumniStudents,
   deleteStudent,
   getTrashedStudents,
   restoreStudent,
+  getTrashedAlumniStudents,
 
   createDutyWithAssignments,
   getDutyById,
