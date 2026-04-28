@@ -32,17 +32,13 @@ const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Enforce single session: destroy any existing session for this user
     await Session.destroy({ where: { user_id: user.id } });
 
-    // Create a new refresh token
     const refreshToken = crypto.randomBytes(40).toString("hex");
 
-    // Save session in database mapping it to the user. Expire in 7 days.
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
     
-    // We can also extract IP & Device Info from req (if available)
     const ip_address = req.ip || req.connection.remoteAddress;
     const device_info = req.headers["user-agent"];
 
@@ -64,7 +60,7 @@ const login = async (req, res) => {
         sessionId: currentSession.id, // Embed session id!
       },
       secretKey,
-      { expiresIn: "15m" }
+      { expiresIn: "2m" }
     );
     const userData = {
       user_id: user.id,
@@ -125,7 +121,7 @@ const refreshToken = async (req, res) => {
         sessionId: session.id, // Embed session id
       },
       secretKey,
-      { expiresIn: "15m" }
+      { expiresIn: "2m" }
     );
 
     res.status(200).json({ token, refreshToken: newRefreshToken });
