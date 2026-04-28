@@ -622,9 +622,10 @@ const restoreSubject = async (req, res) => {
 // Permanent Delete Subject
 const permanentDeleteSubject = async (req, res) => {
   try {
+    const school_id = req.user.school_id;
     const { id } = req.params;
-    const subject = await Subject.findByPk(id);
-    if (!subject || !subject.trash)
+    const subject = await Subject.findOne({ where: { id, school_id, trash: true } });
+    if (!subject)
       return res.status(404).json({ error: "Subject not found" });
 
     await subject.destroy();
