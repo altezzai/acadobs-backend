@@ -17,7 +17,7 @@ const loginRateLimiter = rateLimit({
 // Public Routes
 router.post(
   "/login", 
-  loginRateLimiter, 
+  // loginRateLimiter, 
   [
     body('identifier').isString().trim().notEmpty().escape().withMessage('Valid identifier required'),
     body('password').isString().notEmpty().withMessage('Password must be provided') // Do not escape passwords
