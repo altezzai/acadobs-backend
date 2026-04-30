@@ -2312,6 +2312,7 @@ const getTrashedStudents = async (req, res) => {
     const whereClause = {
       trash: true,
       school_id,
+      alumni: false,
     };
     if (searchQuery) {
       whereClause[Op.or] = [
