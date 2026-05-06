@@ -60,7 +60,7 @@ const login = async (req, res) => {
         sessionId: currentSession.id, // Embed session id!
       },
       secretKey,
-      { expiresIn: "2m" }
+      { expiresIn: "15m" }
     );
     const userData = {
       user_id: user.id,
@@ -121,7 +121,7 @@ const refreshToken = async (req, res) => {
         sessionId: session.id, // Embed session id
       },
       secretKey,
-      { expiresIn: "2m" }
+      { expiresIn: "15m" }
     );
 
     res.status(200).json({ token, refreshToken: newRefreshToken });
