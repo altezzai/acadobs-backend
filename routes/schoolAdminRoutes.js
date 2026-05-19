@@ -6,6 +6,7 @@ const stopController = require("../controllers/tracker/stopController");
 const routeController = require("../controllers/tracker/routeController");
 const commonController = require("../controllers/commonController");
 const reportController = require("../controllers/reportController");
+const transferController = require("../controllers/transferController");
 
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 
@@ -545,5 +546,13 @@ router.get("/getDriversAssignedToRoutes", schoolAdminController.getDriversAssign
 router.put("/updateIsLock/:route_id", schoolAdminController.updateIsLock);
 //get getDriverLocation
 router.get("/getDriverLocation/:driver_id", schoolAdminController.getDriverLocation);
+
+// Student Transfer routes
+router.post("/studentTransfer", transferController.adminCreateTransferRequest);
+router.get("/studentTransfer/outgoing", transferController.adminGetOutgoingTransferRequests);
+router.get("/studentTransfer/incoming", transferController.adminGetIncomingTransferRequests);
+router.get("/studentTransfer/:id", transferController.adminGetTransferRequestById);
+router.patch("/studentTransfer/:id/review", transferController.adminReviewTransferRequest);
+router.delete("/studentTransfer/:id", transferController.adminDeleteTransferRequest);
 
 module.exports = router;

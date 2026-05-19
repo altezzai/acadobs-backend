@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const guardianController = require("../controllers/guardianController");
 const commonController = require("../controllers/commonController");
+const transferController = require("../controllers/transferController");
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { body } = require("express-validator");
 const { validate } = require("../middlewares/validateMiddleware");
@@ -204,5 +205,18 @@ router.get("/getGuardianRouteCount", guardianController.getGuardianRouteCount);
 router.get("/stop/:route_id", guardianController.getStopsByRouteId);
 //parent sees every stop of their student
 router.get("/getStopsForParent/:route_id", guardianController.getStopsForParent);
+
+// Student Transfer routes
+router.post(
+  "/studentTransfer",
+  [
+    body("student_id").notEmpty().isInt(),
+    body("to_school_id").notEmpty().isInt(),
+    body("reason").optional().isString().trim().escape(),
+  ],
+  validate,
+  transferController.guardianCreateTransferRequest,
+);
+router.get("/studentTransfer", transferController.guardianGetTransferRequests);
 
 module.exports = router;

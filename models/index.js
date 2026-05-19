@@ -41,6 +41,7 @@ const StudentRouteAssignment = require("./student_route_assignment");
 const RouteDrivers = require("./route_drivers");
 const RouteStopLog = require("./route_stop_log");
 const Session = require("./session");
+const StudentTransfer = require("./student_transfer");
 
 // Relations
 
@@ -290,6 +291,15 @@ Student.hasMany(RouteStopLog, {
 //   foreignKey: "school_id",
 //   as: "studentroutes",
 // });
+
+// StudentTransfer associations
+StudentTransfer.belongsTo(Student, { foreignKey: "student_id" });
+StudentTransfer.belongsTo(School, { foreignKey: "from_school_id", as: "FromSchool" });
+StudentTransfer.belongsTo(School, { foreignKey: "to_school_id", as: "ToSchool" });
+StudentTransfer.belongsTo(User, { foreignKey: "user_id", as: "Requester" });
+StudentTransfer.belongsTo(User, { foreignKey: "reviewed_by", as: "Reviewer" });
+Student.hasMany(StudentTransfer, { foreignKey: "student_id" });
+
 module.exports = {
   Homework,
   HomeworkAssignment,
@@ -329,4 +339,5 @@ module.exports = {
   RouteDrivers,
   RouteStopLog,
   Session,
+  StudentTransfer,
 };
