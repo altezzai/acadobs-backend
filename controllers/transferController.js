@@ -5,6 +5,7 @@ const Student = require("../models/student");
 const School = require("../models/school");
 const User = require("../models/user");
 const Guardian = require("../models/guardian");
+const Class = require("../models/class");
 const { schoolSequelize } = require("../config/connection");
 
 // ─────────────────────────────────────────────
@@ -370,6 +371,9 @@ const adminReviewTransferRequest = async (req, res) => {
     const reviewed_by = req.user.user_id;
     const { status, admin_remarks } = req.body;
     const classId =req.body.class_id || null;
+    const Reg_No=req.body.reg_no || null;
+    const Roll_Number=req.body.roll_number || null;
+
 
 
     if (!status || !["accepted", "rejected"].includes(status)) {
@@ -378,13 +382,48 @@ const adminReviewTransferRequest = async (req, res) => {
         .status(400)
         .json({ error: "status must be 'accepted' or 'rejected'" });
     }
+    if (status === "accepted") {
+      if (!classId || !Reg_No || !Roll_Number) {
+        await t.rollback();
+        return res.status(400).json({ error: "class_id, reg_no or roll_number is required when accepting a transfer request" });
+      }
+      if (classId) {
+        const classExists = await Class.findOne({
+          where: { id: classId, school_id, trash: false },
+        });
+        if (!classExists) {
+          await t.rollback();
+          return res.status(404).json({ error: "Class not found" });
+        }
+      }
+         
+      if (Reg_No) {
+        const existingRegNo = await Student.findOne({
+          where: { reg_no: Reg_No, school_id, trash: false },
+        });
+        if (existingRegNo) {
+          return res.status(400).json({
+            error: "Registration number already exists in student table",
+          });
+        }
+      }
+      if (Roll_Number) {
+      const existingRollNumber = await Student.findOne({
+        where: { roll_number: Roll_Number, school_id, class_id:classId, trash: false },
+      });
+      if (existingRollNumber) {
+        return res.status(400).json({
+          error: "Roll number already exists in student table for this class",
+        });
+      }   
+      }
+    }
 
     // Only the destination school admin can review
     const transfer = await StudentTransfer.findOne({
       where: { id, to_school_id: school_id, status: "pending", trash: false },
       transaction: t,
     });
-
     if (!transfer) {
       await t.rollback();
       return res
@@ -399,7 +438,7 @@ const adminReviewTransferRequest = async (req, res) => {
 
     if (status === "accepted") {
       await Student.update(
-        { school_id: transfer.to_school_id, class_id:classId  },
+        { school_id: transfer.to_school_id, class_id:classId, reg_no: Reg_No, roll_number: Roll_Number },
         { where: { id: transfer.student_id }, transaction: t }
       );
     }

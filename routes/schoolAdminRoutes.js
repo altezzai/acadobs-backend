@@ -416,6 +416,7 @@ router.get(
   "/staffAttendanceByDate",
   schoolAdminController.getStaffAttendanceByDate,
 );
+router.get("/getSchoolsList", schoolAdminController.getSchoolsList);
 
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
