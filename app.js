@@ -32,6 +32,7 @@ const verifySuperAdmin = require("./middlewares/superAdminMiddleware");
 const verifyStaff = require("./middlewares/staffMiddleware");
 const verifyGuardian = require("./middlewares/guardianMiddleware");
 const verifyDriver = require("./middlewares/driverMiddleware");
+const presignMiddleware = require("./middlewares/presignMiddleware");
 
 // Apply Middleware
 app.use(helmet());
@@ -45,6 +46,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(limiter);
 
+app.use(presignMiddleware);
 app.use(
   "/uploads",
   express.static("uploads", {
