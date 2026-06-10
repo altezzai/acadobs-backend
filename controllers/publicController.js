@@ -6,6 +6,7 @@ const bcrypt = require("bcrypt");
 const { Op } = require("sequelize");
 const logger = require("../utils/logger");
 const crypto = require("crypto");
+const  School  = require("../models/school");
 
 // Login controller
 const login = async (req, res) => {
@@ -150,9 +151,40 @@ const logout = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 }
+const getSchoolsList = async (req, res) => {
+  try {
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: schools } = await School.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      attributes: ["id", "name", "logo"],
+      where: {
+        name: { [Op.like]: `%${searchQuery}%` },
+        trash: false,
+      },
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      schools,
+    });
+  } catch (error) {
+    logger.error("Error getting schools:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
 
 module.exports = {
   login,
   refreshToken,
-  logout
+  logout,
+  getSchoolsList,
 };

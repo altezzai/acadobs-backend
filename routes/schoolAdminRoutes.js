@@ -7,6 +7,7 @@ const routeController = require("../controllers/tracker/routeController");
 const commonController = require("../controllers/commonController");
 const reportController = require("../controllers/reportController");
 const transferController = require("../controllers/transferController");
+const publicController = require("../controllers/publicController");
 
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 
@@ -416,7 +417,6 @@ router.get(
   "/staffAttendanceByDate",
   schoolAdminController.getStaffAttendanceByDate,
 );
-router.get("/getSchoolsList", schoolAdminController.getSchoolsList);
 
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
@@ -555,5 +555,9 @@ router.get("/studentTransfer/incoming", transferController.adminGetIncomingTrans
 router.get("/studentTransfer/:id", transferController.adminGetTransferRequestById);
 router.patch("/studentTransfer/:id/review", transferController.adminReviewTransferRequest);
 router.delete("/studentTransfer/:id", transferController.adminDeleteTransferRequest);
+
+//Public Controller routes
+router.get("/getSchoolsList", publicController.getSchoolsList);
+
 
 module.exports = router;

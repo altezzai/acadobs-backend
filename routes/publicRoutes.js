@@ -43,5 +43,7 @@ router.post(
   validate,
   publicController.logout
 );
+router.get("/getSchoolsList", publicController.getSchoolsList);
+
 
 module.exports = router;
