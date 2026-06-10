@@ -1,6 +1,27 @@
-const { s3 } = require("../config/storageConfig");
+const { s3, BUCKET_NAME } = require("../config/storageConfig");
 
-const BUCKET_NAME = process.env.BUCKET_NAME;
+const isFilePath = (str) => {
+    if (!str || typeof str !== "string") return false;
+    if (str.includes(" ") || !str.includes("/")) return false;
+    const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+    if (uuidRegex.test(str)) return true;
+    const knownFolders = [
+        "staffs",
+        "guardians",
+        "students",
+        "events",
+        "leaverequests",
+        "news",
+        "notices",
+        "drivers",
+        "vehicles",
+        "uploads"
+    ];
+    const firstPart = str.split("/")[0];
+    if (knownFolders.includes(firstPart)) return true;
+
+    return false;
+};
 
 const toSignedUrl = (fileUrl) => {
     if (!fileUrl || typeof fileUrl !== "string") return fileUrl;
@@ -12,7 +33,16 @@ const toSignedUrl = (fileUrl) => {
             fileUrl.includes("127.0.0.1:9000") ||
             fileUrl.includes("localhost:9000");
 
-        if (!isS3Url) return fileUrl;
+        if (!isS3Url) {
+            if (isFilePath(fileUrl)) {
+                return s3.getSignedUrl("getObject", {
+                    Bucket: BUCKET_NAME,
+                    Key: fileUrl,
+                    Expires: 60 * 60,
+                });
+            }
+            return fileUrl;
+        }
 
         const parsedUrl = new URL(fileUrl);
         const pathname = parsedUrl.pathname;

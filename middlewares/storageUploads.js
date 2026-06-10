@@ -19,7 +19,7 @@ const uploadSingleFile = async (file, folder) => {
 
     return {
         fileName,
-        url: data.Location,
+        url: fileName,
     };
 };
 
@@ -56,7 +56,7 @@ const uploadMultipleFiles = async (files, folder = "uploads") => {
 const deleteFile = async (fileUrl) => {
     try {
         if (!fileUrl) return;
-        const key = fileUrl.split(`${BUCKET_NAME}/`)[1];
+        const key = fileUrl.includes(`${BUCKET_NAME}/`) ? fileUrl.split(`${BUCKET_NAME}/`)[1] : fileUrl;
         if (!key) {
             console.error("Invalid file URL:", fileUrl);
             return;

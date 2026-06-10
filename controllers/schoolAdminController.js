@@ -874,7 +874,7 @@ const updateStaff = async (req, res) => {
 
     const user = await User.findByPk(staff.user_id);
     let finalDp = user.dp;
-    const newDpUrl = req.uploadedFiles?.staff?.[0]?.url || null;
+    const newDpUrl = req.uploadedFiles?.dp?.url || null;
     if (newDpUrl) {
       if (user.dp) {
         await deleteFile(user.dp);
