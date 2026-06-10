@@ -660,8 +660,7 @@ const createStaff = async (req, res) => {
         .status(400)
         .json({ error: "Staff's phone already exists in user table" });
     }
-
-    const staffUrl = req.uploadedFiles?.staff?.[0]?.url || null;
+    const staffUrl = req.uploadedFiles?.dp?.url || null;
 
     const hashedPassword = await bcrypt.hash(phone, 10);
     const user = await User.create(
