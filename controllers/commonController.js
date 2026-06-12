@@ -43,6 +43,7 @@ const getStudentsByClassId = async (req, res) => {
         school_id,
         full_name: { [Op.like]: `%${searchQuery}%` },
         trash: false,
+        alumni: false, 
       },
       attributes: ["id", "full_name", "roll_number", "class_id", "image"],
       include: [
@@ -174,7 +175,10 @@ const getStudentById = async (req, res) => {
 };
 const getGuarduianIdbyStudentId = async (student_id) => {
   try {
-    const student = await Student.findByPk(student_id);
+    const school_id = req.user.school_id;
+    const student = await Student.findOne({
+      where: { id: student_id, school_id, trash: false },
+    });
     if (!student) {
       return "student not found";
     }
@@ -189,6 +193,11 @@ const getGuarduianIdbyStudentId = async (student_id) => {
 const getHomeworkByStudentId = async (req, res) => {
   try {
     const { student_id } = req.params;
+    const school_id = req.user.school_id;
+    const student = await Student.findOne({
+      where: { id: student_id, school_id, trash: false },
+    });
+    if (!student) return res.status(404).json({ error: "student not found" });
 
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
@@ -244,6 +253,12 @@ const getHomeworkByStudentId = async (req, res) => {
 const getAttendanceByStudentId = async (req, res) => {
   try {
     const { student_id } = req.params;
+    const school_id = req.user.school_id;
+    const student = await Student.findOne({
+      where: { id: student_id, school_id, trash: false },
+    });
+    if (!student) return res.status(404).json({ error: "student not found" });
+
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -288,6 +303,11 @@ const getAttendanceByStudentId = async (req, res) => {
 const getStudentAttendanceByDate = async (req, res) => {
   try {
     const student_id = req.params.student_id;
+    const school_id = req.user.school_id;
+    const student = await Student.findOne({
+      where: { id: student_id, school_id, trash: false },
+    });
+    if (!student) return res.status(404).json({ error: "student not found" });
     const id = await getschoolIdByStudentId(student_id);
     const date = req.query.date || new Date();
     const page = parseInt(req.query.page) || 1;
@@ -403,6 +423,11 @@ const allAchievements = async (req, res) => {
 const achievementByStudentId = async (req, res) => {
   try {
     const { student_id } = req.params;
+    const school_id = req.user.school_id;
+    const student = await Student.findOne({
+      where: { id: student_id, school_id, trash: false },
+    });
+    if (!student) return res.status(404).json({ error: "student not found" });
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;

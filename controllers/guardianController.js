@@ -39,7 +39,11 @@ const updateHomeworkAssignment = async (req, res) => {
     const { id } = req.params;
 
     const { status, points, student_id } = req.body;
-
+    const guardian_id = req.user.user_id;
+    const student = await Student.findOne({
+      where: { id: student_id, guardian_id: guardian_id },
+    });
+    if (!student) return res.status(404).json({ error: "student not found" });
     const assignment = await HomeworkAssignment.findOne({
       where: { id, student_id: student_id },
     });
@@ -69,8 +73,12 @@ const updateHomeworkAssignment = async (req, res) => {
 
 const getSchoolIdByStudentId = async (student_id) => {
   try {
-    const student = await Student.findByPk(student_id);
-    if (!student) console.log("student not found ---");
+    const guardian_id = req.user.user_id;
+    const student = await Student.findOne({
+      where: { id: student_id, guardian_id: guardian_id },
+    });
+    if (!student) return "student not found";
+    
     const school_id = student.school_id;
     return school_id;
     // res.status(200).json({ school_id });
@@ -88,13 +96,14 @@ const getSchoolIdByStudentId = async (student_id) => {
 const getNoticeByStudentId = async (req, res) => {
   try {
     const { student_id } = req.params;
+    const guardian_id = req.user.user_id;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
     const student = await Student.findOne({
-      where: { id: student_id, trash: false },
+      where: { id: student_id, guardian_id: guardian_id, trash: false },
       attributes: ["class_id", "school_id"],
     });
     if (!student) return res.status(404).json({ error: "student not found" });
@@ -153,6 +162,11 @@ const getNoticeByStudentId = async (req, res) => {
 const getPaymentByStudentId = async (req, res) => {
   try {
     const { student_id } = req.params;
+     const guardian_id = req.user.user_id;
+    const student = await Student.findOne({
+      where: { id: student_id, guardian_id: guardian_id },
+    });
+    if (!student) return res.status(404).json({ error: "student not found" });
     const searchQuery = req.query.q || "";
     const date = req.query.date || "";
     const page = parseInt(req.query.page) || 1;
@@ -217,6 +231,11 @@ const getInvoiceByStudentId = async (req, res) => {
     if (!student_id) {
       return res.status(400).json({ error: "Missing required fields" });
     }
+     const guardian_id = req.user.user_id;
+    const student = await Student.findOne({
+      where: { id: student_id, guardian_id: guardian_id },
+    });
+    if (!student) return res.status(404).json({ error: "student not found" });
     const whereClause = { trash: false };
 
     if (searchQuery) {
@@ -480,7 +499,9 @@ const updateLeaveRequest = async (req, res) => {
 const deleteLeaveRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const leave = await LeaveRequest.findByPk(id);
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const leave = await LeaveRequest.findOne({ where: { id, user_id, school_id } });
     if (!leave) return res.status(404).json({ error: "Not found" });
 
     await leave.update({ trash: true });
@@ -629,11 +650,11 @@ const getStaffsBySchoolId = async (req, res) => {
 const getTodayTimetableByStudentId = async (req, res) => {
   try {
     const student_id = req.params.student_id;
-    const student = await Student.findByPk(student_id);
-    if (!student) {
-      return res.status(404).json({ error: "Student not found" });
-    }
-
+   const guardian_id = req.user.user_id;
+    const student = await Student.findOne({
+      where: { id: student_id, guardian_id: guardian_id },
+    });
+    if (!student) return res.status(404).json({ error: "student not found" });
     const class_id = student.class_id;
     const school_id = student.school_id;
 
@@ -703,10 +724,11 @@ const getTodayTimetableByStudentId = async (req, res) => {
 const getAllDayTimetableByStudentId = async (req, res) => {
   try {
     const student_id = req.params.student_id;
-    const student = await Student.findByPk(student_id);
-    if (!student) {
-      return res.status(404).json({ error: "Student not found" });
-    }
+    const guardian_id = req.user.user_id;
+    const student = await Student.findOne({
+      where: { id: student_id, guardian_id: guardian_id },
+    });
+    if (!student) return res.status(404).json({ error: "student not found" });
     const class_id = student.class_id;
     const school_id = student.school_id;
     const timetable = await Timetable.findAll({

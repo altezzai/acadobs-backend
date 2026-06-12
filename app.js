@@ -6,6 +6,8 @@ const { Server } = require("socket.io"); // Import Socket.IO
 const helmet = require("helmet");
 const cors = require("cors");
 const morgan = require("morgan");
+const globalSanitize = require("./middlewares/xssMiddleware");
+const hpp = require("hpp");
 const app = express();
 require("dotenv").config();
 const PORT = process.env.PORT || 4444;
@@ -35,7 +37,27 @@ const verifyDriver = require("./middlewares/driverMiddleware");
 const presignMiddleware = require("./middlewares/presignMiddleware");
 
 // Apply Middleware
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "blob:"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameAncestors: ["'none'"],
+      },
+    },
+    frameguard: {
+      action: "deny",
+    },
+    noSniff: true,
+  })
+);
 app.use(
   cors({
     origin: "*",
@@ -44,6 +66,8 @@ app.use(
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(globalSanitize); // Sanitize data against XSS securely without object reassignment
+app.use(hpp()); // Prevent HTTP Parameter Pollution
 app.use(limiter);
 
 app.use(presignMiddleware);
@@ -53,6 +77,7 @@ app.use(
     setHeaders: (res) => {
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      res.setHeader("X-Content-Type-Options", "nosniff");
     },
   }),
 );

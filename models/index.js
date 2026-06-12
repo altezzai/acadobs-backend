@@ -40,6 +40,8 @@ const StudentRoutes = require("./studentroutes");
 const StudentRouteAssignment = require("./student_route_assignment");
 const RouteDrivers = require("./route_drivers");
 const RouteStopLog = require("./route_stop_log");
+const Session = require("./session");
+const StudentTransfer = require("./student_transfer");
 
 // Relations
 
@@ -95,6 +97,11 @@ Duty.belongsTo(School, { foreignKey: "school_id" });
 DutyAssignment.belongsTo(Duty, { foreignKey: "duty_id" });
 DutyAssignment.belongsTo(User, { foreignKey: "staff_id" });
 
+Achievement.belongsToMany(Student, {
+  through: StudentAchievement,
+  foreignKey: 'achievement_id',
+  otherKey: 'student_id'
+});
 Achievement.hasMany(StudentAchievement, { foreignKey: "achievement_id" });
 StudentAchievement.belongsTo(Achievement, { foreignKey: "achievement_id" });
 StudentAchievement.belongsTo(Student, { foreignKey: "student_id" });
@@ -104,6 +111,8 @@ Student.belongsTo(School, { foreignKey: "school_id" });
 Student.belongsTo(User, { foreignKey: "guardian_id" });
 User.hasOne(Student, { foreignKey: "guardian_id" });
 User.hasOne(Guardian, { foreignKey: "user_id" });
+Session.belongsTo(User, { foreignKey: "user_id" });
+User.hasMany(Session, { foreignKey: "user_id" });
 InternalMark.belongsTo(School, { foreignKey: "school_id" });
 InternalMark.belongsTo(Class, { foreignKey: "class_id" });
 InternalMark.belongsTo(Subject, { foreignKey: "subject_id" });
@@ -282,6 +291,15 @@ Student.hasMany(RouteStopLog, {
 //   foreignKey: "school_id",
 //   as: "studentroutes",
 // });
+
+// StudentTransfer associations
+StudentTransfer.belongsTo(Student, { foreignKey: "student_id" });
+StudentTransfer.belongsTo(School, { foreignKey: "from_school_id", as: "FromSchool" });
+StudentTransfer.belongsTo(School, { foreignKey: "to_school_id", as: "ToSchool" });
+StudentTransfer.belongsTo(User, { foreignKey: "user_id", as: "Requester" });
+StudentTransfer.belongsTo(User, { foreignKey: "reviewed_by", as: "Reviewer" });
+Student.hasMany(StudentTransfer, { foreignKey: "student_id" });
+
 module.exports = {
   Homework,
   HomeworkAssignment,
@@ -320,4 +338,6 @@ module.exports = {
   StudentRouteAssignment,
   RouteDrivers,
   RouteStopLog,
+  Session,
+  StudentTransfer,
 };

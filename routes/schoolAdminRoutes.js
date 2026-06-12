@@ -6,6 +6,8 @@ const stopController = require("../controllers/tracker/stopController");
 const routeController = require("../controllers/tracker/routeController");
 const commonController = require("../controllers/commonController");
 const reportController = require("../controllers/reportController");
+const transferController = require("../controllers/transferController");
+const publicController = require("../controllers/publicController");
 
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
@@ -122,6 +124,13 @@ router.put(
   schoolAdminController.updateStudent,
 );
 router.delete("/students/:id", schoolAdminController.deleteStudent);
+router.patch("/students/:id", schoolAdminController.restoreStudent);
+router.get("/getTrashedStudents", schoolAdminController.getTrashedStudents);
+router.put("/bulkUpdateStudentsToAlumni", schoolAdminController.bulkUpdateStudentsToAlumni);
+router.get("/getAlumniStudents", schoolAdminController.getAlumniStudents);
+router.get("/getTrashedAlumniStudents", schoolAdminController.getTrashedAlumniStudents);
+
+
 //common controller
 router.get(
   "/getStudentsByClassId/:class_id",
@@ -164,7 +173,7 @@ router.post(
   uploadWithErrorHandler(upload.any()),
   schoolAdminController.createAchievementWithStudents,
 );
-router.get("/getAllAchievements", schoolAdminController.getAllAchievements);
+router.get("/achievements", schoolAdminController.getAllAchievements);
 router.get("/achievements/:id", schoolAdminController.getAchievementById);
 router.put("/achievements/:id", schoolAdminController.updateAchievement);
 router.delete("/achievements/:id", schoolAdminController.deleteAchievement);
@@ -238,7 +247,7 @@ router.post(
   storageUploadMiddleware("leaverequests"),
   schoolAdminController.createLeaveRequest,
 );
-router.get("/leaveRequest", schoolAdminController.getAllLeaveRequests);
+router.get("/leaveRequest", schoolAdminController.getAllStudentLeaveRequests);
 router.get("/leaveRequest/:id", schoolAdminController.getLeaveRequestById);
 router.delete("/leaveRequest/:id", schoolAdminController.deleteLeaveRequest);
 router.patch("/leaveRequest/:id", schoolAdminController.restoreLeaveRequest);
@@ -261,10 +270,10 @@ router.patch(
   schoolAdminController.staffLeaveRequestPermission,
 );
 
-router.get(
-  "/getAllStaffLeaveRequests",
-  schoolAdminController.getAllStaffLeaveRequests,
-);
+// router.get(
+//   "/getAllStaffLeaveRequests",
+//   schoolAdminController.getAllLeaveRequests,
+// );
 router.get(
   "/getAllTeacherLeaveRequests",
   schoolAdminController.getAllTeacherLeaveRequests,
@@ -557,5 +566,17 @@ router.get("/getDriversAssignedToRoutes", schoolAdminController.getDriversAssign
 router.put("/updateIsLock/:route_id", schoolAdminController.updateIsLock);
 //get getDriverLocation
 router.get("/getDriverLocation/:driver_id", schoolAdminController.getDriverLocation);
+
+// Student Transfer routes
+router.post("/studentTransfer", transferController.adminCreateTransferRequest);
+router.get("/studentTransfer/outgoing", transferController.adminGetOutgoingTransferRequests);
+router.get("/studentTransfer/incoming", transferController.adminGetIncomingTransferRequests);
+router.get("/studentTransfer/:id", transferController.adminGetTransferRequestById);
+router.patch("/studentTransfer/:id/review", transferController.adminReviewTransferRequest);
+router.delete("/studentTransfer/:id", transferController.adminDeleteTransferRequest);
+
+//Public Controller routes
+router.get("/getSchoolsList", publicController.getSchoolsList);
+
 
 module.exports = router;

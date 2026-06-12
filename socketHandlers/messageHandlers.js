@@ -27,6 +27,9 @@ const {
 const sendMessage = async (io, socket, data) => {
   try {
     const sender_id = socket.user.user_id;
+    if (typeof data === "string") {
+      data = JSON.parse(data);
+    }
     const {
       receiver_id,
       student_id,
