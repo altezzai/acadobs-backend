@@ -8,6 +8,7 @@ const { Sequelize } = require("sequelize");
 const { compressAndSaveFile } = require("../../utils/fileHandler");
 const { Op } = require("sequelize");
 const { RouteStopLog } = require("../../models");
+const { deleteFile } = require("../../middlewares/storageUploads");
 // getDriverById
 const getDriverById = async (req, res) => {
   try {
@@ -58,11 +59,11 @@ const updateDriverById = async (req, res) => {
     const school_id = req.user.school_id;
     const { name, phone, email, address } = req.body || {};
 
-    let photoPath = undefined;
-    if (req.file) {
-      const uploadPath = "uploads/driver_images/";
-      photoPath = await compressAndSaveFile(req.file, uploadPath);
-    }
+    // let photoPath = undefined;
+    // if (req.file) {
+    //   const uploadPath = "uploads/driver_images/";
+    //   photoPath = await compressAndSaveFile(req.file, uploadPath);
+    // }
     const driver = await Driver.findOne({
       where: {
         id,
@@ -75,12 +76,23 @@ const updateDriverById = async (req, res) => {
         error: "Driver not found",
       });
     }
+
+    const newPhotoUrl = req.uploadedFiles?.photo?.[0]?.url || null;
+
+    let finalPhoto = driver.photo;
+
+    if (newPhotoUrl) {
+      if (driver.photo) {
+        await deleteFile(driver.photo);
+      }
+      finalPhoto = newPhotoUrl;
+    }
     await driver.update({
       name: name ?? driver.name,
       phone: phone ?? driver.phone,
       email: email ?? driver.email,
       address: address ?? driver.address,
-      photo: photoPath ?? driver.photo,
+      photo: finalPhoto,
     });
 
     return res.status(200).json({
@@ -499,7 +511,6 @@ const getStopsForDriver = async (req, res) => {
         route_type: s.route?.type || null,
         isLock: s.route?.isLock || null,
 
-        // ✅ FROM LOG TABLE
         arrived: logData.arrived || false,
         arrived_time: logData.arrived_at || null,
 
@@ -508,8 +519,6 @@ const getStopsForDriver = async (req, res) => {
           full_name: student.full_name,
           reg_no: student.reg_no,
           student_status: student.student_status,
-
-          // ✅ CHECK IF STUDENT COMPLETED AT THIS STOP
           is_completed:
             logData.students?.includes(student.id) || false,
 

@@ -53,6 +53,7 @@ const studentroutes = require("../models/studentroutes");
 const { error } = require("winston");
 const StudentRouteAssignment = require("../models/student_route_assignment");
 const { Console } = require("winston/lib/winston/transports");
+const { deleteFile } = require("../middlewares/storageUploads");
 
 // CREATE
 const createClass = async (req, res) => {
@@ -677,13 +678,7 @@ const createStaff = async (req, res) => {
         .status(400)
         .json({ error: "Staff's phone already exists in user table" });
     }
-
-    let fileName = null;
-
-    if (req.file) {
-      const uploadPath = "uploads/dp/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-    }
+    const staffUrl = req.uploadedFiles?.dp?.url || null;
 
     const hashedPassword = await bcrypt.hash(phone, 10);
     const user = await User.create(
@@ -693,7 +688,7 @@ const createStaff = async (req, res) => {
         phone: phone,
         password: hashedPassword,
         school_id: school_id,
-        dp: fileName,
+        dp: staffUrl,
         role: role,
         status: "active",
       },
@@ -706,6 +701,7 @@ const createStaff = async (req, res) => {
         role,
         qualification,
         address,
+        dp: staffUrl,
         class_id: class_id || null,
       },
       { transaction },
@@ -896,9 +892,27 @@ const updateStaff = async (req, res) => {
       return res.status(404).json({ error: "Staff not found" });
     }
 
+    const user = await User.findByPk(staff.user_id);
+    let finalDp = user.dp;
+    const newDpUrl = req.uploadedFiles?.dp?.url || null;
+    if (newDpUrl) {
+      if (user.dp) {
+        await deleteFile(user.dp);
+      }
+      finalDp = newDpUrl;
+    }
+
     await staff.update(
-      { role, qualification, address, class_id },
+      { role, qualification, address, class_id, dp: finalDp, },
       { transaction },
+    );
+
+    await user.update(
+      {
+        role,
+        dp: finalDp,
+      },
+      { transaction }
     );
 
     if (subjects && Array.isArray(subjects)) {
@@ -978,17 +992,18 @@ const updateStaffUser = async (req, res) => {
         .status(400)
         .json({ error: "SchoolAdmin phone already exists in user table" });
     }
-    let fileName = user.dp;
-
-    if (req.file) {
-      const uploadPath = "uploads/dp/";
-      const oldFileName = user.dp;
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-      await deletefilewithfoldername(oldFileName, uploadPath);
-    }
     const user = await User.findOne({
       where: { id: user_id },
     });
+    const newDpUrl = req.uploadedFiles?.dp?.[0]?.url || null;
+    let finalDp = user.dp;
+
+    if (newDpUrl) {
+      if (user.dp) {
+        await deleteFile(user.dp);
+      }
+      finalDp = newDpUrl;
+    }
     const hashedPassword = await bcrypt.hash(phone, 10);
     await user.update({
       name: name,
@@ -996,7 +1011,7 @@ const updateStaffUser = async (req, res) => {
       phone: phone,
       password: hashedPassword,
       school_id: school_id,
-      dp: fileName,
+      dp: finalDp,
       role: role,
       status: "active",
     });
@@ -1412,7 +1427,7 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
       country,
       post,
       pincode,
-
+      dp,
     } = guardianData;
 
     if (!guardian_name || !guardian_contact) {
@@ -1444,13 +1459,13 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
       name: guardian_name,
       email: guardian_email || null,
       phone: guardian_contact,
-      dp: fileName,
+      dp: dp,
       school_id,
       status: "active",
       password: hashedPassword,
     });
 
-    const guardian = await Guardian.create({
+    await Guardian.create({
       user_id: user.id,
       guardian_relation:normalizeGuardianRelation(guardian_relation),
       guardian_name,
@@ -1772,7 +1787,7 @@ const createStudent = async (req, res) => {
     const guardian_relation = req.body.guardian_relation || "father";
 
     if (
-      (!guardian_contact || !full_name || !reg_no || !class_id, !roll_number)
+      (!guardian_contact || !full_name || !reg_no || !class_id || !roll_number)
     ) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
@@ -1798,8 +1813,10 @@ const createStudent = async (req, res) => {
     }
 
     let guardianUserId;
-    const guardianDpFile = req.files?.dp?.[0];
-    const studentImageFile = req.files?.image?.[0];
+    // const guardianDpFile = req.files?.dp?.[0];
+    // const studentImageFile = req.files?.image?.[0];
+    const guardianDpUrl = req.uploadedFiles?.dp?.[0]?.url || null;
+    const studentImageUrl = req.uploadedFiles?.image?.[0]?.url || null;
 
     if (existingUser) {
       if (existingUser.role === 'guardian') {
@@ -1857,18 +1874,18 @@ const createStudent = async (req, res) => {
         country,
         post,
         pincode,
+        dp: guardianDpUrl,
       };
 
       const newGuardian = await createGuardianService(
         guardianData,
-        guardianDpFile,
+        // guardianDpFile,
       );
       guardianUserId = newGuardian;
     }
     let fileName = null;
-    if (studentImageFile) {
-      const uploadPath = "uploads/students_images/";
-      fileName = await compressAndSaveFile(studentImageFile, uploadPath);
+    if (studentImageUrl) {
+      fileName = studentImageUrl;
     }
 
     const student = await Student.create({
@@ -3384,6 +3401,7 @@ const createEvent = async (req, res) => {
     if (!school_id || !title || !date) {
       return res.status(400).json({ error: "All fields are required" });
     }
+    console.log("event files: ", req.uploadedFiles);
     const existingEvent = await Event.findOne({
       where: { school_id, title, date },
     });
@@ -3392,11 +3410,12 @@ const createEvent = async (req, res) => {
         .status(400)
         .json({ error: "Event with the same title already exists" });
     }
-    let fileName = null;
-    if (req.file) {
-      const uploadPath = "uploads/event_files/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-    }
+    const eventFileUrl = req.uploadedFiles?.file?.url || null;
+    // let fileName = null;
+    // if (req.file) {
+    //   const uploadPath = "uploads/event_files/";
+    //   fileName = await compressAndSaveFile(req.file, uploadPath);
+    // }
 
     const event = await Event.create({
       school_id,
@@ -3406,7 +3425,7 @@ const createEvent = async (req, res) => {
       user_id: req.user.user_id,
       url,
       venue,
-      file: fileName ? fileName : null,
+      file: eventFileUrl ? eventFileUrl : null,
     });
 
     res.status(201).json(event);
@@ -3491,11 +3510,15 @@ const updateEvent = async (req, res) => {
     if (!event || event.trash)
       return res.status(404).json({ error: "Event not found" });
 
-    let fileName = event.file;
-    if (req.file) {
-      const uploadPath = "uploads/event_files/";
-      await deletefilewithfoldername(fileName, uploadPath);
-      fileName = await compressAndSaveFile(req.file, uploadPath);
+
+    const newFileUrl = req.uploadedFiles?.file?.url || null;
+
+    let finalFile = event.file || null;
+    if (newFileUrl) {
+      if (event.file) {
+        await deleteFile(event.file);
+      }
+      finalFile = newFileUrl;
     }
     await event.update({
       school_id,
@@ -3504,7 +3527,7 @@ const updateEvent = async (req, res) => {
       date,
       url,
       venue,
-      file: fileName,
+      file: finalFile,
     });
     res.status(200).json({ message: "Event updated successfully", event });
   } catch (error) {
@@ -4502,7 +4525,7 @@ const permanentDeleteInvoiceStudent = async (req, res) => {
   }
 };
 // Leave Request Management
-const leaverequestFilePath = "uploads/leave_requests/";
+// const leaverequestFilePath = "uploads/leave_requests/";
 
 const createLeaveRequest = async (req, res) => {
   try {
@@ -4537,11 +4560,8 @@ const createLeaveRequest = async (req, res) => {
       return res.status(400).json({ error: "Leave request already exists" });
     }
 
-    let fileName = null;
-    if (req.file) {
-      const uploadPath = leaverequestFilePath;
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-    }
+    const attachmentUrl = req.uploadedFiles?.attachment?.url || null;
+
     const data = await LeaveRequest.create({
       school_id: school_id,
       user_id: user_id ? user_id : admin_id,
@@ -4551,7 +4571,7 @@ const createLeaveRequest = async (req, res) => {
       to_date: to_date,
       leave_type: leave_type,
       reason: reason,
-      attachment: fileName ? fileName : null,
+      attachment: attachmentUrl ? attachmentUrl : null,
       leave_duration,
       status: status ? status : "pending",
       admin_remarks,
@@ -4677,6 +4697,7 @@ const updateLeaveRequest = async (req, res) => {
       reason,
       leave_duration,
     } = req.body;
+    console.log("req.body:", req.body);
 
     const data = await LeaveRequest.findByPk(Id);
     if (!data) return res.status(404).json({ error: "Not found" });
@@ -4693,11 +4714,15 @@ const updateLeaveRequest = async (req, res) => {
     if (existingRequest) {
       return res.status(400).json({ error: "Leave request already exists" });
     }
-    let fileName = data.attachment;
-    if (req.file) {
-      const uploadPath = leaverequestFilePath;
-      await deletefilewithfoldername(fileName, uploadPath);
-      fileName = await compressAndSaveFile(req.file, uploadPath);
+
+    const newFileUrl = req.uploadedFiles?.attachment?.url || null;
+    let finalFile = data.attachment;
+
+    if (newFileUrl) {
+      if (data.attachment) {
+        await deleteFile(data.attachment);
+      }
+      finalFile = newFileUrl;
     }
     await data.update({
       student_id: student_id,
@@ -4705,11 +4730,8 @@ const updateLeaveRequest = async (req, res) => {
       to_date: to_date,
       leave_type: leave_type,
       reason: reason,
-      attachment: fileName ? fileName : null,
+      attachment: finalFile ? finalFile : null,
       leave_duration,
-      // status: status ? status : "pending",
-      // admin_remarks,
-      // approved_by: userId ? userId : null,
     });
 
     res.status(200).json(data);
@@ -5007,8 +5029,7 @@ const permanentDeleteLeaveRequest = async (req, res) => {
     });
     if (!leave) return res.status(404).json({ error: "Not found" });
     if (leave.attachment) {
-      const uploadPath = leaverequestFilePath;
-      await deletefilewithfoldername(leave.attachment, uploadPath);
+      await deleteFile(leave.attachment);
     }
     await leave.destroy();
 
@@ -5228,32 +5249,21 @@ const createNews = async (req, res) => {
         .status(400)
         .json({ error: "news with the same title already exists" });
     }
-    // let fileName = null;
-    // if (req.files?.file?.[0]) {
-    //   fileName = req.files.file[0];
-    //   const uploadPath = newsfilePath;
-    //   fileName = await compressAndSaveFile(fileName, uploadPath);
-    // }
-
     const news = await News.create({
       school_id,
       title,
       content,
       date,
       user_id,
-      // file: fileName,
     });
 
-    if (req.files?.images) {
-      const imageRecords = [];
+    const uploadedImages = req.uploadedFiles?.images || [];
 
-      for (const img of req.files.images) {
-        const compressedName = await compressAndSaveFile(img, newsimagePath);
-        imageRecords.push({
-          news_id: news.id,
-          image_url: compressedName,
-        });
-      }
+    if (uploadedImages.length > 0) {
+      const imageRecords = uploadedImages.map((img) => ({
+        news_id: news.id,
+        image_url: img.url,
+      }));
 
       await NewsImage.bulkCreate(imageRecords);
     }
@@ -5367,27 +5377,44 @@ const updateNews = async (req, res) => {
         .status(409)
         .json({ error: "News with the same title already exists" });
     }
-    // let fileName = news.file;
-    // if (req.file) {
-    //   const uploadPath = newsfilePath;
-    //   fileName = await compressAndSaveFile(req.file, uploadPath);
-    // }
+
     await news.update({ title, content, date });
+    const uploadedImages = req.uploadedFiles?.images || [];
 
-    if (req.files?.images) {
-      const imageRecords = [];
+    if (uploadedImages.length > 0) {
+      const oldImages = await NewsImage.findAll({
+        where: { news_id: news.id },
+      });
 
-      for (const img of req.files.images) {
-        const compressedName = await compressAndSaveFile(img, newsimagePath);
-        imageRecords.push({
-          news_id: news.id,
-          image_url: compressedName,
-        });
+      for (const img of oldImages) {
+        if (img.image_url) {
+          await deleteFile(img.image_url);
+        }
       }
+      await NewsImage.destroy({
+        where: { news_id: news.id },
+      });
+      const imageRecords = uploadedImages.map((img) => ({
+        news_id: news.id,
+        image_url: img.url,
+      }));
 
       await NewsImage.bulkCreate(imageRecords);
     }
-    res.json({ message: "Updated", news });
+    const updatedNews = await News.findOne({
+      where: {
+        id: id,
+      },
+      include: [
+        {
+          model: NewsImage,
+          as: "images",
+          attributes: ["id", "image_url", "caption"],
+        }
+      ]
+    });
+
+    res.json({ message: "Updated", news: updatedNews });
   } catch (error) {
     logger.error(
       "schoolId:",
@@ -5494,19 +5521,19 @@ const permanentDeleteNews = async (req, res) => {
     const school_id = req.user.school_id;
     const news = await News.findOne({ where: { id, trash: true, school_id } });
     if (!news) return res.status(404).json({ error: "Not found" });
-    // if (news.file) {
-    //   const uploadPath = newsfilePath;
-    //   await deletefilewithfoldername(news.file, uploadPath);
-    // }
-    const newsImages = await NewsImage.findAll({ where: { news_id: id } });
+    const newsImages = await NewsImage.findAll({
+      where: { news_id: id },
+    });
     for (const img of newsImages) {
       if (img.image_url) {
-        const uploadPath = newsimagePath;
-        await deletefilewithfoldername(img.image_url, uploadPath);
+        await deleteFile(img.image_url);
       }
-      await img.destroy();
     }
+    await NewsImage.destroy({
+      where: { news_id: id },
+    });
     await news.destroy();
+
     res.json({ message: "Permanently deleted" });
   } catch (error) {
     logger.error(
@@ -5529,8 +5556,7 @@ const deleteNewsImage = async (req, res) => {
     if (!news) return res.status(404).json({ error: "Not found" });
     if (!newsImage) return res.status(404).json({ error: "Not found" });
     if (newsImage.image_url) {
-      const uploadPath = newsimagePath;
-      await deletefilewithfoldername(newsImage.image_url, uploadPath);
+      await deleteFile(newsImage.image_url);
     }
     await newsImage.destroy();
 
@@ -5546,13 +5572,13 @@ const deleteNewsImage = async (req, res) => {
   }
 };
 // Notice Management
-const noticeFilePath = "uploads/notices/";
 const createNotice = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const { title, content, type, class_ids } = req.body;
     const date = req.body.date ? req.body.date : new Date();
-    let fileName = null;
+    console.log("req.body:", req.body);
+    console.log("req.uploadedFiles:", req.uploadedFiles);
     if (!school_id || !title || !content || !type) {
       return res.status(400).json({ error: "required fields are missing" });
     }
@@ -5565,16 +5591,12 @@ const createNotice = async (req, res) => {
         .json({ error: "Notice with the same title,date already exists" });
     }
 
-    if (req.file) {
-      const uploadPath = noticeFilePath;
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-    }
-
+    const noticeFileUrl = req.uploadedFiles?.file?.url || null;
     const notice = await Notice.create({
       school_id,
       title,
       content,
-      file: fileName,
+      file: noticeFileUrl,
       type,
       date,
     });
@@ -5690,6 +5712,7 @@ const updateNotice = async (req, res) => {
     if (!title || !content || !type) {
       return res.status(400).json({ error: "required fields are missing" });
     }
+    console.log("uploaded files:", req.uploadedFiles);
 
     const notice = await Notice.findOne({
       where: { id: id, school_id: school_id, trash: false },
@@ -5710,17 +5733,17 @@ const updateNotice = async (req, res) => {
     }
     if (!notice) return res.status(404).json({ error: "Notice not found" });
 
-    let fileName = notice.file || null;
-    if (req.file) {
-      const uploadPath = noticeFilePath;
-      if (fileName) {
-        await deletefilewithfoldername(fileName, uploadPath);
+    const newFileUrl = req.uploadedFiles?.file?.url || null;
+
+    let finalFile = notice.file || null;
+    if (newFileUrl) {
+      if (notice.file) {
+        await deleteFile(notice.file);
       }
-      await deletefilewithfoldername(fileName, uploadPath);
-      fileName = await compressAndSaveFile(req.file, uploadPath);
+      finalFile = newFileUrl;
     }
 
-    await notice.update({ title, content, type, file: fileName });
+    await notice.update({ title, content, type, file: finalFile });
 
     if (type === "classes") {
       await NoticeClass.destroy({ where: { notice_id: id } });
@@ -5767,8 +5790,7 @@ const permanentDeleteNotice = async (req, res) => {
     const notice = await Notice.findOne({ where: { id: id, trash: true, school_id } });
     if (!notice) return res.status(404).json({ error: "Not found" });
     if (notice.file) {
-      const uploadPath = noticeFilePath;
-      await deletefilewithfoldername(notice.file, uploadPath);
+      await deleteFile(notice.file);
     }
     await NoticeClass.destroy({ where: { notice_id: id } });
     await notice.destroy();
@@ -7724,7 +7746,7 @@ const createStop = async (req, res) => {
   }
 };
 
-//create driver✅
+//create driver
 const createDriver = async (req, res) => {
   const transaction = await schoolSequelize.transaction();
 
@@ -7748,13 +7770,7 @@ const createDriver = async (req, res) => {
       return res.status(400).json({ error: "Driver's phone already exists" });
     }
 
-    let photoPath = null;
-    const driverPhoto = req.files?.photo?.[0];
-
-    if (driverPhoto) {
-      const uploadPath = "uploads/driver_images/";
-      photoPath = await compressAndSaveFile(driverPhoto, uploadPath);
-    }
+    const photoPath = req.uploadedFiles?.photo?.[0]?.url || null;
 
     const hashedPassword = await bcrypt.hash(phone, 10);
 
@@ -7843,19 +7859,14 @@ const createVehicle = async (req, res) => {
       }
     }
 
-    let photoPath = null;
-    const vehiclePhoto = req.files?.photo?.[0];
+    const photoUrl = req.uploadedFiles?.photo?.[0]?.url || null;
 
-    if (vehiclePhoto) {
-      const uploadPath = "uploads/vehicle_images/";
-      photoPath = await compressAndSaveFile(vehiclePhoto, uploadPath);
-    }
 
     const vehicle = await Vehicle.create({
       type,
       model,
       vehicle_number,
-      photo: photoPath,
+      photo: photoUrl,
       driver_id,
       trash: false,
       school_id: school_id,
@@ -7946,13 +7957,6 @@ const updateVehicle = async (req, res) => {
       }
     }
 
-    let photoPath = null;
-    const vehiclePhoto = req.files?.photo?.[0];
-
-    if (vehiclePhoto) {
-      const uploadPath = "uploads/vehicle_images/";
-      photoPath = await compressAndSaveFile(vehiclePhoto, uploadPath);
-    }
 
     const vehicle = await Vehicle.findOne({
       where: { id, trash: false, school_id: school_id, },
@@ -7962,18 +7966,22 @@ const updateVehicle = async (req, res) => {
       return res.status(404).json({ message: "Vehicle not found" });
     }
 
-    const updateData = {
+    const newPhotoUrl = req.uploadedFiles?.photo?.[0]?.url || null;
+    let finalPhoto = vehicle.photo;
+    if (newPhotoUrl) {
+      if (vehicle.photo) {
+        await deleteFile(vehicle.photo);
+      }
+      finalPhoto = newPhotoUrl;
+    }
+
+    await vehicle.update({
       type,
       model,
       vehicle_number,
       driver_id,
-    };
-
-    if (photoPath) {
-      updateData.photo = photoPath;
-    }
-
-    await vehicle.update(updateData);
+      photo: finalPhoto,
+    });
     res.status(200).json({
       message: "Vehicle updated successfully",
       vehicle,
@@ -7985,7 +7993,7 @@ const updateVehicle = async (req, res) => {
   }
 };
 
-//delete vehicle✅
+//delete vehicle
 const deleteVehicle = async (req, res) => {
   try {
     const { id } = req.params;

@@ -3,6 +3,7 @@ const router = express.Router();
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const superAdminController = require("../controllers/superAdminController");
 const schoolAdminController = require("../controllers/schoolAdminController");
+const { storageUploadMiddleware } = require("../middlewares/storageUploads");
 const schoolUploads = [
   { name: "image", maxCount: 1 },
   { name: "logo", maxCount: 1 },
@@ -11,12 +12,14 @@ const schoolUploads = [
 router.post(
   "/schools",
   uploadWithErrorHandler(upload.fields(schoolUploads)),
+  storageUploadMiddleware("schools"),
   superAdminController.createSchool
 );
 router.get("/schools", superAdminController.getAllSchools);
 router.put(
   "/schools/:id",
   uploadWithErrorHandler(upload.fields(schoolUploads)),
+  storageUploadMiddleware("schools"),
   superAdminController.updateSchool
 );
 router.put(
