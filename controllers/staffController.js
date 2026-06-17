@@ -789,7 +789,6 @@ const createAttendance = async (req, res) => {
 
     if (attendance) {
       await attendance.update({
-        teacher_id,
         subject_id,
       });
     } else {
