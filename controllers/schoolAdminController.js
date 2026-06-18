@@ -5342,6 +5342,7 @@ const getNewsById = async (req, res) => {
       include: [
         {
           model: NewsImage,
+          as: "images",
           where: { trash: false },
           attributes: ["id", "image_url", "caption"],
           required: false,
