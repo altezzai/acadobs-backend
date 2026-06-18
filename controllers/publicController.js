@@ -7,6 +7,7 @@ const { Op } = require("sequelize");
 const logger = require("../utils/logger");
 const crypto = require("crypto");
 const  School  = require("../models/school");
+const jwtExpTime = process.env.JWT_EXP_TIME || "30m"; // Default to 15 minutes if not set
 
 // Login controller
 const login = async (req, res) => {
@@ -61,7 +62,7 @@ const login = async (req, res) => {
         sessionId: currentSession.id, // Embed session id!
       },
       secretKey,
-      { expiresIn: "15m" }
+      { expiresIn: jwtExpTime }
     );
     const userData = {
       user_id: user.id,
@@ -122,7 +123,7 @@ const refreshToken = async (req, res) => {
         sessionId: session.id, // Embed session id
       },
       secretKey,
-      { expiresIn: "15m" }
+      { expiresIn:jwtExpTime }
     );
 
     res.status(200).json({ token, refreshToken: newRefreshToken });
