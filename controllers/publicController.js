@@ -7,7 +7,7 @@ const { Op } = require("sequelize");
 const logger = require("../utils/logger");
 const crypto = require("crypto");
 const  School  = require("../models/school");
-const jwtExpTime = process.env.JWT_EXP_TIME || "30m"; // Default to 15 minutes if not set
+const jwtExpTime = process.env.JWT_EXP_TIME || "180m"; // Default to 15 minutes if not set
 
 // Login controller
 const login = async (req, res) => {
