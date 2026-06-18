@@ -43,7 +43,7 @@ const getStudentsByClassId = async (req, res) => {
         school_id,
         full_name: { [Op.like]: `%${searchQuery}%` },
         trash: false,
-        alumni: false, 
+        alumni: false,
       },
       attributes: ["id", "full_name", "roll_number", "class_id", "image"],
       include: [
@@ -647,6 +647,7 @@ const getLatestNews = async (req, res) => {
       include: [
         {
           model: NewsImage,
+          as: "images",
           attributes: ["id", "image_url", "caption"],
         },
       ],

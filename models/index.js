@@ -138,8 +138,17 @@ LeaveRequest.belongsTo(Student, { foreignKey: "student_id" });
 
 News.belongsTo(School, { foreignKey: "school_id" });
 News.belongsTo(User, { foreignKey: "user_id" });
-News.hasMany(NewsImage, { foreignKey: "news_id"});
-NewsImage.belongsTo(News, { foreignKey: "news_id" });
+// News.hasMany(NewsImage, { foreignKey: "news_id"});
+// NewsImage.belongsTo(News, { foreignKey: "news_id" });
+News.hasMany(NewsImage, {
+  foreignKey: "news_id",
+  as: "images",
+});
+
+NewsImage.belongsTo(News, {
+  foreignKey: "news_id",
+  as: "news",
+});
 
 // Notice associations
 Notice.belongsTo(School, { foreignKey: "school_id" });
