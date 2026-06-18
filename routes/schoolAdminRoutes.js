@@ -270,10 +270,10 @@ router.patch(
   schoolAdminController.staffLeaveRequestPermission,
 );
 
-// router.get(
-//   "/getAllStaffLeaveRequests",
-//   schoolAdminController.getAllLeaveRequests,
-// );
+router.get(
+  "/getAllStaffLeaveRequests",
+  schoolAdminController.getAllStaffLeaveRequests,
+);
 router.get(
   "/getAllTeacherLeaveRequests",
   schoolAdminController.getAllTeacherLeaveRequests,
