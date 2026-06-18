@@ -204,7 +204,7 @@ const deleteClass = async (req, res) => {
       },
     });
     if (!classData) return res.status(404).json({ message: "Class not found" });
-    
+
     await Class.update({ trash: true }, { where: { id, school_id } });
     res.status(200).json({ message: "Class soft-deleted" });
   } catch (err) {
@@ -601,8 +601,8 @@ const restoreSubject = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const subject = await Subject.findOne({ where: { id, school_id , trash: true} });
-    if (!subject){
+    const subject = await Subject.findOne({ where: { id, school_id, trash: true } });
+    if (!subject) {
       return res.status(404).json({ error: "Subject not found" });
     }
     subject.trash = false;
@@ -1033,7 +1033,7 @@ const deleteStaff = async (req, res) => {
     const { staff_id } = req.params;
     const school_id = req.user.school_id;
     const staff = await Staff.findOne({
-      where: { id: staff_id, school_id , trash: false},
+      where: { id: staff_id, school_id, trash: false },
     });
     if (!staff)
       return res.status(404).json({ error: "Staff not found" });
@@ -1059,9 +1059,9 @@ const restoredStaff = async (req, res) => {
     const { staff_id } = req.params;
     const school_id = req.user.school_id;
     const staff = await Staff.findOne({
-      where: { id: staff_id, school_id , trash: true},
+      where: { id: staff_id, school_id, trash: true },
     });
-    if (staff )
+    if (staff)
       return res.status(404).json({ error: "Staff not found" });
     const user = await User.findByPk(staff.user_id);
     if (!user && user.trash)
@@ -1081,13 +1081,13 @@ const getTrashedStaffs = async (req, res) => {
     const offset = (page - 1) * limit;
     const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
-let whereClause = {
+    let whereClause = {
       trash: true,
       school_id: school_id,
     };
     if (searchQuery) {
       whereClause[Op.or] = [
-        { name: { [Op.like]: `%${searchQuery}%` } },  
+        { name: { [Op.like]: `%${searchQuery}%` } },
       ];
     }
 
@@ -1096,7 +1096,7 @@ let whereClause = {
       distinct: true,
       limit,
       where: whereClause,
-   
+
     });
     res.status(200).json({
       totalcontent: count,
@@ -1213,15 +1213,15 @@ const getStaffPermissionByUser = async (req, res) => {
     const { user_id } = req.params;
     const school_id = req.user.school_id;
     const permission = await StaffPermission.findOne({
-       where: { user_id },
-       include: [
+      where: { user_id },
+      include: [
         {
           model: User,
           attributes: ["id", "name", "email", "phone", "dp", "school_id"],
-          where: school_id, 
+          where: school_id,
         },
       ],
-       });
+    });
 
     if (!permission) {
       return res.status(404).json({ error: "Permissions not found" });
@@ -1259,14 +1259,16 @@ const updateStaffPermission = async (req, res) => {
       payments,
     } = req.body;
 
-    const permission = await StaffPermission.findOne({ where: { user_id },
+    const permission = await StaffPermission.findOne({
+      where: { user_id },
       include: [
         {
           model: User,
           attributes: ["id", "name", "email", "phone", "dp", "school_id"],
           where: school_id,
-         },
-      ]});
+        },
+      ]
+    });
     if (!permission) {
       return res.status(404).json({ error: "Permissions not found" });
     }
@@ -1371,10 +1373,10 @@ const createGuardian = async (req, res) => {
       user_id: user.id,
       guardian_relation,
       guardian_name,
-      guardian_contact :normalizeGuardianRelation(guardian_relation),
+      guardian_contact: normalizeGuardianRelation(guardian_relation),
       guardian_email,
       guardian_job,
-      guardian2_relation:normalizeGuardianRelation(guardian2_relation),
+      guardian2_relation: normalizeGuardianRelation(guardian2_relation),
       guardian2_name,
       guardian2_job,
       guardian2_contact,
@@ -1467,12 +1469,12 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
 
     await Guardian.create({
       user_id: user.id,
-      guardian_relation:normalizeGuardianRelation(guardian_relation),
+      guardian_relation: normalizeGuardianRelation(guardian_relation),
       guardian_name,
       guardian_contact,
       guardian_email,
       guardian_job,
-      guardian2_relation:normalizeGuardianRelation(guardian2_relation),
+      guardian2_relation: normalizeGuardianRelation(guardian2_relation),
       guardian2_name,
       guardian2_job,
       guardian2_contact,
@@ -1856,7 +1858,7 @@ const createStudent = async (req, res) => {
         guardian_email,
         guardian_name,
         guardian_contact,
-        guardian_relation:guardian_relation?guardian_relation:"father",
+        guardian_relation: guardian_relation ? guardian_relation : "father",
         guardian_job,
         guardian2_name,
         guardian2_relation: guardian2_relation ? guardian2_relation : "mother",
@@ -2039,7 +2041,7 @@ const bulkCreateStudents = async (req, res) => {
           guardian_email,
           guardian_name,
           guardian_contact,
-          guardian_relation:guardian_relation ? guardian_relation : "father",
+          guardian_relation: guardian_relation ? guardian_relation : "father",
           guardian_job,
           guardian2_name,
           guardian2_relation: guardian2_relation ? guardian2_relation : "mother",
@@ -2123,7 +2125,7 @@ const getAllStudents = async (req, res) => {
     const offset = (page - 1) * limit;
     const classId = req.query.class_id;
 
-     const whereClause = {
+    const whereClause = {
       trash: false,
       school_id,
       alumni: false,
@@ -2299,7 +2301,7 @@ const deleteStudent = async (req, res) => {
   }
 };
 const restoreStudent = async (req, res) => {
-  try {  
+  try {
     const school_id = req.user.school_id;
     const { id } = req.params;
     const student = await Student.findByPk(id);
@@ -2324,7 +2326,7 @@ const getTrashedStudents = async (req, res) => {
     const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;          
+    const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const whereClause = {
       trash: true,
@@ -2342,8 +2344,8 @@ const getTrashedStudents = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
-      include: [ { model: User, attributes: ["name", "email", "phone", "dp"] },
-        { model: Class, attributes: ["id", "year", "division", "classname"] },],
+      include: [{ model: User, attributes: ["name", "email", "phone", "dp"] },
+      { model: Class, attributes: ["id", "year", "division", "classname"] },],
       order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
@@ -2353,7 +2355,7 @@ const getTrashedStudents = async (req, res) => {
       "schoolId:",
       req.user.school_id,
       "Error fetching trashed students:",
-      err,  
+      err,
     );
     console.error("Error fetching trashed students:", err);
     res.status(500).json({ error: "Failed to fetch trashed students" });
@@ -2361,7 +2363,8 @@ const getTrashedStudents = async (req, res) => {
 };
 
 const bulkUpdateStudentsToAlumni = async (req, res) => {
-  try {    const school_id = req.user.school_id;
+  try {
+    const school_id = req.user.school_id;
     const { studentIds } = req.body;
     if (!Array.isArray(studentIds) || studentIds.length === 0) {
       return res.status(400).json({ error: "No student IDs provided" });
@@ -2400,14 +2403,14 @@ const bulkUpdateStudentsToAlumni = async (req, res) => {
 };
 const getAlumniStudents = async (req, res) => {
   try {
-  const school_id = req.user.school_id;
+    const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const classId = req.query.class_id;
 
-     const whereClause = {
+    const whereClause = {
       trash: false,
       school_id,
       alumni: true,
@@ -2458,7 +2461,7 @@ const getTrashedAlumniStudents = async (req, res) => {
     const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;          
+    const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const whereClause = {
       trash: true,
@@ -2476,8 +2479,8 @@ const getTrashedAlumniStudents = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
-      include: [ { model: User, attributes: ["name", "email", "phone", "dp"] },
-        { model: Class, attributes: ["id", "year", "division", "classname"] },],
+      include: [{ model: User, attributes: ["name", "email", "phone", "dp"] },
+      { model: Class, attributes: ["id", "year", "division", "classname"] },],
       order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
@@ -2487,7 +2490,7 @@ const getTrashedAlumniStudents = async (req, res) => {
       "schoolId:",
       req.user.school_id,
       "Error fetching trashed students:",
-      err,  
+      err,
     );
     console.error("Error fetching trashed students:", err);
     res.status(500).json({ error: "Failed to fetch trashed students" });
@@ -2749,7 +2752,7 @@ const getDutyById = async (req, res) => {
     const school_id = req.user.school_id;
     const { id } = req.params;
     const duty = await Duty.findOne({
-      where: { id,school_id },
+      where: { id, school_id },
       include: [
         {
           model: DutyAssignment,
@@ -2824,7 +2827,7 @@ const updateDutyAssigned = async (req, res) => {
       where: { id: assignedDuty.duty_id, school_id },
     });
     if (!duty) return res.status(404).json({ error: "Duty not found" });
-    
+
     let fileName = assignedDuty.solved_file;
     if (req.file) {
       const uploadPath = "uploads/solved_duties/";
@@ -2854,7 +2857,7 @@ const bulkUpdateDutyAssignments = async (req, res) => {
         .json({ error: "duty_id and updates array are required" });
     }
     const duty = await Duty.findOne({
-      where: { id: duty_id, school_id ,trash: false},
+      where: { id: duty_id, school_id, trash: false },
     });
     if (!duty) return res.status(404).json({ error: "Duty not found" });
 
@@ -2991,8 +2994,8 @@ const permanentDeleteDuty = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    await DutyAssignment.destroy({ where: { duty_id: id} }, { transaction });
-    await Duty.destroy({ where: { id, school_id ,trash: true} }, { transaction });
+    await DutyAssignment.destroy({ where: { duty_id: id } }, { transaction });
+    await Duty.destroy({ where: { id, school_id, trash: true } }, { transaction });
     await transaction.commit();
     res.json({ message: "Peremently Deleted Duty" });
   } catch (err) {
@@ -3317,13 +3320,13 @@ const updateStudentAchievement = async (req, res) => {
       return res.status(400).json({ error: "Invalid status" });
     }
     const StudentAchievementData = await StudentAchievement.findOne({
-      where: { id: req.params.id},
+      where: { id: req.params.id },
       attributes: ["id", "status", "proof_document", "remarks"],
       include: [
         {
           model: Achievement,
-          attributes: ["id", "title","student_id"],
-            where: { school_id },
+          attributes: ["id", "title", "student_id"],
+          where: { school_id },
         },
       ],
     });
@@ -3588,7 +3591,7 @@ const restoreEvent = async (req, res) => {
 const permanentDeleteEvent = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const event = await Event.findOne({ where: { id: req.params.id , school_id} });
+    const event = await Event.findOne({ where: { id: req.params.id, school_id } });
     if (!event) return res.status(404).json({ error: "Event not found" });
     const uploadPath = "uploads/event_files/";
     await deletefilewithfoldername(event.file, uploadPath);
@@ -4324,15 +4327,15 @@ const addInvoiceStudentsbyInvoiceId = async (req, res) => {
     if (!invoice) {
       return res.status(404).json({ error: "Invoice not found" });
     }
-    
-  if (student_ids && Array.isArray(student_ids)) {
+
+    if (student_ids && Array.isArray(student_ids)) {
       const students = await Student.findAll({
-        where: { id: student_ids, school_id ,trash: false},
+        where: { id: student_ids, school_id, trash: false },
       });
-      if(!students || students.length !== student_ids.length){
+      if (!students || students.length !== student_ids.length) {
         return res.status(400).json({ error: "One or more students not found in this school" });
       }
-    
+
       const invoiceStudents = student_ids.map((student_id) => ({
         invoice_id: id,
         student_id,
@@ -4501,7 +4504,7 @@ const restoreInvoice = async (req, res) => {
 const permanentDeleteInvoiceStudent = async (req, res) => {
   try {
     const { id } = req.params;
-    const school_id = req.user.school_id; 
+    const school_id = req.user.school_id;
     const invoiceStudent = await InvoiceStudent.findByPk(id);
     if (!invoiceStudent) {
       return res.status(404).json({ error: "Not found" });
@@ -5304,6 +5307,7 @@ const getAllNews = async (req, res) => {
       include: [
         {
           model: NewsImage,
+          as: "images",
           where: { trash: false },
           attributes: ["id", "image_url", "caption"],
           required: false,
@@ -7013,7 +7017,7 @@ const dashboardCounts = async (req, res) => {
     const endDate = req.query.endDate || moment().endOf("day").toDate();
 
     const totalStudents = await Student.count({
-      where: { school_id, trash: false ,alumni: false, },
+      where: { school_id, trash: false, alumni: false, },
     });
 
     const totalTeachers = await Staff.count({
@@ -7363,7 +7367,7 @@ const createStaffAttendance = async (req, res) => {
     const school_id = req.user.school_id;
     const { staff_id, date, status, check_in_time, check_out_time, remarks } =
       req.body;
-  const staff = await Staff.findOne({
+    const staff = await Staff.findOne({
       where: { id: staff_id, school_id, trash: false },
     });
     if (!staff) {
@@ -7372,7 +7376,7 @@ const createStaffAttendance = async (req, res) => {
     const existing = await StaffAttendance.findOne({
       where: { school_id, staff_id, date, trash: false },
     });
-  
+
     if (existing)
       return res
         .status(400)
@@ -7596,12 +7600,12 @@ const bulkCreateStaffAttendance = async (req, res) => {
     for (const record of records) {
       const { staff_id, date, status, remarks } = record;
       // check the staff id is the same school
-        const staff = await Staff.findOne({
-      where: { user_id: staff_id, school_id, trash: false },
-    });
-    if (!staff) {
-      return res.status(404).json({ error: "Staff not found" });
-    }
+      const staff = await Staff.findOne({
+        where: { user_id: staff_id, school_id, trash: false },
+      });
+      if (!staff) {
+        return res.status(404).json({ error: "Staff not found" });
+      }
 
       const check_in_time =
         record.check_in_time || record.status === "present"
