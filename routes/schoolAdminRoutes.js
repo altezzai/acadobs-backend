@@ -482,35 +482,23 @@ router.get("/internalmarksReport", reportController.getInternalmarksReport);
 
 /////////////////tracker//////////////////////////////////////
 
-//create driver
 router.post(
   "/driver",
   uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
   storageUploadMiddleware("drivers"),
   schoolAdminController.createDriver,
 );
-
-//create vehicle
 router.post(
   "/vehicle",
   uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
   storageUploadMiddleware("vehicles"),
   schoolAdminController.createVehicle,
 );
-
-//getAllVehicles
 router.get("/getAllVehicles", schoolAdminController.getAllVehicles);
-//getVehicleById
 router.get("/getVehicleById/:id", schoolAdminController.getVehicleById);
-//deleteVehicle by id
 router.delete("/deleteVehicle/:id", schoolAdminController.deleteVehicle);
-
-//getAllRoute
 router.get("/getAllRoutes", schoolAdminController.getAllRoutes);
-
-//getDriverById
 router.get("/getDriverById/:id", trackerController.getDriverById);
-//getAllDrivers
 router.get("/getAllDrivers", schoolAdminController.getAllDrivers);
 router.put(
   "/updateDriverById/:id",
@@ -519,13 +507,9 @@ router.put(
   trackerController.updateDriverById,
 );
 router.delete("/deleteDriverById/:id", trackerController.deleteDriverById);
-//create stop
 router.post("/stop", schoolAdminController.createStop);
 router.get("/getStopById/:id", stopController.getStopById);
-// router.put("/updateStopById/:id", stopController.updateStopById);
 router.delete("/deleteStop/:id", stopController.deleteStop);
-
-//create routes
 router.post("/route", upload.none(), schoolAdminController.createRoute);
 router.get("/getRouteById/:id", routeController.getRouteById);
 router.put("/updateRouteById/:id", routeController.updateRouteById);
@@ -538,33 +522,22 @@ router.post(
   "/assignDriverToRoutes/:driverId",
   schoolAdminController.assignDriverToRoutes,
 );
-
-//add students to route
 router.post(
   "/assign-student-route",
   upload.none(),
   schoolAdminController.assignStudentToRoute,
 );
-
-//update students to route
 router.put(
   "/update-student-route/:route_id",
   schoolAdminController.updateStudentToRoute,
 );
-
-//delete student from route
 router.delete("/deleteStudentFromRoute/:route_id", schoolAdminController.deleteStudentFromRoute);
-
-//update vehicle
 router.put("/updateVehicle/:id", uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
   storageUploadMiddleware("vehicles"),
   schoolAdminController.updateVehicle);
 
 router.get("/getDriversAssignedToRoutes", schoolAdminController.getDriversAssignedToRoutes);
-
-//admin makes islock true or false
 router.put("/updateIsLock/:route_id", schoolAdminController.updateIsLock);
-//get getDriverLocation
 router.get("/getDriverLocation/:driver_id", schoolAdminController.getDriverLocation);
 
 // Student Transfer routes
