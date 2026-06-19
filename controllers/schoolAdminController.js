@@ -5909,12 +5909,12 @@ const bulkUpsertTimetable = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     let { records } = req.body;
-    const staffIds = records.map((record) => record.staff_id);
-    const staff = await User.findAll({ where: { id: staffIds, school_id, role: "teacher",trash:false } });
-    if (staff.length !== staffIds.length) {
-      return res.status(400).json({ error: "Invalid staff_ids" });
+    for (const record of records) {
+      const staff = await User.findOne({ where: { id: record.staff_id, school_id, role: "teacher", trash: false } ,attributes: ["id"] });
+      if (!staff) {
+        return res.status(400).json({ error: "Invalid staff_id" });
+      }
     }
-
     if (!records || !Array.isArray(records)) {
       return res.status(400).json({ error: "Invalid records format" });
     }
