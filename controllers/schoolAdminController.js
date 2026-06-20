@@ -3946,6 +3946,15 @@ const updatePayment = async (req, res) => {
       payment_status,
       payment_method,
     } = req.body;
+    if (
+      !amount ||
+      !payment_date ||
+      !payment_type ||
+      !student_id
+    ) {
+      return res.status(400).json({ error: "student_id,amount,payment_date,payment_type are required" });
+    }
+
     const Id = req.params.id;
     const payment = await Payment.findOne({
       where: { id: Id, school_id },
@@ -3977,7 +3986,36 @@ const updatePayment = async (req, res) => {
       return res
         .status(400)
         .json({ error: "Payment with the same details already exists" });
+
+    } 
+    
+    let invoice_status = "";
+    if(payment.payment_status !== "completed" && payment_status === "completed" && payment.invoice_student_id) {
+      const invoiceStudent = await InvoiceStudent.findOne({
+        where: { id: payment.invoice_student_id},
+        include: [{ model: Invoice, attributes: ["id", "amount"] }],
+      });
+      let totalPaid = 0;
+      if (payment.invoice_student_id) {
+        totalPaid = await Payment.sum("amount", {
+          where: {
+            invoice_student_id: payment.invoice_student_id,
+            payment_status: "completed",
+          },
+        });
+      }
+      const paid= amount + totalPaid;
+      const invoiceAmount = invoiceStudent?.Invoice?.amount || 0;
+
+      if (invoiceStudent && paid >= invoiceAmount) {
+        await invoiceStudent.update({ status: "paid" });
+        invoice_status = "paid";
+      } else {
+        await invoiceStudent.update({ status: "partially_paid" });
+        invoice_status = "partially_paid";
+      }
     }
+
     await payment.update({
       student_id,
       amount,
@@ -5582,8 +5620,7 @@ const createNotice = async (req, res) => {
     const school_id = req.user.school_id;
     const { title, content, type, class_ids } = req.body;
     const date = req.body.date ? req.body.date : new Date();
-    console.log("req.body:", req.body);
-    console.log("req.uploadedFiles:", req.uploadedFiles);
+
     if (!school_id || !title || !content || !type) {
       return res.status(400).json({ error: "required fields are missing" });
     }

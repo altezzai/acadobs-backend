@@ -6,6 +6,8 @@ const transferController = require("../controllers/transferController");
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { body } = require("express-validator");
 const { validate } = require("../middlewares/validateMiddleware");
+const { storageUploadMiddleware } = require("../middlewares/storageUploads");
+
 router.put(
   "/updateHomeworkAssignment/:id",
   uploadWithErrorHandler(upload.single("file")),
@@ -29,6 +31,12 @@ router.get(
 router.get(
   "/getInvoiceByStudentId/:student_id",
   guardianController.getInvoiceByStudentId,
+);
+router.post(
+  "/payments",
+  uploadWithErrorHandler(upload.single("payment_attachment")),
+  storageUploadMiddleware("payment_attachments"),
+  guardianController.createPayment,
 );
 
 const leaveRequestValidation = [

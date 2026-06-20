@@ -275,6 +275,76 @@ const getInvoiceByStudentId = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch invoices" });
   }
 };
+const createPayment = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const {
+      student_id,
+      invoice_student_id,
+      amount,
+      payment_date,
+      payment_type,
+      transaction_id,
+      payment_method,
+    } = req.body;
+
+    if (
+      !school_id ||
+      !amount ||
+      !payment_date ||
+      !payment_type ||
+      !payment_method
+    ) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+    //check if transaction_id already unique or null is
+    const existingTransaction_id = await Payment.findOne({
+      where: { transaction_id },
+    });
+    if (
+      existingTransaction_id &&
+      existingTransaction_id.transaction_id !== ""
+    ) {
+      return res.status(400).json({ error: "Transaction ID already exists" });
+    }
+    const existingPayment = await Payment.findOne({
+      where: {
+        school_id,
+        student_id,
+        amount,
+        payment_date,
+        payment_type,
+      },
+    });
+    if (existingPayment) {
+      return res
+        .status(400)
+        .json({ error: "Payment with the same details already exists" });
+    }
+    const payment_attachmentUrl = req.uploadedFiles?.payment_attachment?.url || null;
+
+    const payment = await Payment.create({
+      school_id,
+      student_id,
+      invoice_student_id,
+      amount,
+      payment_date,
+      payment_type,
+      transaction_id,
+      payment_method,
+      payment_status:"pending",
+      recorded_by: req.user.user_id,
+      payment_attachment: payment_attachmentUrl ? payment_attachmentUrl : null,
+    });
+    res.status(201).json({
+      message: "Payment created",
+      payment,
+    });
+  } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "createPayment :", err);
+    res.status(500).json({ error: err.message });
+  }
+};
 const createLeaveRequest = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -1356,6 +1426,8 @@ module.exports = {
   getNoticeByStudentId,
   getPaymentByStudentId,
   getInvoiceByStudentId,
+  createPayment,
+  
 
   createLeaveRequest,
   getAllLeaveRequests,
