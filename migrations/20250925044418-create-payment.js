@@ -42,7 +42,7 @@ module.exports = {
         type: Sequelize.ENUM("pending", "completed", "failed", "refunded"),
         defaultValue: "pending",
       },
-      transaction_id: { type: Sequelize.STRING, unique: true },
+      transaction_id: { type: Sequelize.STRING},
       payment_method: {
         type: Sequelize.ENUM(
           "cash",

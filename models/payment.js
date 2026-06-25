@@ -32,7 +32,7 @@ const Payment = schoolSequelize.define(
       type: DataTypes.ENUM("pending", "completed", "failed", "refunded"),
       defaultValue: "pending",
     },
-    transaction_id: { type: DataTypes.STRING, unique: true },
+    transaction_id: { type: DataTypes.STRING },
     payment_method: {
       type: DataTypes.ENUM(
         "cash",
