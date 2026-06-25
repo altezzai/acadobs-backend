@@ -1081,6 +1081,7 @@ const getTrashedStaffs = async (req, res) => {
     const offset = (page - 1) * limit;
     const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
+    const role = req.query.role || ""; // 'all' or 'active'
     let whereClause = {
       trash: true,
       school_id: school_id,
@@ -1089,6 +1090,9 @@ const getTrashedStaffs = async (req, res) => {
       whereClause[Op.or] = [
         { name: { [Op.like]: `%${searchQuery}%` } },
       ];
+    }
+    if(role) {
+      whereClause.role = role;
     }
 
     const { count, rows: staffs } = await Staff.findAndCountAll({
