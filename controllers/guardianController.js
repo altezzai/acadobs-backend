@@ -628,7 +628,7 @@ const getSchoolsByUser = async (req, res) => {
       include: [
         {
           model: School,
-          attributes: ["id", "name", "address", "phone", "email"],
+          attributes: ["id", "name", "address", "phone", "email", "logo", "bg_image"],
         },
       ],
       group: ["school_id"],
