@@ -7,6 +7,7 @@ const {
   compressAndSaveFile,
   deletefilewithfoldername,
 } = require("../utils/fileHandler");
+const { deleteFile } = require("../middlewares/storageUploads");
 const { normalizeGuardianRelation } = require("../utils/supportingFunction");
 const { Class, StudentRoutes, stop } = require("../models");
 const HomeworkAssignment = require("../models/homeworkassignment");
@@ -78,7 +79,7 @@ const getSchoolIdByStudentId = async (student_id) => {
       where: { id: student_id, guardian_id: guardian_id },
     });
     if (!student) return "student not found";
-    
+
     const school_id = student.school_id;
     return school_id;
     // res.status(200).json({ school_id });
@@ -162,7 +163,7 @@ const getNoticeByStudentId = async (req, res) => {
 const getPaymentByStudentId = async (req, res) => {
   try {
     const { student_id } = req.params;
-     const guardian_id = req.user.user_id;
+    const guardian_id = req.user.user_id;
     const student = await Student.findOne({
       where: { id: student_id, guardian_id: guardian_id },
     });
@@ -231,7 +232,7 @@ const getInvoiceByStudentId = async (req, res) => {
     if (!student_id) {
       return res.status(400).json({ error: "Missing required fields" });
     }
-     const guardian_id = req.user.user_id;
+    const guardian_id = req.user.user_id;
     const student = await Student.findOne({
       where: { id: student_id, guardian_id: guardian_id },
     });
@@ -332,7 +333,7 @@ const createPayment = async (req, res) => {
       payment_type,
       transaction_id,
       payment_method,
-      payment_status:"pending",
+      payment_status: "pending",
       recorded_by: req.user.user_id,
       payment_attachment: payment_attachmentUrl ? payment_attachmentUrl : null,
     });
@@ -720,7 +721,7 @@ const getStaffsBySchoolId = async (req, res) => {
 const getTodayTimetableByStudentId = async (req, res) => {
   try {
     const student_id = req.params.student_id;
-   const guardian_id = req.user.user_id;
+    const guardian_id = req.user.user_id;
     const student = await Student.findOne({
       where: { id: student_id, guardian_id: guardian_id },
     });
@@ -940,7 +941,21 @@ const updateProfileDetails = async (req, res) => {
       post,
       pincode,
     });
-    res.status(200).json({ message: "Guardian profile updated", guardian });
+    const user = await User.findOne({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const newDpUrl = req.uploadedFiles?.dp?.url || null;
+    let finalDp = user.dp;
+
+    if (newDpUrl) {
+      if (user.dp) {
+        await deleteFile(user.dp);
+      }
+      finalDp = newDpUrl;
+      await user.update({ dp: finalDp });
+    }
+
+    res.status(200).json({ message: "Guardian profile updated", guardian, user });
   } catch (err) {
     logger.error(
       "userId:",
@@ -1025,29 +1040,41 @@ const changeIdentifiersAndName = async (req, res) => {
 
 //update ownstudent profile details in student table
 const updateStudentProfile = async (req, res) => {
+
+  console.log(req.params, "-----------")
+
   try {
+    console.log("id:", req.params)
+    console.log("Params:", req.params);
+    console.log("User:", req.user);
+    console.log("Body:", req.body);
+    console.log("Files:", req.file);
+    console.log("Uploaded Files:", req.uploadedFiles);
     const userId = req.user.user_id;
     const { student_id } = req.params;
-
     const { address } = req.body;
     const student = await Student.findOne({
       where: { id: student_id, guardian_id: userId },
     });
     if (!student) return res.status(404).json({ error: "Student not found" });
 
-    let studentImageFilename = student.image;
-    if (req.file) {
-      console.log("File uploaded:", req.file.originalname);
-      const oldFileName = student.image;
-      const uploadPath = "uploads/students_images/";
-      studentImageFilename = await compressAndSaveFile(req.file, uploadPath);
-      if (oldFileName) {
-        await deletefilewithfoldername(oldFileName, uploadPath);
+    // Existing image
+    let finalImage = student.image;
+
+    // New uploaded image from MinIO
+    const newImageUrl = req.uploadedFiles?.image?.url || null;
+
+    if (newImageUrl) {
+      // Delete old image from MinIO
+      if (student.image) {
+        await deleteFile(student.image);
       }
+
+      finalImage = newImageUrl;
     }
-    console.log("Student Image Filename:", studentImageFilename);
+
     await student.update({
-      image: studentImageFilename,
+      image: finalImage,
       address,
     });
     res.status(200).json({ message: "Student profile updated", student });
@@ -1427,7 +1454,7 @@ module.exports = {
   getPaymentByStudentId,
   getInvoiceByStudentId,
   createPayment,
-  
+
 
   createLeaveRequest,
   getAllLeaveRequests,

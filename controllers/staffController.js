@@ -38,6 +38,7 @@ const {
   sendMessageWithParentNote,
 } = require("../socketHandlers/messageHandlers");
 const { sendPushNotification } = require("./../utils/notifcationHandler");
+const { deleteFile } = require("../middlewares/storageUploads");
 
 const createExamWithMarks = async (req, res) => {
   try {
@@ -976,8 +977,8 @@ const getAttendanceById = async (req, res) => {
 const updateAttendance = async (req, res) => {
   try {
     const { id } = req.params;
-    const teacher_id = req.user.user_id ;
-    const school_id = req.user.school_id ;
+    const teacher_id = req.user.user_id;
+    const school_id = req.user.school_id;
     const { subject_id, period, date } = req.body;
 
     const attendance = await Attendance.findOne({
@@ -1006,12 +1007,12 @@ const updateAttendance = async (req, res) => {
 const updateAttendanceMarkedById = async (req, res) => {
   try {
     const { id } = req.params;
-     const teacher_id = req.user.user_id ;
-    const school_id = req.user.school_id ;
+    const teacher_id = req.user.user_id;
+    const school_id = req.user.school_id;
     const { status, remarks } = req.body;
-      const attendanceMarked = await AttendanceMarked.findByPk(id);
+    const attendanceMarked = await AttendanceMarked.findByPk(id);
     if (!attendanceMarked) return res.status(404).json({ error: "Not found" });
-      const attendance = await Attendance.findOne({
+    const attendance = await Attendance.findOne({
       where: { id: attendanceMarked.attendance_id, trash: false, school_id, teacher_id },
     });
     if (!attendance) return res.status(404).json({ error: "Attendance Not found" });
@@ -1033,15 +1034,15 @@ const updateAttendanceMarkedById = async (req, res) => {
 const bulkUpdateAttendanceById = async (req, res) => {
   try {
     const { attendance_id } = req.params;
-     const teacher_id = req.user.user_id ;
-    const school_id = req.user.school_id ;
+    const teacher_id = req.user.user_id;
+    const school_id = req.user.school_id;
     const { data } = req.body;
     if (!attendance_id || !Array.isArray(data)) {
       return res
         .status(400)
         .json({ error: "attendance_id and data array are required" });
     }
-      const attendance = await Attendance.findOne({
+    const attendance = await Attendance.findOne({
       where: { id: attendance_id, trash: false, school_id, teacher_id },
     });
     if (!attendance) return res.status(404).json({ error: "Attendance Not found" });
@@ -1234,12 +1235,12 @@ const getAllClassesAttendanceStatus = async (req, res) => {
 const deleteAttendance = async (req, res) => {
   try {
     const { id } = req.params;
-     const teacher_id = req.user.user_id ;
-    const school_id = req.user.school_id ;
+    const teacher_id = req.user.user_id;
+    const school_id = req.user.school_id;
     const attendance = await Attendance.findOne({
       where: { id, trash: false, school_id, teacher_id },
     });
-    if (!attendance )
+    if (!attendance)
       return res.status(404).json({ error: "Not found" });
 
     await Attendance.update({ trash: true }, { where: { id: id } });
@@ -1260,8 +1261,8 @@ const deleteAttendance = async (req, res) => {
 const restoreAttendance = async (req, res) => {
   try {
     const { id } = req.params;
-      const teacher_id = req.user.user_id ;
-    const school_id = req.user.school_id ;
+    const teacher_id = req.user.user_id;
+    const school_id = req.user.school_id;
     const attendance = await Attendance.findOne({
       where: { id, trash: false, school_id, teacher_id },
     });
@@ -1287,13 +1288,13 @@ const restoreAttendance = async (req, res) => {
 const permanentDeleteAttendance = async (req, res) => {
   try {
     const { id } = req.params;
-      const teacher_id = req.user.user_id ;
-    const school_id = req.user.school_id ;
+    const teacher_id = req.user.user_id;
+    const school_id = req.user.school_id;
     const attendance = await Attendance.findOne({
       where: { id, trash: true, school_id, teacher_id },
     });
     if (!attendance) return res.status(404).json({ error: "Not found" });
-    
+
     await AttendanceMarked.destroy({ where: { attendance_id: id } });
     await Attendance.destroy({ where: { id } });
     res.json({ message: "Peremently Deleted" });
@@ -1312,8 +1313,8 @@ const getTrashedAttendanceByTeacher = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    const teacher_id = req.user.user_id ;
-    const school_id = req.user.school_id ;
+    const teacher_id = req.user.user_id;
+    const school_id = req.user.school_id;
     const whereClause = {
       trash: true,
       school_id,
@@ -1357,8 +1358,8 @@ const getTrashedAttendanceByTeacher = async (req, res) => {
 };
 const getAttendanceByTeacher = async (req, res) => {
   try {
-     const teacher_id = req.user.user_id ;
-    const school_id = req.user.school_id ;
+    const teacher_id = req.user.user_id;
+    const school_id = req.user.school_id;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -1775,7 +1776,7 @@ const deleteAchievement = async (req, res) => {
 };
 const restoreAchievement = async (req, res) => {
   try {
-      const recorded_by = req.user.user_id;
+    const recorded_by = req.user.user_id;
     const school_id = req.user.school_id;
     await Achievement.update(
       { trash: false, recorded_by, school_id },
@@ -2351,7 +2352,7 @@ const createParentNote = async (req, res) => {
 
           await sendMessageWithParentNote(
             req.io,
-            { user: req.user, emit: () => {} },
+            { user: req.user, emit: () => { } },
             messageData
           );
 
@@ -2915,17 +2916,34 @@ const updateProfileDetails = async (req, res) => {
     if (!staff) {
       return res.status(404).json({ error: "Staff not found" });
     }
+    const user = await User.findOne({ where: { id: user_id } });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    let finalDp = user.dp;
+    const newDpUrl = req.uploadedFiles?.dp?.url || null;
+
+    if (newDpUrl) {
+      if (user.dp) {
+        await deleteFile(user.dp);
+      }
+      finalDp = newDpUrl;
+    }
+
+
     await staff.update({
       qualification,
       address,
     });
-    const user = await User.findOne({ where: { id: user_id } });
 
     await user.update({
       name,
       phone,
+      dp: finalDp,
     });
-    res.status(200).json({ message: "Profile details updated successfully" });
+
+
+    res.status(200).json({ message: "Profile details updated successfully", staff });
   } catch (error) {
     logger.error(
       "userId:",
