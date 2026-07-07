@@ -21,6 +21,7 @@ router.get(
 router.post(
   "/homeworks",
   uploadWithErrorHandler(upload.single("file")),
+  storageUploadMiddleware("homeworks"),
   staffController.createHomeworkWithAssignments
 );
 router.get("/homeworks", staffController.getAllHomework);
@@ -28,6 +29,7 @@ router.get("/homeworks/:id", staffController.getHomeworkById);
 router.put(
   "/homeworks/:id",
   uploadWithErrorHandler(upload.single("file")),
+  storageUploadMiddleware("homeworks"),
   staffController.updateHomework
 );
 router.delete("/homeworks/:id", staffController.deleteHomework);

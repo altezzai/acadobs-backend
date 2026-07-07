@@ -320,13 +320,8 @@ const createHomeworkWithAssignments = async (req, res) => {
     ) {
       return res.status(400).json({ error: "Missing required fields" });
     }
-    let fileName = null;
-    if (req.file) {
-      const uploadPath = "uploads/homeworks/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-    }
+    const fileUrl = req.uploadedFiles?.file?.url || null;
 
-    // Check for existing homework with matching criteria
     const existingHomework = await Homework.findOne({
       where: {
         school_id: 1,
@@ -354,7 +349,7 @@ const createHomeworkWithAssignments = async (req, res) => {
       due_date,
       title,
       type,
-      file: fileName ? fileName : null,
+      file: fileUrl ? fileUrl : null,
     });
     if (!assignments || assignments.length === 0) {
       return res.status(200).json({
@@ -472,15 +467,9 @@ const updateHomework = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, due_date } = req.body;
-
-    let fileName = null;
-    if (req.file) {
-      const uploadPath = "uploads/homeworks/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-    }
-
     const homework = await Homework.findByPk(id);
     if (!homework) return res.status(404).json({ error: "Not found" });
+
     const existingHomework = await Homework.findOne({
       where: {
         id: { [Op.ne]: id },
@@ -500,11 +489,21 @@ const updateHomework = async (req, res) => {
       });
     }
 
+    let finalFile = homework.file;
+    const newFileUrl = req.uploadedFiles?.file?.url || null;
+    if (newFileUrl) {
+      if (homework.file) {
+        await deleteFile(homework.file);
+      }
+
+      finalFile = newFileUrl;
+    }
+
     await homework.update({
       title,
       description,
       due_date,
-      file: fileName ? fileName : homework.file,
+      file: finalFile,
     });
     res.status(200).json({ message: "Updated successfully d", homework });
   } catch (err) {
