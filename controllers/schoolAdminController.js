@@ -1839,13 +1839,11 @@ const createStudent = async (req, res) => {
         }
         guardianUserId = existingUser.id;
       } else {
-        return res
-          .status(400)
-          .json({
-            error:
-              "User is already exists and not a guardian.User is a " +
-              existingUser.role,
-          });
+        return res.status(400).json({
+          error:
+            "User is already exists and not a guardian.User is a " +
+            existingUser.role,
+        });
       }
     } else {
       if (guardian_email) {
@@ -2025,13 +2023,11 @@ const bulkCreateStudents = async (req, res) => {
           }
           guardianUserId = existingGuardian.user_id;
         } else {
-          return res
-            .status(400)
-            .json({
-              error:
-                "User is already exists and not a guardian.User is a " +
-                existingUser.role,
-            });
+          return res.status(400).json({
+            error:
+              "User is already exists and not a guardian.User is a " +
+              existingUser.role,
+          });
         }
       } else {
         if (guardian_email) {
@@ -4170,11 +4166,9 @@ const updatePayment = async (req, res) => {
       payment_method,
     } = req.body;
     if (!amount || !payment_date || !payment_type || !student_id) {
-      return res
-        .status(400)
-        .json({
-          error: "student_id,amount,payment_date,payment_type are required",
-        });
+      return res.status(400).json({
+        error: "student_id,amount,payment_date,payment_type are required",
+      });
     }
 
     const Id = req.params.id;
@@ -6186,12 +6180,18 @@ const bulkUpsertTimetable = async (req, res) => {
           id: record.staff_id,
           school_id,
           role: "teacher",
-          trash: false,
         },
-        attributes: ["id"],
+        attributes: ["id", "trash"],
       });
       if (!staff) {
         return res.status(400).json({ error: "Invalid staff_id" });
+      }
+
+      if (staff.trash) {
+        return res.status(400).json({
+          error:
+            "One or more assigned teachers no longer exists, Please remove them from the timetable before saving.",
+        });
       }
     }
     if (!records || !Array.isArray(records)) {
