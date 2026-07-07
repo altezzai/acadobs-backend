@@ -1092,7 +1092,7 @@ const getTrashedStaffs = async (req, res) => {
         { name: { [Op.like]: `%${searchQuery}%` } },
       ];
     }
-    if(role) {
+    if (role) {
       whereClause.role = role;
     }
 
@@ -2184,37 +2184,38 @@ const getStudentById = async (req, res) => {
       where: { id, school_id, trash: false },
 
       include: [
-        { model: User, attributes: ["name", "email", "phone", "dp"] ,
+        {
+          model: User, attributes: ["name", "email", "phone", "dp"],
 
-          include:[
-             {
-          model: Guardian,
-          attributes: [
-        "guardian_relation",    
-        "guardian_name",
-        "guardian_contact",
-        "guardian_email",
-        "guardian_job",
-        "guardian2_relation",
-        "guardian2_name",
-        "guardian2_job",
-        "guardian2_contact",
-        "father_name",
-        "mother_name",
-        "house_name",
-        "street",
-        "city",
-        "landmark",
-        "district",
-        "state",
-        "country",
-        "post",
-        "pincode",
-          ],
-        },
+          include: [
+            {
+              model: Guardian,
+              attributes: [
+                "guardian_relation",
+                "guardian_name",
+                "guardian_contact",
+                "guardian_email",
+                "guardian_job",
+                "guardian2_relation",
+                "guardian2_name",
+                "guardian2_job",
+                "guardian2_contact",
+                "father_name",
+                "mother_name",
+                "house_name",
+                "street",
+                "city",
+                "landmark",
+                "district",
+                "state",
+                "country",
+                "post",
+                "pincode",
+              ],
+            },
           ]
         },
-       
+
         {
           model: Class,
           attributes: ["id", "year", "division", "classname"],
@@ -2552,11 +2553,12 @@ const createDutyWithAssignments = async (req, res) => {
       return res.status(400).json({ error: "Duty already exists" });
     }
 
-    let storedFileName = null;
-    if (req.file) {
-      uploadDir = "uploads/duties/";
-      storedFileName = await compressAndSaveFile(req.file, uploadDir);
-    }
+    // let storedFileName = null;
+    // if (req.file) {
+    //   uploadDir = "uploads/duties/";
+    //   storedFileName = await compressAndSaveFile(req.file, uploadDir);
+    // }
+    const fileUrl = req.uploadedFiles?.file?.url || null;
 
     const duty = await Duty.create(
       {
@@ -2565,7 +2567,7 @@ const createDutyWithAssignments = async (req, res) => {
         description,
         start_date: start_date || new Date(),
         deadline,
-        file: storedFileName,
+        file: fileUrl,
       },
       { transaction },
     );
@@ -2830,18 +2832,22 @@ const updateDuty = async (req, res) => {
         .status(409)
         .json({ error: "Duty with the same title already exists" });
     }
-    let fileName = null;
-    if (req.file) {
-      uploadPath = "uploads/duties/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-      await deletefilewithfoldername(duty.file, uploadPath);
+    let finalFile = duty.file;
+    const newFileUrl = req.uploadedFiles?.file?.url || null;
+
+    if (newFileUrl) {
+      if (duty.file) {
+        await deleteFile(duty.file);
+      }
+
+      finalFile = newFileUrl;
     }
     await duty.update({
       title,
       description,
       deadline,
       start_date,
-      file: fileName ? fileName : duty.file,
+      file: finalFile,
     });
     res.json(duty);
   } catch (err) {
@@ -4023,12 +4029,12 @@ const updatePayment = async (req, res) => {
         .status(400)
         .json({ error: "Payment with the same details already exists" });
 
-    } 
-    
+    }
+
     let invoice_status = "";
-    if(payment.payment_status !== "completed" && payment_status === "completed" && payment.invoice_student_id) {
+    if (payment.payment_status !== "completed" && payment_status === "completed" && payment.invoice_student_id) {
       const invoiceStudent = await InvoiceStudent.findOne({
-        where: { id: payment.invoice_student_id},
+        where: { id: payment.invoice_student_id },
         include: [{ model: Invoice, attributes: ["id", "amount"] }],
       });
       let totalPaid = 0;
@@ -4040,7 +4046,7 @@ const updatePayment = async (req, res) => {
           },
         });
       }
-      const paid= amount + totalPaid;
+      const paid = amount + totalPaid;
       const invoiceAmount = invoiceStudent?.Invoice?.amount || 0;
 
       if (invoiceStudent && paid >= invoiceAmount) {
@@ -5983,7 +5989,7 @@ const bulkUpsertTimetable = async (req, res) => {
     const school_id = req.user.school_id;
     let { records } = req.body;
     for (const record of records) {
-      const staff = await User.findOne({ where: { id: record.staff_id, school_id, role: "teacher", trash: false } ,attributes: ["id"] });
+      const staff = await User.findOne({ where: { id: record.staff_id, school_id, role: "teacher", trash: false }, attributes: ["id"] });
       if (!staff) {
         return res.status(400).json({ error: "Invalid staff_id" });
       }
@@ -7441,12 +7447,13 @@ const createStaffAttendance = async (req, res) => {
     const school_id = req.user.school_id;
     const { staff_id, date, status, check_in_time, check_out_time, remarks } =
       req.body;
-      //role teacher or staff check
-  const staff = await User.findOne({
-      where: { id: staff_id,
-         school_id,
-         trash: false ,
-         role: { [Op.in]: ["teacher", "staff"] }
+    //role teacher or staff check
+    const staff = await User.findOne({
+      where: {
+        id: staff_id,
+        school_id,
+        trash: false,
+        role: { [Op.in]: ["teacher", "staff"] }
       },
     });
     if (!staff) {
@@ -7679,12 +7686,12 @@ const bulkCreateStaffAttendance = async (req, res) => {
     for (const record of records) {
       const { staff_id, date, status, remarks } = record;
       // check the staff id is the same school
-        const staff = await User.findOne({
-      where: { id: staff_id, school_id, trash: false, role: { [Op.in]: ["teacher", "staff"] } },
-    });
-    if (!staff) {
-      return res.status(404).json({ error: "Staff not found" });
-    }
+      const staff = await User.findOne({
+        where: { id: staff_id, school_id, trash: false, role: { [Op.in]: ["teacher", "staff"] } },
+      });
+      if (!staff) {
+        return res.status(404).json({ error: "Staff not found" });
+      }
 
       const check_in_time =
         record.check_in_time || record.status === "present"

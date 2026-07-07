@@ -141,6 +141,7 @@ router.get(
 router.post(
   "/duties",
   uploadWithErrorHandler(upload.single("file")),
+  storageUploadMiddleware("duties"),
   schoolAdminController.createDutyWithAssignments,
 );
 router.get("/duties", schoolAdminController.getAllTeacherDuties);
@@ -150,6 +151,7 @@ router.get("/duties/:id", schoolAdminController.getDutyById);
 router.put(
   "/duties/:id",
   uploadWithErrorHandler(upload.single("file")),
+  storageUploadMiddleware("duties"),
   schoolAdminController.updateDuty,
 );
 router.delete("/duties/:id", schoolAdminController.deleteDuty);
