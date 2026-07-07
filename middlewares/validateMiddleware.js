@@ -9,10 +9,10 @@ const { validationResult, matchedData } = require('express-validator');
 const validate = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ 
-      success: false, 
+    return res.status(400).json({
+      success: false,
       message: "Input validation error",
-       errors: errors.array() 
+      errors: errors.array()
     });
   }
 
@@ -35,6 +35,7 @@ const validate = (req, res, next) => {
     Object.keys(req.params).forEach(k => delete req.params[k]);
     Object.assign(req.params, paramsData);
   }
+  console.log(req.params, "-----------")
 
   next();
 };

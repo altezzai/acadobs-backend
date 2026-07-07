@@ -3,6 +3,7 @@ const router = express.Router();
 const staffController = require("../controllers/staffController");
 const commonController = require("../controllers/commonController");
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
+const { storageUploadMiddleware } = require("../middlewares/storageUploads");
 // Internal Exam
 router.post("/internalmarks", staffController.createExamWithMarks);
 router.get("/internalmarks", staffController.getAllmarks);
@@ -166,7 +167,12 @@ router.put(
 );
 router.get("/todayAttendanceStatus", staffController.todayAttendanceStatus);
 
-router.put("/updateProfileDetails", staffController.updateProfileDetails);
+router.put(
+  "/updateProfileDetails",
+  uploadWithErrorHandler(upload.single("dp")),
+  storageUploadMiddleware("staffs"),
+  staffController.updateProfileDetails
+);
 router.get("/getProfileDetails", staffController.getProfileDetails);
 
 router.get("/getSubjects", staffController.getSubjects);

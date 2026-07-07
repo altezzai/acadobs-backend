@@ -4,7 +4,7 @@ const guardianController = require("../controllers/guardianController");
 const commonController = require("../controllers/commonController");
 const transferController = require("../controllers/transferController");
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
-const { body } = require("express-validator");
+const { body, param } = require("express-validator");
 const { validate } = require("../middlewares/validateMiddleware");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
 
@@ -95,11 +95,14 @@ router.get(
 router.put(
   "/updateStudentProfile/:student_id",
   uploadWithErrorHandler(upload.single("image")),
-  [body('address').optional().isString().trim().escape()],
+  storageUploadMiddleware("students_images"),
+  [body('address').optional().isString().trim().escape(), param('student_id')],
   validate,
   guardianController.updateStudentProfile,
 );
 router.put("/updateProfileDetails",
+  uploadWithErrorHandler(upload.single("dp")),
+  storageUploadMiddleware("guardians"),
   [
     body('guardian_relation').optional().isString().trim().escape(),
     body('guardian_job').optional().isString().trim().escape(),
@@ -167,7 +170,7 @@ router.get(
   commonController.getLeaveRequestByStudentId,
 );
 
-router.put("/changePassword", 
+router.put("/changePassword",
   [
     body('oldPassword').notEmpty().isString(),
     body('newPassword').notEmpty().isString()
@@ -175,7 +178,7 @@ router.put("/changePassword",
   validate,
   commonController.changePassword
 );
-router.put("/updateFcmToken", 
+router.put("/updateFcmToken",
   [
     body('fcm_token').optional().isString().trim().escape()
   ],
@@ -197,7 +200,7 @@ router.get(
   commonController.getAchievementsBySchool,
 );
 
-router.post("/accountDeleteRequests", 
+router.post("/accountDeleteRequests",
   [
     body('reason').optional().isString().trim().escape()
   ],
