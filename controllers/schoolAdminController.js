@@ -320,10 +320,11 @@ const createSubject = async (req, res) => {
       return res.status(400).json({ error: "Required fields are missing" });
     }
     if (
-      class_range !== "1-4" &&
-      class_range !== "5-7" &&
-      class_range !== "8-10" &&
-      class_range !== "11-12" &&
+      class_range !== "FS" &&
+      class_range !== "PS" &&
+      class_range !== "MS" &&
+      class_range !== "SS" &&
+      class_range !== "common" &&
       class_range !== "other"
     ) {
       return res.status(400).json({ error: "Invalid class range" });
@@ -2185,9 +2186,35 @@ const getStudentById = async (req, res) => {
       include: [
         { model: User, attributes: ["name", "email", "phone", "dp"] },
         {
+          model: Guardian,
+          attributes: [
+        "guardian_relation",    
+        "guardian_name",
+        "guardian_contact",
+        "guardian_email",
+        "guardian_job",
+        "guardian2_relation",
+        "guardian2_name",
+        "guardian2_job",
+        "guardian2_contact",
+        "father_name",
+        "mother_name",
+        "house_name",
+        "street",
+        "city",
+        "landmark",
+        "district",
+        "state",
+        "country",
+        "post",
+        "pincode",
+          ],
+        },
+        {
           model: Class,
           attributes: ["id", "year", "division", "classname"],
         },
+
       ],
     });
 

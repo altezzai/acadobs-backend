@@ -573,10 +573,11 @@ const createSubject = async (req, res) => {
       return res.status(400).json({ error: "Required fields are missing" });
     }
     if (
-      class_range !== "1-4" &&
-      class_range !== "5-7" &&
-      class_range !== "8-10" &&
-      class_range !== "11-12" &&
+      class_range !== "FS" &&
+      class_range !== "PS" &&
+      class_range !== "MS" &&
+      class_range !== "SS" &&
+      class_range !== "common" &&
       class_range !== "other"
     ) {
       return res.status(400).json({ error: "Invalid class range" });

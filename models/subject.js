@@ -15,7 +15,7 @@ const Subject = schoolSequelize.define(
       allowNull: false,
     },
     class_range: {
-      type: DataTypes.ENUM("1-4", "5-7", "8-10", "11-12", "other"),
+      type: DataTypes.ENUM("FS", "PS", "MS", "SS", "common", "other"),
       allowNull: false,
     },
     school_id: {
