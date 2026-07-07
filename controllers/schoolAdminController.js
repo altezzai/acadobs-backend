@@ -2184,8 +2184,10 @@ const getStudentById = async (req, res) => {
       where: { id, school_id, trash: false },
 
       include: [
-        { model: User, attributes: ["name", "email", "phone", "dp"] },
-        {
+        { model: User, attributes: ["name", "email", "phone", "dp"] ,
+
+          include:[
+             {
           model: Guardian,
           attributes: [
         "guardian_relation",    
@@ -2210,6 +2212,9 @@ const getStudentById = async (req, res) => {
         "pincode",
           ],
         },
+          ]
+        },
+       
         {
           model: Class,
           attributes: ["id", "year", "division", "classname"],
