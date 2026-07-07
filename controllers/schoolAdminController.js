@@ -489,9 +489,10 @@ const deleteSubject = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const subject = await Subject.findOne({ where: { id, school_id, trash: false } });
-    if (!subject)
-      return res.status(404).json({ error: "Subject not found" });
+    const subject = await Subject.findOne({
+      where: { id, school_id, trash: false },
+    });
+    if (!subject) return res.status(404).json({ error: "Subject not found" });
 
     subject.trash = true;
     await subject.save();
@@ -602,7 +603,9 @@ const restoreSubject = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const subject = await Subject.findOne({ where: { id, school_id, trash: true } });
+    const subject = await Subject.findOne({
+      where: { id, school_id, trash: true },
+    });
     if (!subject) {
       return res.status(404).json({ error: "Subject not found" });
     }
@@ -626,9 +629,10 @@ const permanentDeleteSubject = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const { id } = req.params;
-    const subject = await Subject.findOne({ where: { id, school_id, trash: true } });
-    if (!subject)
-      return res.status(404).json({ error: "Subject not found" });
+    const subject = await Subject.findOne({
+      where: { id, school_id, trash: true },
+    });
+    if (!subject) return res.status(404).json({ error: "Subject not found" });
 
     await subject.destroy();
     res.status(200).json({ message: "Subject permanently deleted" });
@@ -785,8 +789,8 @@ const getAllStaff = async (req, res) => {
           attributes: ["id", "name", "email", "phone", "dp", "role"],
           where: searchQuery
             ? {
-              name: { [Op.like]: `%${searchQuery}%` },
-            }
+                name: { [Op.like]: `%${searchQuery}%` },
+              }
             : {},
         },
         { model: Class, attributes: ["id", "year", "division", "classname"] },
@@ -904,7 +908,7 @@ const updateStaff = async (req, res) => {
     }
 
     await staff.update(
-      { role, qualification, address, class_id, dp: finalDp, },
+      { role, qualification, address, class_id, dp: finalDp },
       { transaction },
     );
 
@@ -913,7 +917,7 @@ const updateStaff = async (req, res) => {
         role,
         dp: finalDp,
       },
-      { transaction }
+      { transaction },
     );
 
     if (subjects && Array.isArray(subjects)) {
@@ -1036,8 +1040,7 @@ const deleteStaff = async (req, res) => {
     const staff = await Staff.findOne({
       where: { id: staff_id, school_id, trash: false },
     });
-    if (!staff)
-      return res.status(404).json({ error: "Staff not found" });
+    if (!staff) return res.status(404).json({ error: "Staff not found" });
     const user = await User.findByPk(staff.user_id);
     if (!user && user.trash)
       return res.status(404).json({ error: "user not found" });
@@ -1062,8 +1065,7 @@ const restoredStaff = async (req, res) => {
     const staff = await Staff.findOne({
       where: { id: staff_id, school_id, trash: true },
     });
-    if (staff)
-      return res.status(404).json({ error: "Staff not found" });
+    if (staff) return res.status(404).json({ error: "Staff not found" });
     const user = await User.findByPk(staff.user_id);
     if (!user && user.trash)
       return res.status(404).json({ error: "user not found" });
@@ -1088,9 +1090,7 @@ const getTrashedStaffs = async (req, res) => {
       school_id: school_id,
     };
     if (searchQuery) {
-      whereClause[Op.or] = [
-        { name: { [Op.like]: `%${searchQuery}%` } },
-      ];
+      whereClause[Op.or] = [{ name: { [Op.like]: `%${searchQuery}%` } }];
     }
     if (role) {
       whereClause.role = role;
@@ -1101,7 +1101,6 @@ const getTrashedStaffs = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
-
     });
     res.status(200).json({
       totalcontent: count,
@@ -1145,8 +1144,8 @@ const getAllTeachers = async (req, res) => {
           attributes: ["id", "name", "email", "phone", "dp", "role"],
           where: searchQuery
             ? {
-              name: { [Op.like]: `%${searchQuery}%` },
-            }
+                name: { [Op.like]: `%${searchQuery}%` },
+              }
             : {},
         },
         { model: Class, attributes: ["id", "year", "division", "classname"] },
@@ -1272,7 +1271,7 @@ const updateStaffPermission = async (req, res) => {
           attributes: ["id", "name", "email", "phone", "dp", "school_id"],
           where: school_id,
         },
-      ]
+      ],
     });
     if (!permission) {
       return res.status(404).json({ error: "Permissions not found" });
@@ -1768,8 +1767,6 @@ const createStudent = async (req, res) => {
       second_language,
       status,
 
-      // Guardian Data (all inside req.body)
-
       guardian_contact,
       guardian_name,
       guardian_job,
@@ -1794,7 +1791,11 @@ const createStudent = async (req, res) => {
     const guardian_relation = req.body.guardian_relation || "father";
 
     if (
-      (!guardian_contact || !full_name || !reg_no || !class_id || !roll_number)
+      !guardian_contact ||
+      !full_name ||
+      !reg_no ||
+      !class_id ||
+      !roll_number
     ) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
@@ -1826,7 +1827,7 @@ const createStudent = async (req, res) => {
     const studentImageUrl = req.uploadedFiles?.image?.[0]?.url || null;
 
     if (existingUser) {
-      if (existingUser.role === 'guardian') {
+      if (existingUser.role === "guardian") {
         const existingGuardian = await Guardian.findOne({
           where: { user_id: existingUser.id },
         });
@@ -1838,9 +1839,14 @@ const createStudent = async (req, res) => {
         }
         guardianUserId = existingUser.id;
       } else {
-        return res.status(400).json({ error: "User is already exists and not a guardian.User is a " + existingUser.role });
+        return res
+          .status(400)
+          .json({
+            error:
+              "User is already exists and not a guardian.User is a " +
+              existingUser.role,
+          });
       }
-
     } else {
       if (guardian_email) {
         const existingEmail = await User.findOne({
@@ -2007,7 +2013,7 @@ const bulkCreateStudents = async (req, res) => {
       });
 
       if (existingUser) {
-        if (existingUser.role === 'guardian') {
+        if (existingUser.role === "guardian") {
           const existingGuardian = await Guardian.findOne({
             where: { user_id: existingUser.id },
             transaction,
@@ -2019,7 +2025,13 @@ const bulkCreateStudents = async (req, res) => {
           }
           guardianUserId = existingGuardian.user_id;
         } else {
-          return res.status(400).json({ error: "User is already exists and not a guardian.User is a " + existingUser.role });
+          return res
+            .status(400)
+            .json({
+              error:
+                "User is already exists and not a guardian.User is a " +
+                existingUser.role,
+            });
         }
       } else {
         if (guardian_email) {
@@ -2038,7 +2050,6 @@ const bulkCreateStudents = async (req, res) => {
           return res.status(400).json({
             error: `Required guardian fields missing for student: ${full_name}'s guardian details`,
           });
-
         }
 
         const guardianData = {
@@ -2049,7 +2060,9 @@ const bulkCreateStudents = async (req, res) => {
           guardian_relation: guardian_relation ? guardian_relation : "father",
           guardian_job,
           guardian2_name,
-          guardian2_relation: guardian2_relation ? guardian2_relation : "mother",
+          guardian2_relation: guardian2_relation
+            ? guardian2_relation
+            : "mother",
           guardian2_contact,
           guardian2_job,
           father_name,
@@ -2185,7 +2198,8 @@ const getStudentById = async (req, res) => {
 
       include: [
         {
-          model: User, attributes: ["name", "email", "phone", "dp"],
+          model: User,
+          attributes: ["name", "email", "phone", "dp"],
 
           include: [
             {
@@ -2213,14 +2227,13 @@ const getStudentById = async (req, res) => {
                 "pincode",
               ],
             },
-          ]
+          ],
         },
 
         {
           model: Class,
           attributes: ["id", "year", "division", "classname"],
         },
-
       ],
     });
 
@@ -2254,26 +2267,70 @@ const updateStudent = async (req, res) => {
       status,
       second_language,
       alumni,
+
+      // Guardian fields
+      guardian_name,
+      guardian_contact,
+      guardian_email,
+      guardian_relation,
+      guardian_job,
+      guardian2_name,
+      guardian2_relation,
+      guardian2_contact,
+      guardian2_job,
+      father_name,
+      mother_name,
+
+      // Address fields
+      house_name,
+      street,
+      city,
+      landmark,
+      district,
+      state,
+      country,
+      post,
+      pincode,
     } = req.body;
+
     if (reg_no) {
       const existingRegNo = await Student.findOne({
         where: { reg_no, school_id, id: { [Op.ne]: id } },
       });
-
       if (existingRegNo) {
         return res
           .status(400)
           .json({ error: "Reg number already exists in student table" });
       }
     }
+
+    if (roll_number && class_id) {
+      const existingRollNumber = await Student.findOne({
+        where: {
+          roll_number,
+          school_id,
+          class_id,
+          trash: false,
+          id: { [Op.ne]: id },
+        },
+      });
+      if (existingRollNumber) {
+        return res.status(400).json({
+          error: "Roll number already exists in student table for this class",
+        });
+      }
+    }
+
     const student = await Student.findByPk(id);
     if (!student || student.trash)
       return res.status(404).json({ error: "Student not found" });
 
+    // Handle student image — support both legacy req.file and new req.uploadedFiles
     let studentImageFilename = student.image;
-
-    // Update image if provided
-    if (req.file) {
+    const newStudentImageUrl = req.uploadedFiles?.image?.[0]?.url || null;
+    if (newStudentImageUrl) {
+      studentImageFilename = newStudentImageUrl;
+    } else if (req.file) {
       const studentImageFile = req.file;
       const uploadPath = "uploads/students_images/";
       await deletefilewithfoldername(studentImageFilename, uploadPath);
@@ -2283,7 +2340,7 @@ const updateStudent = async (req, res) => {
       );
     }
 
-    const updated = await student.update({
+    await student.update({
       school_id,
       reg_no,
       roll_number,
@@ -2299,6 +2356,111 @@ const updateStudent = async (req, res) => {
       alumni,
     });
 
+    // Update linked guardian if guardian fields are provided
+    if (student.guardian_id) {
+      const guardian = await Guardian.findOne({
+        where: { user_id: student.guardian_id },
+      });
+
+      if (guardian) {
+        // Validate uniqueness of contact if being changed
+        if (
+          guardian_contact &&
+          guardian_contact !== guardian.guardian_contact
+        ) {
+          const existingPhone = await User.findOne({
+            where: {
+              phone: guardian_contact,
+              id: { [Op.ne]: student.guardian_id },
+            },
+          });
+          if (existingPhone) {
+            return res.status(400).json({
+              error: "Guardian phone already exists in user table",
+            });
+          }
+        }
+
+        // Validate uniqueness of email if being changed
+        if (guardian_email && guardian_email !== guardian.guardian_email) {
+          const existingEmail = await User.findOne({
+            where: {
+              email: guardian_email,
+              id: { [Op.ne]: student.guardian_id },
+            },
+          });
+          if (existingEmail && guardian_email !== "") {
+            return res.status(400).json({
+              error: "Guardian email already exists in user table",
+            });
+          }
+        }
+
+        await guardian.update({
+          guardian_name: guardian_name || guardian.guardian_name,
+          guardian_contact: guardian_contact || guardian.guardian_contact,
+          guardian_email:
+            guardian_email !== undefined
+              ? guardian_email
+              : guardian.guardian_email,
+          guardian_relation: guardian_relation
+            ? normalizeGuardianRelation(guardian_relation)
+            : guardian.guardian_relation,
+          guardian_job:
+            guardian_job !== undefined ? guardian_job : guardian.guardian_job,
+          guardian2_name:
+            guardian2_name !== undefined
+              ? guardian2_name
+              : guardian.guardian2_name,
+          guardian2_relation: guardian2_relation
+            ? normalizeGuardianRelation(guardian2_relation)
+            : guardian.guardian2_relation,
+          guardian2_contact:
+            guardian2_contact !== undefined
+              ? guardian2_contact
+              : guardian.guardian2_contact,
+          guardian2_job:
+            guardian2_job !== undefined
+              ? guardian2_job
+              : guardian.guardian2_job,
+          father_name:
+            father_name !== undefined ? father_name : guardian.father_name,
+          mother_name:
+            mother_name !== undefined ? mother_name : guardian.mother_name,
+          house_name:
+            house_name !== undefined ? house_name : guardian.house_name,
+          street: street !== undefined ? street : guardian.street,
+          city: city !== undefined ? city : guardian.city,
+          landmark: landmark !== undefined ? landmark : guardian.landmark,
+          district: district !== undefined ? district : guardian.district,
+          state: state !== undefined ? state : guardian.state,
+          country: country !== undefined ? country : guardian.country,
+          post: post !== undefined ? post : guardian.post,
+          pincode: pincode !== undefined ? pincode : guardian.pincode,
+        });
+
+        // Sync guardian User record
+        const guardianUser = await User.findByPk(student.guardian_id);
+        if (guardianUser) {
+          const newGuardianDpUrl = req.uploadedFiles?.dp?.[0]?.url || null;
+          let guardianDp = guardianUser.dp;
+          if (newGuardianDpUrl) {
+            guardianDp = newGuardianDpUrl;
+          }
+          await guardianUser.update({
+            name: guardian_name || guardianUser.name,
+            email:
+              guardian_email !== undefined
+                ? guardian_email
+                : guardianUser.email,
+            phone: guardian_contact || guardianUser.phone,
+            dp: guardianDp,
+          });
+        }
+      }
+    }
+
+    const updated = await Student.findByPk(id);
     res.status(200).json({ message: "Student updated successfully", updated });
   } catch (err) {
     logger.error(
@@ -2343,7 +2505,9 @@ const restoreStudent = async (req, res) => {
     const { id } = req.params;
     const student = await Student.findByPk(id);
     if (!student || !student.trash) {
-      return res.status(404).json({ error: "Student not found or not in trash" });
+      return res
+        .status(404)
+        .json({ error: "Student not found or not in trash" });
     }
     await student.update({ trash: false });
     res.status(200).json({ message: "Student restored successfully" });
@@ -2381,12 +2545,16 @@ const getTrashedStudents = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
-      include: [{ model: User, attributes: ["name", "email", "phone", "dp"] },
-      { model: Class, attributes: ["id", "year", "division", "classname"] },],
+      include: [
+        { model: User, attributes: ["name", "email", "phone", "dp"] },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+      ],
       order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
-    res.status(200).json({ totalcontent: count, totalPages, currentPage: page, students });
+    res
+      .status(200)
+      .json({ totalcontent: count, totalPages, currentPage: page, students });
   } catch (err) {
     logger.error(
       "schoolId:",
@@ -2415,14 +2583,16 @@ const bulkUpdateStudentsToAlumni = async (req, res) => {
       );
 
       await transaction.commit();
-      res.status(200).json({ message: `${result[0]} students updated to alumni` });
+      res
+        .status(200)
+        .json({ message: `${result[0]} students updated to alumni` });
     } catch (err) {
       await transaction.rollback();
       logger.error(
         "schoolId:",
         req.user.school_id,
         "Error updating students to alumni:",
-        err
+        err,
       );
       console.error("Error updating students to alumni:", err);
       res.status(500).json({ error: "Failed to update students to alumni" });
@@ -2432,7 +2602,7 @@ const bulkUpdateStudentsToAlumni = async (req, res) => {
       "schoolId:",
       req.user.school_id,
       "Error in bulkUpdateStudentsToAlumni:",
-      err
+      err,
     );
     console.error("Error in bulkUpdateStudentsToAlumni:", err);
     res.status(500).json({ error: "Failed to update students to alumni" });
@@ -2516,12 +2686,16 @@ const getTrashedAlumniStudents = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
-      include: [{ model: User, attributes: ["name", "email", "phone", "dp"] },
-      { model: Class, attributes: ["id", "year", "division", "classname"] },],
+      include: [
+        { model: User, attributes: ["name", "email", "phone", "dp"] },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+      ],
       order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
-    res.status(200).json({ totalcontent: count, totalPages, currentPage: page, students });
+    res
+      .status(200)
+      .json({ totalcontent: count, totalPages, currentPage: page, students });
   } catch (err) {
     logger.error(
       "schoolId:",
@@ -2662,7 +2836,6 @@ const getAllTeacherDuties = async (req, res) => {
               attributes: ["id", "name", "dp", "role"],
               required: true,
               where: { role: "teacher" },
-
             },
           ],
         },
@@ -2747,7 +2920,6 @@ const getAllStaffDuties = async (req, res) => {
               attributes: ["id", "name", "dp", "role"],
               required: true,
               where: { role: "staff" },
-
             },
           ],
         },
@@ -3018,7 +3190,7 @@ const restoreDuty = async (req, res) => {
     const school_id = req.user.school_id;
     const duty = await Duty.findOne({
       where: { id, school_id, trash: true },
-    })
+    });
     if (!duty) return res.status(404).json({ error: "Not found" });
 
     await Duty.update({ trash: false }, { where: { id: id } });
@@ -3037,7 +3209,10 @@ const permanentDeleteDuty = async (req, res) => {
     const { id } = req.params;
     const school_id = req.user.school_id;
     await DutyAssignment.destroy({ where: { duty_id: id } }, { transaction });
-    await Duty.destroy({ where: { id, school_id, trash: true } }, { transaction });
+    await Duty.destroy(
+      { where: { id, school_id, trash: true } },
+      { transaction },
+    );
     await transaction.commit();
     res.json({ message: "Peremently Deleted Duty" });
   } catch (err) {
@@ -3281,7 +3456,7 @@ const deleteAchievement = async (req, res) => {
     const school_id = req.user.school_id;
     const achievement = await Achievement.findOne({
       where: { id: req.params.id, school_id, trash: false },
-    })
+    });
     if (!achievement) {
       return res.status(404).json({ error: "Achievement not found" });
     }
@@ -3555,7 +3730,6 @@ const updateEvent = async (req, res) => {
     if (!event || event.trash)
       return res.status(404).json({ error: "Event not found" });
 
-
     const newFileUrl = req.uploadedFiles?.file?.url || null;
 
     let finalFile = event.file || null;
@@ -3621,9 +3795,14 @@ const getTrashedEvents = async (req, res) => {
 const restoreEvent = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const event = await Event.findOne({ where: { id: req.params.id, school_id, trash: true } });
+    const event = await Event.findOne({
+      where: { id: req.params.id, school_id, trash: true },
+    });
     if (!event) return res.status(404).json({ error: "Event not found" });
-    await Event.update({ trash: false }, { where: { id: req.params.id, school_id } });
+    await Event.update(
+      { trash: false },
+      { where: { id: req.params.id, school_id } },
+    );
     res.status(200).json({ message: "Event restored successfully" });
   } catch (error) {
     logger.error("schoolId:", req.user.school_id, "restoreEvent :", error);
@@ -3633,7 +3812,9 @@ const restoreEvent = async (req, res) => {
 const permanentDeleteEvent = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const event = await Event.findOne({ where: { id: req.params.id, school_id } });
+    const event = await Event.findOne({
+      where: { id: req.params.id, school_id },
+    });
     if (!event) return res.status(404).json({ error: "Event not found" });
     const uploadPath = "uploads/event_files/";
     await deletefilewithfoldername(event.file, uploadPath);
@@ -3988,13 +4169,12 @@ const updatePayment = async (req, res) => {
       payment_status,
       payment_method,
     } = req.body;
-    if (
-      !amount ||
-      !payment_date ||
-      !payment_type ||
-      !student_id
-    ) {
-      return res.status(400).json({ error: "student_id,amount,payment_date,payment_type are required" });
+    if (!amount || !payment_date || !payment_type || !student_id) {
+      return res
+        .status(400)
+        .json({
+          error: "student_id,amount,payment_date,payment_type are required",
+        });
     }
 
     const Id = req.params.id;
@@ -4028,11 +4208,14 @@ const updatePayment = async (req, res) => {
       return res
         .status(400)
         .json({ error: "Payment with the same details already exists" });
-
     }
 
     let invoice_status = "";
-    if (payment.payment_status !== "completed" && payment_status === "completed" && payment.invoice_student_id) {
+    if (
+      payment.payment_status !== "completed" &&
+      payment_status === "completed" &&
+      payment.invoice_student_id
+    ) {
       const invoiceStudent = await InvoiceStudent.findOne({
         where: { id: payment.invoice_student_id },
         include: [{ model: Invoice, attributes: ["id", "amount"] }],
@@ -4079,7 +4262,7 @@ const deletePayment = async (req, res) => {
     const school_id = req.user.school_id;
     const payment = await Payment.findOne({
       where: { id: req.params.id, school_id, trash: false },
-    })
+    });
     if (!payment) {
       return res.status(404).json({ error: "Payment not found" });
     }
@@ -4413,7 +4596,9 @@ const addInvoiceStudentsbyInvoiceId = async (req, res) => {
         where: { id: student_ids, school_id, trash: false },
       });
       if (!students || students.length !== student_ids.length) {
-        return res.status(400).json({ error: "One or more students not found in this school" });
+        return res
+          .status(400)
+          .json({ error: "One or more students not found in this school" });
       }
 
       const invoiceStudents = student_ids.map((student_id) => ({
@@ -5495,8 +5680,8 @@ const updateNews = async (req, res) => {
           model: NewsImage,
           as: "images",
           attributes: ["id", "image_url", "caption"],
-        }
-      ]
+        },
+      ],
     });
 
     res.json({ message: "Updated", news: updatedNews });
@@ -5854,7 +6039,10 @@ const deleteNotice = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const [rows] = await Notice.update({ trash: true }, { where: { id: id, school_id } });
+    const [rows] = await Notice.update(
+      { trash: true },
+      { where: { id: id, school_id } },
+    );
     if (!rows) return res.status(404).json({ error: "Not found" });
     res.json({ message: "Notice soft-deleted" });
   } catch (err) {
@@ -5871,7 +6059,9 @@ const permanentDeleteNotice = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const notice = await Notice.findOne({ where: { id: id, trash: true, school_id } });
+    const notice = await Notice.findOne({
+      where: { id: id, trash: true, school_id },
+    });
     if (!notice) return res.status(404).json({ error: "Not found" });
     if (notice.file) {
       await deleteFile(notice.file);
@@ -5935,7 +6125,9 @@ const restoreNotice = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const notice = await Notice.findOne({ where: { id, trash: true, school_id } });
+    const notice = await Notice.findOne({
+      where: { id, trash: true, school_id },
+    });
     if (!notice) return res.status(404).json({ error: "Not found" });
     await notice.update({ trash: false });
     res.json({ message: "Notice restored" });
@@ -5989,7 +6181,15 @@ const bulkUpsertTimetable = async (req, res) => {
     const school_id = req.user.school_id;
     let { records } = req.body;
     for (const record of records) {
-      const staff = await User.findOne({ where: { id: record.staff_id, school_id, role: "teacher", trash: false }, attributes: ["id"] });
+      const staff = await User.findOne({
+        where: {
+          id: record.staff_id,
+          school_id,
+          role: "teacher",
+          trash: false,
+        },
+        attributes: ["id"],
+      });
       if (!staff) {
         return res.status(400).json({ error: "Invalid staff_id" });
       }
@@ -6179,7 +6379,7 @@ const getTimetablesWithClassId = async (req, res) => {
         },
         {
           model: User,
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "trash"],
         },
       ],
       order: [
@@ -6951,7 +7151,7 @@ const deleteSubstitution = async (req, res) => {
     const school_id = req.user.school_id;
     const substitution = await TimetableSubstitution.findOne({
       where: { id, school_id },
-    })
+    });
     if (!substitution) {
       return res.status(404).json({ error: "Substitution not found" });
     }
@@ -7097,7 +7297,7 @@ const dashboardCounts = async (req, res) => {
     const endDate = req.query.endDate || moment().endOf("day").toDate();
 
     const totalStudents = await Student.count({
-      where: { school_id, trash: false, alumni: false, },
+      where: { school_id, trash: false, alumni: false },
     });
 
     const totalTeachers = await Staff.count({
@@ -7453,7 +7653,7 @@ const createStaffAttendance = async (req, res) => {
         id: staff_id,
         school_id,
         trash: false,
-        role: { [Op.in]: ["teacher", "staff"] }
+        role: { [Op.in]: ["teacher", "staff"] },
       },
     });
     if (!staff) {
@@ -7522,9 +7722,9 @@ const updateStaffAttendance = async (req, res) => {
       status: status || attendance.status,
       check_in_time:
         check_in_time ||
-          attendance.check_in_time ||
-          check_in_time ||
-          status === "present"
+        attendance.check_in_time ||
+        check_in_time ||
+        status === "present"
           ? new Date().toISOString()
           : null,
       check_out_time: check_out_time || attendance.check_out_time,
@@ -7687,7 +7887,12 @@ const bulkCreateStaffAttendance = async (req, res) => {
       const { staff_id, date, status, remarks } = record;
       // check the staff id is the same school
       const staff = await User.findOne({
-        where: { id: staff_id, school_id, trash: false, role: { [Op.in]: ["teacher", "staff"] } },
+        where: {
+          id: staff_id,
+          school_id,
+          trash: false,
+          role: { [Op.in]: ["teacher", "staff"] },
+        },
       });
       if (!staff) {
         return res.status(404).json({ error: "Staff not found" });
@@ -7906,7 +8111,7 @@ const getAllDrivers = async (req, res) => {
     const drivers = await Driver.findAll({
       where: {
         trash: false,
-        school_id
+        school_id,
       },
       attributes: ["id", "name", "phone", "email", "photo", "address"],
     });
@@ -7944,7 +8149,6 @@ const createVehicle = async (req, res) => {
 
     const photoUrl = req.uploadedFiles?.photo?.[0]?.url || null;
 
-
     const vehicle = await Vehicle.create({
       type,
       model,
@@ -7970,7 +8174,7 @@ const getAllVehicles = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const vehicles = await Vehicle.findAll({
-      where: { trash: false, school_id: school_id, },
+      where: { trash: false, school_id: school_id },
       include: [
         {
           model: Driver,
@@ -7996,7 +8200,7 @@ const getVehicleById = async (req, res) => {
     const { id } = req.params;
     const school_id = req.user.school_id;
     const vehicle = await Vehicle.findOne({
-      where: { id, trash: false, school_id: school_id, },
+      where: { id, trash: false, school_id: school_id },
       include: [
         {
           model: Driver,
@@ -8036,9 +8240,8 @@ const updateVehicle = async (req, res) => {
       }
     }
 
-
     const vehicle = await Vehicle.findOne({
-      where: { id, trash: false, school_id: school_id, },
+      where: { id, trash: false, school_id: school_id },
     });
 
     if (!vehicle) {
@@ -8098,7 +8301,16 @@ const deleteVehicle = async (req, res) => {
 
 const createRoute = async (req, res) => {
   try {
-    const { start, stop, route_no, vehicle_id, driver_id, type, isLock, hasDropRoute } = req.body;
+    const {
+      start,
+      stop,
+      route_no,
+      vehicle_id,
+      driver_id,
+      type,
+      isLock,
+      hasDropRoute,
+    } = req.body;
     const school_id = req.user.school_id;
 
     if (!start || !stop) {
@@ -8107,7 +8319,7 @@ const createRoute = async (req, res) => {
 
     if (!school_id) {
       return res.status(404).json({
-        message: "school not found"
+        message: "school not found",
       });
     }
 
@@ -8122,15 +8334,19 @@ const createRoute = async (req, res) => {
 
     if (driver_id) {
       const driver = await Driver.findOne({
-        where: { id: driver_id, trash: false, school_id: school_id, },
+        where: { id: driver_id, trash: false, school_id: school_id },
       });
       if (!driver) {
         return res.status(404).json({ message: "Driver not found" });
       }
     }
 
-    const pickupRouteName = route_no ? `${start}-${stop}-${route_no}` : `${start}-${stop}`;
-    const dropRouteName = route_no ? `${stop}-${start}-${route_no}` : `${stop}-${start}`;
+    const pickupRouteName = route_no
+      ? `${start}-${stop}-${route_no}`
+      : `${start}-${stop}`;
+    const dropRouteName = route_no
+      ? `${stop}-${start}-${route_no}`
+      : `${stop}-${start}`;
 
     const pickup_route = await studentroutes.create({
       school_id: school_id,
@@ -8170,7 +8386,8 @@ const createRoute = async (req, res) => {
     }
     res.status(201).json({
       message: "Route created successfully",
-      pickup_route, drop_route,
+      pickup_route,
+      drop_route,
     });
   } catch (error) {
     logger.error("Error creating route:", error);
@@ -8186,7 +8403,6 @@ const getAllRoutes = async (req, res) => {
       where: {
         trash: false,
         school_id: school_id,
-
       },
       include: [
         {
@@ -8205,10 +8421,10 @@ const getAllRoutes = async (req, res) => {
       order: [["createdAt", "DESC"]],
     });
     const dropRoutes = await studentroutes.findAll({
-      where: { type: "DROP", trash: false, school_id: school_id, },
+      where: { type: "DROP", trash: false, school_id: school_id },
       attributes: ["pickId"],
     });
-    const dropRouteSet = new Set(dropRoutes.map(r => r.pickId));
+    const dropRouteSet = new Set(dropRoutes.map((r) => r.pickId));
     const cleanRoutes = routes.map((route) => ({
       id: route.id,
       route_name: route.route_name,
@@ -8216,7 +8432,9 @@ const getAllRoutes = async (req, res) => {
       hasDropRoute: dropRouteSet.has(route.id),
       isLock: route.isLock,
       vehicle_number: route.vehicle?.vehicle_number || null,
-      drivers: route.drivers.map((d) => { return { id: d.id, name: d.name } }),
+      drivers: route.drivers.map((d) => {
+        return { id: d.id, name: d.name };
+      }),
     }));
 
     res.status(200).json({
@@ -8234,7 +8452,11 @@ const assignStudentToRoute = async (req, res) => {
     const school_id = req.user.school_id;
     const { student_ids, route_id, hasAssignToDropRoute } = req.body;
 
-    if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
+    if (
+      !student_ids ||
+      !Array.isArray(student_ids) ||
+      student_ids.length === 0
+    ) {
       return res
         .status(400)
         .json({ message: "student_id and route_id required" });
@@ -8258,11 +8480,13 @@ const assignStudentToRoute = async (req, res) => {
     await pickupRoute.addStudents(students);
     if (hasAssignToDropRoute) {
       const dropRoute = await studentroutes.findOne({
-        where: { pickId: route_id, trash: false, school_id: school_id, },
+        where: { pickId: route_id, trash: false, school_id: school_id },
       });
 
       if (!dropRoute) {
-        return res.status(404).json({ message: "Drop route not found for this pickup route" });
+        return res
+          .status(404)
+          .json({ message: "Drop route not found for this pickup route" });
       }
 
       await dropRoute.addStudents(students);
@@ -8285,14 +8509,18 @@ const updateStudentToRoute = async (req, res) => {
     const { route_id } = req.params;
     const { student_ids } = req.body;
 
-    if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
+    if (
+      !student_ids ||
+      !Array.isArray(student_ids) ||
+      student_ids.length === 0
+    ) {
       return res.status(400).json({
         message: "student_ids array is required",
       });
     }
 
     const route = await studentroutes.findOne({
-      where: { id: route_id, trash: false, school_id: school_id, },
+      where: { id: route_id, trash: false, school_id: school_id },
     });
 
     if (!route) {
@@ -8323,14 +8551,13 @@ const updateStudentToRoute = async (req, res) => {
           trash: false,
           school_id: school_id,
         },
-      }
+      },
     );
 
     return res.status(200).json({
       message: "Students updated to route successfully",
       updated_count: students.length,
     });
-
   } catch (error) {
     console.error("Update Student To Route Error:", error);
     return res.status(500).json({
@@ -8345,14 +8572,18 @@ const deleteStudentFromRoute = async (req, res) => {
     const { student_ids } = req.body;
     const school_id = req.user.school_id;
 
-    if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
+    if (
+      !student_ids ||
+      !Array.isArray(student_ids) ||
+      student_ids.length === 0
+    ) {
       return res.status(400).json({
         message: "student_ids array is required",
       });
     }
 
     const routeInstance = await studentroutes.findOne({
-      where: { id: route_id, trash: false, school_id: school_id, },
+      where: { id: route_id, trash: false, school_id: school_id },
     });
 
     if (!routeInstance) {
@@ -8378,7 +8609,7 @@ const deleteStudentFromRoute = async (req, res) => {
           route_id: route_id,
           student_id: student_ids,
         },
-      }
+      },
     );
     return res.status(200).json({
       message: "Students removed from route successfully",
@@ -8405,7 +8636,7 @@ const assignDriverToRoutes = async (req, res) => {
     }
 
     const driver = await Driver.findOne({
-      where: { id: driverId, trash: false, school_id: school_id, },
+      where: { id: driverId, trash: false, school_id: school_id },
     });
 
     if (!driver) {
@@ -8492,7 +8723,6 @@ const updateIsLock = async (req, res) => {
       message: "Route lock status updated successfully",
       data: route,
     });
-
   } catch (error) {
     console.log("Error occurred:", error);
     return res.status(500).json({
@@ -8520,7 +8750,14 @@ const getDriverLocation = async (req, res) => {
             {
               model: Stop,
               as: "stops",
-              attributes: ["id", "stop_name", "latitude", "longitude", "arrived", "arrived_time"],
+              attributes: [
+                "id",
+                "stop_name",
+                "latitude",
+                "longitude",
+                "arrived",
+                "arrived_time",
+              ],
             },
           ],
         },
@@ -8537,7 +8774,9 @@ const getDriverLocation = async (req, res) => {
     let activeRoute = null;
 
     if (driver.routes && driver.routes.length > 0) {
-      activeRoute = driver.routes.find((route) => route.active && route.activated_by_driver_id === driver.id);
+      activeRoute = driver.routes.find(
+        (route) => route.active && route.activated_by_driver_id === driver.id,
+      );
       if (!activeRoute) {
         activeRoute = driver.routes[0];
       }
@@ -8549,8 +8788,12 @@ const getDriverLocation = async (req, res) => {
 
         if (arrivedStops.length > 0) {
           arrivedStops.sort((a, b) => {
-            const timeA = a.arrived_time ? new Date(a.arrived_time).getTime() : 0;
-            const timeB = b.arrived_time ? new Date(b.arrived_time).getTime() : 0;
+            const timeA = a.arrived_time
+              ? new Date(a.arrived_time).getTime()
+              : 0;
+            const timeB = b.arrived_time
+              ? new Date(b.arrived_time).getTime()
+              : 0;
             return timeB - timeA;
           });
           currentStop = arrivedStops[0];
@@ -8575,8 +8818,6 @@ const getDriverLocation = async (req, res) => {
     });
   }
 };
-
-
 
 module.exports = {
   createClass,
@@ -8774,5 +9015,4 @@ module.exports = {
   getDriversAssignedToRoutes,
   updateIsLock,
   getDriverLocation,
-
 };
