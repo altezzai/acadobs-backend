@@ -2,7 +2,8 @@ const { s3, BUCKET_NAME } = require("../config/storageConfig");
 
 const isFilePath = (str) => {
     if (!str || typeof str !== "string") return false;
-    if (str.includes(" ") || !str.includes("/")) return false;
+    // if (str.includes(" ") || !str.includes("/")) return false;
+    if (!str.includes("/")) return false;//newly added
     const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
     if (uuidRegex.test(str)) return true;
     const knownFolders = [
@@ -17,10 +18,12 @@ const isFilePath = (str) => {
         "vehicles",
         "uploads"
     ];
-    const firstPart = str.split("/")[0];
-    if (knownFolders.includes(firstPart)) return true;
+    // const firstPart = str.split("/")[0];
+    // if (knownFolders.includes(firstPart)) return true;
+    const firstPart = str.replace(/^\/+/, "").split("/")[0];//newly added
+    return knownFolders.includes(firstPart);// newly added
 
-    return false;
+    // return false;
 };
 
 const toSignedUrl = (fileUrl) => {
