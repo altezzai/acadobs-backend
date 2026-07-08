@@ -52,6 +52,7 @@ const leaveRequestValidation = [
 router.post(
   "/leaveRequest",
   uploadWithErrorHandler(upload.single("attachment")),
+  storageUploadMiddleware("leave_requests"),
   leaveRequestValidation,
   validate,
   guardianController.createLeaveRequest,

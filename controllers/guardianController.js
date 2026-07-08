@@ -376,11 +376,7 @@ const createLeaveRequest = async (req, res) => {
       return res.status(400).json({ error: "Leave request already exists" });
     }
 
-    let fileName = null;
-    if (req.file) {
-      const uploadPath = "uploads/leave_requests/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-    }
+    const fileUrl = req.uploadedFiles?.attachment?.url || null;
     const data = await LeaveRequest.create({
       school_id: school_id,
       user_id: user_id,
@@ -390,7 +386,7 @@ const createLeaveRequest = async (req, res) => {
       to_date: to_date,
       leave_type: leave_type,
       reason: reason,
-      attachment: fileName ? fileName : null,
+      attachment: fileUrl,
       leave_duration,
       half_section,
     });
