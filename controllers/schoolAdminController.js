@@ -789,8 +789,8 @@ const getAllStaff = async (req, res) => {
           attributes: ["id", "name", "email", "phone", "dp", "role"],
           where: searchQuery
             ? {
-                name: { [Op.like]: `%${searchQuery}%` },
-              }
+              name: { [Op.like]: `%${searchQuery}%` },
+            }
             : {},
         },
         { model: Class, attributes: ["id", "year", "division", "classname"] },
@@ -1144,8 +1144,8 @@ const getAllTeachers = async (req, res) => {
           attributes: ["id", "name", "email", "phone", "dp", "role"],
           where: searchQuery
             ? {
-                name: { [Op.like]: `%${searchQuery}%` },
-              }
+              name: { [Op.like]: `%${searchQuery}%` },
+            }
             : {},
         },
         { model: Class, attributes: ["id", "year", "division", "classname"] },
@@ -2722,12 +2722,6 @@ const createDutyWithAssignments = async (req, res) => {
     if (duplicate) {
       return res.status(400).json({ error: "Duty already exists" });
     }
-
-    // let storedFileName = null;
-    // if (req.file) {
-    //   uploadDir = "uploads/duties/";
-    //   storedFileName = await compressAndSaveFile(req.file, uploadDir);
-    // }
     const fileUrl = req.uploadedFiles?.file?.url || null;
 
     const duty = await Duty.create(
@@ -7722,9 +7716,9 @@ const updateStaffAttendance = async (req, res) => {
       status: status || attendance.status,
       check_in_time:
         check_in_time ||
-        attendance.check_in_time ||
-        check_in_time ||
-        status === "present"
+          attendance.check_in_time ||
+          check_in_time ||
+          status === "present"
           ? new Date().toISOString()
           : null,
       check_out_time: check_out_time || attendance.check_out_time,
