@@ -314,7 +314,7 @@ const getStudentAttendanceByDate = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const school = await School.findByPk(id, {
-      attributes: ["period_count"],
+      attributes: ["attendance_count"],
     });
     const { count, rows: attendance } = await AttendanceMarked.findAndCountAll({
       offset,
@@ -342,7 +342,7 @@ const getStudentAttendanceByDate = async (req, res) => {
     // res.status(200).json(attendance);
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
-      period_count: school["period_count"],
+      attendance_count: school["attendance_count"],
       totalcontent: count,
       totalPages,
       currentPage: page,

@@ -7,7 +7,7 @@ const { Op } = require("sequelize");
 const logger = require("../utils/logger");
 const crypto = require("crypto");
 const  School  = require("../models/school");
-const jwtExpTime = process.env.JWT_EXP_TIME || "180m"; // Default to 15 minutes if not set
+const jwtExpTime = process.env.JWT_EXP_TIME || "15m"; // Default to 15 minutes if not set
 
 // Login controller
 const login = async (req, res) => {
@@ -34,7 +34,7 @@ const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    await Session.destroy({ where: { user_id: user.id } });
+    // await Session.destroy({ where: { user_id: user.id } });
 
     const refreshToken = crypto.randomBytes(40).toString("hex");
 
@@ -43,6 +43,15 @@ const login = async (req, res) => {
     
     const ip_address = req.ip || req.connection.remoteAddress;
     const device_info = req.headers["user-agent"];
+       const lastSession = await Session.findOne({
+      where: { user_id: user.id },
+      order: [["expires_at", "DESC"]],
+      limit: 1,
+    });
+    if (lastSession) {
+      lastSession.expires_at = new Date();
+      await lastSession.save();
+    }
 
     const currentSession = await Session.create({
       user_id: user.id,
