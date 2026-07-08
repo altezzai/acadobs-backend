@@ -27,9 +27,6 @@ const isFilePath = (str) => {
 };
 
 const toSignedUrl = (fileUrl) => {
-    console.log("S3 Endpoint:", s3.config.endpoint);
-    console.log("Bucket:", BUCKET_NAME);
-    console.log("Incoming:", fileUrl);
     if (!fileUrl || typeof fileUrl !== "string") return fileUrl;
     if (fileUrl.includes("X-Amz-Algorithm")) return fileUrl;
 
@@ -41,14 +38,12 @@ const toSignedUrl = (fileUrl) => {
 
         if (!isS3Url) {
             if (isFilePath(fileUrl)) {
-                console.log("Signing:", fileUrl);
                 return s3.getSignedUrl("getObject", {
                     Bucket: BUCKET_NAME,
                     Key: fileUrl,
                     Expires: 60 * 60,
                 });
             }
-            console.log("Skipped:", fileUrl);
             return fileUrl;
         }
 
@@ -67,8 +62,6 @@ const toSignedUrl = (fileUrl) => {
             Expires: 60 * 60,
         });
     } catch (err) {
-        console.error("Presign Error:", err);
-        console.error("File:", fileUrl);
         return fileUrl;
     }
 };
