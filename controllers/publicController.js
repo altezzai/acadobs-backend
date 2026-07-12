@@ -43,15 +43,16 @@ const login = async (req, res) => {
     
     const ip_address = req.ip || req.connection.remoteAddress;
     const device_info = req.headers["user-agent"];
-       const lastSession = await Session.findOne({
-      where: { user_id: user.id },
-      order: [["expires_at", "DESC"]],
-      limit: 1,
-    });
-    if (lastSession) {
-      lastSession.expires_at = new Date();
-      await lastSession.save();
-    }
+    
+    //    const lastSession = await Session.findOne({
+    //   where: { user_id: user.id },
+    //   order: [["expires_at", "DESC"]],
+    //   limit: 1,
+    // });
+    // if (lastSession) {
+    //   lastSession.expires_at = new Date();
+    //   await lastSession.save();
+    // }
 
     const currentSession = await Session.create({
       user_id: user.id,
