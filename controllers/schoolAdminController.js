@@ -363,7 +363,7 @@ const getSubjects = async (req, res) => {
     const school_id = req.user.school_id;
     const range = req.query.range || "";
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 100;
     const offset = (page - 1) * limit;
 
     let whereClause = {
