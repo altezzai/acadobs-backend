@@ -778,33 +778,34 @@ const getAllStaff = async (req, res) => {
     if (role) {
       whereCondition.role = role;
     }
-    const staff = await Staff.findAll({
-      offset,
-      distinct: true,
-      limit,
-      where: whereCondition,
-      include: [
-        {
-          model: User,
-          attributes: ["id", "name", "email", "phone", "dp", "role"],
-          where: searchQuery
-            ? {
+    const { count, rows: staff } = await Staff.findAndCountAll({
+    offset,
+    distinct: true,
+    limit,
+    where: whereCondition,
+    include: [
+      {
+        model: User,
+        attributes: ["id", "name", "email", "phone", "dp", "role"],
+        where: searchQuery
+          ? {
               name: { [Op.like]: `%${searchQuery}%` },
             }
-            : {},
-        },
-        { model: Class, attributes: ["id", "year", "division", "classname"] },
-      ],
+          : {},
+      },
+      { model: Class, attributes: ["id", "year", "division", "classname"] },
+    ],
+    order: [["createdAt", "DESC"]],
+  });
 
-      order: [["createdAt", "DESC"]],
-    });
-    const totalPages = Math.ceil(staff.length / limit);
-    res.status(200).json({
-      totalcontent: staff.length,
-      totalPages,
-      currentPage: page,
-      staff,
-    });
+  const totalPages = Math.ceil(count / limit);
+
+  res.status(200).json({
+    totalcontent: count,
+    totalPages,
+    currentPage: page,
+    staff,
+  });
   } catch (error) {
     logger.error(
       "schoolId:",
