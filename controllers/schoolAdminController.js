@@ -2104,7 +2104,7 @@ const bulkCreateStudents = async (req, res) => {
         date_of_birth,
         gender: normalizeGender(gender),
         class_id,
-        admission_date,
+        admission_date: admission_date ? admission_date : null,
         address,
         status,
         second_language,
