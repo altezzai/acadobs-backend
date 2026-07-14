@@ -2051,7 +2051,7 @@ const bulkCreateStudents = async (req, res) => {
 
         const guardianData = {
           school_id,
-          guardian_email,
+          guardian_email: guardian_email ? guardian_email : null,
           guardian_name,
           guardian_contact,
           guardian_relation: guardian_relation ? guardian_relation : "father",
