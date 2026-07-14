@@ -33,7 +33,7 @@ const StaffSubject = require("../models/staffsubject");
 const StaffPermission = require("../models/staff_permissions");
 
 const { Homework, HomeworkAssignment } = require("../models");
-const { getGuarduianIdbyStudentId } = require("./commonController");
+const { getGuarduianIdbyStudentId, getStaffsForFilter } = require("./commonController");
 const {
   sendMessageWithParentNote,
 } = require("../socketHandlers/messageHandlers");
@@ -3037,13 +3037,17 @@ const getStaffSubjects = async (req, res) => {
       ];
     }
 
+    const staff = await Staff.findOne({
+      where: { user_id: staff_id },
+    });
+
     const subjects = await Subject.findAll({
       distinct: true,
       attributes: ["id", "subject_name"],
       include: [
         {
           model: StaffSubject,
-          where: { staff_id },
+          where: { staff_id: staff.id },
           attributes: [],
         },
       ],
