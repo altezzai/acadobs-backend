@@ -2168,7 +2168,7 @@ const getAllStudents = async (req, res) => {
           attributes: ["id", "year", "division", "classname"],
         },
       ],
-      order: [["createdAt", "DESC"]],
+      order: [["createdAt", "DESC"], ["id", "ASC"]],
     });
 
     const totalPages = Math.ceil(count / limit);
