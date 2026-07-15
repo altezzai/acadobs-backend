@@ -795,7 +795,7 @@ const getAllStaff = async (req, res) => {
       },
       { model: Class, attributes: ["id", "year", "division", "classname"] },
     ],
-    order: [["createdAt", "DESC"]],
+      order: [["createdAt", "DESC"], ["id","ASC"]],
   });
 
   const totalPages = Math.ceil(count / limit);
@@ -1134,7 +1134,7 @@ const getAllTeachers = async (req, res) => {
       role: "teacher",
     };
 
-    const staff = await Staff.findAll({
+    const { count, rows: staff } = await Staff.findAndCountAll({
       offset,
       distinct: true,
       limit,
@@ -1167,11 +1167,13 @@ const getAllTeachers = async (req, res) => {
         },
       ],
 
-      order: [["createdAt", "DESC"]],
+      order: [["createdAt", "DESC"], ["id", "ASC"]],
     });
-    const totalPages = Math.ceil(staff.length / limit);
+
+    const totalPages = Math.ceil(count / limit);
+
     res.status(200).json({
-      totalcontent: staff.length,
+      totalcontent: count,
       totalPages,
       currentPage: page,
       staff,
