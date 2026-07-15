@@ -1818,7 +1818,7 @@ const createStudent = async (req, res) => {
     if (existingRegNo) {
       return res
         .status(400)
-        .json({ error: "Reg number already exists in student table" });
+        .json({ error: "Reg number already exists in student table" + `, Reg No: ${existingRegNo.reg_no}: `});
     }
 
     let guardianUserId;
@@ -1842,8 +1842,10 @@ const createStudent = async (req, res) => {
       } else {
         return res.status(400).json({
           error:
-            "User is already exists and not a guardian.User is a " +
-            existingUser.role,
+            "User already exists. user is a " +
+            existingUser.role +
+            ", Phone: " +
+            existingUser.phone,
         });
       }
     } else {
@@ -2026,7 +2028,7 @@ const bulkCreateStudents = async (req, res) => {
         } else {
           return res.status(400).json({
             error:
-              "User is already exists and not a guardian.User is a " +
+              "User already exists and user is a " +
               existingUser.role,
           });
         }
