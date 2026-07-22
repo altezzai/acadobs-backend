@@ -1877,11 +1877,12 @@ const createLeaveRequest = async (req, res) => {
       return res.status(400).json({ error: "Leave request already exists" });
     }
 
-    let fileName = null;
-    if (req.file) {
-      const uploadPath = "uploads/leave_requests/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-    }
+    // let fileName = null;
+    // if (req.file) {
+    //   const uploadPath = "uploads/leave_requests/";
+    //   fileName = await compressAndSaveFile(req.file, uploadPath);
+    // }
+    const attachmentUrl = req.uploadedFiles?.attachment?.url || null;
     const data = await LeaveRequest.create({
       school_id: school_id,
       user_id: user_id,
@@ -1890,7 +1891,7 @@ const createLeaveRequest = async (req, res) => {
       to_date: to_date,
       leave_type: leave_type,
       reason: reason,
-      attachment: fileName ? fileName : null,
+      attachment: attachmentUrl,
       leave_duration,
       half_section,
     });
@@ -2018,18 +2019,27 @@ const updateLeaveRequest = async (req, res) => {
     if (existingRequest) {
       return res.status(400).json({ error: "Leave request already exists" });
     }
-    let fileName = data.attachment;
-    if (req.file) {
-      const uploadPath = "uploads/leave_requests/";
-      await deletefilewithfoldername(fileName, uploadPath);
-      fileName = await compressAndSaveFile(req.file, uploadPath);
+    // let fileName = data.attachment;
+    // if (req.file) {
+    //   const uploadPath = "uploads/leave_requests/";
+    //   await deletefilewithfoldername(fileName, uploadPath);
+    //   fileName = await compressAndSaveFile(req.file, uploadPath);
+    // }
+    const newFileUrl = req.uploadedFiles?.attachment?.url || null;
+    let finalFile = data.attachment;
+    if (newFileUrl) {
+      if (data.attachment) {
+        await deleteFile(data.attachment);
+      }
+
+      finalFile = newFileUrl;
     }
     await data.update({
       from_date: from_date,
       to_date: to_date,
       leave_type: leave_type,
       reason: reason,
-      attachment: fileName ? fileName : null,
+      attachment: finalFile,
       leave_duration,
       half_section,
     });

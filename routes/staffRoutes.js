@@ -113,6 +113,7 @@ router.put(
 router.post(
   "/leaveRequest",
   uploadWithErrorHandler(upload.single("attachment")),
+  storageUploadMiddleware("leave_requests"),
   staffController.createLeaveRequest
 );
 router.get("/leaveRequest", staffController.getAllLeaveRequests);
@@ -120,6 +121,7 @@ router.get("/leaveRequest/:id", staffController.getLeaveRequestById);
 router.put(
   "/leaveRequest/:id",
   uploadWithErrorHandler(upload.single("attachment")),
+  storageUploadMiddleware("leave_requests"),
   staffController.updateLeaveRequest
 );
 router.delete("/leaveRequest/:id", staffController.deleteLeaveRequest);
