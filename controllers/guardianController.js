@@ -9,7 +9,8 @@ const {
 } = require("../utils/fileHandler");
 const { deleteFile } = require("../middlewares/storageUploads");
 const { normalizeGuardianRelation } = require("../utils/supportingFunction");
-const { Class, StudentRoutes, stop } = require("../models");
+const { Class, StudentRoutes, stop, Mark, InternalMark } = require("../models");
+const Exams = require("../models/exams");
 const HomeworkAssignment = require("../models/homeworkassignment");
 const Student = require("../models/student");
 const School = require("../models/school");
@@ -322,7 +323,8 @@ const createPayment = async (req, res) => {
         .status(400)
         .json({ error: "Payment with the same details already exists" });
     }
-    const payment_attachmentUrl = req.uploadedFiles?.payment_attachment?.url || null;
+    const payment_attachmentUrl =
+      req.uploadedFiles?.payment_attachment?.url || null;
 
     const payment = await Payment.create({
       school_id,
@@ -568,7 +570,9 @@ const deleteLeaveRequest = async (req, res) => {
     const { id } = req.params;
     const user_id = req.user.user_id;
     const school_id = req.user.school_id;
-    const leave = await LeaveRequest.findOne({ where: { id, user_id, school_id } });
+    const leave = await LeaveRequest.findOne({
+      where: { id, user_id, school_id },
+    });
     if (!leave) return res.status(404).json({ error: "Not found" });
 
     await leave.update({ trash: true });
@@ -625,7 +629,15 @@ const getSchoolsByUser = async (req, res) => {
       include: [
         {
           model: School,
-          attributes: ["id", "name", "address", "phone", "email", "logo", "bg_image"],
+          attributes: [
+            "id",
+            "name",
+            "address",
+            "phone",
+            "email",
+            "logo",
+            "bg_image",
+          ],
         },
       ],
       group: ["school_id"],
@@ -951,7 +963,9 @@ const updateProfileDetails = async (req, res) => {
       await user.update({ dp: finalDp });
     }
 
-    res.status(200).json({ message: "Guardian profile updated", guardian, user });
+    res
+      .status(200)
+      .json({ message: "Guardian profile updated", guardian, user });
   } catch (err) {
     logger.error(
       "userId:",
@@ -1036,11 +1050,10 @@ const changeIdentifiersAndName = async (req, res) => {
 
 //update ownstudent profile details in student table
 const updateStudentProfile = async (req, res) => {
-
-  console.log(req.params, "-----------")
+  console.log(req.params, "-----------");
 
   try {
-    console.log("id:", req.params)
+    console.log("id:", req.params);
     console.log("Params:", req.params);
     console.log("User:", req.user);
     console.log("Body:", req.body);
@@ -1271,9 +1284,9 @@ const getRoutesForGuardian = async (req, res) => {
               attributes: ["id"],
               where: {
                 id: school_id,
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
       ],
     });
@@ -1300,6 +1313,64 @@ const getRoutesForGuardian = async (req, res) => {
     return res.status(500).json({
       error: "Internal server error",
     });
+  }
+};
+
+const getExamsByStudentId = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const guardian_id = req.user.user_id;
+
+    const student = await Student.findOne({
+      where: { id: studentId, guardian_id: guardian_id, trash: false },
+    });
+
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    const marks = await Mark.findAll({
+      where: { student_id: studentId },
+      attributes: ["internal_id"],
+    });
+
+    const internalIds = marks.map((mark) => mark.internal_id);
+
+    if (internalIds.length === 0) {
+      return res.status(200).json({ exams: [] });
+    }
+
+    const internalMarks = await InternalMark.findAll({
+      where: {
+        id: { [Op.in]: internalIds },
+        exam_id: { [Op.ne]: null },
+      },
+      attributes: ["exam_id"],
+      group: ["exam_id"],
+    });
+
+    const examIds = internalMarks.map((im) => im.get("exam_id"));
+
+    if (examIds.length === 0) {
+      return res.status(200).json({ exams: [] });
+    }
+
+    const examsList = await Exams.findAll({
+      where: {
+        id: { [Op.in]: examIds },
+      },
+      attributes: ["id", "exam_name", "education_year"],
+    });
+
+    return res.status(200).json({ exams: examsList });
+  } catch (err) {
+    logger.error(
+      "userId:",
+      req.user ? req.user.user_id : null,
+      "Error getting exams by student id:",
+      err,
+    );
+    return res.status(500).json({ error: err.message });
   }
 };
 
@@ -1335,9 +1406,9 @@ const getGuardianRouteCount = async (req, res) => {
               attributes: ["id"],
               where: {
                 id: school_id,
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
       ],
     });
@@ -1397,7 +1468,7 @@ const getStopsForParent = async (req, res) => {
       return res.status(404).json({ message: "guardian not found" });
     }
     const stops = await stop.findAll({
-      where: { route_id, trash: false, },
+      where: { route_id, trash: false },
       attributes: ["id", "stop_name", "priority", "arrived"],
       include: [
         {
@@ -1411,9 +1482,9 @@ const getStopsForParent = async (req, res) => {
               attributes: ["id"],
               where: {
                 id: school_id,
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
       ],
     });
@@ -1426,8 +1497,8 @@ const getStopsForParent = async (req, res) => {
         route_name: s.route.route_name,
         route_type: s.route.type,
         arrived: s.arrived,
-      }
-    })
+      };
+    });
 
     return res.status(200).json({
       message: "Stops fetched successfully",
@@ -1451,7 +1522,6 @@ module.exports = {
   getInvoiceByStudentId,
   createPayment,
 
-
   createLeaveRequest,
   getAllLeaveRequests,
   getLeaveRequestById,
@@ -1474,6 +1544,7 @@ module.exports = {
   getHomeworkById,
   getAchievementById,
   getRoutesForGuardian,
+  getExamsByStudentId,
   getGuardianRouteCount,
   getStopsByRouteId,
   getStopsForParent,
