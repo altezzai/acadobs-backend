@@ -12,9 +12,14 @@ router.put(
   "/updateHomeworkAssignment/:id",
   uploadWithErrorHandler(upload.single("file")),
   [
-    body('status').optional().customSanitizer(val => val === 'null' ? null : val).isString().trim().escape(),
-    body('points').optional().isNumeric(),
-    body('student_id').notEmpty().trim().escape()
+    body("status")
+      .optional()
+      .customSanitizer((val) => (val === "null" ? null : val))
+      .isString()
+      .trim()
+      .escape(),
+    body("points").optional().isNumeric(),
+    body("student_id").notEmpty().trim().escape(),
   ],
   validate,
   guardianController.updateHomeworkAssignment,
@@ -40,13 +45,13 @@ router.post(
 );
 
 const leaveRequestValidation = [
-  body('student_id').notEmpty().trim().escape(),
-  body('from_date').notEmpty().trim().escape(),
-  body('to_date').notEmpty().trim().escape(),
-  body('leave_type').notEmpty().trim().escape(),
-  body('reason').notEmpty().trim().escape(),
-  body('leave_duration').optional().trim().escape(),
-  body('half_section').optional().trim().escape()
+  body("student_id").notEmpty().trim().escape(),
+  body("from_date").notEmpty().trim().escape(),
+  body("to_date").notEmpty().trim().escape(),
+  body("leave_type").notEmpty().trim().escape(),
+  body("reason").notEmpty().trim().escape(),
+  body("leave_duration").optional().trim().escape(),
+  body("half_section").optional().trim().escape(),
 ];
 
 router.post(
@@ -97,41 +102,42 @@ router.put(
   "/updateStudentProfile/:student_id",
   uploadWithErrorHandler(upload.single("image")),
   storageUploadMiddleware("students_images"),
-  [body('address').optional().isString().trim().escape(), param('student_id')],
+  [body("address").optional().isString().trim().escape(), param("student_id")],
   validate,
   guardianController.updateStudentProfile,
 );
-router.put("/updateProfileDetails",
+router.put(
+  "/updateProfileDetails",
   uploadWithErrorHandler(upload.single("dp")),
   storageUploadMiddleware("guardians"),
   [
-    body('guardian_relation').optional().isString().trim().escape(),
-    body('guardian_job').optional().isString().trim().escape(),
-    body('guardian2_relation').optional().isString().trim().escape(),
-    body('guardian2_name').optional().isString().trim().escape(),
-    body('guardian2_job').optional().isString().trim().escape(),
-    body('guardian2_contact').optional().isString().trim().escape(),
-    body('father_name').optional().isString().trim().escape(),
-    body('mother_name').optional().isString().trim().escape(),
-    body('house_name').optional().isString().trim().escape(),
-    body('street').optional().isString().trim().escape(),
-    body('city').optional().isString().trim().escape(),
-    body('landmark').optional().isString().trim().escape(),
-    body('district').optional().isString().trim().escape(),
-    body('state').optional().isString().trim().escape(),
-    body('country').optional().isString().trim().escape(),
-    body('post').optional().isString().trim().escape(),
-    body('pincode').optional().isString().trim().escape()
+    body("guardian_relation").optional().isString().trim().escape(),
+    body("guardian_job").optional().isString().trim().escape(),
+    body("guardian2_relation").optional().isString().trim().escape(),
+    body("guardian2_name").optional().isString().trim().escape(),
+    body("guardian2_job").optional().isString().trim().escape(),
+    body("guardian2_contact").optional().isString().trim().escape(),
+    body("father_name").optional().isString().trim().escape(),
+    body("mother_name").optional().isString().trim().escape(),
+    body("house_name").optional().isString().trim().escape(),
+    body("street").optional().isString().trim().escape(),
+    body("city").optional().isString().trim().escape(),
+    body("landmark").optional().isString().trim().escape(),
+    body("district").optional().isString().trim().escape(),
+    body("state").optional().isString().trim().escape(),
+    body("country").optional().isString().trim().escape(),
+    body("post").optional().isString().trim().escape(),
+    body("pincode").optional().isString().trim().escape(),
   ],
   validate,
-  guardianController.updateProfileDetails
+  guardianController.updateProfileDetails,
 );
 router.put(
   "/changeIdentifiersAndName",
   [
-    body('guardian_email').optional().isEmail().normalizeEmail(),
-    body('guardian_name').optional().isString().trim().escape(),
-    body('guardian_contact').optional().isString().trim().escape()
+    body("guardian_email").optional().isEmail().normalizeEmail(),
+    body("guardian_name").optional().isString().trim().escape(),
+    body("guardian_contact").optional().isString().trim().escape(),
   ],
   validate,
   guardianController.changeIdentifiersAndName,
@@ -140,6 +146,7 @@ router.get("/getProfileDetails", guardianController.getProfileDetails);
 
 router.get("/getHomeworkById/:id", guardianController.getHomeworkById);
 router.get("/getAchievementById/:id", guardianController.getAchievementById);
+router.get("/getExams/:studentId", guardianController.getExamsByStudentId);
 
 //common controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
@@ -171,20 +178,20 @@ router.get(
   commonController.getLeaveRequestByStudentId,
 );
 
-router.put("/changePassword",
+router.put(
+  "/changePassword",
   [
-    body('oldPassword').notEmpty().isString(),
-    body('newPassword').notEmpty().isString()
+    body("oldPassword").notEmpty().isString(),
+    body("newPassword").notEmpty().isString(),
   ],
   validate,
-  commonController.changePassword
+  commonController.changePassword,
 );
-router.put("/updateFcmToken",
-  [
-    body('fcm_token').optional().isString().trim().escape()
-  ],
+router.put(
+  "/updateFcmToken",
+  [body("fcm_token").optional().isString().trim().escape()],
   validate,
-  commonController.updateFcmToken
+  commonController.updateFcmToken,
 );
 
 router.put(
@@ -201,12 +208,11 @@ router.get(
   commonController.getAchievementsBySchool,
 );
 
-router.post("/accountDeleteRequests",
-  [
-    body('reason').optional().isString().trim().escape()
-  ],
+router.post(
+  "/accountDeleteRequests",
+  [body("reason").optional().isString().trim().escape()],
   validate,
-  commonController.accountDeleteRequests
+  commonController.accountDeleteRequests,
 );
 
 router.get("/getSchoolDetails", commonController.getSchoolDetails);
@@ -216,7 +222,10 @@ router.get("/getRoutesForGuardian", guardianController.getRoutesForGuardian);
 router.get("/getGuardianRouteCount", guardianController.getGuardianRouteCount);
 router.get("/stop/:route_id", guardianController.getStopsByRouteId);
 //parent sees every stop of their student
-router.get("/getStopsForParent/:route_id", guardianController.getStopsForParent);
+router.get(
+  "/getStopsForParent/:route_id",
+  guardianController.getStopsForParent,
+);
 
 // Student Transfer routes
 router.post(
