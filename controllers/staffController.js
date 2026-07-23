@@ -51,7 +51,7 @@ const createExamWithMarks = async (req, res) => {
       date,
       recorded_by,
       marks,
-      term
+      exam_id
     } = req.body;
     if (!school_id || !class_id || !subject_id || !internal_name || !date) {
       return res.status(400).json({ error: "Missing or invalid fields" });
@@ -75,7 +75,7 @@ const createExamWithMarks = async (req, res) => {
       internal_name,
       max_marks,
       date,
-      term,
+      exam_id,
       recorded_by,
     });
 
