@@ -553,5 +553,6 @@ router.delete("/studentTransfer/:id", transferController.adminDeleteTransferRequ
 //Public Controller routes
 router.get("/getSchoolsList", publicController.getSchoolsList);
 
+router.get("/getExams", schoolAdminController.getExams),
 
-module.exports = router;
+  module.exports = router;

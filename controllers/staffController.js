@@ -39,6 +39,7 @@ const {
 } = require("../socketHandlers/messageHandlers");
 const { sendPushNotification } = require("./../utils/notifcationHandler");
 const { deleteFile } = require("../middlewares/storageUploads");
+const Exam = require("../models/exams");
 
 const createExamWithMarks = async (req, res) => {
   try {
@@ -102,6 +103,31 @@ const createExamWithMarks = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+const getExams = async (req, res) => {
+  try {
+    const school_id = req.user.school_id || "";
+    const exams = await Exam.findAll({
+      where: {
+        school_id,
+      },
+      attributes: ["id", "exam_name", "publish"],
+      order: [["createdAt", "DESC"]],
+    });
+    return res.status(200).json({
+      success: true,
+      message: "Exams fetched successfully",
+      data: exams,
+    });
+  } catch (e) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch exams",
+      error: e.message,
+    });
+
+  }
+}
 
 const getInternalMarksById = async (req, res) => {
   try {
@@ -3176,4 +3202,5 @@ module.exports = {
   getStaffSubjects,
 
   getMyPermissions,
+  getExams
 };

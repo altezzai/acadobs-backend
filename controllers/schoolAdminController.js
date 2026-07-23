@@ -54,6 +54,7 @@ const { error } = require("winston");
 const StudentRouteAssignment = require("../models/student_route_assignment");
 const { Console } = require("winston/lib/winston/transports");
 const { deleteFile } = require("../middlewares/storageUploads");
+const Exam = require("../models/exams")
 
 // CREATE
 const createClass = async (req, res) => {
@@ -779,33 +780,33 @@ const getAllStaff = async (req, res) => {
       whereCondition.role = role;
     }
     const { count, rows: staff } = await Staff.findAndCountAll({
-    offset,
-    distinct: true,
-    limit,
-    where: whereCondition,
-    include: [
-      {
-        model: User,
-        attributes: ["id", "name", "email", "phone", "dp", "role"],
-        where: searchQuery
-          ? {
+      offset,
+      distinct: true,
+      limit,
+      where: whereCondition,
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone", "dp", "role"],
+          where: searchQuery
+            ? {
               name: { [Op.like]: `%${searchQuery}%` },
             }
-          : {},
-      },
-      { model: Class, attributes: ["id", "year", "division", "classname"] },
-    ],
-      order: [["createdAt", "DESC"], ["id","ASC"]],
-  });
+            : {},
+        },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+      ],
+      order: [["createdAt", "DESC"], ["id", "ASC"]],
+    });
 
-  const totalPages = Math.ceil(count / limit);
+    const totalPages = Math.ceil(count / limit);
 
-  res.status(200).json({
-    totalcontent: count,
-    totalPages,
-    currentPage: page,
-    staff,
-  });
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      staff,
+    });
   } catch (error) {
     logger.error(
       "schoolId:",
@@ -1820,7 +1821,7 @@ const createStudent = async (req, res) => {
     if (existingRegNo) {
       return res
         .status(400)
-        .json({ error: "Reg number already exists in student table" + `, Reg No: ${existingRegNo.reg_no}: `});
+        .json({ error: "Reg number already exists in student table" + `, Reg No: ${existingRegNo.reg_no}: ` });
     }
 
     let guardianUserId;
@@ -8818,6 +8819,30 @@ const getDriverLocation = async (req, res) => {
   }
 };
 
+const getExams = async (req, res) => {
+  try {
+    const school_id = req.user.school_id || "";
+    const exams = await Exam.findAll({
+      where: {
+        school_id,
+      },
+      order: [["createdAt", "DESC"]],
+    });
+    return res.status(200).json({
+      success: true,
+      message: "Exams fetched successfully",
+      data: exams,
+    });
+  } catch (e) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch exams",
+      error: e.message,
+    });
+
+  }
+}
+
 module.exports = {
   createClass,
   getAllClasses,
@@ -9014,4 +9039,5 @@ module.exports = {
   getDriversAssignedToRoutes,
   updateIsLock,
   getDriverLocation,
+  getExams
 };
