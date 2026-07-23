@@ -1512,6 +1512,69 @@ const getStopsForParent = async (req, res) => {
   }
 };
 
+const getExamMarksByStudentId = async (req, res) => {
+  try {
+    const { studentId, examId } = req.params;
+    const guardian_id = req.user.user_id;
+
+    const student = await Student.findOne({
+      where: { id: studentId, guardian_id: guardian_id, trash: false },
+    });
+
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    const exam = await Exams.findOne({ where: { id: examId } });
+
+    if (!exam) {
+      return res.status(404).json({ error: "Exam not found" });
+    }
+
+    const internalMarks = await InternalMark.findAll({
+      where: { exam_id: examId, trash: false },
+      include: [
+        {
+          model: Subject,
+          attributes: ["id", "subject_name"],
+        },
+        {
+          model: Mark,
+          where: { student_id: studentId },
+          required: true,
+        },
+      ],
+    });
+
+    const marksList = internalMarks.map((im) => {
+      const studentMark = im.Marks && im.Marks.length > 0 ? im.Marks[0] : null;
+      return {
+        internal_mark_id: im.id,
+        subject: im.Subject ? im.Subject.subject_name : null,
+        internal_name: im.internal_name,
+        max_marks: im.max_marks,
+        date: im.date,
+        marks_obtained: studentMark ? studentMark.marks_obtained : null,
+        status: studentMark ? studentMark.status : "absent",
+      };
+    });
+
+    const response = {
+      marks: marksList,
+    };
+
+    return res.status(200).json(response);
+  } catch (err) {
+    logger.error(
+      "userId:",
+      req.user ? req.user.user_id : null,
+      "Error getting exam marks by student id:",
+      err,
+    );
+    return res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   updateHomeworkAssignment,
 
@@ -1545,6 +1608,7 @@ module.exports = {
   getAchievementById,
   getRoutesForGuardian,
   getExamsByStudentId,
+  getExamMarksByStudentId,
   getGuardianRouteCount,
   getStopsByRouteId,
   getStopsForParent,

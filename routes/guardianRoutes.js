@@ -147,6 +147,7 @@ router.get("/getProfileDetails", guardianController.getProfileDetails);
 router.get("/getHomeworkById/:id", guardianController.getHomeworkById);
 router.get("/getAchievementById/:id", guardianController.getAchievementById);
 router.get("/getExams/:studentId", guardianController.getExamsByStudentId);
+router.get("/getExamMarks/:studentId/:examId", guardianController.getExamMarksByStudentId);
 
 //common controller
 router.get("/getLatestEvents", commonController.getLatestEvents);

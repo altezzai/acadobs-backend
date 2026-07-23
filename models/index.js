@@ -1,3 +1,4 @@
+const Exams = require("./exams");
 const Homework = require("./homework");
 const HomeworkAssignment = require("./homeworkassignment");
 const Student = require("./student");
@@ -117,6 +118,8 @@ InternalMark.belongsTo(School, { foreignKey: "school_id" });
 InternalMark.belongsTo(Class, { foreignKey: "class_id" });
 InternalMark.belongsTo(Subject, { foreignKey: "subject_id" });
 InternalMark.belongsTo(User, { foreignKey: "recorded_by" });
+InternalMark.belongsTo(Exams, { foreignKey: "exam_id" });
+Exams.hasMany(InternalMark, { foreignKey: "exam_id" });
 InternalMark.hasMany(Mark, { foreignKey: "internal_id" });
 Mark.belongsTo(InternalMark, { foreignKey: "internal_id" });
 Mark.belongsTo(Student, { foreignKey: "student_id" });
@@ -310,6 +313,7 @@ StudentTransfer.belongsTo(User, { foreignKey: "reviewed_by", as: "Reviewer" });
 Student.hasMany(StudentTransfer, { foreignKey: "student_id" });
 
 module.exports = {
+  Exams,
   Homework,
   HomeworkAssignment,
   Student,
