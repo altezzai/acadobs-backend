@@ -13,7 +13,7 @@ const InternalMark = schoolSequelize.define(
     max_marks: DataTypes.DECIMAL(5, 2),
     date: DataTypes.DATEONLY,
     recorded_by: DataTypes.INTEGER,
-    term: DataTypes.STRING,
+    exam_id: DataTypes.INTEGER,
     trash: { type: DataTypes.BOOLEAN, defaultValue: false },
     createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
@@ -21,7 +21,7 @@ const InternalMark = schoolSequelize.define(
   {
     tableName: "internal_marks",
     timestamps: true,
-  }
+  },
 );
 
 module.exports = InternalMark;
