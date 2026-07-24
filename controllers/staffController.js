@@ -113,8 +113,9 @@ const getExams = async (req, res) => {
     const exams = await Exam.findAll({
       where: {
         school_id,
+        publish: false,
       },
-      attributes: ["id", "exam_name", "publish", "education_year"],
+      attributes: ["id", "exam_name", "education_year"],
       order: [["createdAt", "DESC"]],
     });
     return res.status(200).json({
