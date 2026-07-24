@@ -8947,6 +8947,44 @@ const getMarksByInternalId = async (req, res) => {
   }
 };
 
+const updateExamPublishStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { publish } = req.body;
+    const school_id = req.user.school_id || "";
+
+    if (publish === undefined) {
+      return res.status(400).json({ error: "Publish status is required" });
+    }
+
+    const exam = await Exam.findOne({
+      where: {
+        id,
+        school_id,
+      },
+    });
+
+    if (!exam) {
+      return res.status(404).json({ error: "Exam not found" });
+    }
+
+    await exam.update({ publish });
+
+    return res.status(200).json({
+      success: true,
+      message: `Exam publish status updated to ${publish}`,
+      data: exam,
+    });
+  } catch (error) {
+    logger.error("Error updating exam publish status:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update exam publish status",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createClass,
   getAllClasses,
@@ -9146,4 +9184,5 @@ module.exports = {
   getExams,
   getExamMarksByExamId,
   getMarksByInternalId,
+  updateExamPublishStatus,
 };
