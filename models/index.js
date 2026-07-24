@@ -100,8 +100,8 @@ DutyAssignment.belongsTo(User, { foreignKey: "staff_id" });
 
 Achievement.belongsToMany(Student, {
   through: StudentAchievement,
-  foreignKey: 'achievement_id',
-  otherKey: 'student_id'
+  foreignKey: "achievement_id",
+  otherKey: "student_id",
 });
 Achievement.hasMany(StudentAchievement, { foreignKey: "achievement_id" });
 StudentAchievement.belongsTo(Achievement, { foreignKey: "achievement_id" });
@@ -120,6 +120,7 @@ InternalMark.belongsTo(Subject, { foreignKey: "subject_id" });
 InternalMark.belongsTo(User, { foreignKey: "recorded_by" });
 InternalMark.belongsTo(Exams, { foreignKey: "exam_id" });
 Exams.hasMany(InternalMark, { foreignKey: "exam_id" });
+Exams.belongsTo(School, { foreignKey: "school_id" });
 InternalMark.hasMany(Mark, { foreignKey: "internal_id" });
 Mark.belongsTo(InternalMark, { foreignKey: "internal_id" });
 Mark.belongsTo(Student, { foreignKey: "student_id" });
@@ -195,7 +196,7 @@ Driver.belongsToMany(route, {
 });
 
 // Route ↔ Stop association (BOTH SIDES REQUIRED)
-route.hasMany(stop, { foreignKey: "route_id", as: "stops" });  //
+route.hasMany(stop, { foreignKey: "route_id", as: "stops" }); //
 stop.belongsTo(route, { foreignKey: "route_id", as: "route" });
 
 // Stop → Student
@@ -217,11 +218,6 @@ Guardian.hasMany(Student, {
   foreignKey: "guardian_id",
   as: "students",
 });
-
-
-
-
-
 
 route.hasMany(Student, { foreignKey: "route_id", as: "Student" });
 Student.belongsTo(route, {
@@ -306,8 +302,14 @@ Student.hasMany(RouteStopLog, {
 
 // StudentTransfer associations
 StudentTransfer.belongsTo(Student, { foreignKey: "student_id" });
-StudentTransfer.belongsTo(School, { foreignKey: "from_school_id", as: "FromSchool" });
-StudentTransfer.belongsTo(School, { foreignKey: "to_school_id", as: "ToSchool" });
+StudentTransfer.belongsTo(School, {
+  foreignKey: "from_school_id",
+  as: "FromSchool",
+});
+StudentTransfer.belongsTo(School, {
+  foreignKey: "to_school_id",
+  as: "ToSchool",
+});
 StudentTransfer.belongsTo(User, { foreignKey: "user_id", as: "Requester" });
 StudentTransfer.belongsTo(User, { foreignKey: "reviewed_by", as: "Reviewer" });
 Student.hasMany(StudentTransfer, { foreignKey: "student_id" });

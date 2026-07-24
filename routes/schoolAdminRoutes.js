@@ -126,10 +126,15 @@ router.put(
 router.delete("/students/:id", schoolAdminController.deleteStudent);
 router.patch("/students/:id", schoolAdminController.restoreStudent);
 router.get("/getTrashedStudents", schoolAdminController.getTrashedStudents);
-router.put("/bulkUpdateStudentsToAlumni", schoolAdminController.bulkUpdateStudentsToAlumni);
+router.put(
+  "/bulkUpdateStudentsToAlumni",
+  schoolAdminController.bulkUpdateStudentsToAlumni,
+);
 router.get("/getAlumniStudents", schoolAdminController.getAlumniStudents);
-router.get("/getTrashedAlumniStudents", schoolAdminController.getTrashedAlumniStudents);
-
+router.get(
+  "/getTrashedAlumniStudents",
+  schoolAdminController.getTrashedAlumniStudents,
+);
 
 //common controller
 router.get(
@@ -460,6 +465,7 @@ router.get(
   "/getInternalMarkByStudentId/:student_id",
   commonController.getInternalMarkByStudentId,
 );
+
 router.get(
   "/getLeaveRequestByStudentId/:student_id",
   commonController.getLeaveRequestByStudentId,
@@ -533,26 +539,56 @@ router.put(
   "/update-student-route/:route_id",
   schoolAdminController.updateStudentToRoute,
 );
-router.delete("/deleteStudentFromRoute/:route_id", schoolAdminController.deleteStudentFromRoute);
-router.put("/updateVehicle/:id", uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
+router.delete(
+  "/deleteStudentFromRoute/:route_id",
+  schoolAdminController.deleteStudentFromRoute,
+);
+router.put(
+  "/updateVehicle/:id",
+  uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
   storageUploadMiddleware("vehicles"),
-  schoolAdminController.updateVehicle);
+  schoolAdminController.updateVehicle,
+);
 
-router.get("/getDriversAssignedToRoutes", schoolAdminController.getDriversAssignedToRoutes);
+router.get(
+  "/getDriversAssignedToRoutes",
+  schoolAdminController.getDriversAssignedToRoutes,
+);
 router.put("/updateIsLock/:route_id", schoolAdminController.updateIsLock);
-router.get("/getDriverLocation/:driver_id", schoolAdminController.getDriverLocation);
+router.get(
+  "/getDriverLocation/:driver_id",
+  schoolAdminController.getDriverLocation,
+);
 
 // Student Transfer routes
 router.post("/studentTransfer", transferController.adminCreateTransferRequest);
-router.get("/studentTransfer/outgoing", transferController.adminGetOutgoingTransferRequests);
-router.get("/studentTransfer/incoming", transferController.adminGetIncomingTransferRequests);
-router.get("/studentTransfer/:id", transferController.adminGetTransferRequestById);
-router.patch("/studentTransfer/:id/review", transferController.adminReviewTransferRequest);
-router.delete("/studentTransfer/:id", transferController.adminDeleteTransferRequest);
+router.get(
+  "/studentTransfer/outgoing",
+  transferController.adminGetOutgoingTransferRequests,
+);
+router.get(
+  "/studentTransfer/incoming",
+  transferController.adminGetIncomingTransferRequests,
+);
+router.get(
+  "/studentTransfer/:id",
+  transferController.adminGetTransferRequestById,
+);
+router.patch(
+  "/studentTransfer/:id/review",
+  transferController.adminReviewTransferRequest,
+);
+router.delete(
+  "/studentTransfer/:id",
+  transferController.adminDeleteTransferRequest,
+);
 
-//Public Controller routes
 router.get("/getSchoolsList", publicController.getSchoolsList);
 
-router.get("/getExams", schoolAdminController.getExams),
+router.get("/getExams", schoolAdminController.getExams);
+router.get(
+  "/getExamMarksByExamId/:exam_id",
+  schoolAdminController.getExamMarksByExamId,
+);
 
-  module.exports = router;
+module.exports = router;

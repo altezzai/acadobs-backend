@@ -54,7 +54,7 @@ const { error } = require("winston");
 const StudentRouteAssignment = require("../models/student_route_assignment");
 const { Console } = require("winston/lib/winston/transports");
 const { deleteFile } = require("../middlewares/storageUploads");
-const Exam = require("../models/exams")
+const Exam = require("../models/exams");
 
 // CREATE
 const createClass = async (req, res) => {
@@ -790,13 +790,16 @@ const getAllStaff = async (req, res) => {
           attributes: ["id", "name", "email", "phone", "dp", "role"],
           where: searchQuery
             ? {
-              name: { [Op.like]: `%${searchQuery}%` },
-            }
+                name: { [Op.like]: `%${searchQuery}%` },
+              }
             : {},
         },
         { model: Class, attributes: ["id", "year", "division", "classname"] },
       ],
-      order: [["createdAt", "DESC"], ["id", "ASC"]],
+      order: [
+        ["createdAt", "DESC"],
+        ["id", "ASC"],
+      ],
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -1146,8 +1149,8 @@ const getAllTeachers = async (req, res) => {
           attributes: ["id", "name", "email", "phone", "dp", "role"],
           where: searchQuery
             ? {
-              name: { [Op.like]: `%${searchQuery}%` },
-            }
+                name: { [Op.like]: `%${searchQuery}%` },
+              }
             : {},
         },
         { model: Class, attributes: ["id", "year", "division", "classname"] },
@@ -1168,7 +1171,10 @@ const getAllTeachers = async (req, res) => {
         },
       ],
 
-      order: [["createdAt", "DESC"], ["id", "ASC"]],
+      order: [
+        ["createdAt", "DESC"],
+        ["id", "ASC"],
+      ],
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -1819,9 +1825,11 @@ const createStudent = async (req, res) => {
     });
 
     if (existingRegNo) {
-      return res
-        .status(400)
-        .json({ error: "Reg number already exists in student table" + `, Reg No: ${existingRegNo.reg_no}: ` });
+      return res.status(400).json({
+        error:
+          "Reg number already exists in student table" +
+          `, Reg No: ${existingRegNo.reg_no}: `,
+      });
     }
 
     let guardianUserId;
@@ -2030,9 +2038,7 @@ const bulkCreateStudents = async (req, res) => {
           guardianUserId = existingGuardian.user_id;
         } else {
           return res.status(400).json({
-            error:
-              "User already exists and user is a " +
-              existingUser.role,
+            error: "User already exists and user is a " + existingUser.role,
           });
         }
       } else {
@@ -2173,7 +2179,10 @@ const getAllStudents = async (req, res) => {
           attributes: ["id", "year", "division", "classname"],
         },
       ],
-      order: [["createdAt", "DESC"], ["id", "ASC"]],
+      order: [
+        ["createdAt", "DESC"],
+        ["id", "ASC"],
+      ],
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -7722,9 +7731,9 @@ const updateStaffAttendance = async (req, res) => {
       status: status || attendance.status,
       check_in_time:
         check_in_time ||
-          attendance.check_in_time ||
-          check_in_time ||
-          status === "present"
+        attendance.check_in_time ||
+        check_in_time ||
+        status === "present"
           ? new Date().toISOString()
           : null,
       check_out_time: check_out_time || attendance.check_out_time,
@@ -8826,7 +8835,11 @@ const getExams = async (req, res) => {
       where: {
         school_id,
       },
-      order: [["createdAt", "DESC"]],
+      order: [
+        ["publish", "ASC"],
+        ["education_year", "DESC"],
+        ["id", "DESC"],
+      ],
     });
     return res.status(200).json({
       success: true,
@@ -8839,9 +8852,52 @@ const getExams = async (req, res) => {
       message: "Failed to fetch exams",
       error: e.message,
     });
-
   }
-}
+};
+
+const getExamMarksByExamId = async (req, res) => {
+  try {
+    const school_id = req.user.school_id || "";
+    const { exam_id } = req.params;
+
+    if (!exam_id) {
+      return res.status(400).json({ error: "Exam ID is required" });
+    }
+
+    const internalMarks = await InternalMark.findAll({
+      where: {
+        school_id,
+        exam_id,
+        trash: false,
+      },
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone", "dp", "role"],
+        },
+        { model: Class, attributes: ["id", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+      ],
+      order: [
+        ["recorded_by", "ASC"],
+        ["id", "DESC"],
+      ],
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Internal marks fetched successfully",
+      data: internalMarks,
+    });
+  } catch (error) {
+    logger.error("Error fetching internal marks by exam id:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch internal marks",
+      error: error.message,
+    });
+  }
+};
 
 module.exports = {
   createClass,
@@ -9039,5 +9095,6 @@ module.exports = {
   getDriversAssignedToRoutes,
   updateIsLock,
   getDriverLocation,
-  getExams
+  getExams,
+  getExamMarksByExamId,
 };
