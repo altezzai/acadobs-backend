@@ -585,6 +585,11 @@ router.delete(
 
 router.get("/getSchoolsList", publicController.getSchoolsList);
 
+router.post("/exams", schoolAdminController.createExam);
+router.put("/exams/:id", schoolAdminController.editExam);
+router.delete("/exams/:id", schoolAdminController.deleteExam);
+router.patch("/exams/:id/restore", schoolAdminController.restoreExam);
+
 router.get("/getExams", schoolAdminController.getExams);
 router.get(
   "/getExamMarksByExamId/:exam_id",

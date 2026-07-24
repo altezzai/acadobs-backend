@@ -31,6 +31,11 @@ const Exams = schoolSequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
         },
+        trash: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+        },
 
         createdAt: {
             type: DataTypes.DATE,
