@@ -301,6 +301,7 @@ const getInternalMarkByRecordedBy = async (req, res) => {
       where: {
         recorded_by,
         trash: false,
+        exam_id: null,
         [Op.or]: [
           { internal_name: { [Op.like]: `%${searchQuery}%` } },
           { date: { [Op.like]: `%${searchQuery}%` } },
@@ -311,6 +312,50 @@ const getInternalMarkByRecordedBy = async (req, res) => {
         { model: School, attributes: ["id", "name"] },
         { model: Class, attributes: ["id", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      exams,
+    });
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching exams:", err);
+    console.error("Error fetching exams:", err);
+    res.status(500).json({ error: "Failed to fetch exams" });
+  }
+};
+
+const getExamMarkByRecordedBy = async (req, res) => {
+  try {
+    const { recorded_by } = req.query;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: exams } = await InternalMark.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+
+      where: {
+        recorded_by,
+        trash: false,
+        exam_id: { [Op.not]: null },
+        [Op.or]: [
+          { internal_name: { [Op.like]: `%${searchQuery}%` } },
+          { date: { [Op.like]: `%${searchQuery}%` } },
+        ],
+      },
+      attributes: ["id", "internal_name", "max_marks", "date", "exam_id"],
+      include: [
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
       ],
     });
     const totalPages = Math.ceil(count / limit);
@@ -3265,4 +3310,5 @@ module.exports = {
 
   getMyPermissions,
   getExams,
+  getExamMarkByRecordedBy,
 };
