@@ -263,8 +263,12 @@ const bulkUpdateMarks = async (req, res) => {
         .json({ error: "internal_id and marks array are required" });
     }
 
-    const updatePromises = marks.map(async (item) => {
-      return Mark.update(
+    const sortedMarks = [...marks].sort(
+      (a, b) => Number(a.student_id) - Number(b.student_id),
+    );
+
+    for (const item of sortedMarks) {
+      await Mark.update(
         {
           marks_obtained: item.marks_obtained,
           status: item.status,
@@ -276,9 +280,7 @@ const bulkUpdateMarks = async (req, res) => {
           },
         },
       );
-    });
-
-    await Promise.all(updatePromises);
+    }
 
     res.status(200).json({ message: "Marks updated successfully" });
   } catch (error) {
