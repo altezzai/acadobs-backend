@@ -148,6 +148,7 @@ const getInternalMarksById = async (req, res) => {
         { model: School, attributes: ["id", "name"] },
         { model: Class, attributes: ["id", "year", "division", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
       ],
     });
     if (!internal) {
@@ -186,6 +187,7 @@ const getAllmarks = async (req, res) => {
         { model: School, attributes: ["id", "name"] },
         { model: Class, attributes: ["id", "year", "division", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
       ],
     });
     const totalPages = Math.ceil(count / limit);
