@@ -33,7 +33,10 @@ const StaffSubject = require("../models/staffsubject");
 const StaffPermission = require("../models/staff_permissions");
 
 const { Homework, HomeworkAssignment } = require("../models");
-const { getGuarduianIdbyStudentId, getStaffsForFilter } = require("./commonController");
+const {
+  getGuarduianIdbyStudentId,
+  getStaffsForFilter,
+} = require("./commonController");
 const {
   sendMessageWithParentNote,
 } = require("../socketHandlers/messageHandlers");
@@ -52,7 +55,7 @@ const createExamWithMarks = async (req, res) => {
       date,
       recorded_by,
       marks,
-      exam_id
+      exam_id,
     } = req.body;
     if (!school_id || !class_id || !subject_id || !internal_name || !date) {
       return res.status(400).json({ error: "Missing or invalid fields" });
@@ -97,7 +100,7 @@ const createExamWithMarks = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error creating internal mark and marks:",
-      error
+      error,
     );
     console.error("Error creating internal mark and marks:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -111,7 +114,7 @@ const getExams = async (req, res) => {
       where: {
         school_id,
       },
-      attributes: ["id", "exam_name", "publish"],
+      attributes: ["id", "exam_name", "publish", "education_year"],
       order: [["createdAt", "DESC"]],
     });
     return res.status(200).json({
@@ -125,9 +128,8 @@ const getExams = async (req, res) => {
       message: "Failed to fetch exams",
       error: e.message,
     });
-
   }
-}
+};
 
 const getInternalMarksById = async (req, res) => {
   try {
@@ -156,7 +158,7 @@ const getInternalMarksById = async (req, res) => {
       "userId:",
       req.user.user_id,
       " Error fetching internal mark:",
-      error
+      error,
     );
     res.status(500).json({ error: "Internal server error" });
   }
@@ -212,7 +214,7 @@ const updateExam = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error updating exam detail:",
-      err
+      err,
     );
     console.log(err);
     res.status(500).json({ error: "Update failed" });
@@ -231,7 +233,7 @@ const updateMark = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error updating mark detail:",
-      err
+      err,
     );
     res.status(500).json({ error: "Update failed" });
   }
@@ -269,7 +271,7 @@ const bulkUpdateMarks = async (req, res) => {
             internal_id,
             student_id: item.student_id,
           },
-        }
+        },
       );
     });
 
@@ -562,7 +564,7 @@ const updateHomeworkAssignment = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error updating homework assignment:",
-      err
+      err,
     );
     res.status(500).json({ error: err.message });
   }
@@ -611,7 +613,7 @@ const permanentDeleteHomework = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error permanently deleting homework:",
-      err
+      err,
     );
     res.status(500).json({ error: err.message });
   }
@@ -636,7 +638,7 @@ const restoreHomework = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error restoring homework:",
-      error
+      error,
     );
     res.status(500).json({ error: error.message });
   }
@@ -662,7 +664,7 @@ const bulkUpdateHomeworkAssignments = async (req, res) => {
             homework_id,
             student_id: item.student_id,
           },
-        }
+        },
       );
     });
 
@@ -676,7 +678,7 @@ const bulkUpdateHomeworkAssignments = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error bulk updating homework assignments:",
-      error
+      error,
     );
     console.error("Bulk update failed:", error);
     res.status(500).json({ error: "Bulk update failed" });
@@ -700,7 +702,7 @@ const getHomeworkAssignmentById = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error getting homework assignment:",
-      err
+      err,
     );
     res.status(500).json({ error: err.message });
   }
@@ -765,7 +767,7 @@ const getHomeworkByTeacher = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error getting homework by teacher:",
-      err
+      err,
     );
 
     res.status(500).json({ error: err.message });
@@ -803,7 +805,7 @@ const createAttendance = async (req, res) => {
     const leaveStudentIds = leaveStudents.map((leave) => leave.student_id);
 
     const filteredStudents = students.filter(
-      (student) => !leaveStudentIds.includes(student.student_id)
+      (student) => !leaveStudentIds.includes(student.student_id),
     );
 
     let attendance = await Attendance.findOne({
@@ -842,7 +844,7 @@ const createAttendance = async (req, res) => {
     });
 
     const absentStudents = filteredStudents.filter(
-      (s) => s.status.toLowerCase() === "absent"
+      (s) => s.status.toLowerCase() === "absent",
     );
 
     if (absentStudents.length > 0) {
@@ -882,7 +884,7 @@ const createAttendance = async (req, res) => {
               "student id:",
               student.id,
               "marked id:",
-              attendanceMarkedId
+              attendanceMarkedId,
             );
             status = await sendPushNotification(tokens, title, body, {
               type: "attendance_alert",
@@ -995,7 +997,7 @@ const getAttendanceById = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Get Attendance By Id Error:",
-      err
+      err,
     );
     res.status(500).json({ error: err.message });
   }
@@ -1040,9 +1042,15 @@ const updateAttendanceMarkedById = async (req, res) => {
     const attendanceMarked = await AttendanceMarked.findByPk(id);
     if (!attendanceMarked) return res.status(404).json({ error: "Not found" });
     const attendance = await Attendance.findOne({
-      where: { id: attendanceMarked.attendance_id, trash: false, school_id, teacher_id },
+      where: {
+        id: attendanceMarked.attendance_id,
+        trash: false,
+        school_id,
+        teacher_id,
+      },
     });
-    if (!attendance) return res.status(404).json({ error: "Attendance Not found" });
+    if (!attendance)
+      return res.status(404).json({ error: "Attendance Not found" });
 
     await AttendanceMarked.update({ status, remarks }, { where: { id } });
 
@@ -1052,7 +1060,7 @@ const updateAttendanceMarkedById = async (req, res) => {
       "userId:",
       req.user.user_id,
       " Update Attendance Marked Error:",
-      err
+      err,
     );
     res.status(500).json({ error: err.message });
   }
@@ -1072,7 +1080,8 @@ const bulkUpdateAttendanceById = async (req, res) => {
     const attendance = await Attendance.findOne({
       where: { id: attendance_id, trash: false, school_id, teacher_id },
     });
-    if (!attendance) return res.status(404).json({ error: "Attendance Not found" });
+    if (!attendance)
+      return res.status(404).json({ error: "Attendance Not found" });
 
     const updatePromises = data.map(async (item) => {
       return AttendanceMarked.update(
@@ -1085,7 +1094,7 @@ const bulkUpdateAttendanceById = async (req, res) => {
             id: item.id,
             attendance_id: attendance_id,
           },
-        }
+        },
       );
     });
 
@@ -1098,7 +1107,7 @@ const bulkUpdateAttendanceById = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Bulk Update Attendance Marked Error:",
-      err
+      err,
     );
     res.status(500).json({ error: err.message });
   }
@@ -1174,7 +1183,7 @@ const getAttendanceByclassIdAndDate = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Get Attendance By Class Id And Date Error:",
-      err
+      err,
     );
     res.status(500).json({ error: err.message });
   }
@@ -1252,7 +1261,7 @@ const getAllClassesAttendanceStatus = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Get All Classes Attendance Status Error:",
-      err
+      err,
     );
     console.error("Error fetching attendance:", err);
     res.status(500).json({ error: err.message });
@@ -1267,8 +1276,7 @@ const deleteAttendance = async (req, res) => {
     const attendance = await Attendance.findOne({
       where: { id, trash: false, school_id, teacher_id },
     });
-    if (!attendance)
-      return res.status(404).json({ error: "Not found" });
+    if (!attendance) return res.status(404).json({ error: "Not found" });
 
     await Attendance.update({ trash: true }, { where: { id: id } });
     res.status(200).json({
@@ -1279,7 +1287,7 @@ const deleteAttendance = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error deleting attendance:",
-      err
+      err,
     );
     res.status(500).json({ error: "Delete failed" });
   }
@@ -1305,7 +1313,7 @@ const restoreAttendance = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error restoring attendance:",
-      error
+      error,
     );
     res.status(500).json({ error: error.message });
   }
@@ -1330,7 +1338,7 @@ const permanentDeleteAttendance = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error deleting attendance:",
-      err
+      err,
     );
     res.status(500).json({ error: err.message });
   }
@@ -1378,7 +1386,7 @@ const getTrashedAttendanceByTeacher = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error getting trashed attendance:",
-      err
+      err,
     );
     res.status(500).json({ error: err.message });
   }
@@ -1532,7 +1540,7 @@ const getAssignedDutyById = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error in getAssignedDutyById :",
-      err
+      err,
     );
     res.status(500).json({ error: "Failed to fetch duty" });
   }
@@ -1631,7 +1639,7 @@ const createAchievementWithStudents = async (req, res) => {
         if (req.files && req.files[index]) {
           compressedFileName = await compressAndSaveMultiFile(
             req.files[index],
-            uploadPath
+            uploadPath,
           );
         }
 
@@ -1642,7 +1650,7 @@ const createAchievementWithStudents = async (req, res) => {
           proof_document: compressedFileName,
           remarks: student.remarks,
         };
-      })
+      }),
     );
 
     await StudentAchievement.bulkCreate(studentAchievements);
@@ -1656,7 +1664,7 @@ const createAchievementWithStudents = async (req, res) => {
       "userId:",
       req.user.user_id,
       "createAchievementWithStudents :",
-      err
+      err,
     );
     console.error("Error:", err);
     res.status(500).json({ error: "Server error" });
@@ -1702,7 +1710,7 @@ const getAllAchievementsByStaffId = async (req, res) => {
       "userId:",
       req.user.user_id,
       "getAllAchievementsByStaffId →",
-      error
+      error,
     );
     res.status(500).json({ error: "Internal server error" });
   }
@@ -1773,7 +1781,7 @@ const updateAchievement = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error in updateAchievement:",
-      error
+      error,
     );
     res.status(500).json({ error: "Internal server error" });
   }
@@ -1796,7 +1804,7 @@ const deleteAchievement = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error in deleteAchievement:",
-      error
+      error,
     );
     res.status(500).json({ error: "Internal server error" });
   }
@@ -1807,7 +1815,7 @@ const restoreAchievement = async (req, res) => {
     const school_id = req.user.school_id;
     await Achievement.update(
       { trash: false, recorded_by, school_id },
-      { where: { id: req.params.id } }
+      { where: { id: req.params.id } },
     );
     res.status(200).json({ message: "Achievement restored successfully" });
   } catch (error) {
@@ -1815,7 +1823,7 @@ const restoreAchievement = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error in restoreAchievement:",
-      error
+      error,
     );
     res.status(500).json({ error: "Internal server error" });
   }
@@ -1870,7 +1878,7 @@ const updateStudentAchievement = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error in updateStudentAchievement:",
-      error
+      error,
     );
     console.error("Error:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -1929,7 +1937,7 @@ const createLeaveRequest = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error in createLeaveRequest:",
-      error
+      error,
     );
     console.error("Create Error:", error);
     res.status(500).json({ error: "Failed to create leave request" });
@@ -1984,7 +1992,7 @@ const getAllLeaveRequests = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error in getAllLeaveRequests:",
-      error
+      error,
     );
     console.error("Fetch Error:", error);
     res.status(500).json({ error: "Failed to fetch leave requests" });
@@ -2012,7 +2020,7 @@ const getLeaveRequestById = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error fetching leave request:",
-      error
+      error,
     );
     console.error("Fetch One Error:", error);
     res.status(500).json({ error: "Failed to fetch leave request" });
@@ -2078,7 +2086,7 @@ const updateLeaveRequest = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error in updateLeaveRequest:",
-      error
+      error,
     );
     console.error("Update Error:", error);
     res.status(500).json({ error: "Failed to update leave request" });
@@ -2108,7 +2116,7 @@ const deleteLeaveRequest = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error deleting leave request:",
-      error
+      error,
     );
     console.error("Delete Error:", error);
     res.status(500).json({ error: "Failed to delete leave request" });
@@ -2131,7 +2139,7 @@ const restoreLeaveRequest = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error restoring leave request:",
-      error
+      error,
     );
     console.error("Restore Error:", error);
     res.status(500).json({ error: "Failed to restore leave request" });
@@ -2248,7 +2256,7 @@ const leaveRequestPermission = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error approving leave request:",
-      error
+      error,
     );
     console.error("Approve Error:", error);
     res.status(500).json({ error: "Failed to approve leave request" });
@@ -2335,7 +2343,7 @@ const getStudentLeaveRequestsForClassTeacher = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error fetching leave requests:",
-      error
+      error,
     );
     console.error("Error fetching leave requests:", error);
     res.status(500).json({ error: "Failed to fetch leave requests" });
@@ -2389,8 +2397,8 @@ const createParentNote = async (req, res) => {
 
           await sendMessageWithParentNote(
             req.io,
-            { user: req.user, emit: () => { } },
-            messageData
+            { user: req.user, emit: () => {} },
+            messageData,
           );
 
           // OR directly emit here
@@ -2411,7 +2419,7 @@ const createParentNote = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error creating parent note:",
-      err
+      err,
     );
     console.error("Error creating parent note:", err);
     res.status(500).json({ error: err.message });
@@ -2455,7 +2463,7 @@ const getAllOwnCreatedParentNotes = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error fetching parent notes:",
-      err
+      err,
     );
     console.error("Error fetching parent notes:", err);
     res.status(500).json({ error: "Failed to fetch parent notes" });
@@ -2481,7 +2489,7 @@ const getParentNoteById = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error fetching parent note:",
-      err
+      err,
     );
     console.error("Error fetching parent note:", err);
     res.status(500).json({ error: "Failed to fetch parent note" });
@@ -2536,7 +2544,7 @@ const updateParentNote = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error updating parent note:",
-      err
+      err,
     );
     console.error("Error updating parent note:", err);
     res.status(500).json({ error: "Failed to update parent note" });
@@ -2563,7 +2571,7 @@ const deleteParentNote = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error deleting parent note:",
-      err
+      err,
     );
     console.error("Error deleting parent note:", err);
     res.status(500).json({ error: "Failed to delete parent note" });
@@ -2599,7 +2607,7 @@ const getLatestNotices = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error fetching latest notices:",
-      error
+      error,
     );
     console.error("Error fetching notices:", error);
     res.status(500).json({ error: "Failed to fetch notices" });
@@ -2718,7 +2726,7 @@ const getTodayTimetableForStaff = async (req, res) => {
       "userId:",
       req.user.user_id,
       "getTodayTimetableForStaff error:",
-      error
+      error,
     );
 
     console.error("getTodayTimetableForStaff error:", error);
@@ -2755,7 +2763,7 @@ const getAllDaysTimetableForStaff = async (req, res) => {
       "userId:",
       req.user.user_id,
       "getAllDaysTimetableForStaff error:",
-      error
+      error,
     );
     console.error("getAllDaysTimetableForStaff error:", error);
     return res.status(500).json({ error: error.message });
@@ -2804,11 +2812,11 @@ const getNavigationBarCounts = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error fetching pending leave request counts by role:",
-      error
+      error,
     );
     console.error(
       "Error fetching pending leave request counts by role:",
-      error
+      error,
     );
     res
       .status(500)
@@ -2841,7 +2849,7 @@ const markSelfAttendance = async (req, res) => {
     // ✅ Calculate distance using geolib
     const distance = geolib.getDistance(
       { latitude, longitude },
-      { latitude: schoolLat, longitude: schoolLon }
+      { latitude: schoolLat, longitude: schoolLon },
     );
 
     if (distance > 100) {
@@ -2883,7 +2891,7 @@ const markSelfAttendance = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error marking attendance:",
-      error
+      error,
     );
     console.error("Error marking attendance:", error);
     res.status(500).json({ error: "Failed to mark attendance" });
@@ -2915,7 +2923,7 @@ const markCheckOutSelfAttendance = async (req, res) => {
     // ✅ Calculate distance using geolib
     const distance = geolib.getDistance(
       { latitude, longitude },
-      { latitude: schoolLat, longitude: schoolLon }
+      { latitude: schoolLat, longitude: schoolLon },
     );
 
     if (distance > 100) {
@@ -2957,7 +2965,7 @@ const markCheckOutSelfAttendance = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error marking check-out attendance:",
-      error
+      error,
     );
     console.error("Error marking check-out attendance:", error);
     res.status(500).json({ error: "Failed to mark check-out attendance" });
@@ -2990,7 +2998,7 @@ const todayAttendanceStatus = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error fetching today's attendance status:",
-      error
+      error,
     );
     console.error("Error fetching today's attendance status:", error);
     res
@@ -3020,7 +3028,6 @@ const updateProfileDetails = async (req, res) => {
       finalDp = newDpUrl;
     }
 
-
     await staff.update({
       qualification,
       address,
@@ -3032,14 +3039,15 @@ const updateProfileDetails = async (req, res) => {
       dp: finalDp,
     });
 
-
-    res.status(200).json({ message: "Profile details updated successfully", staff });
+    res
+      .status(200)
+      .json({ message: "Profile details updated successfully", staff });
   } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error updating profile details:",
-      error
+      error,
     );
     console.error("Error updating profile details:", error);
     res.status(500).json({ error: "Failed to update profile details" });
@@ -3066,7 +3074,7 @@ const getProfileDetails = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error fetching profile details:",
-      error
+      error,
     );
     console.error("Error fetching profile details:", error);
     logger.error("Error fetching profile details:", error);
@@ -3166,7 +3174,7 @@ const getMyPermissions = async (req, res) => {
       "userId:",
       req.user.user_id,
       "Error fetching permissions:",
-      err
+      err,
     );
     console.error("Error fetching permissions:", err);
     logger.error("Error fetching permissions:", err);
@@ -3255,5 +3263,5 @@ module.exports = {
   getStaffSubjects,
 
   getMyPermissions,
-  getExams
+  getExams,
 };

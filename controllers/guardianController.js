@@ -1358,6 +1358,7 @@ const getExamsByStudentId = async (req, res) => {
     const examsList = await Exams.findAll({
       where: {
         id: { [Op.in]: examIds },
+        publish: true,
       },
       attributes: ["id", "exam_name", "education_year"],
     });
