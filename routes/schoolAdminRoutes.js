@@ -590,5 +590,9 @@ router.get(
   "/getExamMarksByExamId/:exam_id",
   schoolAdminController.getExamMarksByExamId,
 );
+router.get(
+  "/getMarksByInternalId/:id",
+  schoolAdminController.getMarksByInternalId,
+);
 
 module.exports = router;
