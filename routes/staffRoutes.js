@@ -17,14 +17,16 @@ router.get("/getExams", staffController.getExams);
 
 router.get(
   "/getInternalMarkByRecordedBy",
-  staffController.getInternalMarkByRecordedBy
+  staffController.getInternalMarkByRecordedBy,
 );
+router.get("/getExamMarkByRecordedBy", staffController.getExamMarkByRecordedBy);
+
 // Homework
 router.post(
   "/homeworks",
   uploadWithErrorHandler(upload.single("file")),
   storageUploadMiddleware("homeworks"),
-  staffController.createHomeworkWithAssignments
+  staffController.createHomeworkWithAssignments,
 );
 router.get("/homeworks", staffController.getAllHomework);
 router.get("/homeworks/:id", staffController.getHomeworkById);
@@ -32,26 +34,26 @@ router.put(
   "/homeworks/:id",
   uploadWithErrorHandler(upload.single("file")),
   storageUploadMiddleware("homeworks"),
-  staffController.updateHomework
+  staffController.updateHomework,
 );
 router.delete("/homeworks/:id", staffController.deleteHomework);
 router.patch("/homeworks/:id", staffController.restoreHomework);
 router.delete(
   "/permanentDeleteHomework/:id",
-  staffController.permanentDeleteHomework
+  staffController.permanentDeleteHomework,
 );
 router.put(
   "/updateHomeworkAssignment/:id",
   uploadWithErrorHandler(upload.single("file")),
-  staffController.updateHomeworkAssignment
+  staffController.updateHomeworkAssignment,
 );
 router.put(
   "/bulkUpdateHomeworkAssignments/",
-  staffController.bulkUpdateHomeworkAssignments
+  staffController.bulkUpdateHomeworkAssignments,
 );
 router.get(
   "/getHomeworkAssignmentById/:id",
-  staffController.getHomeworkAssignmentById
+  staffController.getHomeworkAssignmentById,
 );
 router.get("/getHomeworkByTeacher/", staffController.getHomeworkByTeacher);
 // Attendance
@@ -61,30 +63,30 @@ router.put("/attendance/:id", staffController.updateAttendance);
 router.get("/attendance/:id", staffController.getAttendanceById);
 router.get(
   "/getTrashedAttendanceByTeacher/",
-  staffController.getTrashedAttendanceByTeacher
+  staffController.getTrashedAttendanceByTeacher,
 );
 router.get("/getAttendanceByTeacher/", staffController.getAttendanceByTeacher);
 router.delete("/attendance/:id", staffController.deleteAttendance);
 router.patch("/attendance/:id", staffController.restoreAttendance);
 router.put(
   "updateAttendanceMarkedById/:id",
-  staffController.updateAttendanceMarkedById
+  staffController.updateAttendanceMarkedById,
 );
 router.delete(
   "/permanentDeleteAttendance/:id",
-  staffController.permanentDeleteAttendance
+  staffController.permanentDeleteAttendance,
 );
 router.put(
   "/bulkUpdateAttendanceById/:attendance_id",
-  staffController.bulkUpdateAttendanceById
+  staffController.bulkUpdateAttendanceById,
 );
 router.get(
   "/getAttendanceByclassIdAndDate",
-  staffController.getAttendanceByclassIdAndDate
+  staffController.getAttendanceByclassIdAndDate,
 );
 router.get(
   "/getAllClassesAttendanceStatus",
-  staffController.getAllClassesAttendanceStatus
+  staffController.getAllClassesAttendanceStatus,
 );
 //duty
 router.get("/duties", staffController.getAllDuties);
@@ -93,13 +95,13 @@ router.get("/duties/:id", staffController.getAssignedDutyById);
 router.put(
   "/updateAssignedDuty/:id",
   uploadWithErrorHandler(upload.single("solved_file")),
-  staffController.updateAssignedDuty
+  staffController.updateAssignedDuty,
 );
 
 router.post(
   "/achievements",
   uploadWithErrorHandler(upload.any()),
-  staffController.createAchievementWithStudents
+  staffController.createAchievementWithStudents,
 );
 router.get("/achievements", staffController.getAllAchievementsByStaffId);
 router.get("/achievements/:id", staffController.getAchievementById);
@@ -109,14 +111,14 @@ router.patch("/achievements/:id", staffController.restoreAchievement);
 router.put(
   "/updateStudentAchievement/:id",
   uploadWithErrorHandler(upload.single("proof_document")),
-  staffController.updateStudentAchievement
+  staffController.updateStudentAchievement,
 );
 //Leave Request
 router.post(
   "/leaveRequest",
   uploadWithErrorHandler(upload.single("attachment")),
   storageUploadMiddleware("leave_requests"),
-  staffController.createLeaveRequest
+  staffController.createLeaveRequest,
 );
 router.get("/leaveRequest", staffController.getAllLeaveRequests);
 router.get("/leaveRequest/:id", staffController.getLeaveRequestById);
@@ -124,43 +126,43 @@ router.put(
   "/leaveRequest/:id",
   uploadWithErrorHandler(upload.single("attachment")),
   storageUploadMiddleware("leave_requests"),
-  staffController.updateLeaveRequest
+  staffController.updateLeaveRequest,
 );
 router.delete("/leaveRequest/:id", staffController.deleteLeaveRequest);
 router.patch("/leaveRequest/:id", staffController.restoreLeaveRequest);
 //student leave request for class teacher
 router.get(
   "/getStudentLeaveRequestsForClassTeacher",
-  staffController.getStudentLeaveRequestsForClassTeacher
+  staffController.getStudentLeaveRequestsForClassTeacher,
 );
 router.patch(
   "/leaveRequestpermission/:id",
-  staffController.leaveRequestPermission
+  staffController.leaveRequestPermission,
 );
 
 //parent notes
 router.post(
   "/parentNotes",
   uploadWithErrorHandler(upload.single("note_attachment")),
-  staffController.createParentNote
+  staffController.createParentNote,
 );
 router.get("/parentNotes", staffController.getAllOwnCreatedParentNotes);
 router.get("/parentNotes/:id", staffController.getParentNoteById);
 router.put(
   "/parentNotes/:id",
   uploadWithErrorHandler(upload.single("note_attachment")),
-  staffController.updateParentNote
+  staffController.updateParentNote,
 );
 router.delete("/parentNotes/:id", staffController.deleteParentNote);
 
 //timetable
 router.get(
   "/getTodayTimetableForStaff",
-  staffController.getTodayTimetableForStaff
+  staffController.getTodayTimetableForStaff,
 );
 router.get(
   "/getAllDayTimetableForStaff",
-  staffController.getAllDaysTimetableForStaff
+  staffController.getAllDaysTimetableForStaff,
 );
 
 router.get("/getNavigationBarCounts", staffController.getNavigationBarCounts);
@@ -169,7 +171,7 @@ router.get("/getLatestNotices", staffController.getLatestNotices);
 router.post("/markSelfAttendance", staffController.markSelfAttendance);
 router.put(
   "/markCheckOutSelfAttendance",
-  staffController.markCheckOutSelfAttendance
+  staffController.markCheckOutSelfAttendance,
 );
 router.get("/todayAttendanceStatus", staffController.todayAttendanceStatus);
 
@@ -177,7 +179,7 @@ router.put(
   "/updateProfileDetails",
   uploadWithErrorHandler(upload.single("dp")),
   storageUploadMiddleware("staffs"),
-  staffController.updateProfileDetails
+  staffController.updateProfileDetails,
 );
 router.get("/getProfileDetails", staffController.getProfileDetails);
 
@@ -192,7 +194,7 @@ router.get("/getLatestNews", commonController.getLatestNews);
 
 router.get(
   "/getStudentsByClassId/:class_id",
-  commonController.getStudentsByClassId
+  commonController.getStudentsByClassId,
 );
 router.get("/getClassesByYear/:year", commonController.getClassesByYear);
 
@@ -200,32 +202,32 @@ router.get("/getClassesByYear/:year", commonController.getClassesByYear);
 router.get("/students/:id", commonController.getStudentById);
 router.get(
   "/getGuarduianIdbyStudentId",
-  commonController.getGuarduianIdbyStudentId
+  commonController.getGuarduianIdbyStudentId,
 );
 router.get(
   "/getHomeworkByStudentId/:student_id",
-  commonController.getHomeworkByStudentId
+  commonController.getHomeworkByStudentId,
 );
 router.get(
   "/getAttendanceByStudentId/:student_id",
-  commonController.getAttendanceByStudentId
+  commonController.getAttendanceByStudentId,
 );
 router.get(
   "/getStudentAttendanceByDate/:student_id",
-  commonController.getStudentAttendanceByDate
+  commonController.getStudentAttendanceByDate,
 );
 router.get("/allAchievements", commonController.allAchievements);
 router.get(
   "/achievementByStudentId/:student_id",
-  commonController.achievementByStudentId
+  commonController.achievementByStudentId,
 );
 router.get(
   "/getInternalMarkByStudentId/:student_id",
-  commonController.getInternalMarkByStudentId
+  commonController.getInternalMarkByStudentId,
 );
 router.get(
   "/getLeaveRequestByStudentId/:student_id",
-  commonController.getLeaveRequestByStudentId
+  commonController.getLeaveRequestByStudentId,
 );
 router.get("/getSchoolDetails", commonController.getSchoolDetails);
 
@@ -233,12 +235,12 @@ router.put("/changePassword", commonController.changePassword);
 router.put(
   "/updateDp",
   uploadWithErrorHandler(upload.single("dp")),
-  commonController.updateDp
+  commonController.updateDp,
 );
 
 router.get("/getPaymentById/:id", commonController.getPaymentById);
 router.get(
   "/getAchievementsBySchool",
-  commonController.getAchievementsBySchool
+  commonController.getAchievementsBySchool,
 );
 module.exports = router;
