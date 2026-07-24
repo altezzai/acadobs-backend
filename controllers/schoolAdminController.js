@@ -8899,6 +8899,54 @@ const getExamMarksByExamId = async (req, res) => {
   }
 };
 
+const getMarksByInternalId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id || "";
+
+    if (!id) {
+      return res.status(400).json({ error: "Internal mark ID is required" });
+    }
+
+    const marks = await Marks.findAll({
+      where: {
+        internal_id: id,
+      },
+      include: [
+        {
+          model: Student,
+          attributes: [
+            "id",
+            "reg_no",
+            "full_name",
+            "image",
+            "roll_number",
+            "class_id",
+          ],
+        },
+        {
+          model: InternalMark,
+          attributes: ["id", "internal_name", "max_marks", "date", "exam_id"],
+          where: { school_id },
+        },
+      ],
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Marks fetched successfully",
+      data: marks,
+    });
+  } catch (error) {
+    logger.error("Error fetching marks by internal id:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch marks",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createClass,
   getAllClasses,
@@ -9097,4 +9145,5 @@ module.exports = {
   getDriverLocation,
   getExams,
   getExamMarksByExamId,
+  getMarksByInternalId,
 };
