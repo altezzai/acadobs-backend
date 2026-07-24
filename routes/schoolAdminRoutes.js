@@ -594,5 +594,9 @@ router.get(
   "/getMarksByInternalId/:id",
   schoolAdminController.getMarksByInternalId,
 );
+router.put(
+  "/updateExamPublishStatus/:id",
+  schoolAdminController.updateExamPublishStatus,
+);
 
 module.exports = router;
