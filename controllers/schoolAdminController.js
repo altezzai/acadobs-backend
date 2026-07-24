@@ -8834,6 +8834,7 @@ const getExams = async (req, res) => {
     const exams = await Exam.findAll({
       where: {
         school_id,
+        trash: false,
       },
       order: [
         ["publish", "ASC"],
@@ -8942,6 +8943,124 @@ const getMarksByInternalId = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch marks",
+      error: error.message,
+    });
+  }
+};
+
+const createExam = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { exam_name, publish, education_year } = req.body;
+
+    if (!exam_name || !education_year) {
+      return res.status(400).json({ error: "Exam name and education year are required" });
+    }
+
+    const exam = await Exam.create({
+      school_id,
+      exam_name,
+      publish: publish || false,
+      education_year,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Exam created successfully",
+      data: exam,
+    });
+  } catch (error) {
+    logger.error("Error creating exam:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create exam",
+      error: error.message,
+    });
+  }
+};
+
+const editExam = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const { exam_name, publish, education_year } = req.body;
+
+    const exam = await Exam.findOne({ where: { id, school_id, trash: false } });
+
+    if (!exam) {
+      return res.status(404).json({ error: "Exam not found" });
+    }
+
+    await exam.update({
+      exam_name: exam_name || exam.exam_name,
+      publish: publish !== undefined ? publish : exam.publish,
+      education_year: education_year || exam.education_year,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Exam updated successfully",
+      data: exam,
+    });
+  } catch (error) {
+    logger.error("Error updating exam:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update exam",
+      error: error.message,
+    });
+  }
+};
+
+const deleteExam = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+
+    const exam = await Exam.findOne({ where: { id, school_id, trash: false } });
+
+    if (!exam) {
+      return res.status(404).json({ error: "Exam not found" });
+    }
+
+    await exam.update({ trash: true });
+
+    return res.status(200).json({
+      success: true,
+      message: "Exam deleted successfully",
+    });
+  } catch (error) {
+    logger.error("Error deleting exam:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete exam",
+      error: error.message,
+    });
+  }
+};
+
+const restoreExam = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+
+    const exam = await Exam.findOne({ where: { id, school_id, trash: true } });
+
+    if (!exam) {
+      return res.status(404).json({ error: "Exam not found in trash" });
+    }
+
+    await exam.update({ trash: false });
+
+    return res.status(200).json({
+      success: true,
+      message: "Exam restored successfully",
+    });
+  } catch (error) {
+    logger.error("Error restoring exam:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to restore exam",
       error: error.message,
     });
   }
@@ -9185,4 +9304,8 @@ module.exports = {
   getExamMarksByExamId,
   getMarksByInternalId,
   updateExamPublishStatus,
+  createExam,
+  editExam,
+  deleteExam,
+  restoreExam,
 };
