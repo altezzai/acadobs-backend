@@ -2609,16 +2609,55 @@ const getTodayTimetableForStaff = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const staff_id = req.user.user_id;
-    let date = new Date();
-    let today = date.getDay();
+
+    const indiaDateParts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      weekday: "short",
+      hour: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(new Date());
+
+    const getPart = (type) =>
+      indiaDateParts.find((part) => part.type === type)?.value;
+
+    const weekdayMap = {
+      Sun: 0,
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+    };
+
+    let today = weekdayMap[getPart("weekday")];
+    const currentHour = Number(getPart("hour"));
+
+    let year = Number(getPart("year"));
+    let month = Number(getPart("month"));
+    let day = Number(getPart("day"));
     let message = "today's timetable";
 
-    // If time >= 19:00 (7PM), shift to tomorrow
-    if (date.getHours() >= 19) {
+    // After 7 PM IST, return tomorrow's timetable.
+    if (currentHour >= 19) {
       today = (today + 1) % 7;
-      date.setDate(date.getDate() + 1); // Move to next day
       message = "tomorrow's timetable";
+
+      const tomorrow = new Date(Date.UTC(year, month - 1, day + 1));
+
+      year = tomorrow.getUTCFullYear();
+      month = tomorrow.getUTCMonth() + 1;
+      day = tomorrow.getUTCDate();
     }
+
+    // YYYY-MM-DD format, suitable for a Sequelize DATEONLY column.
+    const targetDate = `${year}-${String(month).padStart(2, "0")}-${String(
+      day
+    ).padStart(2, "0")}`;
+
     const timetable = await Timetable.findAll({
       where: {
         school_id,
@@ -2627,8 +2666,14 @@ const getTodayTimetableForStaff = async (req, res) => {
       },
       order: [["period_number", "ASC"]],
       include: [
-        { model: Subject, attributes: ["id", "subject_name"] }, // optional
-        { model: Class, attributes: ["id", "classname"] }, // optional
+        {
+          model: Subject,
+          attributes: ["id", "subject_name"],
+        },
+        {
+          model: Class,
+          attributes: ["id", "classname"],
+        },
       ],
     });
 
@@ -2636,7 +2681,7 @@ const getTodayTimetableForStaff = async (req, res) => {
       where: {
         sub_staff_id: staff_id,
         school_id,
-        date,
+        date: targetDate,
       },
       order: [
         ["date", "ASC"],
@@ -2654,13 +2699,17 @@ const getTodayTimetableForStaff = async (req, res) => {
             },
           ],
         },
-        { model: Subject, attributes: ["id", "subject_name"] },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name"],
+        },
       ],
     });
 
     return res.json({
       message: `Here is ${message}`,
       today,
+      date: targetDate,
       timetable,
       substitutions,
     });
@@ -2671,8 +2720,12 @@ const getTodayTimetableForStaff = async (req, res) => {
       "getTodayTimetableForStaff error:",
       error
     );
+
     console.error("getTodayTimetableForStaff error:", error);
-    return res.status(500).json({ error: error.message });
+
+    return res.status(500).json({
+      error: error.message,
+    });
   }
 };
 const getAllDaysTimetableForStaff = async (req, res) => {
