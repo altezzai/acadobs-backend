@@ -9036,7 +9036,6 @@ const getExams = async (req, res) => {
     const exams = await Exam.findAll({
       where: {
         school_id,
-        trash: false,
       },
       order: [
         ["publish", "ASC"],
@@ -9156,7 +9155,9 @@ const createExam = async (req, res) => {
     const { exam_name, publish, education_year } = req.body;
 
     if (!exam_name || !education_year) {
-      return res.status(400).json({ error: "Exam name and education year are required" });
+      return res
+        .status(400)
+        .json({ error: "Exam name and education year are required" });
     }
 
     const exam = await Exam.create({
