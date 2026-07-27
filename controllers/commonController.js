@@ -22,7 +22,7 @@ const AccountDelete = require("../models/accountdelete");
 const Syllabus = require("../models/syllabus");
 const NewsImage = require("../models/newsimage");
 
-const { Class } = require("../models");
+const { Class, Staff } = require("../models");
 
 const {
   compressAndSaveFile,
@@ -702,6 +702,7 @@ const getLatestNews = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch news" });
   }
 };
+
 const getSchoolDetails = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -730,7 +731,15 @@ const getSchoolDetails = async (req, res) => {
     if (!school) {
       return res.status(404).json({ error: "School not found" });
     }
-    res.status(200).json({ school });
+
+    const staff = await Staff.findOne({
+      attributes: [],
+      where: { user_id: req.user.user_id }, include: {
+        model: Class,
+        attributes: ["id", "classname"],
+    } });
+
+    res.status(200).json({...school.toJSON(), Class:staff?.Class   });
   } catch (error) {
     logger.error(
       "userId:",
