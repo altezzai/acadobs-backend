@@ -13,20 +13,41 @@ const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
 
 // Class routes
-router.post("/classes", schoolAdminController.createClass); // Create a new class
-router.get("/classes", schoolAdminController.getAllClasses); // Get all classes
+router.post("/classes", schoolAdminController.createClass); 
+router.get("/classes", schoolAdminController.getAllClasses); 
 router.get("/classes/:id", schoolAdminController.getClassById);
-router.put("/classes/:id", schoolAdminController.updateClass); // Update a class
-router.delete("/classes/:id", schoolAdminController.deleteClass); // Soft delete a class
+router.put("/classes/:id", schoolAdminController.updateClass);
+router.delete("/classes/:id", schoolAdminController.deleteClass);
 router.patch("/classes/:id", schoolAdminController.restoreClass);
+router.get("/getSpecialClassesByYear/:year", schoolAdminController.getSpecialClassesByYear); // Get classes by year
 router.get("/getTrashedClasses", schoolAdminController.getTrashedClasses);
 router.delete(
   "/permanentDeleteClass/:id",
   schoolAdminController.permanentDeleteClass,
 );
-//common controller
-router.get("/getClassesByYear/:year", commonController.getClassesByYear); // Get classes by year
+router.get("/getClassesByYear/:year", commonController.getClassesByYear);
 
+//special class students routes
+router.post(
+  "/specialClassStudents",  
+  schoolAdminController.addSpecialClassStudents,
+);
+router.get(
+  "/specialClassStudents",
+  schoolAdminController.getSpecialClassStudents,
+);
+router.get(
+  "/specialClassStudents/:class_id",
+  commonController.getSpecialClassStudentsByClassId,
+);
+router.put(
+  "/specialClassStudents/:class_id",
+  schoolAdminController.updateSpecialClassStudents,
+);
+router.delete(
+  "/specialClassStudents/:id",
+  schoolAdminController.deleteSpecialClassStudent,
+);
 // Subject routes
 router.post("/subjects", schoolAdminController.createSubject);
 router.get("/subjects", schoolAdminController.getSubjects);
@@ -108,8 +129,8 @@ router.post(
   "/students",
   uploadWithErrorHandler(
     upload.fields([
-      { name: "dp", maxCount: 1 }, // guardian image
-      { name: "image", maxCount: 1 }, // student image
+      { name: "dp", maxCount: 1 },
+      { name: "image", maxCount: 1 }, 
     ]),
   ),
   storageUploadMiddleware("students"),
@@ -438,43 +459,56 @@ router.get(
   "/staffAttendanceByDate",
   schoolAdminController.getStaffAttendanceByDate,
 );
+router.post("/exams", schoolAdminController.createExam);
+router.put("/exams/:id", schoolAdminController.editExam);
+router.delete("/exams/:id", schoolAdminController.deleteExam);
+router.patch("/exams/:id/restore", schoolAdminController.restoreExam);
 
-//common Controller
-router.get("/getLatestEvents", commonController.getLatestEvents);
-router.get("/getLatestNews", commonController.getLatestNews);
-router.get("/students/:id", commonController.getStudentById);
+router.get("/getExams", schoolAdminController.getExams);
+router.get(
+  "/getExamMarksByExamId/:exam_id",
+  schoolAdminController.getExamMarksByExamId,
+);
+router.get(
+  "/getMarksByInternalId/:id",
+  schoolAdminController.getMarksByInternalId,
+);
+router.put(
+  "/updateExamPublishStatus/:id",
+  schoolAdminController.updateExamPublishStatus,
+);
+router.post(
+  "/assignDriverToRoutes/:driverId",
+  schoolAdminController.assignDriverToRoutes,
+);
+router.post(
+  "/assign-student-route",
+  upload.none(),
+  schoolAdminController.assignStudentToRoute,
+);
+router.put(
+  "/update-student-route/:route_id",
+  schoolAdminController.updateStudentToRoute,
+);
+router.delete(
+  "/deleteStudentFromRoute/:route_id",
+  schoolAdminController.deleteStudentFromRoute,
+);
+router.put(
+  "/updateVehicle/:id",
+  uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
+  storageUploadMiddleware("vehicles"),
+  schoolAdminController.updateVehicle,
+);
 
 router.get(
-  "/getHomeworkByStudentId/:student_id",
-  commonController.getHomeworkByStudentId,
+  "/getDriversAssignedToRoutes",
+  schoolAdminController.getDriversAssignedToRoutes,
 );
+router.put("/updateIsLock/:route_id", schoolAdminController.updateIsLock);
 router.get(
-  "/getAttendanceByStudentId/:student_id",
-  commonController.getAttendanceByStudentId,
-);
-router.get(
-  "/getStudentAttendanceByDate/:student_id",
-  commonController.getStudentAttendanceByDate,
-);
-router.get("/allAchievements", commonController.allAchievements);
-router.get(
-  "/achievementByStudentId/:student_id",
-  commonController.achievementByStudentId,
-);
-router.get(
-  "/getInternalMarkByStudentId/:student_id",
-  commonController.getInternalMarkByStudentId,
-);
-
-router.get(
-  "/getLeaveRequestByStudentId/:student_id",
-  commonController.getLeaveRequestByStudentId,
-);
-router.get("/getStaffsForFilter", commonController.getStaffsForFilter);
-router.get("/getClassesByYear/:year", commonController.getClassesByYear);
-router.get(
-  "/getStudentsByClassId/:class_id",
-  commonController.getStudentsByClassId,
+  "/getDriverLocation/:driver_id",
+  schoolAdminController.getDriverLocation,
 );
 
 //REPORTS
@@ -526,39 +560,6 @@ router.get(
   "/getDriverAssignedRoutes/:driverId",
   trackerController.getDriverAssignedRoutesAdmin,
 );
-router.post(
-  "/assignDriverToRoutes/:driverId",
-  schoolAdminController.assignDriverToRoutes,
-);
-router.post(
-  "/assign-student-route",
-  upload.none(),
-  schoolAdminController.assignStudentToRoute,
-);
-router.put(
-  "/update-student-route/:route_id",
-  schoolAdminController.updateStudentToRoute,
-);
-router.delete(
-  "/deleteStudentFromRoute/:route_id",
-  schoolAdminController.deleteStudentFromRoute,
-);
-router.put(
-  "/updateVehicle/:id",
-  uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
-  storageUploadMiddleware("vehicles"),
-  schoolAdminController.updateVehicle,
-);
-
-router.get(
-  "/getDriversAssignedToRoutes",
-  schoolAdminController.getDriversAssignedToRoutes,
-);
-router.put("/updateIsLock/:route_id", schoolAdminController.updateIsLock);
-router.get(
-  "/getDriverLocation/:driver_id",
-  schoolAdminController.getDriverLocation,
-);
 
 // Student Transfer routes
 router.post("/studentTransfer", transferController.adminCreateTransferRequest);
@@ -585,23 +586,42 @@ router.delete(
 
 router.get("/getSchoolsList", publicController.getSchoolsList);
 
-router.post("/exams", schoolAdminController.createExam);
-router.put("/exams/:id", schoolAdminController.editExam);
-router.delete("/exams/:id", schoolAdminController.deleteExam);
-router.patch("/exams/:id/restore", schoolAdminController.restoreExam);
+//common Controller
+router.get("/getLatestEvents", commonController.getLatestEvents);
+router.get("/getLatestNews", commonController.getLatestNews);
+router.get("/students/:id", commonController.getStudentById);
 
-router.get("/getExams", schoolAdminController.getExams);
 router.get(
-  "/getExamMarksByExamId/:exam_id",
-  schoolAdminController.getExamMarksByExamId,
+  "/getHomeworkByStudentId/:student_id",
+  commonController.getHomeworkByStudentId,
 );
 router.get(
-  "/getMarksByInternalId/:id",
-  schoolAdminController.getMarksByInternalId,
+  "/getAttendanceByStudentId/:student_id",
+  commonController.getAttendanceByStudentId,
 );
-router.put(
-  "/updateExamPublishStatus/:id",
-  schoolAdminController.updateExamPublishStatus,
+router.get(
+  "/getStudentAttendanceByDate/:student_id",
+  commonController.getStudentAttendanceByDate,
+);
+router.get("/allAchievements", commonController.allAchievements);
+router.get(
+  "/achievementByStudentId/:student_id",
+  commonController.achievementByStudentId,
+);
+router.get(
+  "/getInternalMarkByStudentId/:student_id",
+  commonController.getInternalMarkByStudentId,
+);
+
+router.get(
+  "/getLeaveRequestByStudentId/:student_id",
+  commonController.getLeaveRequestByStudentId,
+);
+router.get("/getStaffsForFilter", commonController.getStaffsForFilter);
+router.get("/getClassesByYear/:year", commonController.getClassesByYear);
+router.get(
+  "/getStudentsByClassId/:class_id",
+  commonController.getStudentsByClassId,
 );
 
 module.exports = router;

@@ -196,6 +196,10 @@ router.get(
   "/getStudentsByClassId/:class_id",
   commonController.getStudentsByClassId,
 );
+router.get(
+  "/getStudentsBySpecialClassId/:class_id",
+  commonController.getSpecialClassStudentsByClassId,
+);
 router.get("/getClassesByYear/:year", commonController.getClassesByYear);
 
 //common controller for student

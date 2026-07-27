@@ -26,6 +26,11 @@ const Class = schoolSequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    special: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
     trash: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

@@ -43,6 +43,7 @@ const RouteDrivers = require("./route_drivers");
 const RouteStopLog = require("./route_stop_log");
 const Session = require("./session");
 const StudentTransfer = require("./student_transfer");
+const SpecialClassStudent = require("./special_class_students");
 
 // Relations
 
@@ -176,6 +177,11 @@ TimetableSubstitution.belongsTo(User, { foreignKey: "sub_staff_id" });
 TimetableSubstitution.belongsTo(Subject, { foreignKey: "subject_id" });
 
 AccountDelete.belongsTo(User, { foreignKey: "user_id" });
+
+SpecialClassStudent.belongsTo(Class, { foreignKey: "class_id" });
+SpecialClassStudent.belongsTo(Student, { foreignKey: "student_id" });
+Student.hasMany(SpecialClassStudent, { foreignKey: "student_id" });
+Class.hasMany(SpecialClassStudent, { foreignKey: "class_id" });
 
 Driver.hasMany(Vehicle, { foreignKey: "driver_id", as: "vehicles" });
 Vehicle.belongsTo(Driver, { foreignKey: "driver_id", as: "driver" });

@@ -55,12 +55,13 @@ const StudentRouteAssignment = require("../models/student_route_assignment");
 const { Console } = require("winston/lib/winston/transports");
 const { deleteFile } = require("../middlewares/storageUploads");
 const Exam = require("../models/exams");
+const SpecialClassStudent = require("../models/special_class_students");
 
 // CREATE
 const createClass = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const { year, division, classname } = req.body;
+    const { year, division, classname , special} = req.body;
     if (!year || !division || !classname || !school_id) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
@@ -82,6 +83,7 @@ const createClass = async (req, res) => {
       division,
       classname,
       school_id,
+      special,
     });
     res.status(201).json({ message: "Class created", class: newClass });
   } catch (err) {
@@ -180,9 +182,9 @@ const getClassesByYear = async (req, res) => {
 const updateClass = async (req, res) => {
   try {
     const id = req.params.id;
-    const { year, division, classname } = req.body;
+    const { year, division, classname, special } = req.body;
     const updated = await Class.update(
-      { year, division, classname },
+      { year, division, classname, special },
       { where: { id, school_id: req.user.school_id } },
     );
     res.status(200).json({ message: "Class updated", updated });
@@ -210,6 +212,26 @@ const deleteClass = async (req, res) => {
     res.status(200).json({ message: "Class soft-deleted" });
   } catch (err) {
     logger.error("schoolId:", req.user.school_id, "Error deleting class:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+const getSpecialClassesByYear = async (req, res) => {
+  try {
+    const year = req.params.year;
+    const school_id = req.user.school_id;
+    const classData = await Class.findAll({
+      where: {
+        year: year,
+        school_id: school_id,
+        special: true,
+      },
+      attributes: ["id", "division", "classname"],
+    });
+
+    if (!classData) return res.status(404).json({ message: "Special classes not found" });
+    res.status(200).json(classData);
+  } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "Error fetching special classes:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -4535,6 +4557,186 @@ const permanentDeletePayment = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const addSpecialClassStudents = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { class_id, student_ids } = req.body;
+
+    if (!class_id || !Array.isArray(student_ids) || student_ids.length === 0) {
+      return res.status(400).json({ error: "class_id and student_ids are required" });
+    }
+
+    const classRecord = await Class.findOne({
+      where: { id: class_id, school_id, trash: false },
+    });
+
+    if (!classRecord) {
+      return res.status(404).json({ error: "Class not found" });
+    }
+
+    const validStudents = await Student.findAll({
+      where: { id: student_ids, school_id, trash: false },
+    });
+
+    if (validStudents.length !== student_ids.length) {
+      return res.status(400).json({ error: "One or more students are invalid" });
+    }
+
+    const existingAssignments = await SpecialClassStudent.findAll({
+      where: { class_id, student_id: student_ids },
+      attributes: ["student_id"],
+    });
+
+    const existingStudentIds = new Set(existingAssignments.map((item) => item.student_id));
+    const newAssignments = student_ids
+      .filter((student_id) => !existingStudentIds.has(student_id))
+      .map((student_id) => ({ class_id, student_id }));
+
+    if (newAssignments.length === 0) {
+      return res.status(200).json({ message: "All selected students are already assigned" });
+    }
+
+    await SpecialClassStudent.bulkCreate(newAssignments);
+
+    res.status(201).json({
+      message: "Students added to special class successfully",
+      addedCount: newAssignments.length,
+    });
+  } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "addSpecialClassStudents:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const getSpecialClassStudents = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+     const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const class_id = req.query.class_id || null;
+    const student_id = req.query.student_id || null;
+    let whereClause = [];
+
+    if (class_id) {
+      whereClause.push({ class_id });
+    }
+    if (student_id) {
+      whereClause.push({ student_id });
+    }
+    const data = await SpecialClassStudent.findAll({
+      where: { [Op.and]: whereClause },
+      offset,
+      limit,
+
+      include: [
+        {
+          model: Class,
+          where: { school_id },
+          attributes: ["id", "year", "division", "classname"],
+        },
+        {
+          model: Student,
+          where: { school_id},
+          attributes: ["id", "full_name", "roll_number", "class_id"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    }); 
+   
+    res.status(200).json({
+      totalcontent: data.length,
+      currentPage: page,
+      data,
+      
+    });
+  } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "getSpecialClassStudents:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const updateSpecialClassStudents = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { class_id } = req.params;
+    const {
+     student_ids
+    } = req.body;
+
+    if (!class_id) {
+      return res.status(400).json({ error: "class_id is required" });
+    }
+
+    const classRecord = await Class.findOne({
+      where: { id: class_id, school_id, trash: false,special: true },
+    });
+
+    if (!classRecord) {
+      return res.status(404).json({ error: "Class not found" });
+    }
+    if (!Array.isArray(student_ids)) {
+      return res.status(400).json({ error: "student_ids must be an array"
+  });
+    }
+    const oldStudents = await SpecialClassStudent.findAll({
+      where: { class_id },
+      attributes: ["student_id"],
+    });
+
+    const oldStudentIds = new Set(oldStudents.map((item) => item.student_id));
+    const add_student_ids = student_ids.filter((id) => !oldStudentIds.has(id));
+    const remove_student_ids = oldStudents
+      .filter((item) => !student_ids.includes(item.student_id))
+      .map((item) => item.student_id);
+
+      if (add_student_ids.length > 0) {
+      await SpecialClassStudent.bulkCreate(
+        add_student_ids.map((id) => ({ class_id, student_id: id })),
+      );
+    }
+    if (remove_student_ids.length > 0) {
+    await SpecialClassStudent.destroy({
+      where: { class_id, student_id: remove_student_ids },
+    });
+  }
+
+    res.status(200).json({
+      message: "Special class student assignments updated successfully",
+    });
+  } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "updateSpecialClassStudent:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const deleteSpecialClassStudent = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { id} = req.params;
+
+    const assignment = await SpecialClassStudent.findByPk(id);
+
+    if (!assignment) {
+      return res.status(404).json({ error: "Assignment not found" });
+    }
+    const classRecord = await Class.findOne({
+      where: { id: assignment.class_id, school_id, trash: false },
+    });
+
+    if (!classRecord) {
+      return res.status(404).json({ error: "Class not found or you don't have permission" });
+    }
+
+    await assignment.destroy();
+
+    res.status(200).json({ message: "Student removed from special class successfully" });
+  } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "deleteSpecialClassStudent:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 const createInvoice = async (req, res) => {
   try {
     const { title, description, amount, due_date, category, student_ids } =
@@ -9111,9 +9313,15 @@ module.exports = {
   updateClass,
   deleteClass,
   getClassesByYear,
+  getSpecialClassesByYear,
   getTrashedClasses,
   restoreClass,
   permanentDeleteClass,
+
+  addSpecialClassStudents,
+  getSpecialClassStudents,
+  updateSpecialClassStudents,
+  deleteSpecialClassStudent,
 
   createSubject,
   getSubjects,
@@ -9203,6 +9411,8 @@ module.exports = {
   getTrashedPayments,
   getTrashedDonations,
   permanentDeletePayment,
+
+
 
   createInvoice,
   addInvoiceStudentsbyInvoiceId,

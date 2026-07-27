@@ -67,6 +67,39 @@ const getStudentsByClassId = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch students by class ID" });
   }
 };
+const getSpecialClassStudentsByClassId = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { class_id } = req.params;
+
+    const classRecord = await Class.findOne({
+      where: { id: class_id, school_id, trash: false },
+    });
+
+    if (!classRecord) {
+      return res.status(404).json({ error: "Class not found" });
+    }
+
+    const assignments = await SpecialClassStudent.findAll({
+      where: { class_id },
+      order: [["createdAt", "DESC"]],
+    });
+
+    const studentIds = assignments.map((entry) => entry.student_id);
+    const students = await Student.findAll({
+      where: { id: studentIds, school_id, trash: false },
+      attributes: ["id", "full_name", "roll_number", "class_id", "image"],
+    });
+
+    res.status(200).json({
+      class: classRecord,
+      students,
+    });
+  } catch (err) {
+    logger.error("schoolId:", req.user.school_id, "getSpecialClassStudents:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
 const getschoolIdByStudentId = async (student_id) => {
   try {
     const student = await Student.findByPk(student_id);
@@ -87,7 +120,7 @@ const getClassesByYear = async (req, res) => {
         year: year,
         school_id,
       },
-      attributes: ["id", "division", "classname"],
+      attributes: ["id", "division", "classname","special"],
     });
 
     if (!classData) return res.status(404).json({ message: "Class not found" });
@@ -902,6 +935,7 @@ const accountDeleteRequests = async (req, res) => {
 };
 module.exports = {
   getStudentsByClassId,
+  getSpecialClassStudentsByClassId,
   getschoolIdByStudentId,
   getStudentById,
   getGuarduianIdbyStudentId,
