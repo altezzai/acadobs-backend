@@ -805,17 +805,13 @@ const updateDp = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    // let fileName = user.dp;
-    // console.log("file in update dp", req.file);
-    // if (req.file) {
-    //   const oldFileName = user.dp;
-    //   const uploadPath = "uploads/dp/";
-    //   fileName = await compressAndSaveFile(req.file, uploadPath);
-    //   await deletefilewithfoldername(oldFileName, uploadPath);
-    //   console.log("New file saved:", fileName);
-    // }
+    console.log("req.file:", req.file);
+    console.log("req.uploadedFiles:", req.uploadedFiles);
     let finalDp = user.dp;
-    const newDpUrl = req.uploadedFiles?.dp?.url || null;
+    const dpField = req.uploadedFiles?.dp || req.uploadedFiles?.file;
+    const newDpUrl = Array.isArray(dpField)
+      ? dpField[0]?.url
+      : dpField?.url || null;
 
     if (newDpUrl) {
       if (user.dp) {

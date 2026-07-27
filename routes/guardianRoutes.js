@@ -198,6 +198,7 @@ router.put(
 router.put(
   "/updateDp",
   uploadWithErrorHandler(upload.single("dp")),
+  storageUploadMiddleware("profileDp"),
   [],
   validate,
   commonController.updateDp,
