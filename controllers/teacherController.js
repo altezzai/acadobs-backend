@@ -40,7 +40,7 @@ const {
 const {
   sendMessageWithParentNote,
 } = require("../socketHandlers/messageHandlers");
-const { sendPushNotification } = require("./../utils/notifcationHandler");
+const { sendPushNotification } = require("../utils/notifcationHandler");
 const { deleteFile } = require("../middlewares/storageUploads");
 const Exam = require("../models/exams");
 

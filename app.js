@@ -24,14 +24,14 @@ const io = new Server(server, {
 });
 const SuperadminRoutes = require("./routes/superAdminRoutes");
 const SchooladminRoutes = require("./routes/schoolAdminRoutes");
-const StaffRoutes = require("./routes/staffRoutes");
+const TeacherRoutes = require("./routes/teacherRoutes");
 const GuardianRoutes = require("./routes/guardianRoutes");
 const PublicRoutes = require("./routes/publicRoutes");
 const DriverRoutes = require("./routes/driverRoutes");
 
 const verifyAdmin = require("./middlewares/adminMiddleware");
 const verifySuperAdmin = require("./middlewares/superAdminMiddleware");
-const verifyStaff = require("./middlewares/staffMiddleware");
+const verifyTeacher = require("./middlewares/teacherMiddleware");
 const verifyGuardian = require("./middlewares/guardianMiddleware");
 const verifyDriver = require("./middlewares/driverMiddleware");
 const presignMiddleware = require("./middlewares/presignMiddleware");
@@ -89,17 +89,11 @@ const versionPath = "/api/s1/";
 
 app.use(`${versionPath}superadmin`, auth, verifySuperAdmin, SuperadminRoutes);
 app.use(`${versionPath}schooladmin`, auth, verifyAdmin, SchooladminRoutes);
-app.use(`${versionPath}staff`, auth, verifyStaff, StaffRoutes);
+app.use(`${versionPath}staff`, auth, verifyTeacher, TeacherRoutes);
 app.use(`${versionPath}guardian`, auth, verifyGuardian, GuardianRoutes);
 app.use(`${versionPath}public`, PublicRoutes);
 app.use(`${versionPath}driver`, auth, verifyDriver, DriverRoutes);
-// app.use(`${versionPath}payments`, PaymentRoutes);
-// app.use(`${versionPath}superadmin`, auth, SuperadminRoutes);
-// app.use(`${versionPath}schooladmin`, auth, SchooladminRoutes);
-// app.use(`${versionPath}staff`, auth, StaffRoutes);
-// app.use(`${versionPath}guardian`, auth, GuardianRoutes);
-// app.use(`${versionPath}public`, PublicRoutes);
-// Add other routes similarly...
+
 const socketHandlers = require("./socketHandlers/socket");
 
 io.use(async (socket, next) => {
