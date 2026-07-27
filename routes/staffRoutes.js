@@ -239,6 +239,7 @@ router.put("/changePassword", commonController.changePassword);
 router.put(
   "/updateDp",
   uploadWithErrorHandler(upload.single("dp")),
+  storageUploadMiddleware("profileDp"),
   commonController.updateDp
 );
 
