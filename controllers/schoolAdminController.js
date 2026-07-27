@@ -2172,13 +2172,16 @@ const getAllStudents = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const classId = req.query.class_id;
+    const year = req.query.year;
 
     const whereClause = {
       trash: false,
       school_id,
       alumni: false,
     };
+    const classWhereClause = {}
     if (searchQuery) {
+
       whereClause[Op.or] = [
         { reg_no: { [Op.like]: `%${searchQuery}%` } },
         { full_name: { [Op.like]: `%${searchQuery}%` } },
@@ -2187,6 +2190,10 @@ const getAllStudents = async (req, res) => {
     if (classId) {
       whereClause.class_id = classId;
     }
+    if (year) {
+      classWhereClause.year = year;
+    }
+
 
     const { count, rows: students } = await Student.findAndCountAll({
       offset,
@@ -2199,6 +2206,7 @@ const getAllStudents = async (req, res) => {
         {
           model: Class,
           attributes: ["id", "year", "division", "classname"],
+          where: classWhereClause
         },
       ],
       order: [
@@ -4700,13 +4708,13 @@ const getSpecialClassStudents = async (req, res) => {
         },
       ],
       order: [["createdAt", "DESC"]],
-    }); 
-   
+    });
+
     res.status(200).json({
       totalcontent: data.length,
       currentPage: page,
       data,
-      
+
     });
   } catch (err) {
     logger.error("schoolId:", req.user.school_id, "getSpecialClassStudents:", err);
