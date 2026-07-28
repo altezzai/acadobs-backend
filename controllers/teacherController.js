@@ -1,4 +1,4 @@
-const { Op } = require("sequelize");
+const { Op, where } = require("sequelize");
 const moment = require("moment");
 const geolib = require("geolib");
 const logger = require("../utils/logger");
@@ -296,21 +296,25 @@ const getInternalMarkByRecordedBy = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    let whereClause = {
+      recorded_by,
+      trash: false,
+      exam_id: null,
+    };
+
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { internal_name: { [Op.like]: `%${searchQuery}%` } },
+        { date: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
 
     const { count, rows: exams } = await InternalMark.findAndCountAll({
       offset,
       distinct: true,
       limit,
 
-      where: {
-        recorded_by,
-        trash: false,
-        exam_id: null,
-        [Op.or]: [
-          { internal_name: { [Op.like]: `%${searchQuery}%` } },
-          { date: { [Op.like]: `%${searchQuery}%` } },
-        ],
-      },
+      where: whereClause,
       attributes: ["id", "internal_name", "max_marks", "date"],
       include: [
         { model: School, attributes: ["id", "name"] },
@@ -339,21 +343,25 @@ const getExamMarkByRecordedBy = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    let whereClause = {
+      recorded_by,
+      trash: false,
+      exam_id: { [Op.not]: null },
+    };
+
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { internal_name: { [Op.like]: `%${searchQuery}%` } },
+        { date: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
 
     const { count, rows: exams } = await InternalMark.findAndCountAll({
       offset,
       distinct: true,
       limit,
 
-      where: {
-        recorded_by,
-        trash: false,
-        exam_id: { [Op.not]: null },
-        [Op.or]: [
-          { internal_name: { [Op.like]: `%${searchQuery}%` } },
-          { date: { [Op.like]: `%${searchQuery}%` } },
-        ],
-      },
+      where: whereClause,
       attributes: ["id", "internal_name", "max_marks", "date", "exam_id"],
       include: [
         { model: School, attributes: ["id", "name"] },
@@ -375,6 +383,107 @@ const getExamMarkByRecordedBy = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch exams" });
   }
 };
+const getMyClassInternalMark = async (req, res) => {
+  try {
+    const user_id =req.user.user_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const classId = await Staff.findOne({
+      where:{user_id},
+      attributes:["class_id"],
+    }   );
+    let whereClause = {
+      class_id:classId.class_id,
+      trash: false,
+    };
+
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { internal_name: { [Op.like]: `%${searchQuery}%` } },
+        { date: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+
+    const { count, rows: exams } = await InternalMark.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+
+      where: whereClause,
+      attributes: ["id", "internal_name", "max_marks", "date"],
+      include: [
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      exams,
+    });
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching exams:", err);
+    console.error("Error fetching exams:", err);
+    res.status(500).json({ error: "Failed to fetch exams" });
+  }
+};
+
+const getMyClassExamMark= async (req, res) => {
+  try {
+   const user_id =req.user.user_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const classId = await Staff.findOne({
+      where:{user_id},
+      attributes:["class_id"],});
+
+    let whereClause = {
+      class_id:classId.class_id,
+      trash: false,
+      exam_id: { [Op.not]: null },
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { internal_name: { [Op.like]: `%${searchQuery}%` } },
+        { date: { [Op.like]: `%${searchQuery}%` } },
+      ];  
+  }
+    const { count, rows: exams } = await InternalMark.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      attributes: ["id", "internal_name", "max_marks", "date", "exam_id"],
+      include: [
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      exams,
+    });
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching exams:", err);
+    console.error("Error fetching exams:", err);
+    res.status(500).json({ error: "Failed to fetch exams" });
+  }
+};
+
 
 const createHomeworkWithAssignments = async (req, res) => {
   try {
@@ -3240,6 +3349,10 @@ module.exports = {
   deleteExam,
   getInternalMarkByRecordedBy,
   bulkUpdateMarks,
+  getExams,
+  getExamMarkByRecordedBy,
+  getMyClassExamMark,
+  getMyClassInternalMark,
 
   createHomeworkWithAssignments,
   getAllHomework,
@@ -3313,6 +3426,5 @@ module.exports = {
   getStaffSubjects,
 
   getMyPermissions,
-  getExams,
-  getExamMarkByRecordedBy,
+
 };
