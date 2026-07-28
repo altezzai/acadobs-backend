@@ -2676,7 +2676,7 @@ const bulkUpdateStudentsToAlumni = async (req, res) => {
 const bulkUpdateStudentsClass = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const { student_ids, class_id } = req.body;
+    const { student_ids, class_id, roll_numbers } = req.body;
 
     if (!class_id) {
       return res.status(400).json({ error: "class_id is required" });
@@ -2685,51 +2685,52 @@ const bulkUpdateStudentsClass = async (req, res) => {
       return res.status(400).json({ error: "No student IDs provided" });
     }
 
+    // If roll_numbers provided, must be an array of same length as student_ids
+    if (roll_numbers && (!Array.isArray(roll_numbers) || roll_numbers.length !== student_ids.length)) {
+      return res.status(400).json({ error: "roll_numbers must be an array with same length as student_ids" });
+    }
+
     const existingClass = await Class.findOne({
-      where: { id: class_id, school_id, trash: false ,special:false},
+      where: { id: class_id, school_id, trash: false, special: false },
     });
     if (!existingClass) {
       return res.status(404).json({ error: "Class not found" });
+    }    
+    if (roll_numbers) {
+      for (let i = 0; i < roll_numbers.length; i++) {
+        const roll = parseInt(roll_numbers[i], 10);
+        if (Number.isNaN(roll)) continue;
+        const existing = await Student.findOne({
+          where: { class_id, roll_number: roll, school_id, trash: false },
+        });
+        console.log(`Checking roll number ${roll} in class ${class_id}:`, existing ? "exists" : "not found");
+       if(existing) {
+        return res.status(409).json({
+          error: `Roll number ${roll} already exists in class ${class_id}`,
+        });
+      }
+     }
     }
-
-    const transaction = await schoolSequelize.transaction();
-    try {
       const [updatedCount] = await Student.update(
         { class_id },
         {
           where: { id: student_ids, school_id, trash: false },
-          transaction,
         },
       );
-
-      await transaction.commit();
-      return res.status(200).json({
-        message: `${updatedCount} students moved to class ${class_id}`,
-        updatedCount,
-      });
+    
+      res.status(200).json({ message: `${updatedCount} students updated` });
     } catch (err) {
       await transaction.rollback();
       logger.error(
         "schoolId:",
         req.user.school_id,
-        "Error bulk changing student class:",
+        "Error updating students class:",
         err,
       );
-      console.error("Error bulk changing student class:", err);
-      return res.status(500).json({ error: "Failed to update student classes" });
+      console.error("Error updating students class:", err);
+      res.status(500).json({ error: "Failed to update students class" });
     }
-  } catch (err) {
-    logger.error(
-      "schoolId:",
-      req.user.school_id,
-      "Error in bulkChangeStudentsClass:",
-      err,
-    );
-    console.error("Error in bulkChangeStudentsClass:", err);
-    return res.status(500).json({ error: "Failed to update student classes" });
-  }
-};
-
+  };
 const getAlumniStudents = async (req, res) => {
   try {
     const school_id = req.user.school_id;
