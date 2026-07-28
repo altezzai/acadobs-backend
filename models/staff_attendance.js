@@ -33,6 +33,10 @@ const StaffAttendance = schoolSequelize.define(
       defaultValue: "Manual",
     },
     remarks: DataTypes.TEXT,
+    marked_device_id: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     trash: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
