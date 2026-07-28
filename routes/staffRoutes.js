@@ -239,7 +239,8 @@ router.put("/changePassword", commonController.changePassword);
 router.put(
   "/updateDp",
   uploadWithErrorHandler(upload.single("dp")),
-  commonController.updateDp,
+  storageUploadMiddleware("profileDp"),
+  commonController.updateDp
 );
 
 router.get("/getPaymentById/:id", commonController.getPaymentById);

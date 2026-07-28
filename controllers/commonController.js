@@ -21,6 +21,7 @@ const Payment = require("../models/payment");
 const AccountDelete = require("../models/accountdelete");
 const Syllabus = require("../models/syllabus");
 const NewsImage = require("../models/newsimage");
+const { deleteFile } = require("../middlewares/storageUploads");
 
 const { Class, Staff } = require("../models");
 
@@ -120,7 +121,7 @@ const getClassesByYear = async (req, res) => {
         year: year,
         school_id,
       },
-      attributes: ["id", "division", "classname","special"],
+      attributes: ["id", "division", "classname", "special"],
     });
 
     if (!classData) return res.status(404).json({ message: "Class not found" });
@@ -737,9 +738,10 @@ const getSchoolDetails = async (req, res) => {
       where: { user_id: req.user.user_id }, include: {
         model: Class,
         attributes: ["id", "classname"],
-    } });
+      }
+    });
 
-    res.status(200).json({...school.toJSON(), Class:staff?.Class   });
+    res.status(200).json({ ...school.toJSON(), Class: staff?.Class });
   } catch (error) {
     logger.error(
       "userId:",
@@ -795,6 +797,7 @@ const updateFcmToken = async (req, res) => {
     res.status(500).json({ error: "Failed to update FCM token" });
   }
 };
+//
 const updateDp = async (req, res) => {
   try {
     const userId = req.user.user_id;
@@ -802,17 +805,22 @@ const updateDp = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    let fileName = user.dp;
-    console.log("file in update dp", req.file);
-    if (req.file) {
-      const oldFileName = user.dp;
-      const uploadPath = "uploads/dp/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-      await deletefilewithfoldername(oldFileName, uploadPath);
-      console.log("New file saved:", fileName);
+    console.log("req.file:", req.file);
+    console.log("req.uploadedFiles:", req.uploadedFiles);
+    let finalDp = user.dp;
+    const dpField = req.uploadedFiles?.dp || req.uploadedFiles?.file;
+    const newDpUrl = Array.isArray(dpField)
+      ? dpField[0]?.url
+      : dpField?.url || null;
+
+    if (newDpUrl) {
+      if (user.dp) {
+        await deleteFile(user.dp);
+      }
+      finalDp = newDpUrl;
     }
 
-    await user.update({ dp: fileName }, { where: { id: userId } });
+    await user.update({ dp: finalDp });
 
     res.status(200).json({ message: "Profile picture updated successfully" });
   } catch (err) {
