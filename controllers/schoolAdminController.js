@@ -745,42 +745,16 @@ const createStaff = async (req, res) => {
       });
     }
 
-    if (!role || role === "teacher") {
-      await StaffPermission.create(
-        {
-          user_id: user.id,
-          leave_request: true,
-          attendance: true,
-          timetable: true,
-          marks: true,
-          students: true,
-          homeworks: true,
-          parent_notes: true,
-          achievements: true,
-          student_leave_request: true,
-          chats: true,
-        },
-        { transaction },
-      );
-    } else if (role === "staff") {
-      await StaffPermission.create(
-        {
-          user_id: user.id,
-          leave_request: true,
-          attendance: true,
-          students: true,
-          achievements: true,
-          payments: true,
-          reports: true,
-        },
-        { transaction },
-      );
+    const permissionData = { user_id: user.id };
+    if (role === "staff") {
+      permissionData.leave_request = true;
     }
+    await StaffPermission.create(permissionData, { transaction });
 
     res.status(201).json(newStaff);
     await transaction.commit();
   } catch (error) {
-    logger.error("schoolId:", req.user.school_id, "Error creating staff:", err);
+    logger.error("schoolId:", req.user.school_id, "Error creating staff:", error);
     await transaction.rollback();
     res.status(500).json({ error: error.message });
   }
@@ -1227,7 +1201,7 @@ const getAllStaffPermissions = async (req, res) => {
         {
           model: User,
           attributes: ["id", "name", "email", "phone", "dp", "school_id"],
-          where: school_id,
+          where: { school_id },
         },
       ],
     });
@@ -1254,7 +1228,7 @@ const getStaffPermissionByUser = async (req, res) => {
         {
           model: User,
           attributes: ["id", "name", "email", "phone", "dp", "school_id"],
-          where: school_id,
+          where: { school_id },
         },
       ],
     });
@@ -1293,6 +1267,15 @@ const updateStaffPermission = async (req, res) => {
       chats,
       reports,
       payments,
+      alumni,
+      events,
+      news,
+      notice,
+      exam,
+      transportation,
+      teachers,
+      staffs,
+      aiAnalytics,
     } = req.body;
 
     const permission = await StaffPermission.findOne({
@@ -1301,7 +1284,7 @@ const updateStaffPermission = async (req, res) => {
         {
           model: User,
           attributes: ["id", "name", "email", "phone", "dp", "school_id"],
-          where: school_id,
+          where: { school_id },
         },
       ],
     });
@@ -1322,6 +1305,15 @@ const updateStaffPermission = async (req, res) => {
       chats,
       reports,
       payments,
+      alumni,
+      events,
+      news,
+      notice,
+      exam,
+      transportation,
+      teachers,
+      staffs,
+      aiAnalytics,
     });
     res.json({ success: true, data: permission });
   } catch (err) {
@@ -1336,6 +1328,37 @@ const updateStaffPermission = async (req, res) => {
 };
 
 // DELETE staff permission
+const deleteStaffPermission = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const school_id = req.user.school_id;
+    const permission = await StaffPermission.findOne({
+      where: { user_id },
+      include: [
+        {
+          model: User,
+          attributes: ["id", "school_id"],
+          where: { school_id , role:"teacher" },
+        },
+      ],
+    });
+
+    if (!permission) {
+      return res.status(404).json({ error: "Permissions not found" });
+    }
+
+    await permission.destroy();
+    res.json({ success: true, message: "Staff permission deleted successfully" });
+  } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error deleting staff permission:",
+      err,
+    );
+    res.status(500).json({ error: "Failed to delete staff permission" });
+  }
+};
 
 const createGuardian = async (req, res) => {
   try {
@@ -3320,6 +3343,7 @@ const uploadAchievementPath = "uploads/achievement_proofs/";
 const createAchievementWithStudents = async (req, res) => {
   try {
     const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
     const {
       title,
       description,
@@ -3327,7 +3351,6 @@ const createAchievementWithStudents = async (req, res) => {
       level,
       date,
       awarding_body,
-      recorded_by,
       students,
     } = req.body;
 
@@ -4681,8 +4704,16 @@ const getSpecialClassStudents = async (req, res) => {
     const offset = (page - 1) * limit;
     const class_id = req.query.class_id || null;
     const student_id = req.query.student_id || null;
+    const searchQuery = req.query.q || "";
+    
+    const studentWhere = {
+      school_id,
+      trash: false,
+    };
+    if (searchQuery) {
+      studentWhere.full_name = { [Op.like]: `%${searchQuery}%` };
+    }
     let whereClause = [];
-
     if (class_id) {
       whereClause.push({ class_id });
     }
@@ -4693,7 +4724,6 @@ const getSpecialClassStudents = async (req, res) => {
       where: { [Op.and]: whereClause },
       offset,
       limit,
-
       include: [
         {
           model: Class,
@@ -4702,7 +4732,7 @@ const getSpecialClassStudents = async (req, res) => {
         },
         {
           model: Student,
-          where: { school_id},
+          where: studentWhere,
           attributes: ["id", "full_name", "roll_number", "class_id"],
         },
       ],
@@ -8043,7 +8073,7 @@ const getAllStaffAttendance = async (req, res) => {
       whereClause.date = { [Op.between]: [start_date, end_date] };
     }
 
-    const userWhere = {};
+    let userWhere = {};
     if (searchQuery) {
       userWhere.name = { [Op.like]: `%${searchQuery}%` };
     }
@@ -9431,6 +9461,7 @@ module.exports = {
   getAllStaffPermissions,
   updateStaffPermission,
   getStaffPermissionByUser,
+  deleteStaffPermission,
 
   createGuardian,
   getAllGuardians,

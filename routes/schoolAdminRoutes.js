@@ -95,6 +95,10 @@ router.put(
   "/staffPermissions/:user_id",
   schoolAdminController.updateStaffPermission,
 );
+router.delete(
+  "/staffPermissions/:user_id",
+  schoolAdminController.deleteStaffPermission,
+);
 
 // Guardian routes
 router.post(

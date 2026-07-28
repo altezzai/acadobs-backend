@@ -13,6 +13,10 @@ const StaffPermission = schoolSequelize.define(
       allowNull: false,
       unique: true,
     },
+     students: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     homeworks: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
@@ -21,19 +25,11 @@ const StaffPermission = schoolSequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
-    timetable: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
     marks: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
-    parent_notes: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
-    achievements: {
+     achievements: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
@@ -41,11 +37,72 @@ const StaffPermission = schoolSequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    timetable: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    parent_notes: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     leave_request: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-    chats: {
+   
+    alumni: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    teachers: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    teachers_leaveReuest: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    teachers_duties: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    teachers_attendance: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    staffs: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    staffs_leaveReuest: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    staffs_duties: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    staffs_attendance: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    events: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    news: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    notice: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    exam: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+     chats: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
@@ -57,7 +114,11 @@ const StaffPermission = schoolSequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
-    students: {
+    transportation: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    aiAnalytics: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
