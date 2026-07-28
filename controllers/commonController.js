@@ -21,6 +21,7 @@ const Payment = require("../models/payment");
 const AccountDelete = require("../models/accountdelete");
 const Syllabus = require("../models/syllabus");
 const NewsImage = require("../models/newsimage");
+const SpecialClassStudent = require("../models/special_class_students");
 const { deleteFile } = require("../middlewares/storageUploads");
 
 const { Class, Staff } = require("../models");
@@ -38,20 +39,60 @@ const getStudentsByClassId = async (req, res) => {
     if (!school_id) {
       return res.status(404).json({ error: "School not found" });
     }
-    const { count, rows: students } = await Student.findAndCountAll({
-      where: {
-        class_id,
-        school_id,
-        full_name: { [Op.like]: `%${searchQuery}%` },
-        trash: false,
-        alumni: false,
-      },
-      attributes: ["id", "full_name", "roll_number", "class_id", "image"],
-      include: [
-        { model: Class, attributes: ["id", "year", "division", "classname"] },
-      ],
-      order: [["roll_number", "ASC"]],
+
+    const classRecord = await Class.findOne({
+      where: { id: class_id, school_id, trash: false },
     });
+    if (!classRecord) {
+      return res.status(404).json({ error: "Class not found" });
+    }
+
+    let students = [];
+    let count = 0;
+    const studentAttributes = ["id", "full_name", "roll_number", "class_id", "image"];
+    const studentInclude = [
+      { model: Class, attributes: ["id", "year", "division", "classname"] },
+    ];
+
+    if (classRecord.special === false) {
+      const result = await Student.findAndCountAll({
+        where: {
+          class_id,
+          school_id,
+          full_name: { [Op.like]: `%${searchQuery}%` },
+          trash: false,
+          alumni: false,
+        },
+        attributes: studentAttributes,
+        include: studentInclude,
+        order: [["roll_number", "ASC"]],
+      });
+      count = result.count;
+      students = result.rows;
+    } else {
+      const assignments = await SpecialClassStudent.findAll({
+        where: { class_id },
+        order: [["createdAt", "DESC"]],
+      });
+      const studentIds = assignments.map((entry) => entry.student_id);
+
+      if (studentIds.length > 0) {
+        const result = await Student.findAndCountAll({
+          where: {
+            id: studentIds,
+            school_id,
+            full_name: { [Op.like]: `%${searchQuery}%` },
+            trash: false,
+            alumni: false,
+          },
+          attributes: studentAttributes,
+          include: studentInclude,
+          order: [["roll_number", "ASC"]],
+        });
+        count = result.count;
+        students = result.rows;
+      }
+    }
 
     res.status(200).json({
       totalcontent: count,
