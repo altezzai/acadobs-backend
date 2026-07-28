@@ -2858,6 +2858,7 @@ const createDutyWithAssignments = async (req, res) => {
         start_date: start_date || new Date(),
         deadline,
         file: fileUrl,
+        recorded_by: req.user.user_id,
       },
       { transaction },
     );
@@ -3762,6 +3763,7 @@ const createEvent = async (req, res) => {
       url,
       venue,
       file: eventFileUrl ? eventFileUrl : null,
+      recorded_by: req.user.user_id,
     });
 
     res.status(201).json(event);
@@ -3949,7 +3951,8 @@ const permanentDeleteEvent = async (req, res) => {
 };
 const createPayment = async (req, res) => {
   try {
-    const school_id = req.user.school_id;
+    const school_id = req.user.school_id; 
+    const userId=req.user.user_id;
     const {
       student_id,
       invoice_student_id,
@@ -4005,7 +4008,8 @@ const createPayment = async (req, res) => {
       transaction_id,
       payment_method,
       payment_status,
-      recorded_by: req.user.user_id,
+      recorded_by: userId,
+      updated_by: userId,
     });
     let invoice_status = "";
     if (payment_status === "completed" && invoice_student_id) {
@@ -4276,6 +4280,7 @@ const getPaymentById = async (req, res) => {
 const updatePayment = async (req, res) => {
   try {
     const school_id = req.user.school_id;
+    const userId=req.user.user_id;
     const {
       student_id,
       amount,
@@ -4362,6 +4367,7 @@ const updatePayment = async (req, res) => {
       transaction_id,
       payment_status,
       payment_method,
+      updated_by:userId,
     });
     res.status(200).json({ message: "Payment updated", payment });
   } catch (err) {
@@ -6162,6 +6168,7 @@ const createNotice = async (req, res) => {
       file: noticeFileUrl,
       type,
       date,
+      recorded_by: req.user.user_id,
     });
 
     if (type === "classes" && Array.isArray(class_ids)) {
@@ -8351,6 +8358,7 @@ const createStop = async (req, res) => {
       latitude,
       longitude,
       trash: false,
+      recorded_by: req.user.user_id,
     });
 
     res.status(201).json({

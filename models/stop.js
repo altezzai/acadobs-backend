@@ -56,7 +56,11 @@ const Stop = schoolSequelize.define(
     arrived_time: {
       type: DataTypes.DATE,
       defaultValue: null,
-    }
+    },
+    recorded_by: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
   },
   {
     tableName: "stop",

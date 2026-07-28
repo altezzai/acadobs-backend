@@ -45,6 +45,7 @@ const Payment = schoolSequelize.define(
       allowNull: false,
     },
     recorded_by: { type: DataTypes.INTEGER, allowNull: true },
+    updated_by: { type: DataTypes.INTEGER, allowNull: true },
     payment_attachment: { type: DataTypes.STRING, allowNull: true },
     remarks: { type: DataTypes.TEXT },
     trash: { type: DataTypes.BOOLEAN, defaultValue: false },

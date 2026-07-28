@@ -12,6 +12,7 @@ const Duty = schoolSequelize.define(
     start_date: { type: DataTypes.DATEONLY, allowNull: true },
     deadline: { type: DataTypes.DATEONLY, allowNull: true },
     file: { type: DataTypes.STRING },
+    recorded_by: { type: DataTypes.INTEGER, allowNull: true },
     trash: { type: DataTypes.BOOLEAN, defaultValue: false },
     createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },

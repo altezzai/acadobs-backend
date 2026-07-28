@@ -2987,7 +2987,7 @@ const markSelfAttendance = async (req, res) => {
   try {
     const staff_id = req.user.user_id;
     const school_id = req.user.school_id;
-    const { status, remarks, latitude, longitude } = req.body;
+    const { status, remarks, latitude, longitude,marked_device_id } = req.body;
     const date = new Date().toISOString().split("T")[0];
 
     if (!latitude || !longitude) {
@@ -3038,6 +3038,7 @@ const markSelfAttendance = async (req, res) => {
       remarks,
       latitude,
       longitude,
+      marked_device_id,
     });
 
     res.status(201).json({

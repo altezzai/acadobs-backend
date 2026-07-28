@@ -13,6 +13,7 @@ const Event = schoolSequelize.define(
     venue: { type: DataTypes.STRING },
     url: { type: DataTypes.STRING },
     file: { type: DataTypes.STRING },
+    recorded_by: { type: DataTypes.INTEGER, allowNull: true },
     trash: { type: DataTypes.BOOLEAN, defaultValue: false },
     createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
