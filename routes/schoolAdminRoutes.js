@@ -40,10 +40,6 @@ router.get(
   "/specialClassStudents/:class_id",
   commonController.getSpecialClassStudentsByClassId,
 );
-router.put(
-  "/specialClassStudents/:class_id",
-  schoolAdminController.updateSpecialClassStudents,
-);
 router.delete(
   "/specialClassStudents/:id",
   schoolAdminController.deleteSpecialClassStudent,

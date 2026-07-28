@@ -4267,7 +4267,6 @@ const updatePayment = async (req, res) => {
         error: "student_id,amount,payment_date,payment_type are required",
       });
     }
-
     const Id = req.params.id;
     const payment = await Payment.findOne({
       where: { id: Id, school_id },
@@ -4722,59 +4721,53 @@ const getSpecialClassStudents = async (req, res) => {
   }
 };
 
-const updateSpecialClassStudents = async (req, res) => {
-  try {
-    const school_id = req.user.school_id;
-    const { class_id } = req.params;
-    const {
-     student_ids
-    } = req.body;
-
-    if (!class_id) {
-      return res.status(400).json({ error: "class_id is required" });
-    }
-
-    const classRecord = await Class.findOne({
-      where: { id: class_id, school_id, trash: false,special: true },
-    });
-
-    if (!classRecord) {
-      return res.status(404).json({ error: "Class not found" });
-    }
-    if (!Array.isArray(student_ids)) {
-      return res.status(400).json({ error: "student_ids must be an array"
-  });
-    }
-    const oldStudents = await SpecialClassStudent.findAll({
-      where: { class_id },
-      attributes: ["student_id"],
-    });
-
-    const oldStudentIds = new Set(oldStudents.map((item) => item.student_id));
-    const add_student_ids = student_ids.filter((id) => !oldStudentIds.has(id));
-    const remove_student_ids = oldStudents
-      .filter((item) => !student_ids.includes(item.student_id))
-      .map((item) => item.student_id);
-
-      if (add_student_ids.length > 0) {
-      await SpecialClassStudent.bulkCreate(
-        add_student_ids.map((id) => ({ class_id, student_id: id })),
-      );
-    }
-    if (remove_student_ids.length > 0) {
-    await SpecialClassStudent.destroy({
-      where: { class_id, student_id: remove_student_ids },
-    });
-  }
-
-    res.status(200).json({
-      message: "Special class student assignments updated successfully",
-    });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "updateSpecialClassStudent:", err);
-    res.status(500).json({ error: err.message });
-  }
-};
+// const updateSpecialClassStudents = async (req, res) => {
+//   try {
+//     const school_id = req.user.school_id;
+//     const { class_id } = req.params;
+//     const {
+//      student_ids
+//     } = req.body;
+//     if (!class_id) {
+//       return res.status(400).json({ error: "class_id is required" });
+//     }
+//     const classRecord = await Class.findOne({
+//       where: { id: class_id, school_id, trash: false,special: true },
+//     });
+//     if (!classRecord) {
+//       return res.status(404).json({ error: "Class not found" });
+//     }
+//     if (!Array.isArray(student_ids)) {
+//       return res.status(400).json({ error: "student_ids must be an array"
+//   });
+//     }
+//     const oldStudents = await SpecialClassStudent.findAll({
+//       where: { class_id },
+//       attributes: ["student_id"],
+//     });
+//     const oldStudentIds = new Set(oldStudents.map((item) => item.student_id));
+//     const add_student_ids = student_ids.filter((id) => !oldStudentIds.has(id));
+//     const remove_student_ids = oldStudents
+//       .filter((item) => !student_ids.includes(item.student_id))
+//       .map((item) => item.student_id);
+//       if (add_student_ids.length > 0) {
+//       await SpecialClassStudent.bulkCreate(
+//         add_student_ids.map((id) => ({ class_id, student_id: id })),
+//       );
+//     }
+//     if (remove_student_ids.length > 0) {
+//     await SpecialClassStudent.destroy({
+//       where: { class_id, student_id: remove_student_ids },
+//     });
+//   }
+//     res.status(200).json({
+//       message: "Special class student assignments updated successfully",
+//     });
+//   } catch (err) {
+//     logger.error("schoolId:", req.user.school_id, "updateSpecialClassStudent:", err);
+//     res.status(500).json({ error: err.message });
+//   }
+// };
 
 const deleteSpecialClassStudent = async (req, res) => {
   try {
@@ -9387,7 +9380,6 @@ module.exports = {
 
   addSpecialClassStudents,
   getSpecialClassStudents,
-  updateSpecialClassStudents,
   deleteSpecialClassStudent,
 
   createSubject,
