@@ -2641,6 +2641,64 @@ const bulkUpdateStudentsToAlumni = async (req, res) => {
     res.status(500).json({ error: "Failed to update students to alumni" });
   }
 };
+
+const bulkUpdateStudentsClass = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { student_ids, class_id } = req.body;
+
+    if (!class_id) {
+      return res.status(400).json({ error: "class_id is required" });
+    }
+    if (!Array.isArray(student_ids) || student_ids.length === 0) {
+      return res.status(400).json({ error: "No student IDs provided" });
+    }
+
+    const existingClass = await Class.findOne({
+      where: { id: class_id, school_id, trash: false ,special:false},
+    });
+    if (!existingClass) {
+      return res.status(404).json({ error: "Class not found" });
+    }
+
+    const transaction = await schoolSequelize.transaction();
+    try {
+      const [updatedCount] = await Student.update(
+        { class_id },
+        {
+          where: { id: student_ids, school_id, trash: false },
+          transaction,
+        },
+      );
+
+      await transaction.commit();
+      return res.status(200).json({
+        message: `${updatedCount} students moved to class ${class_id}`,
+        updatedCount,
+      });
+    } catch (err) {
+      await transaction.rollback();
+      logger.error(
+        "schoolId:",
+        req.user.school_id,
+        "Error bulk changing student class:",
+        err,
+      );
+      console.error("Error bulk changing student class:", err);
+      return res.status(500).json({ error: "Failed to update student classes" });
+    }
+  } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error in bulkChangeStudentsClass:",
+      err,
+    );
+    console.error("Error in bulkChangeStudentsClass:", err);
+    return res.status(500).json({ error: "Failed to update student classes" });
+  }
+};
+
 const getAlumniStudents = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -9365,6 +9423,7 @@ module.exports = {
   getStudentById,
   updateStudent,
   bulkUpdateStudentsToAlumni,
+  bulkUpdateStudentsClass,
   getAlumniStudents,
   deleteStudent,
   getTrashedStudents,
