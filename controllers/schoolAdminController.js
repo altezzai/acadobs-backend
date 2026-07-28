@@ -4740,6 +4740,11 @@ const getSpecialClassStudents = async (req, res) => {
           model: Student,
           where: studentWhere,
           attributes: ["id", "full_name", "roll_number", "class_id"],
+          include:[{
+            model:Class,
+            attributes:["classname"]
+          }
+          ]
         },
       ],
       order: [["createdAt", "DESC"]],
