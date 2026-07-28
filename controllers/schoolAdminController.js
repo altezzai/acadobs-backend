@@ -8023,6 +8023,7 @@ const getAllStaffAttendance = async (req, res) => {
     const staff_id = req.query.staff_id;
     const start_date = req.query.start_date;
     const end_date = req.query.end_date;
+    const role = req.query.role;
     const download = req.query.download || "";
     const searchQuery = req.query.q || "";
     let { page = 1, limit = 10 } = req.query;
@@ -8041,21 +8042,41 @@ const getAllStaffAttendance = async (req, res) => {
     if (start_date && end_date) {
       whereClause.date = { [Op.between]: [start_date, end_date] };
     }
-    const count = await StaffAttendance.count({ where: whereClause });
+
+    const userWhere = {};
+    if (searchQuery) {
+      userWhere.name = { [Op.like]: `%${searchQuery}%` };
+    }
+    if (role) {
+      userWhere.role = role;
+    }
+
+    const count = await StaffAttendance.count({
+      where: whereClause,
+      include: [
+        {
+          model: User,
+          where: userWhere,
+          required: true,
+        },
+      ],
+      distinct: true,
+    });
     const records = await StaffAttendance.findAll({
       where: whereClause,
       include: [
         {
           model: User,
-          where: searchQuery ? { name: { [Op.like]: `%${searchQuery}%` } } : {},
-          attributes: ["id", "name"],
+          where: userWhere,
+          attributes: ["id", "name", "role"],
+          required: true,
         },
       ],
       order: [["date", "DESC"]],
       offset,
       limit,
     });
-    const totalPages = Math.ceil(count / limit);
+    const totalPages = limit ? Math.ceil(count / limit) : null;
 
     res.status(200).json({
       totalCount: count,
@@ -8099,11 +8120,15 @@ const getStaffAttendanceById = async (req, res) => {
 const getStaffAttendanceByDate = async (req, res) => {
   try {
     const school_id = req.user.school_id;
+    const role = req.query.role || null;
     const date = req.query.date || new Date().toISOString().split("T")[0];
     const whereClause = {
       role: { [Op.in]: ["teacher", "staff"] },
       school_id,
     };
+    if (role) {
+      whereClause.role = role;
+    }
     const count = await User.count({ where: whereClause });
     const staffList = await User.findAll({
       where: whereClause,
