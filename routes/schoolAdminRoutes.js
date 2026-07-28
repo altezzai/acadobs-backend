@@ -151,6 +151,10 @@ router.put(
   "/bulkUpdateStudentsToAlumni",
   schoolAdminController.bulkUpdateStudentsToAlumni,
 );
+router.put(
+  "/bulkUpdateStudentsClass",
+  schoolAdminController.bulkUpdateStudentsClass,
+);
 router.get("/getAlumniStudents", schoolAdminController.getAlumniStudents);
 router.get(
   "/getTrashedAlumniStudents",
