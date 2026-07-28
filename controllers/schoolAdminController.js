@@ -9570,6 +9570,7 @@ module.exports = {
   getDriversAssignedToRoutes,
   updateIsLock,
   getDriverLocation,
+  
   getExams,
   getExamMarksByExamId,
   getMarksByInternalId,

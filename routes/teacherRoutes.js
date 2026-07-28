@@ -20,6 +20,9 @@ router.get(
   teacherController.getInternalMarkByRecordedBy,
 );
 router.get("/getExamMarkByRecordedBy", teacherController.getExamMarkByRecordedBy);
+//my class exam mark
+router.get("/getMyClassExamMark",teacherController.getMyClassExamMark);
+router.get("/getMyClassInternalMark",teacherController.getMyClassInternalMark);
 
 // Homework
 router.post(
