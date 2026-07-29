@@ -745,12 +745,11 @@ const createStaff = async (req, res) => {
       });
     }
 
-    const permissionData = { user_id: user.id };
     if (role === "staff") {
+      const permissionData = { user_id: user.id };
       permissionData.leave_request = true;
-    }
     await StaffPermission.create(permissionData, { transaction });
-
+    }
     res.status(201).json(newStaff);
     await transaction.commit();
   } catch (error) {
@@ -5163,74 +5162,6 @@ const createLeaveRequest = async (req, res) => {
   }
 };
 
-// const getAllLeaveRequests = async (req, res) => {
-//   try {
-//     const school_id = req.user.school_id;
-//     if (!school_id) {
-//       return res.status(400).json({ error: "Missing required fields" });
-//     }
-//     const searchQuery = req.query.q || "";
-//     const date = req.query.date || "";
-//     const page = parseInt(req.query.page) || 1;
-//     const limit = parseInt(req.query.limit) || 10;
-//     const offset = (page - 1) * limit;
-//     const whereClause = {
-//       trash: false,
-//       school_id: school_id,
-//     };
-//     if (searchQuery) {
-//       whereClause[Op.or] = [{ reason: { [Op.like]: `%${searchQuery}%` } }];
-//     }
-//     if (date) {
-//       whereClause[Op.or] = [
-//         { from_date: { [Op.like]: `%${date}%` } },
-//         { to_date: { [Op.like]: `%${date}%` } },
-//       ];
-//     }
-//     const { count, rows: leaves } = await LeaveRequest.findAndCountAll({
-//       offset,
-//       distinct: true,
-//       limit,
-//       where: whereClause,
-//       attributes: [
-//         "id",
-//         "from_date",
-//         "to_date",
-//         "leave_type",
-//         "leave_duration",
-//         "reason",
-//         "attachment",
-//         "leave_duration",
-//         "status",
-//         "admin_remarks",
-//       ],
-//       order: [["createdAt", "DESC"]],
-//       include: [
-//         {
-//           model: User,
-//           attributes: ["id", "name", "email", "phone"],
-//         },
-//       ],
-//     });
-//     const totalPages = Math.ceil(count / limit);
-//     res.status(200).json({
-//       totalcontent: count,
-//       totalPages,
-//       currentPage: page,
-//       leaves,
-//     });
-//   } catch (error) {
-//     logger.error(
-//       "schoolId:",
-//       req.user.school_id,
-//       "getAllLeaveRequests :",
-//       error,
-//     );
-//     console.error("Fetch Error:", error);
-//     res.status(500).json({ error: "Failed to fetch leave requests" });
-//   }
-// };
-
 const getLeaveRequestById = async (req, res) => {
   try {
     const Id = req.params.id;
@@ -5271,7 +5202,6 @@ const updateLeaveRequest = async (req, res) => {
       reason,
       leave_duration,
     } = req.body;
-    console.log("req.body:", req.body);
 
     const data = await LeaveRequest.findByPk(Id);
     if (!data) return res.status(404).json({ error: "Not found" });

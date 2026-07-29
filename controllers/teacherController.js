@@ -321,6 +321,7 @@ const getInternalMarkByRecordedBy = async (req, res) => {
         { model: Class, attributes: ["id", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -369,6 +370,7 @@ const getExamMarkByRecordedBy = async (req, res) => {
         { model: Subject, attributes: ["id", "subject_name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -419,6 +421,7 @@ const getMyClassInternalMark = async (req, res) => {
         { model: Class, attributes: ["id", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -469,6 +472,7 @@ const getMyClassExamMark= async (req, res) => {
         { model: Subject, attributes: ["id", "subject_name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({

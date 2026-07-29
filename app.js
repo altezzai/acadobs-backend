@@ -28,10 +28,12 @@ const TeacherRoutes = require("./routes/teacherRoutes");
 const GuardianRoutes = require("./routes/guardianRoutes");
 const PublicRoutes = require("./routes/publicRoutes");
 const DriverRoutes = require("./routes/driverRoutes");
+const StaffRoutes = require("./routes/staffRoutes");
 
 const verifyAdmin = require("./middlewares/adminMiddleware");
 const verifySuperAdmin = require("./middlewares/superAdminMiddleware");
 const verifyTeacher = require("./middlewares/teacherMiddleware");
+const verifyStaff = require("./middlewares/staffMiddleware");
 const verifyGuardian = require("./middlewares/guardianMiddleware");
 const verifyDriver = require("./middlewares/driverMiddleware");
 const presignMiddleware = require("./middlewares/presignMiddleware");
@@ -89,10 +91,11 @@ const versionPath = "/api/s1/";
 
 app.use(`${versionPath}superadmin`, auth, verifySuperAdmin, SuperadminRoutes);
 app.use(`${versionPath}schooladmin`, auth, verifyAdmin, SchooladminRoutes);
-app.use(`${versionPath}staff`, auth, verifyTeacher, TeacherRoutes);
+app.use(`${versionPath}teacher`, auth, verifyTeacher, TeacherRoutes);
+app.use(`${versionPath}staff`, auth, verifyStaff, StaffRoutes);
 app.use(`${versionPath}guardian`, auth, verifyGuardian, GuardianRoutes);
-app.use(`${versionPath}public`, PublicRoutes);
 app.use(`${versionPath}driver`, auth, verifyDriver, DriverRoutes);
+app.use(`${versionPath}public`, PublicRoutes);
 
 const socketHandlers = require("./socketHandlers/socket");
 
