@@ -208,7 +208,26 @@ const getAllmarks = async (req, res) => {
 const updateExam = async (req, res) => {
   try {
     const { id } = req.params;
-    const updated = await InternalMark.update(req.body, {
+    const{
+      subject_id,
+      internal_name,
+      max_marks,
+      date,
+    } = req.body;
+    const existingExam = await InternalMark.findByPk(id);
+    let subjectIdToUpdate = subject_id;
+    if(subject_id===0 || !subject_id){
+      subjectIdToUpdate = existingExam.subject_id;
+    }
+
+    const updated = await InternalMark.update(
+      {
+        subject_id: subjectIdToUpdate,
+        internal_name,
+        max_marks,
+        date,
+      },
+      {
       where: { id: id },
     });
     res.status(200).json({ message: "Exam detail updated", updated });

@@ -113,7 +113,7 @@ router.delete("/achievements/:id", teacherController.deleteAchievement);
 router.patch("/achievements/:id", teacherController.restoreAchievement);
 router.put(
   "/updateStudentAchievement/:id",
-  uploadWithErrorHandler(upload.single("proof_document")),
+  uploadWithErrorHandler(upload.any()),
   teacherController.updateStudentAchievement,
 );
 //Leave Request

@@ -216,7 +216,7 @@ router.get(
 );
 router.put(
   "/updateStudentAchievement/:id",
-  uploadWithErrorHandler(upload.single("proof_document")),
+  uploadWithErrorHandler(upload.any()),
   schoolAdminController.updateStudentAchievement,
 );
 //events

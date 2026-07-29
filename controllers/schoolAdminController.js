@@ -1195,16 +1195,37 @@ const getAllTeachers = async (req, res) => {
 const getAllStaffPermissions = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const permissions = await StaffPermission.findAll({
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    let whereCondition = {
+      school_id: school_id,
+      trash: false,
+    };
+    if (searchQuery) {
+      whereCondition.name = { [Op.like]: `%${searchQuery}%` };
+    };
+
+    const { count, rows: data } = await StaffPermission.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
       include: [
         {
           model: User,
+          where : whereCondition,
           attributes: ["id", "name", "email", "phone", "dp", "school_id"],
-          where: { school_id },
         },
+
       ],
     });
-    res.json({ success: true, data: permissions });
+    res.json({ 
+      totalCount: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      data
+     });
   } catch (err) {
     logger.error(
       "schoolId:",
@@ -3533,6 +3554,7 @@ const getAchievementById = async (req, res) => {
 const updateAchievement = async (req, res) => {
   try {
     const school_id = req.user.school_id;
+    const userId = req.user.user_id;
     const achievement = await Achievement.findOne({
       where: { id: req.params.id, school_id },
       attributes: ["id", "title", "description", "category", "level", "date"],
@@ -3547,7 +3569,6 @@ const updateAchievement = async (req, res) => {
       level,
       date,
       awarding_body,
-      recorded_by,
     } = req.body;
 
     await achievement.update({
@@ -3557,7 +3578,7 @@ const updateAchievement = async (req, res) => {
       level,
       date,
       awarding_body,
-      recorded_by,
+      recorded_by:userId,
     });
     res
       .status(200)
@@ -3643,16 +3664,97 @@ const restoreAchievement = async (req, res) => {
 const updateStudentAchievement = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const { status, proof_document, remarks } = req.body;
-    if (
-      status !== "1st prize" &&
-      status !== "2nd prize" &&
-      status !== "3rd prize" &&
-      status !== "participant" &&
-      status !== "other"
-    ) {
+    const { students, status, remarks } = req.body;
+    const validStatuses = [
+      "1st prize",
+      "2nd prize",
+      "3rd prize",
+      "participant",
+      "other",
+    ];
+
+    if (students !== undefined) {
+      let parsedStudents;
+      if (typeof students === "string") {
+        parsedStudents = JSON.parse(students);
+      } else {
+        parsedStudents = students;
+      }
+
+      if (!Array.isArray(parsedStudents) || parsedStudents.length === 0) {
+        return res.status(400).json({ error: "At least one student is required" });
+      }
+
+      const achievement = await Achievement.findOne({
+        where: { id: req.params.id, school_id, trash: false },
+      });
+
+      if (!achievement) {
+        return res.status(404).json({ error: "Achievement not found" });
+      }
+
+      // const uploadedFiles = req.files && Array.isArray(req.files)
+      //   ? req.files
+      //   : req.file
+      //     ? [req.file]
+      //     : [];
+
+      const updatedStudents = await Promise.all(
+        parsedStudents.map(async (student, index) => {
+          const studentStatus = student.status || status;
+          if (studentStatus && !validStatuses.includes(studentStatus)) {
+            throw new Error("Invalid status");
+          }
+
+          const existingStudentAchievement = await StudentAchievement.findOne({
+            where: {
+              achievement_id: achievement.id,
+              student_id: student.student_id,
+            },
+          });
+
+          // const studentFile = uploadedFiles[index] || uploadedFiles[0] || null;
+          // let proofDocument = existingStudentAchievement?.proof_document || null;
+
+          // if (studentFile) {
+          //   if (proofDocument) {
+          //     await deletefilewithfoldername(proofDocument, uploadAchievementPath);
+          //   }
+          //   proofDocument = await compressAndSaveMultiFile(
+          //     studentFile,
+          //     uploadAchievementPath,
+          //   );
+          // }
+
+          const payload = {
+            status: studentStatus || existingStudentAchievement?.status || "participant",
+            remarks: student.remarks ?? remarks ?? existingStudentAchievement?.remarks ?? null,
+            // proof_document: proofDocument,
+          };
+
+          if (existingStudentAchievement) {
+            await existingStudentAchievement.update(payload);
+            return existingStudentAchievement;
+          }
+
+          return StudentAchievement.create({
+            achievement_id: achievement.id,
+            student_id: student.student_id,
+            ...payload,
+          });
+        }),
+      );
+
+      return res.status(200).json({
+        message: "Student achievements updated successfully",
+        updatedStudents,
+      });
+    }
+
+    if (status && !validStatuses.includes(status)) {
       return res.status(400).json({ error: "Invalid status" });
     }
+
     const StudentAchievementData = await StudentAchievement.findOne({
       where: { id: req.params.id },
       attributes: ["id", "status", "proof_document", "remarks"],
@@ -3668,22 +3770,9 @@ const updateStudentAchievement = async (req, res) => {
       return res.status(404).json({ error: "Student achievement not found" });
     }
 
-    let AchievementFilename = StudentAchievementData.proof_document;
-    if (req.file) {
-      await deletefilewithfoldername(
-        AchievementFilename,
-        uploadAchievementPath,
-      );
-      AchievementFilename = await compressAndSaveFile(
-        req.file,
-        uploadAchievementPath,
-      );
-    }
     await StudentAchievementData.update({
-      status,
-      proof_document,
-      remarks,
-      proof_document: AchievementFilename ? AchievementFilename : null,
+      status: status || StudentAchievementData.status,
+      remarks: remarks ?? StudentAchievementData.remarks,
     });
     res.status(200).json({
       message: "Student achievement updated successfully",

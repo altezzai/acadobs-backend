@@ -151,7 +151,7 @@ router.get(
 router.put(
   "/updateStudentAchievement/:id",
   achievementPermission,
-  uploadWithErrorHandler(upload.single("proof_document")),
+  uploadWithErrorHandler(upload.any()),
   schoolAdminController.updateStudentAchievement,
 );
 //events
