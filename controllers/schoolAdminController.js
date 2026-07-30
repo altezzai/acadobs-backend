@@ -766,7 +766,7 @@ const getAllStaff = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    const role = req.query.role || ""; // 'all' or 'active'
+    const role = req.query.role || "staff"; // 'all' or 'active'
     let whereCondition = {
       school_id: school_id,
       trash: false,
@@ -1302,7 +1302,7 @@ const updateStaffPermission = async (req, res) => {
       transportation,
       aiAnalytics,
     } = req.body;
-
+    console.log("teachers_leaveReuest",req.body.teachers_leaveReuest);
     const permission = await StaffPermission.findOne({
       where: { user_id },
       include: [
@@ -1318,7 +1318,6 @@ const updateStaffPermission = async (req, res) => {
     }
 
     await permission.update({
-      leave_request,
       attendance,
       timetable,
       marks,
@@ -1337,7 +1336,38 @@ const updateStaffPermission = async (req, res) => {
       exam,
       transportation,
       teachers,
+      teachers_leaveReuest,
+      teachers_duties,
+      teachers_attendance,
       staffs,
+      staffs_leaveReuest,
+      staffs_duties,
+      staffs_attendance,
+      aiAnalytics,attendance,
+      timetable,
+      marks,
+      students,
+      homeworks,
+      parent_notes,
+      achievements,
+      student_leave_request,
+      teachers,
+      teachers_leaveReuest,
+      teachers_duties,
+      teachers_attendance,
+      staffs,
+      staffs_leaveReuest,
+      staffs_duties,
+      staffs_attendance,
+      chats,
+      reports,
+      payments,
+      alumni,
+      events,
+      news,
+      notice,
+      exam,
+      transportation,
       aiAnalytics,
     });
     res.json({ success: true, data: permission });
@@ -3712,7 +3742,7 @@ const getAchievementById = async (req, res) => {
     const school_id = req.user.school_id;
     const achievement = await Achievement.findOne({
       where: { id: req.params.id, school_id, trash: false },
-      attributes: ["id", "title", "description", "category", "level", "date"],
+      attributes: ["id", "title", "description", "category", "level", "date","awarding_body"],
       include: [
         {
           model: StudentAchievement,

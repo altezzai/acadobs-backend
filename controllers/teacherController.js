@@ -149,7 +149,7 @@ const getInternalMarksById = async (req, res) => {
         { model: Class, attributes: ["id", "year", "division", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
-        { model: User, attributes: ["id", "full_name"] },
+        { model: User, attributes: ["id", "name"] },
       ],
     });
     if (!internal) {

@@ -8,6 +8,7 @@ const commonController = require("../controllers/commonController");
 const reportController = require("../controllers/reportController");
 const transferController = require("../controllers/transferController");
 const publicController = require("../controllers/publicController");
+const teacherController = require("../controllers/teacherController");
 
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
@@ -16,7 +17,7 @@ const { checkStaffPermission } = require("../middlewares/staffMiddleware");
 const achievementPermission = checkStaffPermission("achievements");
 const eventPermission = checkStaffPermission("events");
 const paymentPermission = checkStaffPermission("payments");
-const leaveRequestPermission = checkStaffPermission(["teachers_leave_requests", "staff_leave_requests","student_leave_request"]);
+const leaveRequestPermission = checkStaffPermission(["teachers_leaveReuest", "staffs_leaveReuest","student_leave_request"]);
 const newsPermission = checkStaffPermission("news");
 const noticePermission = checkStaffPermission("notice");
 const timetablePermission = checkStaffPermission("timetable");
@@ -34,13 +35,14 @@ const reportPermission = checkStaffPermission([
   "reports",
   "payments",
   "attendance",
-  "homework",
+  "homeworks",
   "marks",
 ]);
 
 
-
-
+//staffs
+router.get("/staffs", schoolAdminController.getAllStaff);
+router.get("/getAllTeachers", schoolAdminController.getAllTeachers);
 // Student routes
 
 router.post(
@@ -77,6 +79,7 @@ router.put(
   studentPermission,
   schoolAdminController.bulkUpdateStudentsClass,
 );
+router.get("/getSpecialClassesByYear/:year", schoolAdminController.getSpecialClassesByYear); 
 router.get("/getAlumniStudents", studentPermission, schoolAdminController.getAlumniStudents);
 router.get(
   "/getTrashedAlumniStudents",
@@ -90,7 +93,22 @@ router.get(
   studentPermission,
   commonController.getStudentsByClassId,
 );
-
+router.post(
+  "/specialClassStudents",  
+  schoolAdminController.addSpecialClassStudents,
+);
+router.get(
+  "/specialClassStudents",
+  schoolAdminController.getSpecialClassStudents,
+);
+router.get(
+  "/specialClassStudents/:class_id",
+  commonController.getSpecialClassStudentsByClassId,
+);
+router.delete(
+  "/specialClassStudents/:id",
+  schoolAdminController.deleteSpecialClassStudent,
+);
 //duty
 
 router.get("/duties", teacherDutyPermission, schoolAdminController.getAllTeacherDuties);
@@ -614,4 +632,6 @@ router.get(
   commonController.getStudentsByClassId,
 );
 
+//teacher controller
+router.get("/getMyPermissions", teacherController.getMyPermissions);
 module.exports = router;
