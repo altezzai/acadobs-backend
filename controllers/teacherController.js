@@ -149,6 +149,7 @@ const getInternalMarksById = async (req, res) => {
         { model: Class, attributes: ["id", "year", "division", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
+        { model: User, attributes: ["id", "name"] },
       ],
     });
     if (!internal) {
@@ -388,6 +389,7 @@ const getExamMarkByRecordedBy = async (req, res) => {
         { model: Class, attributes: ["id", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
+
       ],
       order: [["createdAt", "DESC"]],
     });
@@ -419,6 +421,7 @@ const getMyClassInternalMark = async (req, res) => {
     let whereClause = {
       class_id:classId.class_id,
       trash: false,
+      exam_id: null,
     };
 
     if (searchQuery) {
@@ -439,6 +442,7 @@ const getMyClassInternalMark = async (req, res) => {
         { model: School, attributes: ["id", "name"] },
         { model: Class, attributes: ["id", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
+        { model: User, attributes: ["id", "name"] },
       ],
       order: [["createdAt", "DESC"]],
     });
@@ -490,6 +494,7 @@ const getMyClassExamMark= async (req, res) => {
         { model: Class, attributes: ["id", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
+        { model: User, attributes: ["id", "name"] },
       ],
       order: [["createdAt", "DESC"]],
     });
@@ -656,14 +661,10 @@ const getHomeworkById = async (req, res) => {
             },
           ],
         },
-        {
-          model: Class,
-          attributes: ["id", "classname"],
-        },
-        {
-          model: Subject,
-          attributes: ["id", "subject_name"],
-        },
+        {model: Class,attributes: ["id", "classname"], },
+        {model: Subject,attributes: ["id", "subject_name"],},
+        { model: User, attributes: ["id", "name"] },
+
       ],
     });
     if (!homework) return res.status(404).json({ error: "Not found" });
@@ -1159,14 +1160,10 @@ const getAttendanceById = async (req, res) => {
             },
           ],
         },
-        {
-          model: Class,
-          attributes: ["id", "classname"],
-        },
-        {
-          model: Subject,
-          attributes: ["id", "subject_name"],
-        },
+        {model: Class,attributes: ["id", "classname"], },
+        {model: Subject,attributes: ["id", "subject_name"],},
+        { model: User, attributes: ["id", "name"] },
+
       ],
     });
 
@@ -1708,6 +1705,10 @@ const getAssignedDutyById = async (req, res) => {
             "file",
             "start_date",
           ],
+          include: [
+            { model: User, attributes: ["id", "name"] },
+
+      ],
         },
       ],
     });
@@ -1918,6 +1919,10 @@ const getAchievementById = async (req, res) => {
               ],
             },
           ],
+        },
+        {
+          model: User,
+          attributes: ["id", "name"],
         },
       ],
     });

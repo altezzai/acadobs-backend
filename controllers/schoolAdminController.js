@@ -766,7 +766,7 @@ const getAllStaff = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    const role = req.query.role || ""; // 'all' or 'active'
+    const role = req.query.role || "staff"; // 'all' or 'active'
     let whereCondition = {
       school_id: school_id,
       trash: false,
@@ -1275,7 +1275,6 @@ const updateStaffPermission = async (req, res) => {
     const { user_id } = req.params;
     const school_id = req.user.school_id;
     const {
-      leave_request,
       attendance,
       timetable,
       marks,
@@ -1284,6 +1283,14 @@ const updateStaffPermission = async (req, res) => {
       parent_notes,
       achievements,
       student_leave_request,
+      teachers,
+      teachers_leaveReuest,
+      teachers_duties,
+      teachers_attendance,
+      staffs,
+      staffs_leaveReuest,
+      staffs_duties,
+      staffs_attendance,
       chats,
       reports,
       payments,
@@ -1293,11 +1300,9 @@ const updateStaffPermission = async (req, res) => {
       notice,
       exam,
       transportation,
-      teachers,
-      staffs,
       aiAnalytics,
     } = req.body;
-
+    console.log("teachers_leaveReuest",req.body.teachers_leaveReuest);
     const permission = await StaffPermission.findOne({
       where: { user_id },
       include: [
@@ -1313,7 +1318,6 @@ const updateStaffPermission = async (req, res) => {
     }
 
     await permission.update({
-      leave_request,
       attendance,
       timetable,
       marks,
@@ -1332,7 +1336,38 @@ const updateStaffPermission = async (req, res) => {
       exam,
       transportation,
       teachers,
+      teachers_leaveReuest,
+      teachers_duties,
+      teachers_attendance,
       staffs,
+      staffs_leaveReuest,
+      staffs_duties,
+      staffs_attendance,
+      aiAnalytics,attendance,
+      timetable,
+      marks,
+      students,
+      homeworks,
+      parent_notes,
+      achievements,
+      student_leave_request,
+      teachers,
+      teachers_leaveReuest,
+      teachers_duties,
+      teachers_attendance,
+      staffs,
+      staffs_leaveReuest,
+      staffs_duties,
+      staffs_attendance,
+      chats,
+      reports,
+      payments,
+      alumni,
+      events,
+      news,
+      notice,
+      exam,
+      transportation,
       aiAnalytics,
     });
     res.json({ success: true, data: permission });
@@ -1861,6 +1896,8 @@ const createStudent = async (req, res) => {
       country,
       post,
       pincode,
+
+      update_roll_number,
     } = req.body;
     const guardian_email = req.body.guardian_email || null;
     const guardian_relation = req.body.guardian_relation || "father";
@@ -1874,14 +1911,12 @@ const createStudent = async (req, res) => {
     ) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
-    const existingRollNumber = await Student.findOne({
-      where: { roll_number, school_id, class_id, trash: false },
-    });
-    if (existingRollNumber) {
-      return res.status(400).json({
-        error: "Roll number already exists in student table for this class",
-      });
+
+    const normalizedRollNumber = Number(roll_number);
+    if (!Number.isInteger(normalizedRollNumber) || normalizedRollNumber < 1) {
+      return res.status(400).json({ error: "Roll number must be a positive integer" });
     }
+
     const existingUser = await User.findOne({
       where: { phone: guardian_contact },
     });
@@ -1896,10 +1931,39 @@ const createStudent = async (req, res) => {
           `, Reg No: ${existingRegNo.reg_no}: `,
       });
     }
+    const existingRollNumber = await Student.findOne({
+      where: {
+        roll_number: normalizedRollNumber,
+        school_id,
+        class_id,
+        trash: false,
+      },
+    });
+    if (existingRollNumber && update_roll_number !== "true") {
+      return res.status(400).json({
+        error: "Roll number already exists in student table for this class",
+      });
+    }
+    if (existingRollNumber && update_roll_number === "true") {
+      const studentsToShift = await Student.findAll({
+        where: {
+          school_id,
+          class_id,
+          trash: false,
+          roll_number: { [Op.gte]: normalizedRollNumber },
+        },
+      });
+
+      await Promise.all(
+        studentsToShift.map((student) =>
+          student.update({
+            roll_number: Number(student.roll_number) + 1,
+          }),
+        ),
+      );
+    }
 
     let guardianUserId;
-    // const guardianDpFile = req.files?.dp?.[0];
-    // const studentImageFile = req.files?.image?.[0];
     const guardianDpUrl = req.uploadedFiles?.dp?.[0]?.url || null;
     const studentImageUrl = req.uploadedFiles?.image?.[0]?.url || null;
 
@@ -1931,7 +1995,7 @@ const createStudent = async (req, res) => {
         });
         if (existingEmail && guardian_email !== "") {
           return res.status(400).json({
-            error: "Guardian email already exists in user table",
+            error: "Guardian email already exists with other phone number",
           });
         }
       }
@@ -2375,6 +2439,7 @@ const updateStudent = async (req, res) => {
       country,
       post,
       pincode,
+      update_roll_number,
     } = req.body;
 
     if (reg_no) {
@@ -2388,26 +2453,82 @@ const updateStudent = async (req, res) => {
       }
     }
 
-    if (roll_number && class_id) {
+    const student = await Student.findByPk(id);
+    if (!student || student.trash)
+      return res.status(404).json({ error: "Student not found" });
+
+    const targetClassId = class_id !== undefined ? class_id : student.class_id;
+    const shouldReorderRollNumbers =
+      update_roll_number === true || update_roll_number === "true";
+
+    if (roll_number !== undefined) {
+      const normalizedRollNumber = Number(roll_number);
+      if (!Number.isInteger(normalizedRollNumber) || normalizedRollNumber < 1) {
+        return res.status(400).json({ error: "Roll number must be a positive integer" });
+      }
+
       const existingRollNumber = await Student.findOne({
         where: {
-          roll_number,
+          roll_number: normalizedRollNumber,
           school_id,
-          class_id,
+          class_id: targetClassId,
           trash: false,
           id: { [Op.ne]: id },
         },
       });
-      if (existingRollNumber) {
+
+      if (existingRollNumber && !shouldReorderRollNumbers) {
         return res.status(400).json({
           error: "Roll number already exists in student table for this class",
         });
       }
-    }
 
-    const student = await Student.findByPk(id);
-    if (!student || student.trash)
-      return res.status(404).json({ error: "Student not found" });
+      if (existingRollNumber && shouldReorderRollNumbers) {
+        const currentRollNumber = Number(student.roll_number);
+
+        if (normalizedRollNumber > currentRollNumber) {
+          const studentsToShift = await Student.findAll({
+            where: {
+              school_id,
+              class_id: targetClassId,
+              trash: false,
+              roll_number: {
+                [Op.between]: [currentRollNumber + 1, normalizedRollNumber],
+              },
+              id: { [Op.ne]: id },
+            },
+          });
+
+          await Promise.all(
+            studentsToShift.map((studentRecord) =>
+              studentRecord.update({
+                roll_number: Number(studentRecord.roll_number) - 1,
+              }),
+            ),
+          );
+        } else if (normalizedRollNumber < currentRollNumber) {
+          const studentsToShift = await Student.findAll({
+            where: {
+              school_id,
+              class_id: targetClassId,
+              trash: false,
+              roll_number: {
+                [Op.between]: [normalizedRollNumber, currentRollNumber - 1],
+              },
+              id: { [Op.ne]: id },
+            },
+          });
+
+          await Promise.all(
+            studentsToShift.map((studentRecord) =>
+              studentRecord.update({
+                roll_number: Number(studentRecord.roll_number) + 1,
+              }),
+            ),
+          );
+        }
+      }
+    }
 
     // Handle student image — support both legacy req.file and new req.uploadedFiles
     let studentImageFilename = student.image;
@@ -2569,7 +2690,28 @@ const deleteStudent = async (req, res) => {
       return res.status(404).json({ error: "Student not found" });
     }
 
+    const deletedRollNumber = Number(student.roll_number);
+    const targetClassId = student.class_id;
+
     await student.update({ trash: true });
+
+    const studentsToReorder = await Student.findAll({
+      where: {
+        school_id,
+        class_id: targetClassId,
+        trash: false,
+        roll_number: { [Op.gt]: deletedRollNumber },
+      },
+      order: [["roll_number", "ASC"]],
+    });
+
+    await Promise.all(
+      studentsToReorder.map((studentRecord) =>
+        studentRecord.update({
+          roll_number: Number(studentRecord.roll_number) - 1,
+        }),
+      ),
+    );
 
     res.status(200).json({ message: "Student deleted successfully" });
   } catch (err) {
@@ -2593,7 +2735,31 @@ const restoreStudent = async (req, res) => {
         .status(404)
         .json({ error: "Student not found or not in trash" });
     }
+
+    const restoredRollNumber = Number(student.roll_number);
+    const targetClassId = student.class_id;
+
     await student.update({ trash: false });
+
+    const studentsToReorder = await Student.findAll({
+      where: {
+        school_id,
+        class_id: targetClassId,
+        trash: false,
+        roll_number: { [Op.gte]: restoredRollNumber },
+        id: { [Op.ne]: id },
+      },
+      order: [["roll_number", "ASC"]],
+    });
+
+    await Promise.all(
+      studentsToReorder.map((studentRecord) =>
+        studentRecord.update({
+          roll_number: Number(studentRecord.roll_number) + 1,
+        }),
+      ),
+    );
+
     res.status(200).json({ message: "Student restored successfully" });
   } catch (err) {
     logger.error(
@@ -2604,6 +2770,62 @@ const restoreStudent = async (req, res) => {
     );
     console.error("Error restoring student:", err);
     res.status(500).json({ error: "Failed to restore student" });
+  }
+};
+
+const permanentDeleteStudent = async (req, res) => {
+  const transaction = await schoolSequelize.transaction();
+
+  try {
+    const school_id = req.user.school_id;
+    const { id } = req.params;
+
+    const student = await Student.findOne({
+      where: { id, school_id, trash: true },
+      transaction,
+    });
+
+    if (!student) {
+      await transaction.rollback();
+      return res.status(404).json({ error: "Student not found in trash" });
+    }
+
+    const guardianUserId = student.guardian_id;
+
+    await student.destroy({ transaction });
+
+    const remainingStudents = await Student.count({
+      where: {
+        guardian_id: guardianUserId,
+        trash: false,
+        id: { [Op.ne]: id },
+      },
+      transaction,
+    });
+
+    if (remainingStudents === 0) {
+      await Guardian.destroy({
+        where: { user_id: guardianUserId },
+        transaction,
+      });
+      await User.destroy({
+        where: { id: guardianUserId },
+        transaction,
+      });
+    }
+
+    await transaction.commit();
+    res.status(200).json({ message: "Student permanently deleted" });
+  } catch (err) {
+    await transaction.rollback();
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error permanently deleting student:",
+      err,
+    );
+    console.error("Error permanently deleting student:", err);
+    res.status(500).json({ error: "Failed to permanently delete student" });
   }
 };
 const getTrashedStudents = async (req, res) => {
@@ -3112,6 +3334,7 @@ const getDutyById = async (req, res) => {
             },
           ],
         },
+        { model: User, attributes: ["id", "name"] },
       ],
     });
 
@@ -3519,7 +3742,7 @@ const getAchievementById = async (req, res) => {
     const school_id = req.user.school_id;
     const achievement = await Achievement.findOne({
       where: { id: req.params.id, school_id, trash: false },
-      attributes: ["id", "title", "description", "category", "level", "date"],
+      attributes: ["id", "title", "description", "category", "level", "date","awarding_body"],
       include: [
         {
           model: StudentAchievement,
@@ -3537,6 +3760,7 @@ const getAchievementById = async (req, res) => {
             },
           ],
         },
+        { model: User, attributes: ["id", "name"] },
       ],
     });
     res.status(200).json(achievement);
@@ -3908,6 +4132,9 @@ const getEventById = async (req, res) => {
     const school_id = req.user.school_id;
     const event = await Event.findOne({
       where: { id: req.params.id, school_id },
+      include: [
+    { model: User, attributes: ["id", "name"] },
+      ]
     });
     if (!event || event.trash)
       return res.status(404).json({ error: "Event not found" });
@@ -4355,6 +4582,16 @@ const getPaymentById = async (req, res) => {
         {
           model: Student,
           attributes: ["id", "full_name", "reg_no", "image"],
+        },
+        {
+          model: User,
+          as: "recorded",
+          attributes: ["id", "name"],
+        },
+        {
+          model: User,
+          as: "updated",
+          attributes: ["id", "name"],
         },
       ],
     });
@@ -9517,6 +9754,7 @@ module.exports = {
   deleteStudent,
   getTrashedStudents,
   restoreStudent,
+  permanentDeleteStudent, 
   getTrashedAlumniStudents,
 
   createDutyWithAssignments,

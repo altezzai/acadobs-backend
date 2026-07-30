@@ -16,7 +16,7 @@ const LeaveRequest = schoolSequelize.define(
     },
     reason: { type: DataTypes.TEXT, allowNull: false },
     leave_type: {
-      type: DataTypes.ENUM("sick", "casual", "emergency", "vacation", "other"),
+      type: DataTypes.ENUM("sick", "casual", "emergency", "vacation", "onduty", "other"),
       defaultValue: "other",
     },
     leave_duration: {
