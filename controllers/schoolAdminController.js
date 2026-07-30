@@ -3304,6 +3304,7 @@ const getDutyById = async (req, res) => {
             },
           ],
         },
+        { model: User, attributes: ["id", "name"] },
       ],
     });
 
@@ -3729,6 +3730,7 @@ const getAchievementById = async (req, res) => {
             },
           ],
         },
+        { model: User, attributes: ["id", "name"] },
       ],
     });
     res.status(200).json(achievement);
@@ -4100,6 +4102,9 @@ const getEventById = async (req, res) => {
     const school_id = req.user.school_id;
     const event = await Event.findOne({
       where: { id: req.params.id, school_id },
+      include: [
+    { model: User, attributes: ["id", "name"] },
+      ]
     });
     if (!event || event.trash)
       return res.status(404).json({ error: "Event not found" });
@@ -4547,6 +4552,16 @@ const getPaymentById = async (req, res) => {
         {
           model: Student,
           attributes: ["id", "full_name", "reg_no", "image"],
+        },
+        {
+          model: User,
+          as: "recorded",
+          attributes: ["id", "name"],
+        },
+        {
+          model: User,
+          as: "updated",
+          attributes: ["id", "name"],
         },
       ],
     });

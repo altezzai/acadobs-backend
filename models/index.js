@@ -44,6 +44,7 @@ const RouteStopLog = require("./route_stop_log");
 const Session = require("./session");
 const StudentTransfer = require("./student_transfer");
 const SpecialClassStudent = require("./special_class_students");
+const Event = require("./event");
 
 // Relations
 
@@ -96,6 +97,7 @@ Guardian.belongsTo(User, { foreignKey: "user_id" });
 
 Duty.hasMany(DutyAssignment, { foreignKey: "duty_id" });
 Duty.belongsTo(School, { foreignKey: "school_id" });
+Duty.belongsTo(User,{ foreignKey: "recorded_by" });
 DutyAssignment.belongsTo(Duty, { foreignKey: "duty_id" });
 DutyAssignment.belongsTo(User, { foreignKey: "staff_id" });
 
@@ -105,6 +107,7 @@ Achievement.belongsToMany(Student, {
   otherKey: "student_id",
 });
 Achievement.hasMany(StudentAchievement, { foreignKey: "achievement_id" });
+Achievement.belongsTo(User,{ foreignKey: "recorded_by" });
 StudentAchievement.belongsTo(Achievement, { foreignKey: "achievement_id" });
 StudentAchievement.belongsTo(Student, { foreignKey: "student_id" });
 
@@ -115,11 +118,14 @@ User.hasOne(Student, { foreignKey: "guardian_id" });
 User.hasOne(Guardian, { foreignKey: "user_id" });
 Session.belongsTo(User, { foreignKey: "user_id" });
 User.hasMany(Session, { foreignKey: "user_id" });
+
 InternalMark.belongsTo(School, { foreignKey: "school_id" });
 InternalMark.belongsTo(Class, { foreignKey: "class_id" });
 InternalMark.belongsTo(Subject, { foreignKey: "subject_id" });
 InternalMark.belongsTo(User, { foreignKey: "recorded_by" });
 InternalMark.belongsTo(Exams, { foreignKey: "exam_id" });
+InternalMark.belongsTo(User,{ foreignKey: "recorded_by" });
+
 Exams.hasMany(InternalMark, { foreignKey: "exam_id" });
 Exams.belongsTo(School, { foreignKey: "school_id" });
 InternalMark.hasMany(Mark, { foreignKey: "internal_id" });
@@ -128,11 +134,13 @@ Mark.belongsTo(Student, { foreignKey: "student_id" });
 
 Payment.belongsTo(School, { foreignKey: "school_id" });
 Payment.belongsTo(Student, { foreignKey: "student_id" });
-Payment.belongsTo(User, { foreignKey: "recorded_by" });
+Payment.belongsTo(User, { as: "recorded", foreignKey: "recorded_by" });
+Payment.belongsTo(User,{as: "updated", foreignKey: "updated_by" });
 Payment.belongsTo(InvoiceStudent, { foreignKey: "invoice_student_id" });
 
 Invoice.belongsTo(School, { foreignKey: "school_id" });
 Invoice.hasMany(InvoiceStudent, { foreignKey: "invoice_id" });
+Invoice.belongsTo(User,{ foreignKey: "recorded_by" });
 InvoiceStudent.belongsTo(Invoice, { foreignKey: "invoice_id" });
 InvoiceStudent.belongsTo(Student, { foreignKey: "student_id" });
 
@@ -155,9 +163,14 @@ NewsImage.belongsTo(News, {
   as: "news",
 });
 
+Event.belongsTo(School, { foreignKey: "school_id" });
+Event.belongsTo(User, { foreignKey: "recorded_by" });
+
+
 // Notice associations
 Notice.belongsTo(School, { foreignKey: "school_id" });
 Notice.hasMany(NoticeClass, { foreignKey: "notice_id" });
+Notice.belongsTo(User,{ foreignKey: "recorded_by" });
 NoticeClass.belongsTo(Notice, { foreignKey: "notice_id" });
 NoticeClass.belongsTo(Class, { foreignKey: "class_id" });
 
@@ -204,6 +217,8 @@ Driver.belongsToMany(route, {
 // Route ↔ Stop association (BOTH SIDES REQUIRED)
 route.hasMany(stop, { foreignKey: "route_id", as: "stops" }); //
 stop.belongsTo(route, { foreignKey: "route_id", as: "route" });
+stop.belongsTo(User,{ foreignKey: "recorded_by" });
+
 
 // Stop → Student
 stop.hasMany(Student, {
