@@ -1275,7 +1275,6 @@ const updateStaffPermission = async (req, res) => {
     const { user_id } = req.params;
     const school_id = req.user.school_id;
     const {
-      leave_request,
       attendance,
       timetable,
       marks,
@@ -1284,6 +1283,14 @@ const updateStaffPermission = async (req, res) => {
       parent_notes,
       achievements,
       student_leave_request,
+      teachers,
+      teachers_leaveReuest,
+      teachers_duties,
+      teachers_attendance,
+      staffs,
+      staffs_leaveReuest,
+      staffs_duties,
+      staffs_attendance,
       chats,
       reports,
       payments,
@@ -1293,8 +1300,6 @@ const updateStaffPermission = async (req, res) => {
       notice,
       exam,
       transportation,
-      teachers,
-      staffs,
       aiAnalytics,
     } = req.body;
 
