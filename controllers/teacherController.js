@@ -419,6 +419,7 @@ const getMyClassInternalMark = async (req, res) => {
     let whereClause = {
       class_id:classId.class_id,
       trash: false,
+      exam_id: null,
     };
 
     if (searchQuery) {
