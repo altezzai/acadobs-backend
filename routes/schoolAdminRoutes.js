@@ -146,6 +146,7 @@ router.put(
 );
 router.delete("/students/:id", schoolAdminController.deleteStudent);
 router.patch("/students/:id", schoolAdminController.restoreStudent);
+router.delete("/permanentDeleteStudent/:id", schoolAdminController.permanentDeleteStudent);
 router.get("/getTrashedStudents", schoolAdminController.getTrashedStudents);
 router.put(
   "/bulkUpdateStudentsToAlumni",

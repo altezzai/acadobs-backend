@@ -54,6 +54,7 @@ module.exports = {
           "casual",
           "emergency",
           "vacation",
+          "onduty",
           "other"
         ),
         defaultValue: "other",
