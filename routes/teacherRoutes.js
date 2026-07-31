@@ -12,6 +12,7 @@ router.put("/internalmarks/:id", teacherController.updateExam);
 router.delete("/internalmarks/:id", teacherController.deleteExam);
 router.put("/updateMark/:mark_id", teacherController.updateMark);
 router.put("/bulkUpdateMarks", teacherController.bulkUpdateMarks);
+router.get("/getInternalMarksByIdWithClassId/:id/:class_id", teacherController.getInternalMarksByIdWithClassId);
 
 router.get("/getExams", teacherController.getExams);
 

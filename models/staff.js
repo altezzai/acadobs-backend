@@ -28,6 +28,11 @@ const Staff = schoolSequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    staff_incharge: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
     createdAt: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,

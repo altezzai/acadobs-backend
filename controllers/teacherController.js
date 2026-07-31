@@ -166,6 +166,41 @@ const getInternalMarksById = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+const getInternalMarksByIdWithClassId = async (req, res) => {
+  try {
+    const { id , class_id} = req.params;
+    const internal = await InternalMark.findOne({
+      where: { id },
+      include: [
+        {
+          model: Mark,
+          attributes: ["id", "marks_obtained", "status"],
+          include: [
+            { model: Student,
+              where: { class_id }, attributes: ["id", "full_name", "roll_number"] },
+          ],
+        },
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
+        { model: User, attributes: ["id", "name"] },
+      ],
+    });
+    if (!internal) {
+      return res.status(404).json({ error: "Internal mark not found" });
+    }
+    res.status(200).json(internal);
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      " Error fetching internal mark:",
+      error,
+    );
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 const getAllmarks = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
@@ -3373,6 +3408,7 @@ module.exports = {
   createExamWithMarks,
   getAllmarks,
   getInternalMarksById,
+  getInternalMarksByIdWithClassId,
   updateExam,
   updateMark,
   deleteExam,

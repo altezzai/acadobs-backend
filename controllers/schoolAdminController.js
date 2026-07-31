@@ -684,6 +684,7 @@ const createStaff = async (req, res) => {
       address,
       class_id,
       subjects,
+      staff_incharge,
     } = req.body;
     if (!name || !email || !phone) {
       return res.status(400).json({ error: "Required fields are missing" });
@@ -731,6 +732,7 @@ const createStaff = async (req, res) => {
         address,
         dp: staffUrl,
         class_id: class_id || null,
+        staff_incharge: staff_incharge || false,
       },
       { transaction },
     );
@@ -745,9 +747,12 @@ const createStaff = async (req, res) => {
       });
     }
 
+    const permissionData = { user_id: user.id };
     if (role === "staff") {
-      const permissionData = { user_id: user.id };
-      permissionData.leave_request = true;
+    permissionData.leave_request = true;
+    await StaffPermission.create(permissionData, { transaction });
+    } else if(role === "teacher" && staff_incharge==="true"){
+    permissionData.leave_request = true;
     await StaffPermission.create(permissionData, { transaction });
     }
     res.status(201).json(newStaff);
@@ -887,7 +892,7 @@ const updateStaff = async (req, res) => {
   try {
     const { staff_id } = req.params;
     const school_id = req.user.school_id;
-    const { role, qualification, address, class_id, subjects } = req.body;
+    const { role, qualification, address, class_id, subjects, staff_incharge } = req.body;
 
     const staff = await Staff.findOne({
       where: { id: staff_id, school_id },
@@ -906,9 +911,22 @@ const updateStaff = async (req, res) => {
       }
       finalDp = newDpUrl;
     }
-
+  
+    if (staff_incharge === "true" && staff.staff_incharge !== "true") {
+      const staffPermission = await StaffPermission.findOne({
+        where: {
+          user_id: staff.user_id,
+        },
+      });
+      if (!staffPermission) {
+        await StaffPermission.create({
+          user_id: staff.user_id,
+          leave_request: true,
+        }, { transaction });
+      }
+    }
     await staff.update(
-      { role, qualification, address, class_id, dp: finalDp },
+      { role, qualification, address, class_id, dp: finalDp, staff_incharge },
       { transaction },
     );
 
@@ -956,7 +974,6 @@ const updateStaff = async (req, res) => {
         });
       }
     }
-
     await transaction.commit();
 
     res.status(200).json({ message: "Staff updated successfully", staff });
