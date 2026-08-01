@@ -84,6 +84,10 @@ router.delete("/staffs/:staff_id", schoolAdminController.deleteStaff);
 router.patch("/staffs/:staff_id", schoolAdminController.restoredStaff);
 router.get("/getAllTeachers", schoolAdminController.getAllTeachers);
 router.get("/getTrashedStaffs", schoolAdminController.getTrashedStaffs);
+router.delete(
+  "/permanentDeleteStaff/:staff_id",
+  schoolAdminController.permanentDeleteStaff,
+);
 
 //staff permissions
 router.get(

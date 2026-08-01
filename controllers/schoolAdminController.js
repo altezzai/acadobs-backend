@@ -1143,6 +1143,48 @@ const getTrashedStaffs = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const permanentDeleteStaff = async (req, res) => {
+    const transaction = await schoolSequelize.transaction();
+  try {
+    const { staff_id } = req.params;
+    const school_id = req.user.school_id; 
+    const role = req.user.role;
+    if (role !== "admin") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const staff = await Staff.findOne({
+      where: { id: staff_id, school_id, trash: true },
+    },
+   { transaction },);
+    if (!staff) return res.status(404).json({ error: "Staff not found" });
+    const user = await User.findByPk(staff.user_id , { transaction },);
+    if (!user) return res.status(404).json({ error: "user not found" });
+    const dutyAssignment = await DutyAssignment.findOne({ where: { staff_id:staff.user_id } });
+    const staffAttendance = await StaffAttendance.findOne({ where: { staff_id:staff.user_id } });
+    const leaveRequest = await LeaveRequest.findOne({ where: { user_id:staff.user_id,role: { [Op.in]: ["teacher", "staff"] } } });
+    const staffPermission = await StaffPermission.findOne({ where: { user_id: staff.user_id } });
+    const staffSubject = await StaffSubject.findOne({ where: { staff_id:staff.user_id } });
+    await dutyAssignment?.destroy({ transaction });
+    await staffAttendance?.destroy({ transaction });
+    await leaveRequest?.destroy({ transaction });
+    await staffPermission?.destroy({ transaction });
+    await staffSubject?.destroy({ transaction });
+    await staff.destroy( { transaction },);
+    await user.destroy( { transaction },);
+   
+    await transaction.commit();
+    res.status(200).json({ message: "Staff deleted (permanent)" });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error deleting staff:",
+      error,
+    );
+    await transaction.rollback();
+    res.status(500).json({ error: error.message });
+  }
+};
 
 const getAllTeachers = async (req, res) => {
   try {
@@ -9775,6 +9817,7 @@ module.exports = {
   getAllTeachers,
   getStaffs,
   getTrashedStaffs,
+  permanentDeleteStaff,
 
   getAllStaffPermissions,
   updateStaffPermission,
@@ -9846,8 +9889,6 @@ module.exports = {
   getTrashedPayments,
   getTrashedDonations,
   permanentDeletePayment,
-
-
 
   createInvoice,
   addInvoiceStudentsbyInvoiceId,
