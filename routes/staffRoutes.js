@@ -39,6 +39,8 @@ const reportPermission = checkStaffPermission([
   "marks",
 ]);
 
+router.get("/getSpecialClassesByYear/:year", schoolAdminController.getSpecialClassesByYear); // Get classes by year
+router.get("/classes", schoolAdminController.getAllClasses); 
 
 //staffs
 router.get("/staffs", schoolAdminController.getAllStaff);

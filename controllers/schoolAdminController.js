@@ -23,6 +23,7 @@ const Duty = require("../models/duty");
 const DutyAssignment = require("../models/dutyassignment");
 const Achievement = require("../models/achievement");
 const StudentAchievement = require("../models/studentachievement");
+const Message = require("../models/messages");
 const Event = require("../models/event");
 const Payment = require("../models/payment");
 const LeaveRequest = require("../models/leaverequest");
@@ -42,6 +43,9 @@ const Homework = require("../models/homework");
 const HomeworkAssignment = require("../models/homeworkassignment");
 const StaffAttendance = require("../models/staff_attendance");
 const Syllabus = require("../models/syllabus");
+const StudentRouteAssignment = require("../models/student_route_assignment");
+const RouteStopLog = require("../models/route_stop_log");
+const StudentTransfer = require("../models/student_transfer");
 const { School, StudentRoutes } = require("../models");
 const { schoolSequelize } = require("../config/connection");
 const studentRoutes = require("../models/studentroutes");
@@ -51,7 +55,6 @@ const { Driver } = require("../models");
 const { Vehicle } = require("../models");
 const studentroutes = require("../models/studentroutes");
 const { error } = require("winston");
-const StudentRouteAssignment = require("../models/student_route_assignment");
 const { Console } = require("winston/lib/winston/transports");
 const { deleteFile } = require("../middlewares/storageUploads");
 const Exam = require("../models/exams");
@@ -121,6 +124,8 @@ const getAllClasses = async (req, res) => {
       distinct: true,
       limit,
       where: whereCondition,
+      order: [["createdAt", "DESC"]],
+
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -256,6 +261,7 @@ const getTrashedClasses = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
+      order: [["updatedAt", "DESC"]],
     });
 
     res.status(200).json({
@@ -604,6 +610,7 @@ const getTrashedSubjects = async (req, res) => {
           attributes: ["name"],
         },
       ],
+      order: [["updatedAt", "DESC"]],
     });
     res.status(200).json({
       totalcontent: count,
@@ -1118,6 +1125,7 @@ const getTrashedStaffs = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
+      order: [["updatedAt", "DESC"]],
     });
     res.status(200).json({
       totalcontent: count,
@@ -1234,7 +1242,9 @@ const getAllStaffPermissions = async (req, res) => {
           where : whereCondition,
           attributes: ["id", "name", "email", "phone", "dp", "school_id"],
         },
-
+      ],
+      order: [
+        ["createdAt", "DESC"],
       ],
     });
     res.json({ 
@@ -2795,7 +2805,14 @@ const permanentDeleteStudent = async (req, res) => {
 
   try {
     const school_id = req.user.school_id;
+    const role = req.user.role;
     const { id } = req.params;
+    if (role !== "admin") {
+      await transaction.rollback();
+      return res
+        .status(403)
+        .json({ error: "You are not authorized to perform this action" });
+    }
 
     const student = await Student.findOne({
       where: { id, school_id, trash: true },
@@ -2809,11 +2826,61 @@ const permanentDeleteStudent = async (req, res) => {
 
     const guardianUserId = student.guardian_id;
 
+    await Payment.destroy({
+      where: { student_id: id },
+      transaction,
+    });
+    await InvoiceStudent.destroy({
+      where: { student_id: id },
+      transaction,
+    });
+    await Marks.destroy({
+      where: { student_id: id },
+      transaction,
+    });
+    await HomeworkAssignment.destroy({
+      where: { student_id: id },
+      transaction,
+    });
+    await AttendanceMarked.destroy({
+      where: { student_id: id },
+      transaction,
+    });
+    await StudentAchievement.destroy({
+      where: { student_id: id },
+      transaction,
+    });
+    await LeaveRequest.destroy({
+      where: { student_id: id },
+      transaction,
+    });
+    await Message.destroy({
+      where: { student_id: id },
+      transaction,
+    });
+    await StudentRouteAssignment.destroy({
+      where: { student_id: id },
+      transaction,
+    });
+    await RouteStopLog.destroy({
+      where: { student_id: id },
+      transaction,
+    });
+    await StudentTransfer.destroy({
+      where: { student_id: id },
+      transaction,
+    });
+    await SpecialClassStudent.destroy({
+      where: { student_id: id },
+      transaction,
+    });
+
     await student.destroy({ transaction });
 
     const remainingStudents = await Student.count({
       where: {
         guardian_id: guardianUserId,
+        school_id,
         trash: false,
         id: { [Op.ne]: id },
       },
@@ -3072,7 +3139,7 @@ const getTrashedAlumniStudents = async (req, res) => {
         { model: User, attributes: ["name", "email", "phone", "dp"] },
         { model: Class, attributes: ["id", "year", "division", "classname"] },
       ],
-      order: [["createdAt", "DESC"]],
+      order: [["updatedAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res
@@ -3217,6 +3284,7 @@ const getAllTeacherDuties = async (req, res) => {
           ],
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const formattedData = duties.map((record) => {
       const total_staff = record.DutyAssignments?.length || 0;
@@ -3301,6 +3369,7 @@ const getAllStaffDuties = async (req, res) => {
           ],
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const formattedData = duties.map((record) => {
       const total_staff = record.DutyAssignments?.length || 0;
@@ -3548,6 +3617,7 @@ const getTrashedDuties = async (req, res) => {
       limit,
       distinct: true,
       where: { school_id, trash: true },
+      order: [["updatedAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -3739,6 +3809,7 @@ const getAllAchievements = async (req, res) => {
           ],
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -3860,6 +3931,7 @@ const getTrashedAchievements = async (req, res) => {
       limit,
       where: { school_id, trash: true },
       attributes: ["id", "title", "description", "category", "level", "date"],
+      order: [["updatedAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -4129,6 +4201,7 @@ const getAllEvents = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
+      order: [["createdAt", "DESC"]], 
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -4230,6 +4303,7 @@ const getTrashedEvents = async (req, res) => {
       distinct: true,
       limit,
       where: { trash: true, school_id },
+      order: [["updatedAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -4847,7 +4921,7 @@ const getTrashedPayments = async (req, res) => {
           ],
         },
       ],
-      order: [["createdAt", "DESC"]],
+      order: [["updatedAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -4931,7 +5005,7 @@ const getTrashedDonations = async (req, res) => {
           ],
         },
       ],
-      order: [["createdAt", "DESC"]],
+      order: [["updatedAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -5252,6 +5326,7 @@ const getAllInvoices = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
 
@@ -5341,6 +5416,7 @@ const getTrashedInvoices = async (req, res) => {
       distinct: true,
       limit,
       where: { school_id, trash: true },
+      order: [["updatedAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -5778,7 +5854,7 @@ const getTrashedLeaveRequests = async (req, res) => {
       where: whereClause,
       offset,
       limit,
-      order: [["createdAt", "DESC"]],
+      order: [["updatedAt", "DESC"]],
     });
 
     res.status(200).json({
@@ -6280,7 +6356,7 @@ const getTrashedNews = async (req, res) => {
           required: false,
         },
       ],
-      order: [["createdAt", "DESC"]],
+      order: [["updatedAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -7118,7 +7194,7 @@ const getAllTeacherLeaveRequestsforSubstitution = async (req, res) => {
           attributes: ["id", "name", "email", "phone", "dp"],
         },
       ],
-      order: [["createdAt", "DESC"]],
+      order: [["updatedAt", "DESC"],["from_date", "ASC"]],
     });
 
     const leaveRequestsWithExtraData = await Promise.all(
@@ -8680,6 +8756,7 @@ const getAllDrivers = async (req, res) => {
         school_id,
       },
       attributes: ["id", "name", "phone", "email", "photo", "address"],
+      order: [["createdAt", "DESC"]],
     });
 
     return res.status(200).json({

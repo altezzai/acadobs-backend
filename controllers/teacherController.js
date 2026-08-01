@@ -223,6 +223,7 @@ const getAllmarks = async (req, res) => {
         { model: Subject, attributes: ["id", "subject_name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -1161,6 +1162,7 @@ const getAllAttendance = async (req, res) => {
           ],
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -2199,6 +2201,7 @@ const getAllLeaveRequests = async (req, res) => {
           attributes: ["id", "name", "email", "phone"],
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({

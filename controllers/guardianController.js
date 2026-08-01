@@ -205,6 +205,7 @@ const getPaymentByStudentId = async (req, res) => {
           ],
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -258,6 +259,7 @@ const getInvoiceByStudentId = async (req, res) => {
           where: whereClause,
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -1186,6 +1188,7 @@ const getHomeworkById = async (req, res) => {
           ],
         },
       ],
+      order:[["createdAt", "DESC"]]
     });
 
     if (!homework) return res.status(404).json({ error: "Not found" });
@@ -1233,6 +1236,7 @@ const getAchievementById = async (req, res) => {
           ],
         },
       ],
+      order:[["createdAt", "DESC"]]
     });
     if (!achievement) return res.status(404).json({ error: "Not found" });
     res.status(200).json(achievement);
