@@ -135,49 +135,47 @@ const getExams = async (req, res) => {
 const getInternalMarksById = async (req, res) => {
   try {
     const { id } = req.params;
-    const internal = await InternalMark.findOne({
-      where: { id },
-      include: [
-        {
-          model: Mark,
-          attributes: ["id", "marks_obtained", "status"],
-          include: [
-            { model: Student, attributes: ["id", "full_name", "roll_number"] },
-          ],
-        },
-        { model: School, attributes: ["id", "name"] },
-        { model: Class, attributes: ["id", "year", "division", "classname"] },
-        { model: Subject, attributes: ["id", "subject_name"] },
-        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
-        { model: User, attributes: ["id", "name"] },
-      ],
+    const userId = req.user.user_id;
+    const schoolId = req.user.school_id;
+    const internalMark = await InternalMark.findOne({
+      where: { id, school_id: schoolId, trash: false },
+      attributes: ["id", "recorded_by"],
     });
-    if (!internal) {
+
+    if (!internalMark) {
       return res.status(404).json({ error: "Internal mark not found" });
     }
-    res.status(200).json(internal);
-  } catch (error) {
-    logger.error(
-      "userId:",
-      req.user.user_id,
-      " Error fetching internal mark:",
-      error,
-    );
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-const getInternalMarksByIdWithClassId = async (req, res) => {
-  try {
-    const { id , class_id} = req.params;
+
+    const isRecordedByUser = Number(internalMark.recorded_by) === Number(userId);
+    console.log("isRecordedByUser:", isRecordedByUser);
+    const staff = isRecordedByUser
+      ? null
+      : await Staff.findOne({
+          where: { user_id: userId, school_id: schoolId, trash: false },
+          attributes: ["class_id"],
+        });
+    const studentWhere = isRecordedByUser
+      ? undefined
+      : { class_id: staff?.class_id };
+
+    if (!isRecordedByUser && !staff?.class_id) {
+      return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+
     const internal = await InternalMark.findOne({
-      where: { id },
+      where: { id, school_id: schoolId, trash: false },
       include: [
         {
           model: Mark,
+          required: !isRecordedByUser,
           attributes: ["id", "marks_obtained", "status"],
           include: [
-            { model: Student,
-              where: { class_id }, attributes: ["id", "full_name", "roll_number"] },
+            {
+              model: Student,
+              required: !isRecordedByUser,
+              where: studentWhere,
+              attributes: ["id", "full_name", "roll_number"],
+            },
           ],
         },
         { model: School, attributes: ["id", "name"] },
@@ -3408,7 +3406,6 @@ module.exports = {
   createExamWithMarks,
   getAllmarks,
   getInternalMarksById,
-  getInternalMarksByIdWithClassId,
   updateExam,
   updateMark,
   deleteExam,
