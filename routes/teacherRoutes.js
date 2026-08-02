@@ -20,6 +20,15 @@ router.get(
   teacherController.getInternalMarkByRecordedBy,
 );
 router.get("/getExamMarkByRecordedBy", teacherController.getExamMarkByRecordedBy);
+router.get(
+  "/getTrashedInternalMarkByRecordedBy",
+  teacherController.getTrashedInternalMarkByRecordedBy);
+router.get(
+  "/getTrashedExamMarkByRecordedBy",
+  teacherController.getTrashedExamMarkByRecordedBy);
+router.patch(
+  "/restoreInternalMark/:id",
+  teacherController.restoreInternalMark);
 //my class exam mark
 router.get("/getMyClassExamMark",teacherController.getMyClassExamMark);
 router.get("/getMyClassInternalMark",teacherController.getMyClassInternalMark);

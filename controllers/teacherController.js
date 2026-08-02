@@ -595,7 +595,122 @@ const getMyClassExamMark = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch exams" });
   }
 };
+const getTrashedInternalMarkByRecordedBy = async (req, res) => {
+  try {
+    const { recorded_by } = req.query;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    let whereClause = {
+      recorded_by,
+      trash: true,
+      exam_id: null,
+    };
 
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { internal_name: { [Op.like]: `%${searchQuery}%` } },
+        { date: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+
+    const { count, rows: exams } = await InternalMark.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+
+      where: whereClause,
+      attributes: ["id", "internal_name", "max_marks", "date"],
+      include: [
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      exams,
+    });
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching exams:", err);
+    console.error("Error fetching exams:", err);
+    res.status(500).json({ error: "Failed to fetch exams" });
+  }
+};
+
+const getTrashedExamMarkByRecordedBy = async (req, res) => {
+  try {
+    const { recorded_by } = req.query;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    let whereClause = {
+      recorded_by,
+      trash: true,
+      exam_id: { [Op.not]: null },
+    };
+
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { internal_name: { [Op.like]: `%${searchQuery}%` } },
+        { date: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+
+    const { count, rows: exams } = await InternalMark.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+
+      where: whereClause,
+      attributes: ["id", "internal_name", "max_marks", "date", "exam_id"],
+      include: [
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
+
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      exams,
+    });
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching exams:", err);
+    console.error("Error fetching exams:", err);
+    res.status(500).json({ error: "Failed to fetch exams" });
+  }
+};
+const restoreInternalMark = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.user_id;
+    const school_id = req.user.school_id;
+    const internalMark = await InternalMark.findOne({
+      where: { id, school_id, trash: true ,recorded_by: userId},
+    });
+    if (!internalMark) {
+      return res.status(404).json({ error: "Internal Mark not found" });
+    }
+    await internalMark.update({ trash: false });
+    res.status(200).json({ message: "Internal Mark restored successfully" });
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error restoring internal mark:", err);
+    console.error("Error restoring internal mark:", err);
+    res.status(500).json({ error: "Failed to restore internal mark" });
+  }
+};
 
 const createHomeworkWithAssignments = async (req, res) => {
   try {
@@ -3468,6 +3583,9 @@ module.exports = {
   getExamMarkByRecordedBy,
   getMyClassExamMark,
   getMyClassInternalMark,
+  getTrashedExamMarkByRecordedBy,
+  getTrashedInternalMarkByRecordedBy,
+  restoreInternalMark,
 
   createHomeworkWithAssignments,
   getAllHomework,
