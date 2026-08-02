@@ -1,4 +1,4 @@
-const { Op, where } = require("sequelize");
+const { Op, where, Sequelize } = require("sequelize");
 const moment = require("moment");
 const geolib = require("geolib");
 const logger = require("../utils/logger");
@@ -448,23 +448,46 @@ const getMyClassInternalMark = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const classId = await Staff.findOne({
-      where:{user_id},
-      attributes:["class_id"],
-    }   );
-    let whereClause = {
-      class_id:classId.class_id,
-      trash: false,
-      exam_id: null,
+ const classRecord = await Staff.findOne({
+      where: { user_id },
+      attributes: ["class_id"],
+    });
+
+    if (!classRecord?.class_id) {
+      return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+
+    const teacherClassId = classRecord.class_id;
+    const studentClassSubQuery = Sequelize.literal(`(
+      SELECT DISTINCT m.internal_id
+      FROM marks m
+      INNER JOIN students s ON s.id = m.student_id
+      WHERE s.class_id = ${teacherClassId}
+    )`);
+
+    const whereClause = {
+      [Op.and]: [
+        {
+          trash: false,
+          exam_id: null,
+        },
+        {
+          [Op.or]: [
+            { class_id: teacherClassId },
+            { id: { [Op.in]: studentClassSubQuery } },
+          ],
+        },
+      ],
     };
 
     if (searchQuery) {
-      whereClause[Op.or] = [
-        { internal_name: { [Op.like]: `%${searchQuery}%` } },
-        { date: { [Op.like]: `%${searchQuery}%` } },
-      ];
+      whereClause[Op.and].push({
+        [Op.or]: [
+          { internal_name: { [Op.like]: `%${searchQuery}%` } },
+          { date: { [Op.like]: `%${searchQuery}%` } },
+        ],
+      });
     }
-
     const { count, rows: exams } = await InternalMark.findAndCountAll({
       offset,
       distinct: true,
@@ -494,29 +517,55 @@ const getMyClassInternalMark = async (req, res) => {
   }
 };
 
-const getMyClassExamMark= async (req, res) => {
+const getMyClassExamMark = async (req, res) => {
   try {
-   const user_id =req.user.user_id;
+    const user_id = req.user.user_id;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const classId = await Staff.findOne({
-      where:{user_id},
-      attributes:["class_id"],});
+    const classRecord = await Staff.findOne({
+      where: { user_id },
+      attributes: ["class_id"],
+    });
 
-    let whereClause = {
-      class_id:classId.class_id,
-      trash: false,
-      exam_id: { [Op.not]: null },
+    if (!classRecord?.class_id) {
+      return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+
+    const teacherClassId = classRecord.class_id;
+    const studentClassSubQuery = Sequelize.literal(`(
+      SELECT DISTINCT m.internal_id
+      FROM marks m
+      INNER JOIN students s ON s.id = m.student_id
+      WHERE s.class_id = ${teacherClassId}
+    )`);
+
+    const whereClause = {
+      [Op.and]: [
+        {
+          trash: false,
+          exam_id: { [Op.not]: null },
+        },
+        {
+          [Op.or]: [
+            { class_id: teacherClassId },
+            { id: { [Op.in]: studentClassSubQuery } },
+          ],
+        },
+      ],
     };
+
     if (searchQuery) {
-      whereClause[Op.or] = [
-        { internal_name: { [Op.like]: `%${searchQuery}%` } },
-        { date: { [Op.like]: `%${searchQuery}%` } },
-      ];  
-  }
+      whereClause[Op.and].push({
+        [Op.or]: [
+          { internal_name: { [Op.like]: `%${searchQuery}%` } },
+          { date: { [Op.like]: `%${searchQuery}%` } },
+        ],
+      });
+    }
+
     const { count, rows: exams } = await InternalMark.findAndCountAll({
       offset,
       distinct: true,
@@ -532,6 +581,7 @@ const getMyClassExamMark= async (req, res) => {
       ],
       order: [["createdAt", "DESC"]],
     });
+
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
