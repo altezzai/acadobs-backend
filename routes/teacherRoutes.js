@@ -68,6 +68,7 @@ router.get(
   teacherController.getHomeworkAssignmentById,
 );
 router.get("/getHomeworkByTeacher/", teacherController.getHomeworkByTeacher);
+router.get("/getMyClassHomework", teacherController.getMyClassHomework);
 // Attendance
 router.post("/attendance", teacherController.createAttendance);
 router.get("/attendance", teacherController.getAllAttendance);

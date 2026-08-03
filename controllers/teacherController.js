@@ -372,7 +372,7 @@ const getInternalMarkByRecordedBy = async (req, res) => {
       attributes: ["id", "internal_name", "max_marks", "date"],
       include: [
         { model: School, attributes: ["id", "name"] },
-        { model: Class, attributes: ["id", "classname"] },
+        { model: Class, attributes: ["id", "classname","special"] },
         { model: Subject, attributes: ["id", "subject_name"] },
       ],
       order: [["createdAt", "DESC"]],
@@ -420,7 +420,7 @@ const getExamMarkByRecordedBy = async (req, res) => {
       attributes: ["id", "internal_name", "max_marks", "date", "exam_id"],
       include: [
         { model: School, attributes: ["id", "name"] },
-        { model: Class, attributes: ["id", "classname"] },
+        { model: Class, attributes: ["id", "classname","special"] },
         { model: Subject, attributes: ["id", "subject_name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
 
@@ -447,6 +447,7 @@ const getMyClassInternalMark = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const school_id = req.user.school_id;
 
  const classRecord = await Staff.findOne({
       where: { user_id },
@@ -470,6 +471,7 @@ const getMyClassInternalMark = async (req, res) => {
         {
           trash: false,
           exam_id: null,
+          school_id,
         },
         {
           [Op.or]: [
@@ -497,7 +499,7 @@ const getMyClassInternalMark = async (req, res) => {
       attributes: ["id", "internal_name", "max_marks", "date"],
       include: [
         { model: School, attributes: ["id", "name"] },
-        { model: Class, attributes: ["id", "classname"] },
+        { model: Class, attributes: ["id", "classname","special"] },
         { model: Subject, attributes: ["id", "subject_name"] },
         { model: User, attributes: ["id", "name"] },
       ],
@@ -520,6 +522,7 @@ const getMyClassInternalMark = async (req, res) => {
 const getMyClassExamMark = async (req, res) => {
   try {
     const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -547,6 +550,7 @@ const getMyClassExamMark = async (req, res) => {
         {
           trash: false,
           exam_id: { [Op.not]: null },
+          school_id,
         },
         {
           [Op.or]: [
@@ -574,7 +578,7 @@ const getMyClassExamMark = async (req, res) => {
       attributes: ["id", "internal_name", "max_marks", "date", "exam_id"],
       include: [
         { model: School, attributes: ["id", "name"] },
-        { model: Class, attributes: ["id", "classname"] },
+        { model: Class, attributes: ["id", "classname","special"] },
         { model: Subject, attributes: ["id", "subject_name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
         { model: User, attributes: ["id", "name"] },
@@ -624,7 +628,7 @@ const getTrashedInternalMarkByRecordedBy = async (req, res) => {
       attributes: ["id", "internal_name", "max_marks", "date"],
       include: [
         { model: School, attributes: ["id", "name"] },
-        { model: Class, attributes: ["id", "classname"] },
+        { model: Class, attributes: ["id", "classname","special"] },
         { model: Subject, attributes: ["id", "subject_name"] },
       ],
       order: [["createdAt", "DESC"]],
@@ -672,7 +676,7 @@ const getTrashedExamMarkByRecordedBy = async (req, res) => {
       attributes: ["id", "internal_name", "max_marks", "date", "exam_id"],
       include: [
         { model: School, attributes: ["id", "name"] },
-        { model: Class, attributes: ["id", "classname"] },
+        { model: Class, attributes: ["id", "classname","special"] },
         { model: Subject, attributes: ["id", "subject_name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
 
@@ -842,12 +846,54 @@ const getAllHomework = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
-// READ ONE
-const getHomeworkById = async (req, res) => {
+const getMyClassHomework = async (req, res) => {
   try {
-    const { id } = req.params;
-    const homework = await Homework.findByPk(id, {
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+     const classRecord = await Staff.findOne({
+      where: { user_id },
+      attributes: ["class_id"],
+    });
+
+    if (!classRecord?.class_id) {
+      return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+
+    const teacherClassId = classRecord.class_id;
+    const studentClassSubQuery = Sequelize.literal(`(
+      SELECT DISTINCT h.homework_id
+      FROM  homework_assignments h
+      INNER JOIN students s ON s.id = h.student_id
+      WHERE s.class_id = ${teacherClassId}
+    )`);
+
+    const whereClause = {
+      [Op.and]: [
+        {
+          trash: false,
+          school_id,
+        },
+        {
+          [Op.or]: [
+            { class_id: teacherClassId },
+            { id: { [Op.in]: studentClassSubQuery } },
+          ],
+        },
+      ],
+    };
+    if (searchQuery) {
+      whereClause.title = { [Op.like]: `%${searchQuery}%` };
+    }
+
+    const { count, rows: homework } = await Homework.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
       include: [
         {
           model: HomeworkAssignment,
@@ -856,7 +902,69 @@ const getHomeworkById = async (req, res) => {
           include: [
             {
               model: Student,
-              attributes: ["id", "reg_no", "full_name", "image", "roll_number"],
+              attributes: ["id", "reg_no", "full_name", "image"],
+            },
+          ],
+        },
+        {model: Class,attributes: ["id", "classname","special"], },
+        {model: Subject,attributes: ["id", "subject_name"],},
+        {model: User, attributes: ["id", "name"] },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      homework,
+    });
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching homework:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// READ ONE
+const getHomeworkById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const userId = req.user.user_id;
+    const data = await Homework.findOne({
+      where: { id, school_id, trash: false },
+      attributes: ["id", "teacher_id"],
+    });
+
+    if (!data) {
+      return res.status(404).json({ error: "Homework not found" });
+    }
+     const isRecordedByUser = Number(data.teacher_id) === Number(userId);
+    const staff = isRecordedByUser
+      ? null
+      : await Staff.findOne({
+          where: { user_id: userId, school_id, trash: false },
+          attributes: ["class_id"],
+        });
+    const studentWhere = isRecordedByUser
+      ? undefined
+      : { class_id: staff?.class_id };
+
+    if (!isRecordedByUser && !staff?.class_id) {
+      return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+    const homework = await Homework.findByPk(id, {
+      include: [
+        {
+          model: HomeworkAssignment,
+          required: !isRecordedByUser,
+          attributes: ["id", "remarks", "points", "solved_file"],
+          include: [
+            {
+              model: Student,
+              required: !isRecordedByUser,
+              where: studentWhere,
+              attributes: ["id", "full_name", "roll_number"],
             },
           ],
         },
@@ -3590,6 +3698,7 @@ module.exports = {
   createHomeworkWithAssignments,
   getAllHomework,
   getHomeworkById,
+  getMyClassHomework,
   updateHomework,
   deleteHomework,
   restoreHomework,
