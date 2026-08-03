@@ -5,14 +5,14 @@ const commonController = require("../controllers/commonController");
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
 // Internal Exam
-router.post("/internalmarks", teacherController.createExamWithMarks);
-router.get("/internalmarks", teacherController.getAllmarks);
+router.post("/internalmarks", teacherController.createInternalMarkWithMarks);
+router.get("/internalmarks", teacherController.getAllInternalMark);
 router.get("/internalmarks/:id", teacherController.getInternalMarksById);
-router.put("/internalmarks/:id", teacherController.updateExam);
-router.delete("/internalmarks/:id", teacherController.deleteExam);
+router.put("/internalmarks/:id", teacherController.updateInternalMark);
+router.delete("/internalmarks/:id", teacherController.deleteInternalMark);
 router.put("/updateMark/:mark_id", teacherController.updateMark);
 router.put("/bulkUpdateMarks", teacherController.bulkUpdateMarks);
-
+  
 router.get("/getExams", teacherController.getExams);
 
 router.get(

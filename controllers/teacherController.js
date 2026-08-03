@@ -44,7 +44,7 @@ const { sendPushNotification } = require("../utils/notifcationHandler");
 const { deleteFile } = require("../middlewares/storageUploads");
 const Exam = require("../models/exams");
 
-const createExamWithMarks = async (req, res) => {
+const createInternalMarkWithMarks = async (req, res) => {
   try {
     const school_id = req.user.school_id || "";
     const {
@@ -199,7 +199,7 @@ const getInternalMarksById = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-const getAllmarks = async (req, res) => {
+const getAllInternalMark = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
@@ -240,7 +240,7 @@ const getAllmarks = async (req, res) => {
   }
 };
 
-const updateExam = async (req, res) => {
+const updateInternalMark = async (req, res) => {
   try {
     const { id } = req.params;
     const{
@@ -248,6 +248,7 @@ const updateExam = async (req, res) => {
       internal_name,
       max_marks,
       date,
+      exam_id
     } = req.body;
     const existingExam = await InternalMark.findByPk(id);
     let subjectIdToUpdate = subject_id;
@@ -261,6 +262,7 @@ const updateExam = async (req, res) => {
         internal_name,
         max_marks,
         date,
+        exam_id
       },
       {
       where: { id: id },
@@ -296,9 +298,17 @@ const updateMark = async (req, res) => {
   }
 };
 
-const deleteExam = async (req, res) => {
+const deleteInternalMark = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.user_id;
+    const school_id = req.user.school_id;
+    const internalMark = await InternalMark.findOne({
+      where: { id, recorded_by: userId, trash: false ,school_id,},
+    })
+    if (!internalMark) {
+      return res.status(404).json({ error: "Internal mark not found" });
+    }
     await InternalMark.update({ trash: true }, { where: { id: id } });
     res.status(200).json({ message: "Exam soft-deleted" });
   } catch (err) {
@@ -719,8 +729,8 @@ const restoreInternalMark = async (req, res) => {
 const createHomeworkWithAssignments = async (req, res) => {
   try {
     const school_id = req.user.school_id || "";
+    const teacher_id = req.user.user_id || "";
     const {
-      teacher_id,
       class_id,
       subject_id,
       description,
@@ -744,7 +754,7 @@ const createHomeworkWithAssignments = async (req, res) => {
 
     const existingHomework = await Homework.findOne({
       where: {
-        school_id: 1,
+        school_id,
         teacher_id,
         class_id,
         subject_id,
@@ -986,19 +996,22 @@ const getHomeworkById = async (req, res) => {
 const updateHomework = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, due_date } = req.body;
-    const homework = await Homework.findByPk(id);
+    const school_id = req.user.school_id;
+    const teacher_id = req.user.user_id;
+    const { title, description, class_id,due_date,subject_id } = req.body;
+    const homework = await Homework.findOne({
+      where: { id: id, school_id: school_id, teacher_id: teacher_id },
+    });
     if (!homework) return res.status(404).json({ error: "Not found" });
-
     const existingHomework = await Homework.findOne({
       where: {
         id: { [Op.ne]: id },
-        school_id: homework.school_id,
-        teacher_id: homework.teacher_id,
-        class_id: homework.class_id,
-        subject_id: homework.subject_id,
+        school_id ,
+        teacher_id,
+        class_id,
+        subject_id,
         title,
-        due_date,
+        due_date:due_date,
         trash: false,
       },
     });
@@ -1022,6 +1035,7 @@ const updateHomework = async (req, res) => {
     await homework.update({
       title,
       description,
+      subject_id,
       due_date,
       file: finalFile,
     });
@@ -1069,12 +1083,12 @@ const deleteHomework = async (req, res) => {
     const homework = await Homework.findOne({
       where: { id: id, school_id: school_id, teacher_id: teacher_id },
     });
-    if (!homework || homework.trash)
+    if (!homework)
       return res.status(404).json({ error: "Not found" });
 
     await Homework.update({ trash: true }, { where: { id: id } });
     res.status(200).json({
-      message: `Deleted successfully,'description : ${homework.description}'.`,
+      message: `Deleted successfully,'description : ${homework.title}'.`,
     });
   } catch (err) {
     logger.error("userId:", req.user.user_id, "Error deleting homework:", err);
@@ -1087,11 +1101,8 @@ const permanentDeleteHomework = async (req, res) => {
     const school_id = req.user.school_id;
     const teacher_id = req.user.user_id;
     const homework = await Homework.findOne({
-      where: { id: id, school_id: school_id, teacher_id: teacher_id },
+      where: { id: id, school_id, teacher_id,trash:true },
     });
-    if (!homework || homework.trash)
-      return res.status(404).json({ error: "Not found" });
-
     if (!homework) return res.status(404).json({ error: "Not found" });
 
     await HomeworkAssignment.destroy({ where: { homework_id: id } });
@@ -1114,7 +1125,7 @@ const restoreHomework = async (req, res) => {
     const school_id = req.user.school_id;
     const teacher_id = req.user.user_id;
     const homework = await Homework.findOne({
-      where: { id: id, school_id: school_id, teacher_id: teacher_id },
+      where: { id: id, school_id, teacher_id,trash:true },
     });
     if (!homework) return res.status(404).json({ error: "Not found" });
 
@@ -3679,12 +3690,12 @@ const getMyPermissions = async (req, res) => {
   }
 };
 module.exports = {
-  createExamWithMarks,
-  getAllmarks,
+  createInternalMarkWithMarks,
+  getAllInternalMark,
   getInternalMarksById,
-  updateExam,
+  updateInternalMark,
   updateMark,
-  deleteExam,
+  deleteInternalMark,
   getInternalMarkByRecordedBy,
   bulkUpdateMarks,
   getExams,

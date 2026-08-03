@@ -8186,6 +8186,184 @@ const getInternalmarkById = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const updateInternalMark = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const{
+      exam_id,
+      subject_id,
+      internal_name,
+      date,
+    } = req.body;
+    const existingExam = await InternalMark.findByPk(id);
+    let subjectIdToUpdate = subject_id;
+    if(subject_id===0 || !subject_id){
+      subjectIdToUpdate = existingExam.subject_id;
+    }
+
+    const updated = await InternalMark.update(
+      {
+        subject_id: subjectIdToUpdate,
+        internal_name,
+        date,
+        exam_id
+      },
+      {
+      where: { id: id },
+    });
+    res.status(200).json({ message: "Exam detail updated", updated });
+  } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error updating exam detail:",
+      err,
+    );
+    console.log(err);
+    res.status(500).json({ error: "Update failed" });
+  }
+};
+const deleteInternalMark = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const internalMark = await InternalMark.findOne({
+      where: { id,  trash: false ,school_id,},
+    })
+    if (!internalMark) {
+      return res.status(404).json({ error: "Internal mark not found" });
+    }
+    await InternalMark.update({ trash: true }, { where: { id: id } });
+    res.status(200).json({ message: "Exam soft-deleted" });
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error deleting exam:", err);
+    res.status(500).json({ error: "Delete failed" });
+  }
+};
+const restoreInternalMark = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const internalMark = await InternalMark.findOne({
+      where: { id, school_id, trash: true },
+    });
+    if (!internalMark) {
+      return res.status(404).json({ error: "Internal Mark not found" });
+    }
+    await internalMark.update({ trash: false });
+    res.status(200).json({ message: "Internal Mark restored successfully" });
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error restoring internal mark:", err);
+    console.error("Error restoring internal mark:", err);
+    res.status(500).json({ error: "Failed to restore internal mark" });
+  }
+};
+const permanentDeleteInternalMark = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const internalMark = await InternalMark.findOne({
+      where: { id, school_id, trash: true },
+    });
+    if (!internalMark) {
+      return res.status(404).json({ error: "Internal Mark not found" });
+    }
+    await Marks.destroy({ where: { internal_mark_id: id } });
+    await internalMark.destroy();
+
+    res.status(200).json({ message: "Internal Mark permanently deleted" });
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error permanently deleting internal mark:", err);
+    console.error("Error permanently deleting internal mark:", err);
+    res.status(500).json({ error: "Failed to permanently delete internal mark" });
+  }
+};
+const getTrashedInternalMarks = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const class_id = req.query.class_id || null;
+    const subject_id = req.query.subject_id || null;
+    const teacher_id = req.query.teacher_id || null;
+    const start_date = req.query.start_date || null;
+    const end_date = req.query.end_date || null;
+    const exam_id = req.query.exam_id || null;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = page && limit ? (page - 1) * limit : 0;
+
+    let whereClause = {
+      school_id,
+      trash: true,
+    };
+    if (class_id) {
+      whereClause.class_id = class_id;
+    }
+    if (subject_id) {
+      whereClause.subject_id = subject_id;
+    }
+    if (teacher_id) {
+      whereClause.recorded_by = teacher_id;
+    }
+    if (exam_id) {
+      whereClause.exam_id = exam_id;
+    }
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { internal_name: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if (start_date) {
+      const startDate = new Date(start_date);
+      startDate.setHours(0, 0, 0, 0);
+      whereClause.date = {
+        ...whereClause.date,
+        [Op.gte]: new Date(startDate),
+      };
+    }
+    if (end_date) {
+      const endDate = new Date(end_date);
+      endDate.setHours(23, 59, 59, 999);
+      whereClause.date = {
+        ...whereClause.date,
+        [Op.lte]: new Date(endDate),
+      };
+    }
+    const count = await InternalMark.count({ where: whereClause });
+    const internalMarks = await InternalMark.findAll({
+      where: whereClause,
+      offset,
+      limit,
+      distinct: true,
+      attributes: ["id", "internal_name", "max_marks", "date", "createdAt"],
+      include: [
+        { model: Marks, attributes: ["marks_obtained"] },
+
+        { model: Class, attributes: ["classname"] },
+        { model: Subject, attributes: ["subject_name"] },
+        { model: User, attributes: ["name"] },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    const totalPages = limit ? Math.ceil(count / limit) : 1;
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      internalMarks,
+  });
+  } catch (err) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error fetching trashed internal marks:",
+      err,
+    );
+    console.error("Error fetching trashed internal marks:", err);
+    res.status(500).json({ error: "Failed to fetch trashed internal marks" });
+  }
+};
 const getHomeworkById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -8243,6 +8421,211 @@ const getHomeworkById = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const updateHomework = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const teacher_id = req.user.user_id;
+    const { title, description,due_date,subject_id } = req.body;
+    const homework = await Homework.findOne({
+      where: { id: id, school_id: school_id, teacher_id: teacher_id },
+    });
+    if (!homework) return res.status(404).json({ error: "Not found" });
+    const existingHomework = await Homework.findOne({
+      where: {
+        id: { [Op.ne]: id },
+        school_id ,
+        teacher_id,
+        class_id: homework.class_id,
+        subject_id,
+        title,
+        due_date:due_date,
+        trash: false,
+      },
+    });
+    if (existingHomework) {
+      return res.status(200).json({
+        message: "Homework already exists in the same class",
+        homework: existingHomework,
+      });
+    }
+
+    let finalFile = homework.file;
+    const newFileUrl = req.uploadedFiles?.file?.url || null;
+    if (newFileUrl) {
+      if (homework.file) {
+        await deleteFile(homework.file);
+      }
+
+      finalFile = newFileUrl;
+    }
+
+    await homework.update({
+      title,
+      description,
+      subject_id,
+      due_date,
+      file: finalFile,
+    });
+    res.status(200).json({ message: "Updated successfully d", homework });
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error updating homework:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+const deleteHomework = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const homework = await Homework.findOne({
+      where: { id: id, school_id,trash:false },
+    });
+    if (!homework)
+      return res.status(404).json({ error: "Not found" });
+
+    await Homework.update({ trash: true }, { where: { id: id } });
+    res.status(200).json({
+      message: `Deleted successfully,'description : ${homework.title}'.`,
+    });
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error deleting homework:", err);
+    res.status(500).json({ error: "Delete failed" });
+  }
+};
+const permanentDeleteHomework = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const homework = await Homework.findOne({
+      where: { id: id, school_id: school_id ,trash: true},
+    });
+
+    if (!homework) return res.status(404).json({ error: "Not found" });
+
+    await HomeworkAssignment.destroy({ where: { homework_id: id } });
+    await homework.destroy();
+
+    res.status(200).json({ message: "Deleted successfully" });
+  } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error permanently deleting homework:",
+      err,
+    );
+    res.status(500).json({ error: err.message });
+  }
+};
+const restoreHomework = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const homework = await Homework.findOne({
+      where: { id: id, school_id, trash: true},
+    });
+    if (!homework) return res.status(404).json({ error: "Not found" });
+
+    await Homework.update({ trash: false }, { where: { id: id } });
+
+    res.json({
+      message: `restored 'description : ${homework.description}'`,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error restoring homework:",
+      error,
+    );
+    res.status(500).json({ error: error.message });
+  }
+};
+const getTrashedHomework = async (req, res) => {
+  try {
+   const school_id = req.user.school_id;
+    const class_id = req.query.class_id || "";
+    const teacher_id = req.query.teacher_id || "";
+    const subject_id = req.query.subject_id || "";
+    const searchQuery = req.query.q || "";
+    const start_date = req.query.start_date || "";
+    const end_date = req.query.end_date || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = page && limit ? (page - 1) * limit : 0;
+
+    let whereClause = {
+      trash: true,
+      school_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if (class_id) {
+      whereClause.class_id = class_id;
+    }
+    if (subject_id) {
+      whereClause.subject_id = subject_id;
+    }
+    if (teacher_id) {
+      whereClause.teacher_id = teacher_id;
+    }
+    if (start_date) {
+      const startDate = new Date(start_date);
+      startDate.setHours(0, 0, 0, 0);
+      whereClause.createdAt = {
+        ...whereClause.createdAt,
+        [Op.gte]: new Date(startDate),
+      };
+    }
+    if (end_date) {
+      const endDate = new Date(end_date);
+      endDate.setHours(23, 59, 59, 999);
+      whereClause.createdAt = {
+        ...whereClause.createdAt,
+        [Op.lte]: new Date(endDate),
+      };
+    }
+    const totalCount = await Homework.count({ where: whereClause });
+    const homeworks = await Homework.findAll({
+      where: whereClause,
+      offset,
+      limit,
+      include: [
+        { model: Class, attributes: ["id", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: User, attributes: ["id", "name"] },
+        {
+          model: HomeworkAssignment,
+          attributes: ["id", "student_id", "points"],
+          include: [{ model: Student, attributes: ["id", "full_name"] }],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    const totalPages = limit ? Math.ceil(totalCount / limit) : 1;
+    res.status(200).json({
+      totalcontent: totalCount,
+      totalPages,
+      currentPage: page,
+      homeworks,
+    });
+  } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching trashed homework:",
+      err,
+    );  
+  console.error("Error fetching trashed homework:", err);
+    res.status(500).json({ error: "Failed to fetch trashed homework" });
+  }
+};
+  
+
 
 const getAttendanceById = async (req, res) => {
   try {
@@ -9958,7 +10341,18 @@ module.exports = {
   dashboardCounts,
 
   getInternalmarkById,
+  updateInternalMark,
+  deleteInternalMark,
+  restoreInternalMark,
+  permanentDeleteInternalMark,
+  getTrashedInternalMarks,
+
   getHomeworkById,
+  updateHomework,
+  deleteHomework,
+  restoreHomework,
+  getTrashedHomework,
+  permanentDeleteHomework,
   getAttendanceById,
 
   createStaffAttendance,

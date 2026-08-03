@@ -442,11 +442,30 @@ router.get(
   schoolAdminController.getNavigationBarCounts,
 );
 router.get("/dashboardCounts", schoolAdminController.dashboardCounts);
+
 router.get(
   "/getInternalmarkById/:id",
   schoolAdminController.getInternalmarkById,
 );
+router.put("/updateInternalmark/:id", schoolAdminController.updateInternalMark);  
+router.delete("/deleteInternalmark/:id", schoolAdminController.deleteInternalMark);
+router.patch(
+  "/restoreInternalmark/:id",
+  schoolAdminController.restoreInternalMark,
+);
+router.delete(
+  "/permanentDeleteInternalmark/:id",
+  schoolAdminController.permanentDeleteInternalMark,
+);
 router.get("/getHomeworkById/:id", schoolAdminController.getHomeworkById);
+router.put("/updateHomework/:id", schoolAdminController.updateHomework);
+router.delete("/deleteHomework/:id", schoolAdminController.deleteHomework);
+router.patch("/restoreHomework/:id", schoolAdminController.restoreHomework);
+router.delete(
+  "/permanentDeleteHomework/:id",
+  schoolAdminController.permanentDeleteHomework,
+);
+
 router.get("/getAttendanceById/:id", schoolAdminController.getAttendanceById);
 //staff attendance
 router.post("/staffAttendance", schoolAdminController.createStaffAttendance);
@@ -486,6 +505,19 @@ router.put(
   "/updateExamPublishStatus/:id",
   schoolAdminController.updateExamPublishStatus,
 );
+
+//REPORTS
+router.get("/invoiceReport", reportController.getInvoiceReport);
+router.get("/paymentReport", reportController.getPaymentReport);
+router.get("/attendanceReport", reportController.getAttendanceReport);
+router.get("/homeworkReport", reportController.getHomeworkReport);
+router.get(
+  "/studentReport/:student_id",
+  reportController.getStudentReportByStudentId,
+);
+router.get("/internalmarksReport", reportController.getInternalmarksReport);
+
+/////////////////tracker//////////////////////////////////////
 router.post(
   "/assignDriverToRoutes/:driverId",
   schoolAdminController.assignDriverToRoutes,
@@ -519,19 +551,6 @@ router.get(
   "/getDriverLocation/:driver_id",
   schoolAdminController.getDriverLocation,
 );
-
-//REPORTS
-router.get("/invoiceReport", reportController.getInvoiceReport);
-router.get("/paymentReport", reportController.getPaymentReport);
-router.get("/attendanceReport", reportController.getAttendanceReport);
-router.get("/homeworkReport", reportController.getHomeworkReport);
-router.get(
-  "/studentReport/:student_id",
-  reportController.getStudentReportByStudentId,
-);
-router.get("/internalmarksReport", reportController.getInternalmarksReport);
-
-/////////////////tracker//////////////////////////////////////
 
 router.post(
   "/driver",
