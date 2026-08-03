@@ -49,9 +49,8 @@ const checkStaffPermission = (permissionField) => async (req, res, next) => {
   if (!user) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-
-  if (!user.role || user.role !== "staff") {
-    return res.status(403).json({ message: "Forbidden: Staff only" });
+  if (!user.role || (user.role !== "staff" && user.role !== "teacher")) {
+    return res.status(403).json({ message: "Forbidden: Staff or Teacher only" });
   }
 
   const userId = user.user_id || user.id;
@@ -86,9 +85,4 @@ const checkStaffPermission = (permissionField) => async (req, res, next) => {
   }
 };
 
-verifyStaff.checkStaffPermission = checkStaffPermission;
-verifyStaff.verifyStaff = verifyStaff;
-
-module.exports = verifyStaff;
-module.exports.checkStaffPermission = checkStaffPermission;
-module.exports.verifyStaff = verifyStaff;
+module.exports = { verifyStaff, checkStaffPermission };
