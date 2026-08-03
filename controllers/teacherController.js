@@ -1,4 +1,4 @@
-const { Op, where } = require("sequelize");
+const { Op, where, Sequelize } = require("sequelize");
 const moment = require("moment");
 const geolib = require("geolib");
 const logger = require("../utils/logger");
@@ -44,7 +44,7 @@ const { sendPushNotification } = require("../utils/notifcationHandler");
 const { deleteFile } = require("../middlewares/storageUploads");
 const Exam = require("../models/exams");
 
-const createExamWithMarks = async (req, res) => {
+const createInternalMarkWithMarks = async (req, res) => {
   try {
     const school_id = req.user.school_id || "";
     const {
@@ -135,14 +135,47 @@ const getExams = async (req, res) => {
 const getInternalMarksById = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.user_id;
+    const schoolId = req.user.school_id;
+    const internalMark = await InternalMark.findOne({
+      where: { id, school_id: schoolId, trash: false },
+      attributes: ["id", "recorded_by"],
+    });
+
+    if (!internalMark) {
+      return res.status(404).json({ error: "Internal mark not found" });
+    }
+
+    const isRecordedByUser = Number(internalMark.recorded_by) === Number(userId);
+    console.log("isRecordedByUser:", isRecordedByUser);
+    const staff = isRecordedByUser
+      ? null
+      : await Staff.findOne({
+          where: { user_id: userId, school_id: schoolId, trash: false },
+          attributes: ["class_id"],
+        });
+    const studentWhere = isRecordedByUser
+      ? undefined
+      : { class_id: staff?.class_id };
+
+    if (!isRecordedByUser && !staff?.class_id) {
+      return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+
     const internal = await InternalMark.findOne({
-      where: { id },
+      where: { id, school_id: schoolId, trash: false },
       include: [
         {
           model: Mark,
+          required: !isRecordedByUser,
           attributes: ["id", "marks_obtained", "status"],
           include: [
-            { model: Student, attributes: ["id", "full_name", "roll_number"] },
+            {
+              model: Student,
+              required: !isRecordedByUser,
+              where: studentWhere,
+              attributes: ["id", "full_name", "roll_number"],
+            },
           ],
         },
         { model: School, attributes: ["id", "name"] },
@@ -166,7 +199,7 @@ const getInternalMarksById = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-const getAllmarks = async (req, res) => {
+const getAllInternalMark = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
@@ -190,6 +223,7 @@ const getAllmarks = async (req, res) => {
         { model: Subject, attributes: ["id", "subject_name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -206,7 +240,7 @@ const getAllmarks = async (req, res) => {
   }
 };
 
-const updateExam = async (req, res) => {
+const updateInternalMark = async (req, res) => {
   try {
     const { id } = req.params;
     const{
@@ -214,6 +248,7 @@ const updateExam = async (req, res) => {
       internal_name,
       max_marks,
       date,
+      exam_id
     } = req.body;
     const existingExam = await InternalMark.findByPk(id);
     let subjectIdToUpdate = subject_id;
@@ -227,6 +262,7 @@ const updateExam = async (req, res) => {
         internal_name,
         max_marks,
         date,
+        exam_id
       },
       {
       where: { id: id },
@@ -262,9 +298,17 @@ const updateMark = async (req, res) => {
   }
 };
 
-const deleteExam = async (req, res) => {
+const deleteInternalMark = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.user_id;
+    const school_id = req.user.school_id;
+    const internalMark = await InternalMark.findOne({
+      where: { id, recorded_by: userId, trash: false ,school_id,},
+    })
+    if (!internalMark) {
+      return res.status(404).json({ error: "Internal mark not found" });
+    }
     await InternalMark.update({ trash: true }, { where: { id: id } });
     res.status(200).json({ message: "Exam soft-deleted" });
   } catch (err) {
@@ -338,7 +382,7 @@ const getInternalMarkByRecordedBy = async (req, res) => {
       attributes: ["id", "internal_name", "max_marks", "date"],
       include: [
         { model: School, attributes: ["id", "name"] },
-        { model: Class, attributes: ["id", "classname"] },
+        { model: Class, attributes: ["id", "classname","special"] },
         { model: Subject, attributes: ["id", "subject_name"] },
       ],
       order: [["createdAt", "DESC"]],
@@ -386,7 +430,7 @@ const getExamMarkByRecordedBy = async (req, res) => {
       attributes: ["id", "internal_name", "max_marks", "date", "exam_id"],
       include: [
         { model: School, attributes: ["id", "name"] },
-        { model: Class, attributes: ["id", "classname"] },
+        { model: Class, attributes: ["id", "classname","special"] },
         { model: Subject, attributes: ["id", "subject_name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
 
@@ -413,14 +457,168 @@ const getMyClassInternalMark = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const school_id = req.user.school_id;
 
-    const classId = await Staff.findOne({
-      where:{user_id},
-      attributes:["class_id"],
-    }   );
+ const classRecord = await Staff.findOne({
+      where: { user_id },
+      attributes: ["class_id"],
+    });
+
+    if (!classRecord?.class_id) {
+      return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+
+    const teacherClassId = classRecord.class_id;
+    const studentClassSubQuery = Sequelize.literal(`(
+      SELECT DISTINCT m.internal_id
+      FROM marks m
+      INNER JOIN students s ON s.id = m.student_id
+      WHERE s.class_id = ${teacherClassId}
+    )`);
+
+    const whereClause = {
+      [Op.and]: [
+        {
+          trash: false,
+          exam_id: null,
+          school_id,
+        },
+        {
+          [Op.or]: [
+            { class_id: teacherClassId },
+            { id: { [Op.in]: studentClassSubQuery } },
+          ],
+        },
+      ],
+    };
+
+    if (searchQuery) {
+      whereClause[Op.and].push({
+        [Op.or]: [
+          { internal_name: { [Op.like]: `%${searchQuery}%` } },
+          { date: { [Op.like]: `%${searchQuery}%` } },
+        ],
+      });
+    }
+    const { count, rows: exams } = await InternalMark.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+
+      where: whereClause,
+      attributes: ["id", "internal_name", "max_marks", "date"],
+      include: [
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "classname","special"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: User, attributes: ["id", "name"] },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      exams,
+    });
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching exams:", err);
+    console.error("Error fetching exams:", err);
+    res.status(500).json({ error: "Failed to fetch exams" });
+  }
+};
+
+const getMyClassExamMark = async (req, res) => {
+  try {
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const classRecord = await Staff.findOne({
+      where: { user_id },
+      attributes: ["class_id"],
+    });
+
+    if (!classRecord?.class_id) {
+      return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+
+    const teacherClassId = classRecord.class_id;
+    const studentClassSubQuery = Sequelize.literal(`(
+      SELECT DISTINCT m.internal_id
+      FROM marks m
+      INNER JOIN students s ON s.id = m.student_id
+      WHERE s.class_id = ${teacherClassId}
+    )`);
+
+    const whereClause = {
+      [Op.and]: [
+        {
+          trash: false,
+          exam_id: { [Op.not]: null },
+          school_id,
+        },
+        {
+          [Op.or]: [
+            { class_id: teacherClassId },
+            { id: { [Op.in]: studentClassSubQuery } },
+          ],
+        },
+      ],
+    };
+
+    if (searchQuery) {
+      whereClause[Op.and].push({
+        [Op.or]: [
+          { internal_name: { [Op.like]: `%${searchQuery}%` } },
+          { date: { [Op.like]: `%${searchQuery}%` } },
+        ],
+      });
+    }
+
+    const { count, rows: exams } = await InternalMark.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      attributes: ["id", "internal_name", "max_marks", "date", "exam_id"],
+      include: [
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "classname","special"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
+        { model: User, attributes: ["id", "name"] },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      exams,
+    });
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching exams:", err);
+    console.error("Error fetching exams:", err);
+    res.status(500).json({ error: "Failed to fetch exams" });
+  }
+};
+const getTrashedInternalMarkByRecordedBy = async (req, res) => {
+  try {
+    const { recorded_by } = req.query;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
     let whereClause = {
-      class_id:classId.class_id,
-      trash: false,
+      recorded_by,
+      trash: true,
       exam_id: null,
     };
 
@@ -440,9 +638,8 @@ const getMyClassInternalMark = async (req, res) => {
       attributes: ["id", "internal_name", "max_marks", "date"],
       include: [
         { model: School, attributes: ["id", "name"] },
-        { model: Class, attributes: ["id", "classname"] },
+        { model: Class, attributes: ["id", "classname","special"] },
         { model: Subject, attributes: ["id", "subject_name"] },
-        { model: User, attributes: ["id", "name"] },
       ],
       order: [["createdAt", "DESC"]],
     });
@@ -460,41 +657,39 @@ const getMyClassInternalMark = async (req, res) => {
   }
 };
 
-const getMyClassExamMark= async (req, res) => {
+const getTrashedExamMarkByRecordedBy = async (req, res) => {
   try {
-   const user_id =req.user.user_id;
+    const { recorded_by } = req.query;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-
-    const classId = await Staff.findOne({
-      where:{user_id},
-      attributes:["class_id"],});
-
     let whereClause = {
-      class_id:classId.class_id,
-      trash: false,
+      recorded_by,
+      trash: true,
       exam_id: { [Op.not]: null },
     };
+
     if (searchQuery) {
       whereClause[Op.or] = [
         { internal_name: { [Op.like]: `%${searchQuery}%` } },
         { date: { [Op.like]: `%${searchQuery}%` } },
-      ];  
-  }
+      ];
+    }
+
     const { count, rows: exams } = await InternalMark.findAndCountAll({
       offset,
       distinct: true,
       limit,
+
       where: whereClause,
       attributes: ["id", "internal_name", "max_marks", "date", "exam_id"],
       include: [
         { model: School, attributes: ["id", "name"] },
-        { model: Class, attributes: ["id", "classname"] },
+        { model: Class, attributes: ["id", "classname","special"] },
         { model: Subject, attributes: ["id", "subject_name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
-        { model: User, attributes: ["id", "name"] },
+
       ],
       order: [["createdAt", "DESC"]],
     });
@@ -511,13 +706,31 @@ const getMyClassExamMark= async (req, res) => {
     res.status(500).json({ error: "Failed to fetch exams" });
   }
 };
-
+const restoreInternalMark = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.user_id;
+    const school_id = req.user.school_id;
+    const internalMark = await InternalMark.findOne({
+      where: { id, school_id, trash: true ,recorded_by: userId},
+    });
+    if (!internalMark) {
+      return res.status(404).json({ error: "Internal Mark not found" });
+    }
+    await internalMark.update({ trash: false });
+    res.status(200).json({ message: "Internal Mark restored successfully" });
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error restoring internal mark:", err);
+    console.error("Error restoring internal mark:", err);
+    res.status(500).json({ error: "Failed to restore internal mark" });
+  }
+};
 
 const createHomeworkWithAssignments = async (req, res) => {
   try {
     const school_id = req.user.school_id || "";
+    const teacher_id = req.user.user_id || "";
     const {
-      teacher_id,
       class_id,
       subject_id,
       description,
@@ -541,7 +754,7 @@ const createHomeworkWithAssignments = async (req, res) => {
 
     const existingHomework = await Homework.findOne({
       where: {
-        school_id: 1,
+        school_id,
         teacher_id,
         class_id,
         subject_id,
@@ -643,12 +856,54 @@ const getAllHomework = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
-// READ ONE
-const getHomeworkById = async (req, res) => {
+const getMyClassHomework = async (req, res) => {
   try {
-    const { id } = req.params;
-    const homework = await Homework.findByPk(id, {
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+     const classRecord = await Staff.findOne({
+      where: { user_id },
+      attributes: ["class_id"],
+    });
+
+    if (!classRecord?.class_id) {
+      return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+
+    const teacherClassId = classRecord.class_id;
+    const studentClassSubQuery = Sequelize.literal(`(
+      SELECT DISTINCT h.homework_id
+      FROM  homework_assignments h
+      INNER JOIN students s ON s.id = h.student_id
+      WHERE s.class_id = ${teacherClassId}
+    )`);
+
+    const whereClause = {
+      [Op.and]: [
+        {
+          trash: false,
+          school_id,
+        },
+        {
+          [Op.or]: [
+            { class_id: teacherClassId },
+            { id: { [Op.in]: studentClassSubQuery } },
+          ],
+        },
+      ],
+    };
+    if (searchQuery) {
+      whereClause.title = { [Op.like]: `%${searchQuery}%` };
+    }
+
+    const { count, rows: homework } = await Homework.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
       include: [
         {
           model: HomeworkAssignment,
@@ -657,7 +912,69 @@ const getHomeworkById = async (req, res) => {
           include: [
             {
               model: Student,
-              attributes: ["id", "reg_no", "full_name", "image", "roll_number"],
+              attributes: ["id", "reg_no", "full_name", "image"],
+            },
+          ],
+        },
+        {model: Class,attributes: ["id", "classname","special"], },
+        {model: Subject,attributes: ["id", "subject_name"],},
+        {model: User, attributes: ["id", "name"] },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      homework,
+    });
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching homework:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// READ ONE
+const getHomeworkById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const userId = req.user.user_id;
+    const data = await Homework.findOne({
+      where: { id, school_id, trash: false },
+      attributes: ["id", "teacher_id"],
+    });
+
+    if (!data) {
+      return res.status(404).json({ error: "Homework not found" });
+    }
+     const isRecordedByUser = Number(data.teacher_id) === Number(userId);
+    const staff = isRecordedByUser
+      ? null
+      : await Staff.findOne({
+          where: { user_id: userId, school_id, trash: false },
+          attributes: ["class_id"],
+        });
+    const studentWhere = isRecordedByUser
+      ? undefined
+      : { class_id: staff?.class_id };
+
+    if (!isRecordedByUser && !staff?.class_id) {
+      return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+    const homework = await Homework.findByPk(id, {
+      include: [
+        {
+          model: HomeworkAssignment,
+          required: !isRecordedByUser,
+          attributes: ["id", "remarks", "points", "solved_file"],
+          include: [
+            {
+              model: Student,
+              required: !isRecordedByUser,
+              where: studentWhere,
+              attributes: ["id", "full_name", "roll_number"],
             },
           ],
         },
@@ -679,19 +996,22 @@ const getHomeworkById = async (req, res) => {
 const updateHomework = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, due_date } = req.body;
-    const homework = await Homework.findByPk(id);
+    const school_id = req.user.school_id;
+    const teacher_id = req.user.user_id;
+    const { title, description, class_id,due_date,subject_id } = req.body;
+    const homework = await Homework.findOne({
+      where: { id: id, school_id: school_id, teacher_id: teacher_id },
+    });
     if (!homework) return res.status(404).json({ error: "Not found" });
-
     const existingHomework = await Homework.findOne({
       where: {
         id: { [Op.ne]: id },
-        school_id: homework.school_id,
-        teacher_id: homework.teacher_id,
-        class_id: homework.class_id,
-        subject_id: homework.subject_id,
+        school_id ,
+        teacher_id,
+        class_id,
+        subject_id,
         title,
-        due_date,
+        due_date:due_date,
         trash: false,
       },
     });
@@ -715,6 +1035,7 @@ const updateHomework = async (req, res) => {
     await homework.update({
       title,
       description,
+      subject_id,
       due_date,
       file: finalFile,
     });
@@ -762,12 +1083,12 @@ const deleteHomework = async (req, res) => {
     const homework = await Homework.findOne({
       where: { id: id, school_id: school_id, teacher_id: teacher_id },
     });
-    if (!homework || homework.trash)
+    if (!homework)
       return res.status(404).json({ error: "Not found" });
 
     await Homework.update({ trash: true }, { where: { id: id } });
     res.status(200).json({
-      message: `Deleted successfully,'description : ${homework.description}'.`,
+      message: `Deleted successfully,'description : ${homework.title}'.`,
     });
   } catch (err) {
     logger.error("userId:", req.user.user_id, "Error deleting homework:", err);
@@ -780,11 +1101,8 @@ const permanentDeleteHomework = async (req, res) => {
     const school_id = req.user.school_id;
     const teacher_id = req.user.user_id;
     const homework = await Homework.findOne({
-      where: { id: id, school_id: school_id, teacher_id: teacher_id },
+      where: { id: id, school_id, teacher_id,trash:true },
     });
-    if (!homework || homework.trash)
-      return res.status(404).json({ error: "Not found" });
-
     if (!homework) return res.status(404).json({ error: "Not found" });
 
     await HomeworkAssignment.destroy({ where: { homework_id: id } });
@@ -807,7 +1125,7 @@ const restoreHomework = async (req, res) => {
     const school_id = req.user.school_id;
     const teacher_id = req.user.user_id;
     const homework = await Homework.findOne({
-      where: { id: id, school_id: school_id, teacher_id: teacher_id },
+      where: { id: id, school_id, teacher_id,trash:true },
     });
     if (!homework) return res.status(404).json({ error: "Not found" });
 
@@ -1128,6 +1446,7 @@ const getAllAttendance = async (req, res) => {
           ],
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -2166,6 +2485,7 @@ const getAllLeaveRequests = async (req, res) => {
           attributes: ["id", "name", "email", "phone"],
         },
       ],
+      order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -3370,22 +3690,26 @@ const getMyPermissions = async (req, res) => {
   }
 };
 module.exports = {
-  createExamWithMarks,
-  getAllmarks,
+  createInternalMarkWithMarks,
+  getAllInternalMark,
   getInternalMarksById,
-  updateExam,
+  updateInternalMark,
   updateMark,
-  deleteExam,
+  deleteInternalMark,
   getInternalMarkByRecordedBy,
   bulkUpdateMarks,
   getExams,
   getExamMarkByRecordedBy,
   getMyClassExamMark,
   getMyClassInternalMark,
+  getTrashedExamMarkByRecordedBy,
+  getTrashedInternalMarkByRecordedBy,
+  restoreInternalMark,
 
   createHomeworkWithAssignments,
   getAllHomework,
   getHomeworkById,
+  getMyClassHomework,
   updateHomework,
   deleteHomework,
   restoreHomework,

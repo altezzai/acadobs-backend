@@ -23,6 +23,8 @@ const Achievement = schoolSequelize.define(
     awarding_body: { type: DataTypes.STRING },
     recorded_by: { type: DataTypes.INTEGER, allowNull: false },
     trash: { type: DataTypes.BOOLEAN, defaultValue: false },
+    createdAt: { type: DataTypes.DATE, allowNull: false },
+    updatedAt: { type: DataTypes.DATE, allowNull: false },
   },
   {
     timestamps: true,

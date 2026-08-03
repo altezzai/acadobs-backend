@@ -683,6 +683,7 @@ const getInternalmarksReport = async (req, res) => {
     const teacher_id = req.query.teacher_id || null;
     const start_date = req.query.start_date || null;
     const end_date = req.query.end_date || null;
+    const exam_id = req.query.exam_id || null;
     const searchQuery = req.query.q || "";
     const passMarkPercentage = 0.4; // 40% pass mark
 
@@ -699,6 +700,7 @@ const getInternalmarksReport = async (req, res) => {
 
     let whereClause = {
       school_id,
+      trash: false,
     };
     if (class_id) {
       whereClause.class_id = class_id;
@@ -708,6 +710,9 @@ const getInternalmarksReport = async (req, res) => {
     }
     if (teacher_id) {
       whereClause.recorded_by = teacher_id;
+    }
+    if (exam_id) {
+      whereClause.exam_id = exam_id;
     }
     if (searchQuery) {
       whereClause[Op.or] = [
