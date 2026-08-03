@@ -4,6 +4,48 @@ const teacherController = require("../controllers/teacherController");
 const commonController = require("../controllers/commonController");
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
+
+const {
+  verifyTeacherOrStaff,
+} = require("../middlewares/teacherMiddleware");
+
+const staffAllowedRoutes = [
+  "/getSchoolDetails",
+  "/duties",
+  "/updateAssignedDuty",
+  "/leaveRequest",
+  "/getLatestNotices",
+  "/getLatestEvents",
+  "/getLatestNews",
+  "/getAchievementsBySchool",
+  "/todayAttendanceStatus",
+  "/markSelfAttendance",
+  "/markCheckOutSelfAttendance",
+  "/getProfileDetails",
+  "/updateProfileDetails",
+  "/changePassword",
+  "/updateDp",
+];
+
+router.use(verifyTeacherOrStaff);
+router.use((req, res, next) => {
+  const user = req.user;
+  if (user && user.role === "staff") {
+    const path = req.path;
+    const allowed = staffAllowedRoutes.some((route) =>
+      path === route || path.startsWith(`${route}/`),
+    );
+
+    if (!allowed) {
+      return res.status(403).json({
+        message: "Forbidden: Staff cannot access this teacher route",
+      });
+    }
+  }
+
+  next();
+});
+
 // Internal Exam
 router.post("/internalmarks", teacherController.createInternalMarkWithMarks);
 router.get("/internalmarks", teacherController.getAllInternalMark);

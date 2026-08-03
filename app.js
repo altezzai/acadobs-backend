@@ -32,7 +32,7 @@ const StaffRoutes = require("./routes/staffRoutes");
 
 const verifyAdmin = require("./middlewares/adminMiddleware");
 const verifySuperAdmin = require("./middlewares/superAdminMiddleware");
-const verifyTeacher = require("./middlewares/teacherMiddleware");
+const { verifyTeacher, verifyTeacherOrStaff } = require("./middlewares/teacherMiddleware");
 const {verifyStaff} = require("./middlewares/staffMiddleware");
 const verifyGuardian = require("./middlewares/guardianMiddleware");
 const verifyDriver = require("./middlewares/driverMiddleware");
@@ -91,7 +91,7 @@ const versionPath = "/api/s1/";
 
 app.use(`${versionPath}superadmin`, auth, verifySuperAdmin, SuperadminRoutes);
 app.use(`${versionPath}schooladmin`, auth, verifyAdmin, SchooladminRoutes);
-app.use(`${versionPath}teacher`, auth, verifyTeacher, TeacherRoutes);
+app.use(`${versionPath}teacher`, auth, verifyTeacherOrStaff, TeacherRoutes);
 app.use(`${versionPath}staff`, auth, verifyStaff, StaffRoutes);
 app.use(`${versionPath}guardian`, auth, verifyGuardian, GuardianRoutes);
 app.use(`${versionPath}driver`, auth, verifyDriver, DriverRoutes);
