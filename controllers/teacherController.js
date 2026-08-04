@@ -939,7 +939,7 @@ const getMyClassHomework = async (req, res) => {
       totalcontent: count,
       totalPages,
       currentPage: page,
-      homework: groupedHomework,
+      groupedHomework,
     });
   } catch (err) {
     logger.error("userId:", req.user.user_id, "Error fetching homework:", err);
