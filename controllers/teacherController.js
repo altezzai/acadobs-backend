@@ -410,6 +410,143 @@ const getExamMarkByRecordedBy = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch exams" });
   }
 };
+const getMyClassTermMarksInTableFormat = async (req, res) => {
+  try {
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const exam_id = req.query.exam_id;
+    const internal_name = req.query.internal_name;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 20;
+    const offset = (page - 1) * limit;
+    if(!exam_id && !internal_name){
+      return res.status(400).json({ error: "Please provide either exam_id or internal_name" });
+    }
+    const classRecord = await Staff.findOne({
+      where: { user_id, school_id, trash: false },
+      attributes: ["class_id"],
+    });
+    if (!classRecord?.class_id) {
+      return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+
+    const teacherClassId = classRecord.class_id;
+
+    const students = await Student.findAll({
+      where: { class_id: teacherClassId, trash: false },
+      attributes: ["id", "full_name", "roll_number"],
+      order: [["roll_number", "ASC"]],
+    });
+
+    const studentClassSubQuery = Sequelize.literal(`(
+      SELECT DISTINCT m.internal_id
+      FROM marks m
+      INNER JOIN students s ON s.id = m.student_id
+      WHERE s.class_id = ${teacherClassId}
+    )`);
+
+    const internalWhere = {
+      [Op.and]: [
+        { trash: false, school_id },
+        {
+          [Op.or]: [
+            { class_id: teacherClassId },
+            { id: { [Op.in]: studentClassSubQuery } },
+          ],
+        },
+      ],
+    };
+
+    if (exam_id) {
+      internalWhere[Op.and].push({ exam_id });
+    }
+    if (internal_name) {
+      internalWhere[Op.and].push({
+        internal_name: { [Op.like]: `%${internal_name}%` },
+      });
+    }
+
+    const internals = await InternalMark.findAll({
+      where: internalWhere,
+      include: [
+        { model: Subject, attributes: ["id", "subject_name", "is_multi_teacher"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
+        {
+          model: Mark,
+          attributes: ["id", "student_id", "marks_obtained", "status"],
+          include: [
+            {
+              model: Student,
+              where: { class_id: teacherClassId, trash: false },
+              attributes: ["id", "full_name", "roll_number"],
+            },
+          ],
+        },
+      ],
+      order: [[{ model: Subject }, "subject_name", "ASC"], ["date", "ASC"]],
+      limit,
+      offset,
+      distinct: true,
+    });
+
+    const count = await InternalMark.count({
+      where: internalWhere,
+      distinct: true,
+      col: "id",
+    });
+
+    const subjectGroups = {};
+    internals.forEach((internal) => {
+      const subject = internal.Subject || {};
+      if (!subject.id) return;
+
+      if (!subjectGroups[subject.id]) {
+        subjectGroups[subject.id] = {
+          subject_id: subject.id,
+          subject_name: subject.subject_name,
+          is_multi_teacher: subject.is_multi_teacher,
+          internals: [],
+        };
+      }
+
+      const studentMarks = (internal.Marks || []).map((mark) => ({
+        id: mark.id,
+        student_id: mark.student_id,
+        full_name: mark.Student?.full_name || null,
+        roll_number: mark.Student?.roll_number || null,
+        marks_obtained: mark.marks_obtained,
+        status: mark.status,
+      }));
+
+      subjectGroups[subject.id].internals.push({
+        internal_id: internal.id,
+        internal_name: internal.internal_name,
+        exam_id: internal.exam_id,
+        max_marks: internal.max_marks,
+        date: internal.date,
+        studentMarks,
+      });
+    });
+
+    res.status(200).json({
+      class_id: teacherClassId,
+      students,
+      subjectGroups: Object.values(subjectGroups),
+      totalcontent: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+    });
+  } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching class term marks:",
+      err,
+    );
+    console.error("Error fetching class term marks:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
 const getMyClassInternalMark = async (req, res) => {
   try {
     const user_id =req.user.user_id;
@@ -3914,6 +4051,7 @@ module.exports = {
   getExamMarkByRecordedBy,
   getMyClassExamMark,
   getMyClassInternalMark,
+  getMyClassTermMarksInTableFormat,
   getTrashedExamMarkByRecordedBy,
   getTrashedInternalMarkByRecordedBy,
   restoreInternalMark,

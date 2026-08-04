@@ -8244,12 +8244,13 @@ const getInternalmarkById = async (req, res) => {
     const school_id = req.user.school_id;
     const { id } = req.params;
     const internalmark = await InternalMark.findOne({
-      attributes: ["id", "internal_name", "max_marks", "date"],
+      attributes: ["id", "internal_name", "max_marks", "date", "exam_id","subject_id"],
       where: { id, school_id },
       include: [
         { model: Class, attributes: ["classname"] },
         { model: Subject, attributes: ["subject_name"] },
         { model: User, attributes: ["name"] },
+        { model:Exam,attributes:["exam_name"]},
         {
           model: Marks,
           attributes: ["marks_obtained", "status"],
@@ -9955,7 +9956,7 @@ const getExams = async (req, res) => {
       school_id,
     };
     if (searchQuery) {
-      whereClause[Op.or] = [{ classname: { [Op.like]: `%${searchQuery}%` } }];
+      whereClause[Op.or] = [{ exam_name: { [Op.like]: `%${searchQuery}%` } }];
     }
     const { count, rows: exams } = await Exam.findAndCountAll({
       offset,
