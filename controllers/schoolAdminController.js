@@ -344,7 +344,7 @@ const createSubject = async (req, res) => {
       where: { id: school_id },
       attributes: ["syllabus_id"],
     });
-    const { subject_name, class_range } = req.body;
+    const { subject_name, class_range,is_multi_teacher } = req.body;
     if (!subject_name || !class_range || !school_id) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
@@ -372,6 +372,7 @@ const createSubject = async (req, res) => {
       subject_name,
       class_range,
       school_id,
+      is_multi_teacher,
       syllabus_id: schoolData.syllabus_id,
     });
     res.status(201).json(subject);
@@ -412,7 +413,7 @@ const getSubjects = async (req, res) => {
       offset,
       distinct: true,
       limit,
-      attributes: ["id", "subject_name", "class_range"],
+      attributes: ["id", "subject_name", "class_range", "is_multi_teacher"],
       where: whereClause,
       include: [
         {
@@ -472,7 +473,7 @@ const updateSubject = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const { subject_name, class_range } = req.body;
+    const { subject_name, class_range, is_multi_teacher } = req.body;
     const subject = await Subject.findOne({
       where: {
         id,
@@ -500,7 +501,7 @@ const updateSubject = async (req, res) => {
       });
     }
 
-    await subject.update({ subject_name, class_range, school_id });
+    await subject.update({ subject_name, class_range, school_id, is_multi_teacher });
     res.status(200).json(subject);
   } catch (err) {
     logger.error(
@@ -542,6 +543,7 @@ const getSubjectsForFilter = async (req, res) => {
     const searchQuery = req.query.q || "";
     const range = req.query.range || "";
     const school_id = req.user.school_id;
+    const is_multi_teacher = req.query.is_multi_teacher || null; 
     const schoolDetails = await School.findOne({
       where: { id: school_id },
       attributes: ["syllabus_id"],
@@ -561,6 +563,9 @@ const getSubjectsForFilter = async (req, res) => {
     }
     if (range) {
       whereClause.range = range;
+    }
+    if (is_multi_teacher !== null) {
+      whereClause.is_multi_teacher = is_multi_teacher;
     }
 
     const subjects = await Subject.findAll({

@@ -3814,6 +3814,102 @@ const getStaffSubjects = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+const getMultiTeacherSubjectInternalMarks = async (req, res) => {
+  try {
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const offset = (page - 1) * limit;
+
+    const staff = await Staff.findOne({
+      where: { user_id },
+    });
+
+    if (!staff) {
+      return res.status(404).json({ error: "Staff not found" });
+    }
+
+    const subjects = await Subject.findAll({
+      distinct: true,
+      attributes: ["id"],
+      where: {
+        trash: false,
+        is_multi_teacher: true,
+        [Op.or]: [{ school_id }, { school_id: null }],
+      },
+      include: [
+        {
+          model: StaffSubject,
+          where: { staff_id: user_id },
+          attributes: [],
+        },
+      ],
+    });
+
+    const subjectIds = subjects.map((subject) => subject.id);
+    console.log("Multi-teacher subject IDs:", subjectIds);
+    if (!subjectIds.length) {
+      return res.status(200).json({
+        totalcontent: 0,
+        totalPages: 0,
+        currentPage: page,
+        subjects: [],
+        internalMarks: [],
+      });
+    }
+
+    const internalWhere = {
+      school_id,
+      subject_id: { [Op.in]: subjectIds },
+      trash: false,
+    };
+    if (searchQuery) {
+      internalWhere[Op.or] = [
+        { internal_name: { [Op.like]: `%${searchQuery}%` } },
+        { date: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+
+    const { count, rows: internalMarks } = await InternalMark.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: internalWhere,
+      include: [
+        { model: Subject, attributes: ["id", "subject_name", "is_multi_teacher"] },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    const subjectDetails = await Subject.findAll({
+      where: { id: { [Op.in]: subjectIds } },
+      attributes: ["id", "subject_name", "is_multi_teacher"],
+    });
+
+    res.status(200).json({
+      totalcontent: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      subjects: subjectDetails,
+      internalMarks,
+    });
+  } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching multi-teacher internal marks:",
+      err,
+    );
+    console.error("Error fetching multi-teacher internal marks:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 const getMyPermissions = async (req, res) => {
   try {
     const user_id = req.user.user_id;
@@ -3922,6 +4018,7 @@ module.exports = {
 
   getSubjects,
   getStaffSubjects,
+  getMultiTeacherSubjectInternalMarks,
 
   getMyPermissions,
   getMyClassTodayTimetable,

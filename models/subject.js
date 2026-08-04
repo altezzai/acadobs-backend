@@ -26,6 +26,11 @@ const Subject = schoolSequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    is_multi_teacher: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
     trash: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

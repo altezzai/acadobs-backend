@@ -25,6 +25,7 @@ const staffAllowedRoutes = [
   "/updateProfileDetails",
   "/changePassword",
   "/updateDp",
+  "/achievements/:id",
 ];
 
 router.use(verifyTeacherOrStaff);
@@ -54,6 +55,7 @@ router.put("/internalmarks/:id", teacherController.updateInternalMark);
 router.delete("/internalmarks/:id", teacherController.deleteInternalMark);
 router.put("/updateMark/:mark_id", teacherController.updateMark);
 router.put("/bulkUpdateMarks", teacherController.bulkUpdateMarks);
+router.get("/myMultiTeacherSubjectInternalMarks", teacherController.getMultiTeacherSubjectInternalMarks);
   
 router.get("/getExams", teacherController.getExams);
 
