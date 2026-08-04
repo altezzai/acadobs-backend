@@ -9890,19 +9890,34 @@ const getDriverLocation = async (req, res) => {
 const getExams = async (req, res) => {
   try {
     const school_id = req.user.school_id || "";
-    const exams = await Exam.findAll({
-      where: {
-        school_id,
-      },
+     const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10; 
+    const offset = page && limit ? (page - 1) * limit : 0;
+    let whereClause = {
+      school_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [{ classname: { [Op.like]: `%${searchQuery}%` } }];
+    }
+    const { count, rows: exams } = await Exam.findAndCountAll({
+      offset,
+      limit,
+      distinct: true,
+      where: whereClause,
       order: [
         ["publish", "ASC"],
         ["education_year", "DESC"],
         ["id", "DESC"],
       ],
     });
-    return res.status(200).json({
+   
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
       success: true,
-      message: "Exams fetched successfully",
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
       data: exams,
     });
   } catch (e) {
@@ -9918,17 +9933,44 @@ const getExamMarksByExamId = async (req, res) => {
   try {
     const school_id = req.user.school_id || "";
     const { exam_id } = req.params;
+    const class_id = req.query.class_id || null;
+    const subject_id = req.query.subject_id || null;
+    const teacher_id = req.query.teacher_id || null;
+    const start_date = req.query.start_date || null;
+    const end_date = req.query.end_date || null;
+    const internal_name = req.query.internal_name || null;  
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10; 
+    const offset = page && limit ? (page - 1) * limit : 0;
 
+    let whereClause = {
+      school_id,
+      trash: false,
+    };
+    if (class_id) {
+      whereClause.class_id = class_id;
+    }
+    if (subject_id) {
+      whereClause.subject_id = subject_id;
+    }
+    if (teacher_id) {
+      whereClause.recorded_by = teacher_id;
+    }
+    if(internal_name){
+      whereClause.internal_name = internal_name;
+    }
+ 
+    
     if (!exam_id) {
       return res.status(400).json({ error: "Exam ID is required" });
     }
 
-    const internalMarks = await InternalMark.findAll({
-      where: {
-        school_id,
-        exam_id,
-        trash: false,
-      },
+    const { count, rows: internalMarks } = await InternalMark.findAndCountAll({
+      limit,
+      offset,
+      distinct: true,
+      where: whereClause,
       include: [
         {
           model: User,
@@ -9943,10 +9985,14 @@ const getExamMarksByExamId = async (req, res) => {
       ],
     });
 
-    return res.status(200).json({
+     const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
       success: true,
-      message: "Internal marks fetched successfully",
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
       data: internalMarks,
+      
     });
   } catch (error) {
     logger.error("Error fetching internal marks by exam id:", error);

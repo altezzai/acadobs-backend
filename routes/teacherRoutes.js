@@ -220,6 +220,9 @@ router.get(
   teacherController.getAllDaysTimetableForStaff,
 );
 
+router.get("/getMyClassTodayTimetable", teacherController.getMyClassTodayTimetable);
+router.get("/getMyClassAllDayTimetable", teacherController.getMyClassAllDayTimetable);
+
 router.get("/getNavigationBarCounts", teacherController.getNavigationBarCounts);
 router.get("/getLatestNotices", teacherController.getLatestNotices);
 

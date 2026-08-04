@@ -3276,6 +3276,150 @@ const getAllDaysTimetableForStaff = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+const getMyClassTodayTimetable = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
+       const classRecord = await Staff.findOne({
+      where: { user_id },
+      attributes: ["class_id"],
+    });
+
+    if (!classRecord?.class_id) {
+      return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+    const class_id = classRecord.class_id;
+    let date = new Date();
+    let today = date.getDay();
+    let message = "today's timetable";
+
+    // If time >= 19:00 (7PM), shift to tomorrow
+    if (date.getHours() >= 19) {
+      today = (today + 1) % 7;
+      date.setDate(date.getDate() + 1); // Move to next day
+      message = "tomorrow's timetable";
+    }
+
+    const timetable = await Timetable.findAll({
+      where: {
+        class_id,
+        school_id,
+        day_of_week: today,
+      },
+
+      order: [["period_number", "ASC"]],
+      include: [
+        { model: User, attributes: ["id", "name"] },
+        { model: Subject, attributes: ["id", "subject_name"] }, // optional
+        { model: Class, attributes: ["id", "classname"] }, // optional
+      ],
+    });
+    //the class id used TimetableSubstitution get the substitutions for today
+    const substitutions = await TimetableSubstitution.findAll({
+      where: { date },
+      include: [
+        {
+          model: Timetable,
+          where: { class_id: class_id },
+          attributes: ["id", "day_of_week", "class_id", "period_number"],
+          required: true,
+        },
+        {
+          model: User,
+          attributes: ["id", "name"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name"],
+        },
+      ],
+    });
+
+    return res.json({
+      message: `Here is ${message}`,
+      today,
+      timetable,
+      substitutions,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "getTodayTimetableForStaff error:",
+      error,
+    );
+    console.error("getTodayTimetableForStaff error:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+const getMyClassAllDayTimetable = async (req, res) => {
+  try {
+      const school_id = req.user.school_id;
+      const user_id = req.user.user_id;
+      const classRecord = await Staff.findOne({
+      where: { user_id },
+      attributes: ["class_id"],
+    });
+
+    if (!classRecord?.class_id) {
+      return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+    const class_id = classRecord.class_id;
+    const timetable = await Timetable.findAll({
+      where: {
+        class_id,
+        school_id,
+      },
+      attributes: [
+        "id",
+        "day_of_week",
+        "period_number",
+        "subject_id",
+        "staff_id",
+        "createdAt",
+      ],
+      order: [
+        ["day_of_week", "ASC"],
+        ["period_number", "ASC"],
+      ],
+      include: [
+        { model: User, attributes: ["id", "name"] },
+        { model: Subject, attributes: ["id", "subject_name"] }, // optional
+        { model: Class, attributes: ["id", "classname"] }, // optional
+      ],
+    });
+    const grouped = timetable.reduce((acc, entry) => {
+      const day = entry.day_of_week;
+      if (!acc[day]) {
+        acc[day] = [];
+      }
+      acc[day].push(entry);
+      return acc;
+    }, {});
+
+    // Convert grouped object to array with "day_of_week" key
+    const formatted = Object.keys(grouped).map((day) => ({
+      day_of_week: parseInt(day),
+      periods: grouped[day],
+    }));
+
+    return res.json({
+      student_id,
+      class_id,
+      school_id,
+      timetable: formatted,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "getAllDayTimetableByStudentId error:",
+      error,
+    );
+    console.error("getAllDayTimetableByStudentId error:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
 const getNavigationBarCounts = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -3689,6 +3833,7 @@ const getMyPermissions = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 module.exports = {
   createInternalMarkWithMarks,
   getAllInternalMark,
@@ -3779,5 +3924,7 @@ module.exports = {
   getStaffSubjects,
 
   getMyPermissions,
+  getMyClassTodayTimetable,
+  getMyClassAllDayTimetable,
 
 };
