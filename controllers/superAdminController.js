@@ -568,7 +568,7 @@ const getTrashedClasses = async (req, res) => {
 const createSubject = async (req, res) => {
   try {
     const school_id = req.body.school_id || null;
-    const { subject_name, class_range, syllabus_id } = req.body;
+    const { subject_name, class_range, syllabus_id,is_multi_teacher } = req.body;
     if (!subject_name || !class_range) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
@@ -603,6 +603,7 @@ const createSubject = async (req, res) => {
       class_range,
       syllabus_id,
       school_id: school_id ? school_id : null,
+      is_multi_teacher,
     });
     res.status(201).json(subject);
   } catch (err) {
@@ -618,6 +619,7 @@ const getSubjects = async (req, res) => {
     const range = req.query.range || "";
     const school_id = req.query.school_id || "";
     const trash = req.query.trash || "";
+    const is_multi_teacher = req.query.is_multi_teacher || null;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -637,6 +639,9 @@ const getSubjects = async (req, res) => {
     }
     if (trash) {
       whereClause.trash = false;
+    }
+    if (is_multi_teacher !== null) {
+      whereClause.is_multi_teacher = is_multi_teacher;
     }
 
     const { count, rows: subjects } = await Subject.findAndCountAll({
@@ -693,7 +698,7 @@ const getSubjectById = async (req, res) => {
 const updateSubject = async (req, res) => {
   try {
     const { id } = req.params;
-    const { subject_name, class_range, syllabus_id } = req.body;
+    const { subject_name, class_range, syllabus_id ,is_multi_teacher} = req.body;
 
     const exists = await Subject.findOne({
       where: {
@@ -724,7 +729,7 @@ const updateSubject = async (req, res) => {
     if (!subject || subject.trash)
       return res.status(404).json({ error: "Subject not found" });
 
-    await subject.update({ subject_name, class_range, syllabus_id });
+    await subject.update({ subject_name, class_range, syllabus_id, is_multi_teacher });
     res.status(200).json(subject);
   } catch (err) {
     logger.error("Error updating subject:", err);

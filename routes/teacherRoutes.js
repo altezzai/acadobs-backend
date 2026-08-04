@@ -4,16 +4,59 @@ const teacherController = require("../controllers/teacherController");
 const commonController = require("../controllers/commonController");
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
+
+const {
+  verifyTeacherOrStaff,
+} = require("../middlewares/teacherMiddleware");
+
+const staffAllowedRoutes = [
+  "/getSchoolDetails",
+  "/duties",
+  "/updateAssignedDuty",
+  "/leaveRequest",
+  "/getLatestNotices",
+  "/getLatestEvents",
+  "/getLatestNews",
+  "/getAchievementsBySchool",
+  "/todayAttendanceStatus",
+  "/markSelfAttendance",
+  "/markCheckOutSelfAttendance",
+  "/getProfileDetails",
+  "/updateProfileDetails",
+  "/changePassword",
+  "/updateDp",
+  "/achievements/:id",
+];
+
+router.use(verifyTeacherOrStaff);
+router.use((req, res, next) => {
+  const user = req.user;
+  if (user && user.role === "staff") {
+    const path = req.path;
+    const allowed = staffAllowedRoutes.some((route) =>
+      path === route || path.startsWith(`${route}/`),
+    );
+
+    if (!allowed) {
+      return res.status(403).json({
+        message: "Forbidden: Staff cannot access this teacher route",
+      });
+    }
+  }
+
+  next();
+});
+
+router.get("/getExams", teacherController.getExams);
 // Internal Exam
 router.post("/internalmarks", teacherController.createInternalMarkWithMarks);
-router.get("/internalmarks", teacherController.getAllInternalMark);
 router.get("/internalmarks/:id", teacherController.getInternalMarksById);
 router.put("/internalmarks/:id", teacherController.updateInternalMark);
 router.delete("/internalmarks/:id", teacherController.deleteInternalMark);
 router.put("/updateMark/:mark_id", teacherController.updateMark);
 router.put("/bulkUpdateMarks", teacherController.bulkUpdateMarks);
-  
-router.get("/getExams", teacherController.getExams);
+router.get("/myMultiTeacherSubjectInternalMarks", teacherController.getMultiTeacherSubjectInternalMarks);
+router.get("/MyClassTermMarksInTableFormat", teacherController.getMyClassTermMarksInTableFormat);
 
 router.get(
   "/getInternalMarkByRecordedBy",
@@ -177,6 +220,9 @@ router.get(
   "/getAllDayTimetableForStaff",
   teacherController.getAllDaysTimetableForStaff,
 );
+
+router.get("/getMyClassTodayTimetable", teacherController.getMyClassTodayTimetable);
+router.get("/getMyClassAllDayTimetable", teacherController.getMyClassAllDayTimetable);
 
 router.get("/getNavigationBarCounts", teacherController.getNavigationBarCounts);
 router.get("/getLatestNotices", teacherController.getLatestNotices);

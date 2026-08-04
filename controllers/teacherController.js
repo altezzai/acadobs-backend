@@ -199,46 +199,6 @@ const getInternalMarksById = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-const getAllInternalMark = async (req, res) => {
-  try {
-    const searchQuery = req.query.q || "";
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
-
-    const { count, rows: marks } = await InternalMark.findAndCountAll({
-      offset,
-      distinct: true,
-      limit,
-      where: {
-        trash: false,
-        [Op.or]: [
-          { internal_name: { [Op.like]: `%${searchQuery}%` } },
-          { date: { [Op.like]: `%${searchQuery}%` } },
-        ],
-      },
-      include: [
-        { model: School, attributes: ["id", "name"] },
-        { model: Class, attributes: ["id", "year", "division", "classname"] },
-        { model: Subject, attributes: ["id", "subject_name"] },
-        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
-      ],
-      order: [["createdAt", "DESC"]],
-    });
-    const totalPages = Math.ceil(count / limit);
-    res.status(200).json({
-      totalcontent: count,
-      totalPages,
-      currentPage: page,
-      marks,
-    });
-    // res.status(200).json(marks);
-  } catch (err) {
-    logger.error("userId:", req.user.user_id, "Error fetching marks:", err);
-    console.error("Error fetching marks:", err);
-    res.status(500).json({ error: "Failed to fetch marks" });
-  }
-};
 
 const updateInternalMark = async (req, res) => {
   try {
@@ -448,6 +408,143 @@ const getExamMarkByRecordedBy = async (req, res) => {
     logger.error("userId:", req.user.user_id, "Error fetching exams:", err);
     console.error("Error fetching exams:", err);
     res.status(500).json({ error: "Failed to fetch exams" });
+  }
+};
+const getMyClassTermMarksInTableFormat = async (req, res) => {
+  try {
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const exam_id = req.query.exam_id;
+    const internal_name = req.query.internal_name;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 20;
+    const offset = (page - 1) * limit;
+    if(!exam_id && !internal_name){
+      return res.status(400).json({ error: "Please provide either exam_id or internal_name" });
+    }
+    const classRecord = await Staff.findOne({
+      where: { user_id, school_id, trash: false },
+      attributes: ["class_id"],
+    });
+    if (!classRecord?.class_id) {
+      return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+
+    const teacherClassId = classRecord.class_id;
+
+    const students = await Student.findAll({
+      where: { class_id: teacherClassId, trash: false },
+      attributes: ["id", "full_name", "roll_number"],
+      order: [["roll_number", "ASC"]],
+    });
+
+    const studentClassSubQuery = Sequelize.literal(`(
+      SELECT DISTINCT m.internal_id
+      FROM marks m
+      INNER JOIN students s ON s.id = m.student_id
+      WHERE s.class_id = ${teacherClassId}
+    )`);
+
+    const internalWhere = {
+      [Op.and]: [
+        { trash: false, school_id },
+        {
+          [Op.or]: [
+            { class_id: teacherClassId },
+            { id: { [Op.in]: studentClassSubQuery } },
+          ],
+        },
+      ],
+    };
+
+    if (exam_id) {
+      internalWhere[Op.and].push({ exam_id });
+    }
+    if (internal_name) {
+      internalWhere[Op.and].push({
+        internal_name: { [Op.like]: `%${internal_name}%` },
+      });
+    }
+
+    const internals = await InternalMark.findAll({
+      where: internalWhere,
+      include: [
+        { model: Subject, attributes: ["id", "subject_name", "is_multi_teacher"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
+        {
+          model: Mark,
+          attributes: ["id", "student_id", "marks_obtained", "status"],
+          include: [
+            {
+              model: Student,
+              where: { class_id: teacherClassId, trash: false },
+              attributes: ["id", "full_name", "roll_number"],
+            },
+          ],
+        },
+      ],
+      order: [[{ model: Subject }, "subject_name", "ASC"], ["date", "ASC"]],
+      limit,
+      offset,
+      distinct: true,
+    });
+
+    const count = await InternalMark.count({
+      where: internalWhere,
+      distinct: true,
+      col: "id",
+    });
+
+    const subjectGroups = {};
+    internals.forEach((internal) => {
+      const subject = internal.Subject || {};
+      if (!subject.id) return;
+
+      if (!subjectGroups[subject.id]) {
+        subjectGroups[subject.id] = {
+          subject_id: subject.id,
+          subject_name: subject.subject_name,
+          is_multi_teacher: subject.is_multi_teacher,
+          internals: [],
+        };
+      }
+
+      const studentMarks = (internal.Marks || []).map((mark) => ({
+        id: mark.id,
+        student_id: mark.student_id,
+        full_name: mark.Student?.full_name || null,
+        roll_number: mark.Student?.roll_number || null,
+        marks_obtained: mark.marks_obtained,
+        status: mark.status,
+      }));
+
+      subjectGroups[subject.id].internals.push({
+        internal_id: internal.id,
+        internal_name: internal.internal_name,
+        exam_id: internal.exam_id,
+        max_marks: internal.max_marks,
+        date: internal.date,
+        studentMarks,
+      });
+    });
+
+    res.status(200).json({
+      class_id: teacherClassId,
+      students,
+      subjectGroups: Object.values(subjectGroups),
+      totalcontent: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+    });
+  } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching class term marks:",
+      err,
+    );
+    console.error("Error fetching class term marks:", err);
+    res.status(500).json({ error: err.message });
   }
 };
 const getMyClassInternalMark = async (req, res) => {
@@ -899,7 +996,7 @@ const getMyClassHomework = async (req, res) => {
       whereClause.title = { [Op.like]: `%${searchQuery}%` };
     }
 
-    const { count, rows: homework } = await Homework.findAndCountAll({
+    const { count, rows } = await Homework.findAndCountAll({
       offset,
       distinct: true,
       limit,
@@ -922,12 +1019,24 @@ const getMyClassHomework = async (req, res) => {
       ],
       order: [["createdAt", "DESC"]],
     });
+     const grouped = rows.reduce((acc, hw) => {
+      const dateKey = hw.createdAt.toISOString().split("T")[0];
+      // const dateKey = hw.createdAt;
+      if (!acc[dateKey]) acc[dateKey] = [];
+      acc[dateKey].push(hw);
+      return acc;
+    }, {});
+
+    const groupedHomework = Object.keys(grouped).map((date) => ({
+      date,
+      homeworks: grouped[date],
+    }));
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
       totalPages,
       currentPage: page,
-      homework,
+      groupedHomework,
     });
   } catch (err) {
     logger.error("userId:", req.user.user_id, "Error fetching homework:", err);
@@ -3276,6 +3385,150 @@ const getAllDaysTimetableForStaff = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+const getMyClassTodayTimetable = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
+       const classRecord = await Staff.findOne({
+      where: { user_id },
+      attributes: ["class_id"],
+    });
+
+    if (!classRecord?.class_id) {
+      return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+    const class_id = classRecord.class_id;
+    let date = new Date();
+    let today = date.getDay();
+    let message = "today's timetable";
+
+    // If time >= 19:00 (7PM), shift to tomorrow
+    if (date.getHours() >= 19) {
+      today = (today + 1) % 7;
+      date.setDate(date.getDate() + 1); // Move to next day
+      message = "tomorrow's timetable";
+    }
+
+    const timetable = await Timetable.findAll({
+      where: {
+        class_id,
+        school_id,
+        day_of_week: today,
+      },
+
+      order: [["period_number", "ASC"]],
+      include: [
+        { model: User, attributes: ["id", "name"] },
+        { model: Subject, attributes: ["id", "subject_name"] }, // optional
+        { model: Class, attributes: ["id", "classname"] }, // optional
+      ],
+    });
+    //the class id used TimetableSubstitution get the substitutions for today
+    const substitutions = await TimetableSubstitution.findAll({
+      where: { date },
+      include: [
+        {
+          model: Timetable,
+          where: { class_id: class_id },
+          attributes: ["id", "day_of_week", "class_id", "period_number"],
+          required: true,
+        },
+        {
+          model: User,
+          attributes: ["id", "name"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name"],
+        },
+      ],
+    });
+
+    return res.json({
+      message: `Here is ${message}`,
+      today,
+      timetable,
+      substitutions,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "getTodayTimetableForStaff error:",
+      error,
+    );
+    console.error("getTodayTimetableForStaff error:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+const getMyClassAllDayTimetable = async (req, res) => {
+  try {
+      const school_id = req.user.school_id;
+      const user_id = req.user.user_id;
+      const classRecord = await Staff.findOne({
+      where: { user_id },
+      attributes: ["class_id"],
+    });
+
+    if (!classRecord?.class_id) {
+      return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+    const class_id = classRecord.class_id;
+    const timetable = await Timetable.findAll({
+      where: {
+        class_id,
+        school_id,
+      },
+      attributes: [
+        "id",
+        "day_of_week",
+        "period_number",
+        "subject_id",
+        "staff_id",
+        "createdAt",
+      ],
+      order: [
+        ["day_of_week", "ASC"],
+        ["period_number", "ASC"],
+      ],
+      include: [
+        { model: User, attributes: ["id", "name"] },
+        { model: Subject, attributes: ["id", "subject_name"] }, // optional
+        { model: Class, attributes: ["id", "classname"] }, // optional
+      ],
+    });
+    const grouped = timetable.reduce((acc, entry) => {
+      const day = entry.day_of_week;
+      if (!acc[day]) {
+        acc[day] = [];
+      }
+      acc[day].push(entry);
+      return acc;
+    }, {});
+
+    // Convert grouped object to array with "day_of_week" key
+    const formatted = Object.keys(grouped).map((day) => ({
+      day_of_week: parseInt(day),
+      periods: grouped[day],
+    }));
+
+    return res.json({
+      student_id,
+      class_id,
+      school_id,
+      timetable: formatted,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "getAllDayTimetableByStudentId error:",
+      error,
+    );
+    console.error("getAllDayTimetableByStudentId error:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
 const getNavigationBarCounts = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -3670,6 +3923,102 @@ const getStaffSubjects = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+const getMultiTeacherSubjectInternalMarks = async (req, res) => {
+  try {
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const offset = (page - 1) * limit;
+
+    const staff = await Staff.findOne({
+      where: { user_id },
+    });
+
+    if (!staff) {
+      return res.status(404).json({ error: "Staff not found" });
+    }
+
+    const subjects = await Subject.findAll({
+      distinct: true,
+      attributes: ["id"],
+      where: {
+        trash: false,
+        is_multi_teacher: true,
+        [Op.or]: [{ school_id }, { school_id: null }],
+      },
+      include: [
+        {
+          model: StaffSubject,
+          where: { staff_id: user_id },
+          attributes: [],
+        },
+      ],
+    });
+
+    const subjectIds = subjects.map((subject) => subject.id);
+    console.log("Multi-teacher subject IDs:", subjectIds);
+    if (!subjectIds.length) {
+      return res.status(200).json({
+        totalcontent: 0,
+        totalPages: 0,
+        currentPage: page,
+        subjects: [],
+        internalMarks: [],
+      });
+    }
+
+    const internalWhere = {
+      school_id,
+      subject_id: { [Op.in]: subjectIds },
+      trash: false,
+    };
+    if (searchQuery) {
+      internalWhere[Op.or] = [
+        { internal_name: { [Op.like]: `%${searchQuery}%` } },
+        { date: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+
+    const { count, rows: internalMarks } = await InternalMark.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: internalWhere,
+      include: [
+        { model: Subject, attributes: ["id", "subject_name", "is_multi_teacher"] },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    const subjectDetails = await Subject.findAll({
+      where: { id: { [Op.in]: subjectIds } },
+      attributes: ["id", "subject_name", "is_multi_teacher"],
+    });
+
+    res.status(200).json({
+      totalcontent: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      subjects: subjectDetails,
+      internalMarks,
+    });
+  } catch (err) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching multi-teacher internal marks:",
+      err,
+    );
+    console.error("Error fetching multi-teacher internal marks:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 const getMyPermissions = async (req, res) => {
   try {
     const user_id = req.user.user_id;
@@ -3689,9 +4038,9 @@ const getMyPermissions = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 module.exports = {
   createInternalMarkWithMarks,
-  getAllInternalMark,
   getInternalMarksById,
   updateInternalMark,
   updateMark,
@@ -3702,6 +4051,7 @@ module.exports = {
   getExamMarkByRecordedBy,
   getMyClassExamMark,
   getMyClassInternalMark,
+  getMyClassTermMarksInTableFormat,
   getTrashedExamMarkByRecordedBy,
   getTrashedInternalMarkByRecordedBy,
   restoreInternalMark,
@@ -3777,7 +4127,10 @@ module.exports = {
 
   getSubjects,
   getStaffSubjects,
+  getMultiTeacherSubjectInternalMarks,
 
   getMyPermissions,
+  getMyClassTodayTimetable,
+  getMyClassAllDayTimetable,
 
 };

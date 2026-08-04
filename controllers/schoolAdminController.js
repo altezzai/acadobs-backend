@@ -344,7 +344,7 @@ const createSubject = async (req, res) => {
       where: { id: school_id },
       attributes: ["syllabus_id"],
     });
-    const { subject_name, class_range } = req.body;
+    const { subject_name, class_range,is_multi_teacher } = req.body;
     if (!subject_name || !class_range || !school_id) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
@@ -372,6 +372,7 @@ const createSubject = async (req, res) => {
       subject_name,
       class_range,
       school_id,
+      is_multi_teacher,
       syllabus_id: schoolData.syllabus_id,
     });
     res.status(201).json(subject);
@@ -412,7 +413,7 @@ const getSubjects = async (req, res) => {
       offset,
       distinct: true,
       limit,
-      attributes: ["id", "subject_name", "class_range"],
+      attributes: ["id", "subject_name", "class_range", "is_multi_teacher"],
       where: whereClause,
       include: [
         {
@@ -472,7 +473,7 @@ const updateSubject = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const { subject_name, class_range } = req.body;
+    const { subject_name, class_range, is_multi_teacher } = req.body;
     const subject = await Subject.findOne({
       where: {
         id,
@@ -500,7 +501,7 @@ const updateSubject = async (req, res) => {
       });
     }
 
-    await subject.update({ subject_name, class_range, school_id });
+    await subject.update({ subject_name, class_range, school_id, is_multi_teacher });
     res.status(200).json(subject);
   } catch (err) {
     logger.error(
@@ -542,6 +543,7 @@ const getSubjectsForFilter = async (req, res) => {
     const searchQuery = req.query.q || "";
     const range = req.query.range || "";
     const school_id = req.user.school_id;
+    const is_multi_teacher = req.query.is_multi_teacher || null; 
     const schoolDetails = await School.findOne({
       where: { id: school_id },
       attributes: ["syllabus_id"],
@@ -561,6 +563,9 @@ const getSubjectsForFilter = async (req, res) => {
     }
     if (range) {
       whereClause.range = range;
+    }
+    if (is_multi_teacher !== null) {
+      whereClause.is_multi_teacher = is_multi_teacher;
     }
 
     const subjects = await Subject.findAll({
@@ -4735,6 +4740,27 @@ const getPaymentById = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const paymentVerification = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const userId=req.user.user_id;
+    const id= req.params.id;
+    const status = req.body.status;
+    const payment = await Payment.findOne({
+      where: { id, school_id, trash: false },
+    });
+    if (!payment) {
+      return res.status(404).json({ error: "Payment not found" });
+    }
+    //change status to completed or pending
+    payment.payment_status = status;
+    payment.updated_by = userId;
+    await payment.save();
+    res.status(200).json(payment);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 const updatePayment = async (req, res) => {
   try {
@@ -8156,18 +8182,75 @@ const dashboardCounts = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getAllInternalMarks = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const class_id = req.query.class_id || null;
+    const subject_id = req.query.subject_id || null;
+    const teacher_id = req.query.teacher_id || null;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
 
+    let whereClause = {
+      school_id,
+      trash: false,
+      exam_id:null,
+    };
+    if (class_id) {
+      whereClause.class_id = class_id;
+    }
+    if (subject_id) {
+      whereClause.subject_id = subject_id;
+    }
+    if (teacher_id) {
+      whereClause.recorded_by = teacher_id;
+    }
+    if(searchQuery){
+      whereClause[Op.or] = [
+        { internal_name: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: marks } = await InternalMark.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      marks,
+    });
+    // res.status(200).json(marks);
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching marks:", err);
+    console.error("Error fetching marks:", err);
+    res.status(500).json({ error: "Failed to fetch marks" });
+  }
+};
 const getInternalmarkById = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const { id } = req.params;
     const internalmark = await InternalMark.findOne({
-      attributes: ["id", "internal_name", "max_marks", "date"],
+      attributes: ["id", "internal_name", "max_marks", "date", "exam_id","subject_id"],
       where: { id, school_id },
       include: [
         { model: Class, attributes: ["classname"] },
         { model: Subject, attributes: ["subject_name"] },
         { model: User, attributes: ["name"] },
+        { model:Exam,attributes:["exam_name"]},
         {
           model: Marks,
           attributes: ["marks_obtained", "status"],
@@ -8268,7 +8351,7 @@ const permanentDeleteInternalMark = async (req, res) => {
     if (!internalMark) {
       return res.status(404).json({ error: "Internal Mark not found" });
     }
-    await Marks.destroy({ where: { internal_mark_id: id } });
+    await Marks.destroy({ where: { internal_id: id } });
     await internalMark.destroy();
 
     res.status(200).json({ message: "Internal Mark permanently deleted" });
@@ -8284,17 +8367,15 @@ const getTrashedInternalMarks = async (req, res) => {
     const class_id = req.query.class_id || null;
     const subject_id = req.query.subject_id || null;
     const teacher_id = req.query.teacher_id || null;
-    const start_date = req.query.start_date || null;
-    const end_date = req.query.end_date || null;
-    const exam_id = req.query.exam_id || null;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const offset = page && limit ? (page - 1) * limit : 0;
+    const offset = (page - 1) * limit;
 
     let whereClause = {
       school_id,
       trash: true,
+      exam_id:null,
     };
     if (class_id) {
       whereClause.class_id = class_id;
@@ -8305,54 +8386,31 @@ const getTrashedInternalMarks = async (req, res) => {
     if (teacher_id) {
       whereClause.recorded_by = teacher_id;
     }
-    if (exam_id) {
-      whereClause.exam_id = exam_id;
-    }
-    if (searchQuery) {
+    if(searchQuery){
       whereClause[Op.or] = [
         { internal_name: { [Op.like]: `%${searchQuery}%` } },
       ];
     }
-    if (start_date) {
-      const startDate = new Date(start_date);
-      startDate.setHours(0, 0, 0, 0);
-      whereClause.date = {
-        ...whereClause.date,
-        [Op.gte]: new Date(startDate),
-      };
-    }
-    if (end_date) {
-      const endDate = new Date(end_date);
-      endDate.setHours(23, 59, 59, 999);
-      whereClause.date = {
-        ...whereClause.date,
-        [Op.lte]: new Date(endDate),
-      };
-    }
-    const count = await InternalMark.count({ where: whereClause });
-    const internalMarks = await InternalMark.findAll({
-      where: whereClause,
+    const { count, rows: marks } = await InternalMark.findAndCountAll({
       offset,
-      limit,
       distinct: true,
-      attributes: ["id", "internal_name", "max_marks", "date", "createdAt"],
+      limit,
+      where: whereClause,
       include: [
-        { model: Marks, attributes: ["marks_obtained"] },
-
-        { model: Class, attributes: ["classname"] },
-        { model: Subject, attributes: ["subject_name"] },
-        { model: User, attributes: ["name"] },
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
       ],
       order: [["createdAt", "DESC"]],
     });
-
-    const totalPages = limit ? Math.ceil(count / limit) : 1;
+    const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
       totalPages,
       currentPage: page,
-      internalMarks,
-  });
+      marks,
+    });
   } catch (err) {
     logger.error(
       "schoolId:",
@@ -9890,19 +9948,34 @@ const getDriverLocation = async (req, res) => {
 const getExams = async (req, res) => {
   try {
     const school_id = req.user.school_id || "";
-    const exams = await Exam.findAll({
-      where: {
-        school_id,
-      },
+     const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10; 
+    const offset = page && limit ? (page - 1) * limit : 0;
+    let whereClause = {
+      school_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [{ exam_name: { [Op.like]: `%${searchQuery}%` } }];
+    }
+    const { count, rows: exams } = await Exam.findAndCountAll({
+      offset,
+      limit,
+      distinct: true,
+      where: whereClause,
       order: [
         ["publish", "ASC"],
         ["education_year", "DESC"],
         ["id", "DESC"],
       ],
     });
-    return res.status(200).json({
+   
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
       success: true,
-      message: "Exams fetched successfully",
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
       data: exams,
     });
   } catch (e) {
@@ -9918,17 +9991,44 @@ const getExamMarksByExamId = async (req, res) => {
   try {
     const school_id = req.user.school_id || "";
     const { exam_id } = req.params;
+    const class_id = req.query.class_id || null;
+    const subject_id = req.query.subject_id || null;
+    const teacher_id = req.query.teacher_id || null;
+    const start_date = req.query.start_date || null;
+    const end_date = req.query.end_date || null;
+    const internal_name = req.query.internal_name || null;  
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10; 
+    const offset = page && limit ? (page - 1) * limit : 0;
 
+    let whereClause = {
+      school_id,
+      trash: false,
+    };
+    if (class_id) {
+      whereClause.class_id = class_id;
+    }
+    if (subject_id) {
+      whereClause.subject_id = subject_id;
+    }
+    if (teacher_id) {
+      whereClause.recorded_by = teacher_id;
+    }
+    if(internal_name){
+      whereClause.internal_name = internal_name;
+    }
+ 
+    
     if (!exam_id) {
       return res.status(400).json({ error: "Exam ID is required" });
     }
 
-    const internalMarks = await InternalMark.findAll({
-      where: {
-        school_id,
-        exam_id,
-        trash: false,
-      },
+    const { count, rows: internalMarks } = await InternalMark.findAndCountAll({
+      limit,
+      offset,
+      distinct: true,
+      where: whereClause,
       include: [
         {
           model: User,
@@ -9943,10 +10043,14 @@ const getExamMarksByExamId = async (req, res) => {
       ],
     });
 
-    return res.status(200).json({
+     const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
       success: true,
-      message: "Internal marks fetched successfully",
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
       data: internalMarks,
+      
     });
   } catch (error) {
     logger.error("Error fetching internal marks by exam id:", error);
@@ -10272,6 +10376,7 @@ module.exports = {
   getTrashedPayments,
   getTrashedDonations,
   permanentDeletePayment,
+  paymentVerification,
 
   createInvoice,
   addInvoiceStudentsbyInvoiceId,
@@ -10340,6 +10445,7 @@ module.exports = {
   getNavigationBarCounts,
   dashboardCounts,
 
+  getAllInternalMarks,
   getInternalmarkById,
   updateInternalMark,
   deleteInternalMark,
