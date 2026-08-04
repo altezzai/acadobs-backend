@@ -8182,7 +8182,63 @@ const dashboardCounts = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getAllInternalMarks = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const class_id = req.query.class_id || null;
+    const subject_id = req.query.subject_id || null;
+    const teacher_id = req.query.teacher_id || null;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
 
+    let whereClause = {
+      school_id,
+      trash: false,
+      exam_id:null,
+    };
+    if (class_id) {
+      whereClause.class_id = class_id;
+    }
+    if (subject_id) {
+      whereClause.subject_id = subject_id;
+    }
+    if (teacher_id) {
+      whereClause.recorded_by = teacher_id;
+    }
+    if(searchQuery){
+      whereClause[Op.or] = [
+        { internal_name: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: marks } = await InternalMark.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      marks,
+    });
+    // res.status(200).json(marks);
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching marks:", err);
+    console.error("Error fetching marks:", err);
+    res.status(500).json({ error: "Failed to fetch marks" });
+  }
+};
 const getInternalmarkById = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -8310,17 +8366,15 @@ const getTrashedInternalMarks = async (req, res) => {
     const class_id = req.query.class_id || null;
     const subject_id = req.query.subject_id || null;
     const teacher_id = req.query.teacher_id || null;
-    const start_date = req.query.start_date || null;
-    const end_date = req.query.end_date || null;
-    const exam_id = req.query.exam_id || null;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const offset = page && limit ? (page - 1) * limit : 0;
+    const offset = (page - 1) * limit;
 
     let whereClause = {
       school_id,
       trash: true,
+      exam_id:null,
     };
     if (class_id) {
       whereClause.class_id = class_id;
@@ -8331,54 +8385,31 @@ const getTrashedInternalMarks = async (req, res) => {
     if (teacher_id) {
       whereClause.recorded_by = teacher_id;
     }
-    if (exam_id) {
-      whereClause.exam_id = exam_id;
-    }
-    if (searchQuery) {
+    if(searchQuery){
       whereClause[Op.or] = [
         { internal_name: { [Op.like]: `%${searchQuery}%` } },
       ];
     }
-    if (start_date) {
-      const startDate = new Date(start_date);
-      startDate.setHours(0, 0, 0, 0);
-      whereClause.date = {
-        ...whereClause.date,
-        [Op.gte]: new Date(startDate),
-      };
-    }
-    if (end_date) {
-      const endDate = new Date(end_date);
-      endDate.setHours(23, 59, 59, 999);
-      whereClause.date = {
-        ...whereClause.date,
-        [Op.lte]: new Date(endDate),
-      };
-    }
-    const count = await InternalMark.count({ where: whereClause });
-    const internalMarks = await InternalMark.findAll({
-      where: whereClause,
+    const { count, rows: marks } = await InternalMark.findAndCountAll({
       offset,
-      limit,
       distinct: true,
-      attributes: ["id", "internal_name", "max_marks", "date", "createdAt"],
+      limit,
+      where: whereClause,
       include: [
-        { model: Marks, attributes: ["marks_obtained"] },
-
-        { model: Class, attributes: ["classname"] },
-        { model: Subject, attributes: ["subject_name"] },
-        { model: User, attributes: ["name"] },
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
       ],
       order: [["createdAt", "DESC"]],
     });
-
-    const totalPages = limit ? Math.ceil(count / limit) : 1;
+    const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
       totalPages,
       currentPage: page,
-      internalMarks,
-  });
+      marks,
+    });
   } catch (err) {
     logger.error(
       "schoolId:",
@@ -10413,6 +10444,7 @@ module.exports = {
   getNavigationBarCounts,
   dashboardCounts,
 
+  getAllInternalMarks,
   getInternalmarkById,
   updateInternalMark,
   deleteInternalMark,

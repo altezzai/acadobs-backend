@@ -49,7 +49,6 @@ router.use((req, res, next) => {
 
 // Internal Exam
 router.post("/internalmarks", teacherController.createInternalMarkWithMarks);
-router.get("/internalmarks", teacherController.getAllInternalMark);
 router.get("/internalmarks/:id", teacherController.getInternalMarksById);
 router.put("/internalmarks/:id", teacherController.updateInternalMark);
 router.delete("/internalmarks/:id", teacherController.deleteInternalMark);

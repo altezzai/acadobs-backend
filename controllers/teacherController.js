@@ -199,46 +199,6 @@ const getInternalMarksById = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-const getAllInternalMark = async (req, res) => {
-  try {
-    const searchQuery = req.query.q || "";
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
-
-    const { count, rows: marks } = await InternalMark.findAndCountAll({
-      offset,
-      distinct: true,
-      limit,
-      where: {
-        trash: false,
-        [Op.or]: [
-          { internal_name: { [Op.like]: `%${searchQuery}%` } },
-          { date: { [Op.like]: `%${searchQuery}%` } },
-        ],
-      },
-      include: [
-        { model: School, attributes: ["id", "name"] },
-        { model: Class, attributes: ["id", "year", "division", "classname"] },
-        { model: Subject, attributes: ["id", "subject_name"] },
-        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
-      ],
-      order: [["createdAt", "DESC"]],
-    });
-    const totalPages = Math.ceil(count / limit);
-    res.status(200).json({
-      totalcontent: count,
-      totalPages,
-      currentPage: page,
-      marks,
-    });
-    // res.status(200).json(marks);
-  } catch (err) {
-    logger.error("userId:", req.user.user_id, "Error fetching marks:", err);
-    console.error("Error fetching marks:", err);
-    res.status(500).json({ error: "Failed to fetch marks" });
-  }
-};
 
 const updateInternalMark = async (req, res) => {
   try {
@@ -3944,7 +3904,6 @@ const getMyPermissions = async (req, res) => {
 
 module.exports = {
   createInternalMarkWithMarks,
-  getAllInternalMark,
   getInternalMarksById,
   updateInternalMark,
   updateMark,

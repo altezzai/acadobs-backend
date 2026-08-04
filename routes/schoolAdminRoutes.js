@@ -444,20 +444,14 @@ router.get(
 );
 router.get("/dashboardCounts", schoolAdminController.dashboardCounts);
 
-router.get(
-  "/getInternalmarkById/:id",
-  schoolAdminController.getInternalmarkById,
-);
+router.get("getAllInternalMarks", schoolAdminController.getAllInternalMarks);
+router.get("/getInternalmarkById/:id",schoolAdminController.getInternalmarkById,);
 router.put("/updateInternalmark/:id", schoolAdminController.updateInternalMark);  
 router.delete("/deleteInternalmark/:id", schoolAdminController.deleteInternalMark);
-router.patch(
-  "/restoreInternalmark/:id",
-  schoolAdminController.restoreInternalMark,
-);
-router.delete(
-  "/permanentDeleteInternalmark/:id",
-  schoolAdminController.permanentDeleteInternalMark,
-);
+router.get("/getTrashedInternalmarks", schoolAdminController.getTrashedInternalMarks);
+router.patch("/restoreInternalmark/:id",schoolAdminController.restoreInternalMark);
+router.delete("/permanentDeleteInternalmark/:id",schoolAdminController.permanentDeleteInternalMark,);
+
 router.get("/getHomeworkById/:id", schoolAdminController.getHomeworkById);
 router.put("/updateHomework/:id", schoolAdminController.updateHomework);
 router.delete("/deleteHomework/:id", schoolAdminController.deleteHomework);
