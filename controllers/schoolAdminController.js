@@ -8350,7 +8350,7 @@ const permanentDeleteInternalMark = async (req, res) => {
     if (!internalMark) {
       return res.status(404).json({ error: "Internal Mark not found" });
     }
-    await Marks.destroy({ where: { internal_mark_id: id } });
+    await Marks.destroy({ where: { internal_id: id } });
     await internalMark.destroy();
 
     res.status(200).json({ message: "Internal Mark permanently deleted" });
