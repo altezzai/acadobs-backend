@@ -260,6 +260,7 @@ router.delete(
   "/permanentDeletePayment/:id",
   schoolAdminController.permanentDeletePayment,
 );
+router.patch("/paymentVerification/:id", schoolAdminController.paymentVerification);
 //invoice
 router.post("/invoices", schoolAdminController.createInvoice);
 router.post(

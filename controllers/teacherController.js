@@ -899,7 +899,7 @@ const getMyClassHomework = async (req, res) => {
       whereClause.title = { [Op.like]: `%${searchQuery}%` };
     }
 
-    const { count, rows: homework } = await Homework.findAndCountAll({
+    const { count, rows } = await Homework.findAndCountAll({
       offset,
       distinct: true,
       limit,
@@ -922,12 +922,24 @@ const getMyClassHomework = async (req, res) => {
       ],
       order: [["createdAt", "DESC"]],
     });
+     const grouped = rows.reduce((acc, hw) => {
+      const dateKey = hw.createdAt.toISOString().split("T")[0];
+      // const dateKey = hw.createdAt;
+      if (!acc[dateKey]) acc[dateKey] = [];
+      acc[dateKey].push(hw);
+      return acc;
+    }, {});
+
+    const groupedHomework = Object.keys(grouped).map((date) => ({
+      date,
+      homeworks: grouped[date],
+    }));
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
       totalPages,
       currentPage: page,
-      homework,
+      homework: groupedHomework,
     });
   } catch (err) {
     logger.error("userId:", req.user.user_id, "Error fetching homework:", err);

@@ -4740,6 +4740,27 @@ const getPaymentById = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const paymentVerification = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const userId=req.user.user_id;
+    const id= req.params.id;
+    const status = req.body.status;
+    const payment = await Payment.findOne({
+      where: { id, school_id, trash: false },
+    });
+    if (!payment) {
+      return res.status(404).json({ error: "Payment not found" });
+    }
+    //change status to completed or pending
+    payment.payment_status = status;
+    payment.updated_by = userId;
+    await payment.save();
+    res.status(200).json(payment);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 const updatePayment = async (req, res) => {
   try {
@@ -10323,6 +10344,7 @@ module.exports = {
   getTrashedPayments,
   getTrashedDonations,
   permanentDeletePayment,
+  paymentVerification,
 
   createInvoice,
   addInvoiceStudentsbyInvoiceId,
