@@ -146,6 +146,7 @@ router.get("/students/:id", schoolAdminController.getStudentById);
 router.put(
   "/students/:id",
   uploadWithErrorHandler(upload.single("image")),
+  storageUploadMiddleware("students"),
   schoolAdminController.updateStudent,
 );
 router.delete("/students/:id", schoolAdminController.deleteStudent);

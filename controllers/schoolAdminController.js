@@ -2321,15 +2321,6 @@ const bulkCreateStudents = async (req, res) => {
         );
         guardianUserId = newGuardianId;
       }
-
-      // ✅ Student image upload
-      // let fileName = null;
-      // const studentImageFile = req.files?.[`student_${roll_number}`]?.[0];
-      // if (studentImageFile) {
-      //   const uploadPath = "uploads/students_images/";
-      //   fileName = await compressAndSaveFile(studentImageFile, uploadPath);
-      // }
-
       createdStudents.push({
         school_id,
         guardian_id: guardianUserId,
@@ -2630,15 +2621,16 @@ const updateStudent = async (req, res) => {
     const newStudentImageUrl = req.uploadedFiles?.image?.[0]?.url || null;
     if (newStudentImageUrl) {
       studentImageFilename = newStudentImageUrl;
-    } else if (req.file) {
-      const studentImageFile = req.file;
-      const uploadPath = "uploads/students_images/";
-      await deletefilewithfoldername(studentImageFilename, uploadPath);
-      studentImageFilename = await compressAndSaveFile(
-        studentImageFile,
-        uploadPath,
-      );
     }
+    //  else if (req.file) {
+    //   const studentImageFile = req.file;
+    //   const uploadPath = "uploads/students_images/";
+    //   await deletefilewithfoldername(studentImageFilename, uploadPath);
+    //   studentImageFilename = await compressAndSaveFile(
+    //     studentImageFile,
+    //     uploadPath,
+    //   );
+    // }
 
     await student.update({
       school_id,
@@ -4218,11 +4210,6 @@ const createEvent = async (req, res) => {
         .json({ error: "Event with the same title already exists" });
     }
     const eventFileUrl = req.uploadedFiles?.file?.url || null;
-    // let fileName = null;
-    // if (req.file) {
-    //   const uploadPath = "uploads/event_files/";
-    //   fileName = await compressAndSaveFile(req.file, uploadPath);
-    // }
 
     const event = await Event.create({
       school_id,
