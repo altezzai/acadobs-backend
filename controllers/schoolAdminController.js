@@ -697,7 +697,7 @@ const createStaff = async (req, res) => {
     if (!name || !email || !phone) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
-    /////
+    
     const existingUser = await User.findOne({
       where: { email: email },
     });
@@ -1172,6 +1172,7 @@ const permanentDeleteStaff = async (req, res) => {
     const school_id = req.user.school_id; 
     const user_id = req.user.user_id;
     const role = req.user.role;
+    const strictDelete = req.user.strict_delete;
     if (role !== "admin") {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -1180,6 +1181,14 @@ const permanentDeleteStaff = async (req, res) => {
       transaction,
     },
    );
+   const internal= await InternalMark.findOne({
+    where: { recorded_by: staff.user_id },
+    transaction,
+   })
+    if(internal && strictDelete !=="true"){
+      await transaction.rollback();
+      return res.status(400).json({ error: "Unable to delete this user because other records are linked to this account." });
+    }
     if (!staff) return res.status(404).json({ error: "Staff not found" });
     const user = await User.findByPk(staff.user_id, { transaction });
     if (!user) return res.status(404).json({ error: "user not found" });
@@ -2881,6 +2890,8 @@ const permanentDeleteStudent = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const role = req.user.role;
+    const user_id = req.user.user_id;
+    const strictDelete = req.user.strict_delete;
     const { id } = req.params;
     if (role !== "admin") {
       await transaction.rollback();
@@ -2901,22 +2912,52 @@ const permanentDeleteStudent = async (req, res) => {
 
     const guardianUserId = student.guardian_id;
 
-    await Payment.destroy({
+    const payments = await Payment.findOne({
       where: { student_id: id },
       transaction,
     });
+    if(payments && strictDelete !=="true"){
+      await transaction.rollback();
+      return res.status(400).json({ error: "Unable to delete this user because other records are linked to this account." });
+    }
+    for (const payment of payments) {
+      if (payment.payment_attachment) {
+        await deleteFile(payment.payment_attachment);
+      }
+    }
+    //update the payment table student_id  null for student_id
+    await Payment.update(
+      { 
+        student_id: null,
+        invoice_student_id: null,
+       },
+      { where: { student_id: id }, transaction },
+    );
+
     await InvoiceStudent.destroy({
       where: { student_id: id },
       transaction,
     });
+
     await Marks.destroy({
       where: { student_id: id },
       transaction,
     });
+
+    const homeworkAssignments = await HomeworkAssignment.findAll({
+      where: { student_id: id },
+      transaction,
+    });
+    for (const assignment of homeworkAssignments) {
+      if (assignment.solved_file) {
+        await deleteFile(assignment.solved_file);
+      }
+    }
     await HomeworkAssignment.destroy({
       where: { student_id: id },
       transaction,
     });
+
     await AttendanceMarked.destroy({
       where: { student_id: id },
       transaction,
@@ -2925,10 +2966,21 @@ const permanentDeleteStudent = async (req, res) => {
       where: { student_id: id },
       transaction,
     });
+
+    const leaveRequests = await LeaveRequest.findAll({
+      where: { student_id: id },
+      transaction,
+    });
+    for (const leave of leaveRequests) {
+      if (leave.attachment) {
+        await deleteFile(leave.attachment);
+      }
+    }
     await LeaveRequest.destroy({
       where: { student_id: id },
       transaction,
     });
+
     await Message.destroy({
       where: { student_id: id },
       transaction,
@@ -2950,13 +3002,14 @@ const permanentDeleteStudent = async (req, res) => {
       transaction,
     });
 
+    if (student.image) {
+      await deleteFile(student.image);
+    }
     await student.destroy({ transaction });
 
     const remainingStudents = await Student.count({
       where: {
         guardian_id: guardianUserId,
-        school_id,
-        trash: false,
         id: { [Op.ne]: id },
       },
       transaction,
@@ -2967,10 +3020,10 @@ const permanentDeleteStudent = async (req, res) => {
         where: { user_id: guardianUserId },
         transaction,
       });
-      await User.destroy({
-        where: { id: guardianUserId },
-        transaction,
-      });
+      // await User.destroy({
+      //   where: { id: guardianUserId },
+      //   transaction,
+      // });
     }
 
     await transaction.commit();
@@ -3732,9 +3785,28 @@ const permanentDeleteDuty = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    await DutyAssignment.destroy({ where: { duty_id: id } }, { transaction });
+    //delete duty files
+    const duty = await Duty.findOne({
+      where: { id, school_id, trash: true },
+    })
+    if (!duty) return res.status(404).json({ error: "Not found" });
+ 
+    const dutyAssignments = await DutyAssignment.findAll({
+      where: { duty_id: id },
+    });
+    if (dutyAssignments.length > 0) {
+      for (const assignment of dutyAssignments) {
+        if (assignment.file) {
+          await deleteFile(assignment.file);
+        }
+      }
+      await DutyAssignment.destroy({ where: { duty_id: id } }, { transaction });
+    }
+    if(duty.file){
+      await deleteFile(duty.file);
+    }
     await Duty.destroy(
-      { where: { id, school_id, trash: true } },
+      { where: { id} },
       { transaction },
     );
     await transaction.commit();
@@ -5111,24 +5183,19 @@ const permanentDeletePayment = async (req, res) => {
     const school_id = req.user.school_id;
     const user_id = req.user.user_id;
     const data = await Payment.findOne({
-      where: { trash: true, id: req.params.id },
+      where: {  id: req.params.id , school_id, trash: true, },
     });
     if (!data) {
       return res.status(404).json({
         error: "Payment not found ",
       });
     }
-    if (data.school_id !== school_id || data.recorded_by !== user_id) {
-      return res.status(403).json({
-        error: "You do not have permission to delete this payment",
-      });
+    if(data.payment_attachment){
+      await deleteFile(data.payment_attachment);
     }
     await Payment.destroy({
       where: {
         id: req.params.id,
-        trash: true,
-        school_id,
-        recorded_by: user_id,
       },
     });
     res.status(200).json({ message: "Payment permanently deleted" });
@@ -8557,10 +8624,20 @@ const permanentDeleteHomework = async (req, res) => {
     const homework = await Homework.findOne({
       where: { id: id, school_id: school_id ,trash: true},
     });
-
     if (!homework) return res.status(404).json({ error: "Not found" });
+    const homeworkAssignments = await HomeworkAssignment.findAll({
+      where: { homework_id: id },
+    })
+    for (const assignment of homeworkAssignments) {
+      if(assignment.solved_file){
+        await deleteFile(assignment.solved_file);
+      }
+    }
 
     await HomeworkAssignment.destroy({ where: { homework_id: id } });
+    if(homework.file){
+      await deleteFile(homework.file);
+    }
     await homework.destroy();
 
     res.status(200).json({ message: "Deleted successfully" });
@@ -10005,6 +10082,7 @@ const getExamMarksByExamId = async (req, res) => {
     let whereClause = {
       school_id,
       trash: false,
+      exam_id,
     };
     if (class_id) {
       whereClause.class_id = class_id;
