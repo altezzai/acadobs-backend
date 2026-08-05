@@ -1176,16 +1176,17 @@ const permanentDeleteStaff = async (req, res) => {
     }
     const staff = await Staff.findOne({
       where: { id: staff_id, school_id, trash: true },
+      transaction,
     },
-   { transaction },);
+   );
     if (!staff) return res.status(404).json({ error: "Staff not found" });
     const user = await User.findByPk(staff.user_id , { transaction },);
     if (!user) return res.status(404).json({ error: "user not found" });
-    const dutyAssignment = await DutyAssignment.findOne({ where: { staff_id:staff.user_id } });
-    const staffAttendance = await StaffAttendance.findOne({ where: { staff_id:staff.user_id } });
-    const leaveRequest = await LeaveRequest.findOne({ where: { user_id:staff.user_id,role: { [Op.in]: ["teacher", "staff"] } } });
-    const staffPermission = await StaffPermission.findOne({ where: { user_id: staff.user_id } });
-    const staffSubject = await StaffSubject.findOne({ where: { staff_id:staff.user_id } });
+    const dutyAssignment = await DutyAssignment.findAll({ where: { staff_id:staff.user_id } });
+    const staffAttendance = await StaffAttendance.findAll({ where: { staff_id:staff.user_id } });
+    const leaveRequest = await LeaveRequest.findAll({ where: { user_id:staff.user_id,role: { [Op.in]: ["teacher", "staff"] } } });
+    const staffPermission = await StaffPermission.findAll({ where: { user_id: staff.user_id } });
+    const staffSubject = await StaffSubject.findAll({ where: { staff_id:staff.id } });
     await dutyAssignment?.destroy({ transaction });
     await staffAttendance?.destroy({ transaction });
     await leaveRequest?.destroy({ transaction });
