@@ -1129,7 +1129,7 @@ const getTrashedStaffs = async (req, res) => {
       offset,
       distinct: true,
       limit,
-      where: whereCondition,
+      where: whereClause,
       include: [
         {
           model: User,
