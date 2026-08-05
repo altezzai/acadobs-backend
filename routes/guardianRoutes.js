@@ -11,6 +11,7 @@ const { storageUploadMiddleware } = require("../middlewares/storageUploads");
 router.put(
   "/updateHomeworkAssignment/:id",
   uploadWithErrorHandler(upload.single("file")),
+  storageUploadMiddleware("homework_assignments"),
   [
     body("status")
       .optional()
@@ -21,7 +22,6 @@ router.put(
     body("points").optional().isNumeric(),
     body("student_id").notEmpty().trim().escape(),
   ],
-  validate,
   guardianController.updateHomeworkAssignment,
 );
 
@@ -59,7 +59,6 @@ router.post(
   uploadWithErrorHandler(upload.single("attachment")),
   storageUploadMiddleware("leave_requests"),
   leaveRequestValidation,
-  validate,
   guardianController.createLeaveRequest,
 );
 router.get("/leaveRequest", guardianController.getAllLeaveRequests);
@@ -68,8 +67,8 @@ router.get("/leaveRequest/:id", guardianController.getLeaveRequestById);
 router.put(
   "/leaveRequest/:id",
   uploadWithErrorHandler(upload.single("attachment")),
+  storageUploadMiddleware("leave_requests"),
   leaveRequestValidation,
-  validate,
   guardianController.updateLeaveRequest,
 );
 router.delete("/leaveRequest/:id", guardianController.deleteLeaveRequest);
@@ -103,7 +102,6 @@ router.put(
   uploadWithErrorHandler(upload.single("image")),
   storageUploadMiddleware("students_images"),
   [body("address").optional().isString().trim().escape(), param("student_id")],
-  validate,
   guardianController.updateStudentProfile,
 );
 router.put(
@@ -129,7 +127,6 @@ router.put(
     body("post").optional().isString().trim().escape(),
     body("pincode").optional().isString().trim().escape(),
   ],
-  validate,
   guardianController.updateProfileDetails,
 );
 router.put(
@@ -139,7 +136,6 @@ router.put(
     body("guardian_name").optional().isString().trim().escape(),
     body("guardian_contact").optional().isString().trim().escape(),
   ],
-  validate,
   guardianController.changeIdentifiersAndName,
 );
 router.get("/getProfileDetails", guardianController.getProfileDetails);
@@ -185,13 +181,11 @@ router.put(
     body("oldPassword").notEmpty().isString(),
     body("newPassword").notEmpty().isString(),
   ],
-  validate,
   commonController.changePassword,
 );
 router.put(
   "/updateFcmToken",
   [body("fcm_token").optional().isString().trim().escape()],
-  validate,
   commonController.updateFcmToken,
 );
 
@@ -200,7 +194,6 @@ router.put(
   uploadWithErrorHandler(upload.single("dp")),
   storageUploadMiddleware("profileDp"),
   [],
-  validate,
   commonController.updateDp,
 );
 
@@ -213,7 +206,6 @@ router.get(
 router.post(
   "/accountDeleteRequests",
   [body("reason").optional().isString().trim().escape()],
-  validate,
   commonController.accountDeleteRequests,
 );
 
@@ -237,7 +229,6 @@ router.post(
     body("to_school_id").notEmpty().isInt(),
     body("reason").optional().isString().trim().escape(),
   ],
-  validate,
   transferController.guardianCreateTransferRequest,
 );
 router.get("/studentTransfer", transferController.guardianGetTransferRequests);

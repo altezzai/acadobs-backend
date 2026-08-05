@@ -13,7 +13,7 @@
 - Controllers: `controllers/*Controller.js` implement REST endpoints and return JSON consistently. Responses often follow pagination schema: `res.status(...).json({ totalcontent, totalPages, currentPage, <resource> })`.
 - Models & soft-deletes: Many models use a `trash` boolean for soft-deletes. CRUD handlers typically check `trash: false` when listing and use `trash: true` to soft-delete.
 - Transactions: For multi-step writes (e.g., creating staff, bulk students, duties) controllers use `schoolSequelize.transaction()` from `config/connection.js`. Preserve transaction scope when adding related DB writes.
-- File handling: Image/files use `multer` and helpers in `utils/fileHandler` (`compressAndSaveFile`, `compressAndSaveMultiFile`, `deletefilewithfoldername`). Upload paths commonly include `uploads/dp/`, `uploads/students_images/`, `uploads/duties/`.
+. Upload paths commonly include `uploads/dp/`, `uploads/students_images/`, `uploads/duties/`.
 - Auth & roles: Middleware files in `middlewares/` (e.g., `authMiddleware.js`, `adminMiddleware.js`, `staffMiddleware.js`, `guardianMiddleware.js`) enforce authentication and role-based access. Use `req.user.school_id` — controllers expect `req.user` to be present after `authMiddleware`.
 - Socket / realtime: `socketHandlers/` holds socket.io handlers; `socket.io` is a runtime dependency. When changing realtime behavior, update both `app.js` and `socketHandlers/` consistently.
 

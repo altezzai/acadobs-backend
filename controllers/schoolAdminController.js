@@ -2,11 +2,7 @@ const moment = require("moment");
 const bcrypt = require("bcrypt");
 const { Op, where } = require("sequelize");
 const logger = require("../utils/logger");
-const {
-  compressAndSaveFile,
-  deletefilewithfoldername,
-  compressAndSaveMultiFile,
-} = require("../utils/fileHandler");
+
 const {
   normalizeGender,
   normalizeGuardianRelation,
@@ -1558,12 +1554,7 @@ const createGuardian = async (req, res) => {
         .status(400)
         .json({ error: "guardian phone already exists in user table" });
     }
-    let fileName = null;
-
-    if (req.file) {
-      const uploadPath = "uploads/dp/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-    }
+    const fileUrl = req.uploadedFiles?.dp?.url || null;
 
     const hashedPassword = await bcrypt.hash(guardian_contact, 10);
 
@@ -1572,7 +1563,7 @@ const createGuardian = async (req, res) => {
       name: guardian_name,
       email: guardian_email || null,
       phone: guardian_contact,
-      dp: fileName,
+      dp: fileUrl || null,
       school_id: school_id,
       status: "active",
       password: hashedPassword,
@@ -1651,13 +1642,6 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
 
     if (existingUser) {
       throw new Error("Guardian phone already exists");
-    }
-
-    let fileName = null;
-    if (fileBuffer) {
-      const file = fileBuffer;
-      const uploadPath = "uploads/dp/";
-      fileName = await compressAndSaveFile(file, uploadPath);
     }
     const contactStr = String(guardian_contact);
 
@@ -1859,11 +1843,9 @@ const updateGuardian = async (req, res) => {
     });
     if (!user) return res.status(404).json({ error: "user not found" });
     let fileName = user.dp;
-    if (req.file) {
-      const uploadPath = "uploads/dp/";
-      const oldFileName = user.dp;
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-      await deletefilewithfoldername(oldFileName, uploadPath);
+    const fileUrl = req.uploadedFiles?.dp?.url || null;
+    if (fileUrl) {
+      fileName = fileUrl;
     }
     await user.update({
       name: guardian.guardian_name,
@@ -2543,6 +2525,8 @@ const updateStudent = async (req, res) => {
     if (!student || student.trash)
       return res.status(404).json({ error: "Student not found" });
 
+    const guardianUser = await User.findByPk(student.guardian_id);
+
     const targetClassId = class_id !== undefined ? class_id : student.class_id;
     const shouldReorderRollNumbers =
       update_roll_number === true || update_roll_number === "true";
@@ -2615,22 +2599,23 @@ const updateStudent = async (req, res) => {
         }
       }
     }
-
     // Handle student image — support both legacy req.file and new req.uploadedFiles
     let studentImageFilename = student.image;
     const newStudentImageUrl = req.uploadedFiles?.image?.[0]?.url || null;
     if (newStudentImageUrl) {
+      if (studentImageFilename) {
+        await deleteFile(studentImageFilename);
+      }
       studentImageFilename = newStudentImageUrl;
     }
-    //  else if (req.file) {
-    //   const studentImageFile = req.file;
-    //   const uploadPath = "uploads/students_images/";
-    //   await deletefilewithfoldername(studentImageFilename, uploadPath);
-    //   studentImageFilename = await compressAndSaveFile(
-    //     studentImageFile,
-    //     uploadPath,
-    //   );
-    // }
+    let guardianDpFilename = guardianUser.dp;
+    const newGuardianDpUrl = req.uploadedFiles?.dp?.[0]?.url || null;
+    if (newGuardianDpUrl) {
+      if (guardianDpFilename) {
+        await deleteFile(guardianDpFilename);
+      }
+      guardianDpFilename = newGuardianDpUrl;
+    }
 
     await student.update({
       school_id,
@@ -2648,14 +2633,12 @@ const updateStudent = async (req, res) => {
       alumni,
     });
 
-    // Update linked guardian if guardian fields are provided
     if (student.guardian_id) {
       const guardian = await Guardian.findOne({
         where: { user_id: student.guardian_id },
       });
 
       if (guardian) {
-        // Validate uniqueness of contact if being changed
         if (
           guardian_contact &&
           guardian_contact !== guardian.guardian_contact
@@ -2729,10 +2712,10 @@ const updateStudent = async (req, res) => {
           country: country !== undefined ? country : guardian.country,
           post: post !== undefined ? post : guardian.post,
           pincode: pincode !== undefined ? pincode : guardian.pincode,
+          dp: guardianDpFilename,
         });
 
         // Sync guardian User record
-        const guardianUser = await User.findByPk(student.guardian_id);
         if (guardianUser) {
           const newGuardianDpUrl = req.uploadedFiles?.dp?.[0]?.url || null;
           let guardianDp = guardianUser.dp;
@@ -3286,7 +3269,7 @@ const createDutyWithAssignments = async (req, res) => {
       "createDutyWithAssignments →",
       err,
     );
-    if (uploadDir) await deletefilewithfoldername(req.file, uploadDir);
+    if (uploadDir) await deleteFiles(uploadDir);
     await transaction.rollback();
     console.error("createDutyWithAssignments →", err);
     res.status(500).json({ error: err.message });
@@ -3518,7 +3501,6 @@ const updateDuty = async (req, res) => {
       if (duty.file) {
         await deleteFile(duty.file);
       }
-
       finalFile = newFileUrl;
     }
     await duty.update({
@@ -3550,10 +3532,12 @@ const updateDutyAssigned = async (req, res) => {
     if (!duty) return res.status(404).json({ error: "Duty not found" });
 
     let fileName = assignedDuty.solved_file;
-    if (req.file) {
-      const uploadPath = "uploads/solved_duties/";
-      await deletefilewithfoldername(fileName, uploadPath);
-      fileName = await compressAndSaveFile(req.file, uploadPath);
+    const newFileUrl = req.uploadedFiles?.file?.url || null;
+    if (newFileUrl) {
+      if (assignedDuty.solved_file) {
+        await deleteFile(assignedDuty.solved_file);
+      }
+      fileName = newFileUrl;
     }
     const updatedDuty = await assignedDuty.update({
       status,
@@ -3789,20 +3773,12 @@ const createAchievementWithStudents = async (req, res) => {
 
     const studentAchievements = await Promise.all(
       parsedStudents.map(async (student, index) => {
-        let compressedFileName = null;
 
-        if (req.files && req.files[index]) {
-          compressedFileName = await compressAndSaveMultiFile(
-            req.files[index],
-            uploadAchievementPath,
-          );
-        }
 
         return {
           achievement_id: achievement.id,
           student_id: student.student_id,
           status: student.status,
-          proof_document: compressedFileName,
           remarks: student.remarks,
         };
       }),
@@ -4086,23 +4062,9 @@ const updateStudentAchievement = async (req, res) => {
             },
           });
 
-          // const studentFile = uploadedFiles[index] || uploadedFiles[0] || null;
-          // let proofDocument = existingStudentAchievement?.proof_document || null;
-
-          // if (studentFile) {
-          //   if (proofDocument) {
-          //     await deletefilewithfoldername(proofDocument, uploadAchievementPath);
-          //   }
-          //   proofDocument = await compressAndSaveMultiFile(
-          //     studentFile,
-          //     uploadAchievementPath,
-          //   );
-          // }
-
           const payload = {
             status: studentStatus || existingStudentAchievement?.status || "participant",
             remarks: student.remarks ?? remarks ?? existingStudentAchievement?.remarks ?? null,
-            // proof_document: proofDocument,
           };
 
           if (existingStudentAchievement) {
@@ -4175,10 +4137,6 @@ const peremententDeleteAchievement = async (req, res) => {
     const studentAchievements = await StudentAchievement.findAll({
       where: { achievement_id: id },
     });
-    for (const sa of studentAchievements) {
-      await deletefilewithfoldername(sa.proof_document, uploadAchievementPath);
-    }
-
     await StudentAchievement.destroy({ where: { achievement_id: id } });
     await Achievement.destroy({ where: { id } });
     res.status(200).json({ message: "Achievement deleted successfully" });
@@ -4397,7 +4355,9 @@ const permanentDeleteEvent = async (req, res) => {
     });
     if (!event) return res.status(404).json({ error: "Event not found" });
     const uploadPath = "uploads/event_files/";
-    await deletefilewithfoldername(event.file, uploadPath);
+    if (event.file) {
+      await deleteFile(event.file);
+    }
     await event.destroy();
 
     res.status(200).json({ message: "Event permanently deleted" });

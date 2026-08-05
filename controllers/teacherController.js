@@ -2,11 +2,6 @@ const { Op, where, Sequelize } = require("sequelize");
 const moment = require("moment");
 const geolib = require("geolib");
 const logger = require("../utils/logger");
-const {
-  compressAndSaveFile,
-  compressAndSaveMultiFile,
-  deletefilewithfoldername,
-} = require("../utils/fileHandler");
 const Mark = require("../models/marks");
 const InternalMark = require("../models/internal_marks");
 const School = require("../models/school");
@@ -1161,11 +1156,15 @@ const updateHomeworkAssignment = async (req, res) => {
 
     const assignment = await HomeworkAssignment.findByPk(id);
     if (!assignment) return res.status(404).json({ error: "Not found" });
-    let fileName = null;
-    if (req.file) {
-      const uploadPath = "uploads/solved_homeworks/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
+    let fileName = assignment.solved_file;
+    const newFileUrl = req.uploadedFiles?.file?.url || null;
+    if (newFileUrl) {
+      if (assignment.solved_file) {
+        await deleteFile(assignment.solved_file);
+      }
+      fileName = newFileUrl;
     }
+
     await assignment.update({
       remarks,
       points,
@@ -2170,15 +2169,18 @@ const updateAssignedDuty = async (req, res) => {
     if (!assignedDuty) {
       return res.status(404).json({ error: "Not found" });
     }
-    let fileName = null;
-    if (req.file) {
-      uploadPath = "uploads/solved_duties/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
+    let fileName = assignedDuty.solved_file;
+    const newFileUrl = req.uploadedFiles?.solved_file?.url || null; 
+    if (newFileUrl) {
+      if (fileName) {
+        await deleteFile(fileName);
+      }
+      fileName = newFileUrl;
     }
     const updatedDuty = await assignedDuty.update({
       status,
       remarks,
-      solved_file: fileName ? fileName : assignedDuty.solved_file,
+      solved_file: fileName,
     });
     res.json({ message: "Updated", updatedDuty });
   } catch (err) {
@@ -2242,23 +2244,14 @@ const createAchievementWithStudents = async (req, res) => {
 
     const uploadPath = "uploads/achievement_proofs/";
 
-    // Handle and compress each student's file
     const studentAchievements = await Promise.all(
       parsedStudents.map(async (student, index) => {
-        let compressedFileName = null;
-
-        if (req.files && req.files[index]) {
-          compressedFileName = await compressAndSaveMultiFile(
-            req.files[index],
-            uploadPath,
-          );
-        }
+       
 
         return {
           achievement_id: achievement.id,
           student_id: student.student_id,
           status: student.status,
-          proof_document: compressedFileName,
           remarks: student.remarks,
         };
       }),
@@ -2471,18 +2464,9 @@ const updateStudentAchievement = async (req, res) => {
     if (!StudentAchievementData) {
       return res.status(404).json({ error: "Student achievement not found" });
     }
-
-    let AchievementFilename = StudentAchievementData.proof_document;
-    const uploadPath = "uploads/achievement_proofs/";
-    if (req.file) {
-      console.log(req.file);
-      await deletefilewithfoldername(AchievementFilename, uploadPath);
-      AchievementFilename = await compressAndSaveFile(req.file, uploadPath);
-    }
     await StudentAchievementData.update({
       status,
       remarks,
-      proof_document: AchievementFilename ? AchievementFilename : null,
     });
     res.status(200).json({
       message: "Student achievement updated successfully",
@@ -2528,11 +2512,6 @@ const createLeaveRequest = async (req, res) => {
       return res.status(400).json({ error: "Leave request already exists" });
     }
 
-    // let fileName = null;
-    // if (req.file) {
-    //   const uploadPath = "uploads/leave_requests/";
-    //   fileName = await compressAndSaveFile(req.file, uploadPath);
-    // }
     const attachmentUrl = req.uploadedFiles?.attachment?.url || null;
     const data = await LeaveRequest.create({
       school_id: school_id,
@@ -2671,19 +2650,13 @@ const updateLeaveRequest = async (req, res) => {
     if (existingRequest) {
       return res.status(400).json({ error: "Leave request already exists" });
     }
-    // let fileName = data.attachment;
-    // if (req.file) {
-    //   const uploadPath = "uploads/leave_requests/";
-    //   await deletefilewithfoldername(fileName, uploadPath);
-    //   fileName = await compressAndSaveFile(req.file, uploadPath);
-    // }
+ 
     const newFileUrl = req.uploadedFiles?.attachment?.url || null;
     let finalFile = data.attachment;
     if (newFileUrl) {
       if (data.attachment) {
         await deleteFile(data.attachment);
       }
-
       finalFile = newFileUrl;
     }
     await data.update({
@@ -2986,13 +2959,8 @@ const createParentNote = async (req, res) => {
     if (existingNote) {
       return res.status(400).json({ error: "Note already exists" });
     }
-    let fileName = null;
-    if (req.file) {
-      const uploadPath = "uploads/parent_notes/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-    }
 
-    // ✅ Create the parent note
+    const fileName = req.uploadedFiles?.attachment?.url || null;
     const note = await ParentNote.create({
       school_id,
       note_title,
@@ -3139,15 +3107,14 @@ const updateParentNote = async (req, res) => {
     }
 
     let fileName = note.note_attachment;
-    if (req.file) {
-      const uploadPath = "uploads/parent_notes/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-      // Delete old file if it exists
-      if (note.note_attachment) {
-        await deletefilewithfoldername(note.note_attachment, uploadPath);
-      }
-    }
+    const newFileUrl = req.uploadedFiles?.attachment?.url || null;
 
+    if (newFileUrl) {
+      if (fileName) {
+        await deleteFile(fileName);
+      }
+      fileName = newFileUrl;
+    }
     await note.update({
       note_title,
       note_content,
@@ -3513,7 +3480,6 @@ const getMyClassAllDayTimetable = async (req, res) => {
     }));
 
     return res.json({
-      student_id,
       class_id,
       school_id,
       timetable: formatted,

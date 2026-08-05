@@ -27,7 +27,6 @@ const { deleteFile } = require("../middlewares/storageUploads");
 const { Class, Staff } = require("../models");
 
 const {
-  compressAndSaveFile,
   deletefilewithfoldername,
 } = require("../utils/fileHandler");
 
