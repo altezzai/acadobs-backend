@@ -1170,6 +1170,7 @@ const permanentDeleteStaff = async (req, res) => {
   try {
     const { staff_id } = req.params;
     const school_id = req.user.school_id; 
+    const user_id = req.user.user_id;
     const role = req.user.role;
     if (role !== "admin") {
       return res.status(401).json({ error: "Unauthorized" });
@@ -1180,15 +1181,50 @@ const permanentDeleteStaff = async (req, res) => {
     },
    );
     if (!staff) return res.status(404).json({ error: "Staff not found" });
-    const user = await User.findByPk(staff.user_id , { transaction },);
+    const user = await User.findByPk(staff.user_id, { transaction });
     if (!user) return res.status(404).json({ error: "user not found" });
-    const dutyAssignment = await DutyAssignment.destroy({ where: { staff_id:staff.user_id },transaction });
-    const staffAttendance = await StaffAttendance.destroy({ where: { staff_id:staff.user_id },transaction });
-    const leaveRequest = await LeaveRequest.destroy({ where: { user_id:staff.user_id,role: { [Op.in]: ["teacher", "staff"] }},transaction });
-    const staffPermission = await StaffPermission.destroy({ where: { user_id: staff.user_id } ,transaction});
-    const staffSubject = await StaffSubject.destroy({ where: { staff_id:staff.id },transaction });
-    await staff.destroy( { transaction },);
-    await user.destroy( { transaction },);
+
+    const dutyAssignments = await DutyAssignment.findAll({
+      where: { staff_id: staff.user_id },
+      transaction,
+    });
+    for (const assignment of dutyAssignments) {
+      if (assignment.solved_file) {
+        await deleteFile(assignment.solved_file);
+      }
+    }
+    await DutyAssignment.destroy({ where: { staff_id: staff.user_id }, transaction });
+
+    const leaveRequests = await LeaveRequest.findAll({
+      where: {
+        user_id: staff.user_id,
+        role: { [Op.in]: ["teacher", "staff"] },
+      },
+      transaction,
+    });
+    for (const leave of leaveRequests) {
+      if (leave.attachment) {
+        await deleteFile(leave.attachment);
+      }
+    }
+    await LeaveRequest.destroy({
+      where: {
+        user_id: staff.user_id,
+        role: { [Op.in]: ["teacher", "staff"] },
+      },
+      transaction,
+    });
+
+    const staffAttendance = await StaffAttendance.destroy({ where: { staff_id: staff.user_id }, transaction });
+    const staffPermission = await StaffPermission.destroy({ where: { user_id: staff.user_id }, transaction });
+    const staffSubject = await StaffSubject.destroy({ where: { staff_id: staff.id }, transaction });
+    await staff.destroy({ transaction });
+    
+    const toaday = new Date(); 
+    const date = toaday.getDate() + "-" + (toaday.getMonth() + 1) + "-" + toaday.getFullYear();
+    const deleted_phone = user.phone;
+    const phone = `${staff_id}/${user_id}/${date}`;
+    await user.update({ phone, deleted_phone, trash: true }, { transaction });
    
     await transaction.commit();
     res.status(200).json({ message: "Staff deleted (permanent)" });

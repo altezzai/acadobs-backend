@@ -3,9 +3,6 @@ const fs = require("fs");
 const bcrypt = require("bcrypt");
 const { Op, where } = require("sequelize");
 const logger = require("../utils/logger");
-const {
-  deletefilewithfoldername,
-} = require("../utils/fileHandler");
 const { deleteFile } = require("../middlewares/storageUploads");
 const { normalizeGuardianRelation } = require("../utils/supportingFunction");
 const { Class, StudentRoutes, stop, Mark, InternalMark } = require("../models");
