@@ -26,10 +26,6 @@ const { deleteFile } = require("../middlewares/storageUploads");
 
 const { Class, Staff } = require("../models");
 
-const {
-  deletefilewithfoldername,
-} = require("../utils/fileHandler");
-
 const getStudentsByClassId = async (req, res) => {
   try {
     const { class_id } = req.params;
