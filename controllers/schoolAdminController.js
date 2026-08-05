@@ -105,25 +105,25 @@ const getAllClasses = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    let whereCondition = {
+    let whereClause = {
       school_id: req.user.school_id,
       trash: false,
     };
     if (searchQuery) {
-      whereCondition.classname = { [Op.like]: `%${searchQuery}%` };
+      whereClause.classname = { [Op.like]: `%${searchQuery}%` };
     }
     if (year) {
-      whereCondition.year = year;
+      whereClause.year = year;
     }
     if (division) {
-      whereCondition.division = division;
+      whereClause.division = division;
     }
 
     const { count, rows: classes } = await Class.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: whereCondition,
+      where: whereClause,
       order: [["createdAt", "DESC"]],
 
     });
@@ -784,18 +784,18 @@ const getAllStaff = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const role = req.query.role || "staff"; // 'all' or 'active'
-    let whereCondition = {
+    let whereClause = {
       school_id: school_id,
       trash: false,
     };
     if (role) {
-      whereCondition.role = role;
+      whereClause.role = role;
     }
     const { count, rows: staff } = await Staff.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: whereCondition,
+      where: whereClause,
       include: [
         {
           model: User,
@@ -1220,7 +1220,7 @@ const getAllTeachers = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    let whereCondition = {
+    let whereClause = {
       school_id: school_id,
       trash: false,
       role: "teacher",
@@ -1230,7 +1230,7 @@ const getAllTeachers = async (req, res) => {
       offset,
       distinct: true,
       limit,
-      where: whereCondition,
+      where: whereClause,
       include: [
         {
           model: User,
@@ -1292,12 +1292,12 @@ const getAllStaffPermissions = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    let whereCondition = {
+    let whereClause = {
       school_id: school_id,
       trash: false,
     };
     if (searchQuery) {
-      whereCondition.name = { [Op.like]: `%${searchQuery}%` };
+      whereClause.name = { [Op.like]: `%${searchQuery}%` };
     };
 
     const { count, rows: data } = await StaffPermission.findAndCountAll({
@@ -1307,7 +1307,7 @@ const getAllStaffPermissions = async (req, res) => {
       include: [
         {
           model: User,
-          where : whereCondition,
+          where : whereClause,
           attributes: ["id", "name", "email", "phone", "dp", "school_id"],
         },
       ],
