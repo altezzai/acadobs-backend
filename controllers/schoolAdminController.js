@@ -802,7 +802,10 @@ const getAllStaff = async (req, res) => {
           attributes: ["id", "name", "email", "phone", "dp", "role"],
           where: searchQuery
             ? {
-                name: { [Op.like]: `%${searchQuery}%` },
+                [Op.or]: [
+                  { name: { [Op.like]: `%${searchQuery}%` } },
+                  { phone: { [Op.like]: `%${searchQuery}%` } },
+                ],
               }
             : {},
         },
@@ -1118,23 +1121,41 @@ const getTrashedStaffs = async (req, res) => {
       trash: true,
       school_id: school_id,
     };
-    if (searchQuery) {
-      whereClause[Op.or] = [{ name: { [Op.like]: `%${searchQuery}%` } }];
-    }
     if (role) {
       whereClause.role = role;
     }
 
-    const { count, rows: staff } = await Staff.findAndCountAll({
+     const { count, rows: staff } = await Staff.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: whereClause,
-      order: [["updatedAt", "DESC"]],
+      where: whereCondition,
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone", "dp", "role"],
+          where: searchQuery
+            ? {
+                [Op.or]: [
+                  { name: { [Op.like]: `%${searchQuery}%` } },
+                  { phone: { [Op.like]: `%${searchQuery}%` } },
+                ],
+              }
+            : {},
+        },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+      ],
+      order: [
+        ["createdAt", "DESC"],
+        ["id", "ASC"],
+      ],
     });
+
+    const totalPages = Math.ceil(count / limit);
+
     res.status(200).json({
       totalcontent: count,
-      totalPages: Math.ceil(count / limit),
+      totalPages,
       currentPage: page,
       staff,
     });
