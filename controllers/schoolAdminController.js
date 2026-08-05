@@ -1125,7 +1125,7 @@ const getTrashedStaffs = async (req, res) => {
       whereClause.role = role;
     }
 
-    const { count, rows: staffs } = await Staff.findAndCountAll({
+    const { count, rows: staff } = await Staff.findAndCountAll({
       offset,
       distinct: true,
       limit,
@@ -1136,7 +1136,7 @@ const getTrashedStaffs = async (req, res) => {
       totalcontent: count,
       totalPages: Math.ceil(count / limit),
       currentPage: page,
-      staffs,
+      staff,
     });
   } catch (err) {
     logger.error(
