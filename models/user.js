@@ -65,6 +65,11 @@ const User = schoolSequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    deleted_phone: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+
     createdAt: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,

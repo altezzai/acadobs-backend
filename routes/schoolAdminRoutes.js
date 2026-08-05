@@ -116,6 +116,7 @@ router.get("/guardian/:id", schoolAdminController.getGuardianById);
 router.put(
   "/guardian/:id",
   uploadWithErrorHandler(upload.single("dp")),
+  storageUploadMiddleware("guardians"),
   schoolAdminController.updateGuardian,
 );
 router.delete("/guardian/:id", schoolAdminController.deleteGuardian);
@@ -145,7 +146,13 @@ router.get("/students", schoolAdminController.getAllStudents);
 router.get("/students/:id", schoolAdminController.getStudentById);
 router.put(
   "/students/:id",
-  uploadWithErrorHandler(upload.single("image")),
+   uploadWithErrorHandler(
+    upload.fields([
+      { name: "dp", maxCount: 1 },
+      { name: "image", maxCount: 1 }, 
+    ]),
+  ),
+  storageUploadMiddleware("students"),
   schoolAdminController.updateStudent,
 );
 router.delete("/students/:id", schoolAdminController.deleteStudent);

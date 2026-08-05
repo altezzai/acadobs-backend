@@ -1,18 +1,21 @@
 const { s3, BUCKET_NAME } = require("../config/storageConfig");
 const { v4: uuidv4 } = require("uuid");
 const sharp = require("sharp");
+const path = require("path");
 
 // upload single file
 const uploadSingleFile = async (file, folder) => {
     const compressedBuffer = await compressImage(file);
-    const fileName = `${folder}/${uuidv4()}-${file.originalname}`;
+    const isImage = file.mimetype.startsWith("image/");
+    const baseName = isImage ? path.parse(file.originalname).name : file.originalname;
+    const extension = isImage ? ".jpg" : path.extname(file.originalname);
+    const fileName = `${folder}/${uuidv4()}-${baseName}${extension}`;
 
     const params = {
         Bucket: BUCKET_NAME,
         Key: fileName,
-        // Body: file.buffer,
         Body: compressedBuffer,
-        ContentType: file.mimetype,
+        ContentType: isImage ? "image/jpeg" : file.mimetype,
     };
 
     const data = await s3.upload(params).promise();
@@ -72,12 +75,12 @@ const deleteFile = async (fileUrl) => {
 
 const compressImage = async (file) => {
     try {
-
         if (!file.mimetype.startsWith("image")) {
             return file.buffer;
         }
 
         const compressedBuffer = await sharp(file.buffer)
+            .rotate()
             .resize({ width: 1200 })
             .jpeg({ quality: 70 })
             .toBuffer();

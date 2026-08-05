@@ -7,10 +7,6 @@ const Subject = require("../models/subject");
 const AccountDelete = require("../models/accountdelete");
 const Syllabus = require("../models/syllabus");
 const { schoolSequelize } = require("../config/connection");
-const {
-  compressAndSaveFile,
-  deletefilewithfoldername,
-} = require("../utils/fileHandler");
 const { Op } = require("sequelize");
 const { Payment } = require("../models");
 const Invoice = require("../models/invoice");
@@ -59,22 +55,6 @@ const createSchool = async (req, res) => {
         .status(400)
         .json({ error: "SchoolAdmin phone already exists in user table" });
     }
-
-    let fileName = null;
-    if (req.files?.logo) {
-      const uploadPath = "uploads/school_logos/";
-      fileName = await compressAndSaveFile(req.files.logo[0], uploadPath);
-    }
-
-    let bgImageFileName = null;
-    if (req.files?.image) {
-      const uploadPath = "uploads/school_image/";
-      bgImageFileName = await compressAndSaveFile(
-        req.files.image[0],
-        uploadPath
-      );
-    }
-
     const school = await School.create({
       name,
       email,

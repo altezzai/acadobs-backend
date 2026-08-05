@@ -33,6 +33,7 @@ const Payment = schoolSequelize.define(
       defaultValue: "pending",
     },
     transaction_id: { type: DataTypes.STRING },
+    invoice_student_id: { type: DataTypes.INTEGER, allowNull: true },
     payment_method: {
       type: DataTypes.ENUM(
         "cash",

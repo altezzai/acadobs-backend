@@ -359,7 +359,7 @@ const getUsersListandLatestMessage = async (io, socket, data) => {
     const { page = 1, limit = 10, search } = data || {};
     const offset = (page - 1) * limit;
 
-    let whereCondition = {
+    let whereClause = {
       [Op.or]: [{ user1_id: user_id }, { user2_id: user_id }],
     };
 
@@ -367,7 +367,7 @@ const getUsersListandLatestMessage = async (io, socket, data) => {
       limit,
       offset,
       distinct: true,
-      where: whereCondition,
+      where: whereClause,
       include: [
         {
           model: User,

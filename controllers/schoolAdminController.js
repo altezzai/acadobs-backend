@@ -2,11 +2,7 @@ const moment = require("moment");
 const bcrypt = require("bcrypt");
 const { Op, where } = require("sequelize");
 const logger = require("../utils/logger");
-const {
-  compressAndSaveFile,
-  deletefilewithfoldername,
-  compressAndSaveMultiFile,
-} = require("../utils/fileHandler");
+
 const {
   normalizeGender,
   normalizeGuardianRelation,
@@ -105,25 +101,25 @@ const getAllClasses = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    let whereCondition = {
+    let whereClause = {
       school_id: req.user.school_id,
       trash: false,
     };
     if (searchQuery) {
-      whereCondition.classname = { [Op.like]: `%${searchQuery}%` };
+      whereClause.classname = { [Op.like]: `%${searchQuery}%` };
     }
     if (year) {
-      whereCondition.year = year;
+      whereClause.year = year;
     }
     if (division) {
-      whereCondition.division = division;
+      whereClause.division = division;
     }
 
     const { count, rows: classes } = await Class.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: whereCondition,
+      where: whereClause,
       order: [["createdAt", "DESC"]],
 
     });
@@ -701,7 +697,7 @@ const createStaff = async (req, res) => {
     if (!name || !email || !phone) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
-    /////
+    
     const existingUser = await User.findOne({
       where: { email: email },
     });
@@ -784,25 +780,28 @@ const getAllStaff = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const role = req.query.role || "staff"; // 'all' or 'active'
-    let whereCondition = {
+    let whereClause = {
       school_id: school_id,
       trash: false,
     };
     if (role) {
-      whereCondition.role = role;
+      whereClause.role = role;
     }
     const { count, rows: staff } = await Staff.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: whereCondition,
+      where: whereClause,
       include: [
         {
           model: User,
           attributes: ["id", "name", "email", "phone", "dp", "role"],
           where: searchQuery
             ? {
-                name: { [Op.like]: `%${searchQuery}%` },
+                [Op.or]: [
+                  { name: { [Op.like]: `%${searchQuery}%` } },
+                  { phone: { [Op.like]: `%${searchQuery}%` } },
+                ],
               }
             : {},
         },
@@ -1118,25 +1117,43 @@ const getTrashedStaffs = async (req, res) => {
       trash: true,
       school_id: school_id,
     };
-    if (searchQuery) {
-      whereClause[Op.or] = [{ name: { [Op.like]: `%${searchQuery}%` } }];
-    }
     if (role) {
       whereClause.role = role;
     }
 
-    const { count, rows: staffs } = await Staff.findAndCountAll({
+     const { count, rows: staff } = await Staff.findAndCountAll({
       offset,
       distinct: true,
       limit,
       where: whereClause,
-      order: [["updatedAt", "DESC"]],
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name", "email", "phone", "dp", "role"],
+          where: searchQuery
+            ? {
+                [Op.or]: [
+                  { name: { [Op.like]: `%${searchQuery}%` } },
+                  { phone: { [Op.like]: `%${searchQuery}%` } },
+                ],
+              }
+            : {},
+        },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+      ],
+      order: [
+        ["createdAt", "DESC"],
+        ["id", "ASC"],
+      ],
     });
+
+    const totalPages = Math.ceil(count / limit);
+
     res.status(200).json({
       totalcontent: count,
-      totalPages: Math.ceil(count / limit),
+      totalPages,
       currentPage: page,
-      staffs,
+      staff,
     });
   } catch (err) {
     logger.error(
@@ -1153,29 +1170,70 @@ const permanentDeleteStaff = async (req, res) => {
   try {
     const { staff_id } = req.params;
     const school_id = req.user.school_id; 
+    const user_id = req.user.user_id;
     const role = req.user.role;
+    const strictDelete = req.user.strict_delete;
     if (role !== "admin") {
       return res.status(401).json({ error: "Unauthorized" });
     }
     const staff = await Staff.findOne({
       where: { id: staff_id, school_id, trash: true },
+      transaction,
     },
-   { transaction },);
+   );
+   const internal= await InternalMark.findOne({
+    where: { recorded_by: staff.user_id },
+    transaction,
+   })
+    if(internal && strictDelete !=="true"){
+      await transaction.rollback();
+      return res.status(400).json({ error: "Unable to delete this user because other records are linked to this account." });
+    }
     if (!staff) return res.status(404).json({ error: "Staff not found" });
-    const user = await User.findByPk(staff.user_id , { transaction },);
+    const user = await User.findByPk(staff.user_id, { transaction });
     if (!user) return res.status(404).json({ error: "user not found" });
-    const dutyAssignment = await DutyAssignment.findOne({ where: { staff_id:staff.user_id } });
-    const staffAttendance = await StaffAttendance.findOne({ where: { staff_id:staff.user_id } });
-    const leaveRequest = await LeaveRequest.findOne({ where: { user_id:staff.user_id,role: { [Op.in]: ["teacher", "staff"] } } });
-    const staffPermission = await StaffPermission.findOne({ where: { user_id: staff.user_id } });
-    const staffSubject = await StaffSubject.findOne({ where: { staff_id:staff.user_id } });
-    await dutyAssignment?.destroy({ transaction });
-    await staffAttendance?.destroy({ transaction });
-    await leaveRequest?.destroy({ transaction });
-    await staffPermission?.destroy({ transaction });
-    await staffSubject?.destroy({ transaction });
-    await staff.destroy( { transaction },);
-    await user.destroy( { transaction },);
+
+    const dutyAssignments = await DutyAssignment.findAll({
+      where: { staff_id: staff.user_id },
+      transaction,
+    });
+    for (const assignment of dutyAssignments) {
+      if (assignment.solved_file) {
+        await deleteFile(assignment.solved_file);
+      }
+    }
+    await DutyAssignment.destroy({ where: { staff_id: staff.user_id }, transaction });
+
+    const leaveRequests = await LeaveRequest.findAll({
+      where: {
+        user_id: staff.user_id,
+        role: { [Op.in]: ["teacher", "staff"] },
+      },
+      transaction,
+    });
+    for (const leave of leaveRequests) {
+      if (leave.attachment) {
+        await deleteFile(leave.attachment);
+      }
+    }
+    await LeaveRequest.destroy({
+      where: {
+        user_id: staff.user_id,
+        role: { [Op.in]: ["teacher", "staff"] },
+      },
+      transaction,
+    });
+
+    const staffAttendance = await StaffAttendance.destroy({ where: { staff_id: staff.user_id }, transaction });
+    const staffPermission = await StaffPermission.destroy({ where: { user_id: staff.user_id }, transaction });
+    const staffSubject = await StaffSubject.destroy({ where: { staff_id: staff.id }, transaction });
+    await staff.destroy({ transaction });
+    
+    const toaday = new Date(); 
+    const date = toaday.getDate() + "-" + (toaday.getMonth() + 1) + "-" + toaday.getFullYear();
+    const deleted_phone = user.phone;
+    const phone = `${staff_id}/${user_id}/${date}`;
+    await user.update({ phone, deleted_phone, trash: true }, { transaction });
    
     await transaction.commit();
     res.status(200).json({ message: "Staff deleted (permanent)" });
@@ -1199,7 +1257,7 @@ const getAllTeachers = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    let whereCondition = {
+    let whereClause = {
       school_id: school_id,
       trash: false,
       role: "teacher",
@@ -1209,7 +1267,7 @@ const getAllTeachers = async (req, res) => {
       offset,
       distinct: true,
       limit,
-      where: whereCondition,
+      where: whereClause,
       include: [
         {
           model: User,
@@ -1271,12 +1329,12 @@ const getAllStaffPermissions = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    let whereCondition = {
+    let whereClause = {
       school_id: school_id,
       trash: false,
     };
     if (searchQuery) {
-      whereCondition.name = { [Op.like]: `%${searchQuery}%` };
+      whereClause.name = { [Op.like]: `%${searchQuery}%` };
     };
 
     const { count, rows: data } = await StaffPermission.findAndCountAll({
@@ -1286,7 +1344,7 @@ const getAllStaffPermissions = async (req, res) => {
       include: [
         {
           model: User,
-          where : whereCondition,
+          where : whereClause,
           attributes: ["id", "name", "email", "phone", "dp", "school_id"],
         },
       ],
@@ -1537,12 +1595,7 @@ const createGuardian = async (req, res) => {
         .status(400)
         .json({ error: "guardian phone already exists in user table" });
     }
-    let fileName = null;
-
-    if (req.file) {
-      const uploadPath = "uploads/dp/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-    }
+    const fileUrl = req.uploadedFiles?.dp?.url || null;
 
     const hashedPassword = await bcrypt.hash(guardian_contact, 10);
 
@@ -1551,7 +1604,7 @@ const createGuardian = async (req, res) => {
       name: guardian_name,
       email: guardian_email || null,
       phone: guardian_contact,
-      dp: fileName,
+      dp: fileUrl || null,
       school_id: school_id,
       status: "active",
       password: hashedPassword,
@@ -1630,13 +1683,6 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
 
     if (existingUser) {
       throw new Error("Guardian phone already exists");
-    }
-
-    let fileName = null;
-    if (fileBuffer) {
-      const file = fileBuffer;
-      const uploadPath = "uploads/dp/";
-      fileName = await compressAndSaveFile(file, uploadPath);
     }
     const contactStr = String(guardian_contact);
 
@@ -1838,11 +1884,9 @@ const updateGuardian = async (req, res) => {
     });
     if (!user) return res.status(404).json({ error: "user not found" });
     let fileName = user.dp;
-    if (req.file) {
-      const uploadPath = "uploads/dp/";
-      const oldFileName = user.dp;
-      fileName = await compressAndSaveFile(req.file, uploadPath);
-      await deletefilewithfoldername(oldFileName, uploadPath);
+    const fileUrl = req.uploadedFiles?.dp?.url || null;
+    if (fileUrl) {
+      fileName = fileUrl;
     }
     await user.update({
       name: guardian.guardian_name,
@@ -2300,15 +2344,6 @@ const bulkCreateStudents = async (req, res) => {
         );
         guardianUserId = newGuardianId;
       }
-
-      // ✅ Student image upload
-      // let fileName = null;
-      // const studentImageFile = req.files?.[`student_${roll_number}`]?.[0];
-      // if (studentImageFile) {
-      //   const uploadPath = "uploads/students_images/";
-      //   fileName = await compressAndSaveFile(studentImageFile, uploadPath);
-      // }
-
       createdStudents.push({
         school_id,
         guardian_id: guardianUserId,
@@ -2531,6 +2566,8 @@ const updateStudent = async (req, res) => {
     if (!student || student.trash)
       return res.status(404).json({ error: "Student not found" });
 
+    const guardianUser = await User.findByPk(student.guardian_id);
+
     const targetClassId = class_id !== undefined ? class_id : student.class_id;
     const shouldReorderRollNumbers =
       update_roll_number === true || update_roll_number === "true";
@@ -2603,20 +2640,22 @@ const updateStudent = async (req, res) => {
         }
       }
     }
-
     // Handle student image — support both legacy req.file and new req.uploadedFiles
     let studentImageFilename = student.image;
     const newStudentImageUrl = req.uploadedFiles?.image?.[0]?.url || null;
     if (newStudentImageUrl) {
+      if (studentImageFilename) {
+        await deleteFile(studentImageFilename);
+      }
       studentImageFilename = newStudentImageUrl;
-    } else if (req.file) {
-      const studentImageFile = req.file;
-      const uploadPath = "uploads/students_images/";
-      await deletefilewithfoldername(studentImageFilename, uploadPath);
-      studentImageFilename = await compressAndSaveFile(
-        studentImageFile,
-        uploadPath,
-      );
+    }
+    let guardianDpFilename = guardianUser.dp;
+    const newGuardianDpUrl = req.uploadedFiles?.dp?.[0]?.url || null;
+    if (newGuardianDpUrl) {
+      if (guardianDpFilename) {
+        await deleteFile(guardianDpFilename);
+      }
+      guardianDpFilename = newGuardianDpUrl;
     }
 
     await student.update({
@@ -2635,14 +2674,12 @@ const updateStudent = async (req, res) => {
       alumni,
     });
 
-    // Update linked guardian if guardian fields are provided
     if (student.guardian_id) {
       const guardian = await Guardian.findOne({
         where: { user_id: student.guardian_id },
       });
 
       if (guardian) {
-        // Validate uniqueness of contact if being changed
         if (
           guardian_contact &&
           guardian_contact !== guardian.guardian_contact
@@ -2716,10 +2753,10 @@ const updateStudent = async (req, res) => {
           country: country !== undefined ? country : guardian.country,
           post: post !== undefined ? post : guardian.post,
           pincode: pincode !== undefined ? pincode : guardian.pincode,
+          dp: guardianDpFilename,
         });
 
         // Sync guardian User record
-        const guardianUser = await User.findByPk(student.guardian_id);
         if (guardianUser) {
           const newGuardianDpUrl = req.uploadedFiles?.dp?.[0]?.url || null;
           let guardianDp = guardianUser.dp;
@@ -2853,6 +2890,8 @@ const permanentDeleteStudent = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const role = req.user.role;
+    const user_id = req.user.user_id;
+    const strictDelete = req.user.strict_delete;
     const { id } = req.params;
     if (role !== "admin") {
       await transaction.rollback();
@@ -2873,22 +2912,52 @@ const permanentDeleteStudent = async (req, res) => {
 
     const guardianUserId = student.guardian_id;
 
-    await Payment.destroy({
+    const payments = await Payment.findOne({
       where: { student_id: id },
       transaction,
     });
+    if(payments && strictDelete !=="true"){
+      await transaction.rollback();
+      return res.status(400).json({ error: "Unable to delete this user because other records are linked to this account." });
+    }
+    for (const payment of payments) {
+      if (payment.payment_attachment) {
+        await deleteFile(payment.payment_attachment);
+      }
+    }
+    //update the payment table student_id  null for student_id
+    await Payment.update(
+      { 
+        student_id: null,
+        invoice_student_id: null,
+       },
+      { where: { student_id: id }, transaction },
+    );
+
     await InvoiceStudent.destroy({
       where: { student_id: id },
       transaction,
     });
+
     await Marks.destroy({
       where: { student_id: id },
       transaction,
     });
+
+    const homeworkAssignments = await HomeworkAssignment.findAll({
+      where: { student_id: id },
+      transaction,
+    });
+    for (const assignment of homeworkAssignments) {
+      if (assignment.solved_file) {
+        await deleteFile(assignment.solved_file);
+      }
+    }
     await HomeworkAssignment.destroy({
       where: { student_id: id },
       transaction,
     });
+
     await AttendanceMarked.destroy({
       where: { student_id: id },
       transaction,
@@ -2897,10 +2966,21 @@ const permanentDeleteStudent = async (req, res) => {
       where: { student_id: id },
       transaction,
     });
+
+    const leaveRequests = await LeaveRequest.findAll({
+      where: { student_id: id },
+      transaction,
+    });
+    for (const leave of leaveRequests) {
+      if (leave.attachment) {
+        await deleteFile(leave.attachment);
+      }
+    }
     await LeaveRequest.destroy({
       where: { student_id: id },
       transaction,
     });
+
     await Message.destroy({
       where: { student_id: id },
       transaction,
@@ -2922,13 +3002,14 @@ const permanentDeleteStudent = async (req, res) => {
       transaction,
     });
 
+    if (student.image) {
+      await deleteFile(student.image);
+    }
     await student.destroy({ transaction });
 
     const remainingStudents = await Student.count({
       where: {
         guardian_id: guardianUserId,
-        school_id,
-        trash: false,
         id: { [Op.ne]: id },
       },
       transaction,
@@ -2939,10 +3020,10 @@ const permanentDeleteStudent = async (req, res) => {
         where: { user_id: guardianUserId },
         transaction,
       });
-      await User.destroy({
-        where: { id: guardianUserId },
-        transaction,
-      });
+      // await User.destroy({
+      //   where: { id: guardianUserId },
+      //   transaction,
+      // });
     }
 
     await transaction.commit();
@@ -3273,7 +3354,7 @@ const createDutyWithAssignments = async (req, res) => {
       "createDutyWithAssignments →",
       err,
     );
-    if (uploadDir) await deletefilewithfoldername(req.file, uploadDir);
+    if (uploadDir) await deleteFiles(uploadDir);
     await transaction.rollback();
     console.error("createDutyWithAssignments →", err);
     res.status(500).json({ error: err.message });
@@ -3505,7 +3586,6 @@ const updateDuty = async (req, res) => {
       if (duty.file) {
         await deleteFile(duty.file);
       }
-
       finalFile = newFileUrl;
     }
     await duty.update({
@@ -3537,10 +3617,12 @@ const updateDutyAssigned = async (req, res) => {
     if (!duty) return res.status(404).json({ error: "Duty not found" });
 
     let fileName = assignedDuty.solved_file;
-    if (req.file) {
-      const uploadPath = "uploads/solved_duties/";
-      await deletefilewithfoldername(fileName, uploadPath);
-      fileName = await compressAndSaveFile(req.file, uploadPath);
+    const newFileUrl = req.uploadedFiles?.file?.url || null;
+    if (newFileUrl) {
+      if (assignedDuty.solved_file) {
+        await deleteFile(assignedDuty.solved_file);
+      }
+      fileName = newFileUrl;
     }
     const updatedDuty = await assignedDuty.update({
       status,
@@ -3703,9 +3785,28 @@ const permanentDeleteDuty = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    await DutyAssignment.destroy({ where: { duty_id: id } }, { transaction });
+    //delete duty files
+    const duty = await Duty.findOne({
+      where: { id, school_id, trash: true },
+    })
+    if (!duty) return res.status(404).json({ error: "Not found" });
+ 
+    const dutyAssignments = await DutyAssignment.findAll({
+      where: { duty_id: id },
+    });
+    if (dutyAssignments.length > 0) {
+      for (const assignment of dutyAssignments) {
+        if (assignment.file) {
+          await deleteFile(assignment.file);
+        }
+      }
+      await DutyAssignment.destroy({ where: { duty_id: id } }, { transaction });
+    }
+    if(duty.file){
+      await deleteFile(duty.file);
+    }
     await Duty.destroy(
-      { where: { id, school_id, trash: true } },
+      { where: { id} },
       { transaction },
     );
     await transaction.commit();
@@ -3776,20 +3877,12 @@ const createAchievementWithStudents = async (req, res) => {
 
     const studentAchievements = await Promise.all(
       parsedStudents.map(async (student, index) => {
-        let compressedFileName = null;
 
-        if (req.files && req.files[index]) {
-          compressedFileName = await compressAndSaveMultiFile(
-            req.files[index],
-            uploadAchievementPath,
-          );
-        }
 
         return {
           achievement_id: achievement.id,
           student_id: student.student_id,
           status: student.status,
-          proof_document: compressedFileName,
           remarks: student.remarks,
         };
       }),
@@ -4073,23 +4166,9 @@ const updateStudentAchievement = async (req, res) => {
             },
           });
 
-          // const studentFile = uploadedFiles[index] || uploadedFiles[0] || null;
-          // let proofDocument = existingStudentAchievement?.proof_document || null;
-
-          // if (studentFile) {
-          //   if (proofDocument) {
-          //     await deletefilewithfoldername(proofDocument, uploadAchievementPath);
-          //   }
-          //   proofDocument = await compressAndSaveMultiFile(
-          //     studentFile,
-          //     uploadAchievementPath,
-          //   );
-          // }
-
           const payload = {
             status: studentStatus || existingStudentAchievement?.status || "participant",
             remarks: student.remarks ?? remarks ?? existingStudentAchievement?.remarks ?? null,
-            // proof_document: proofDocument,
           };
 
           if (existingStudentAchievement) {
@@ -4162,10 +4241,6 @@ const peremententDeleteAchievement = async (req, res) => {
     const studentAchievements = await StudentAchievement.findAll({
       where: { achievement_id: id },
     });
-    for (const sa of studentAchievements) {
-      await deletefilewithfoldername(sa.proof_document, uploadAchievementPath);
-    }
-
     await StudentAchievement.destroy({ where: { achievement_id: id } });
     await Achievement.destroy({ where: { id } });
     res.status(200).json({ message: "Achievement deleted successfully" });
@@ -4197,11 +4272,6 @@ const createEvent = async (req, res) => {
         .json({ error: "Event with the same title already exists" });
     }
     const eventFileUrl = req.uploadedFiles?.file?.url || null;
-    // let fileName = null;
-    // if (req.file) {
-    //   const uploadPath = "uploads/event_files/";
-    //   fileName = await compressAndSaveFile(req.file, uploadPath);
-    // }
 
     const event = await Event.create({
       school_id,
@@ -4389,7 +4459,9 @@ const permanentDeleteEvent = async (req, res) => {
     });
     if (!event) return res.status(404).json({ error: "Event not found" });
     const uploadPath = "uploads/event_files/";
-    await deletefilewithfoldername(event.file, uploadPath);
+    if (event.file) {
+      await deleteFile(event.file);
+    }
     await event.destroy();
 
     res.status(200).json({ message: "Event permanently deleted" });
@@ -5111,24 +5183,19 @@ const permanentDeletePayment = async (req, res) => {
     const school_id = req.user.school_id;
     const user_id = req.user.user_id;
     const data = await Payment.findOne({
-      where: { trash: true, id: req.params.id },
+      where: {  id: req.params.id , school_id, trash: true, },
     });
     if (!data) {
       return res.status(404).json({
         error: "Payment not found ",
       });
     }
-    if (data.school_id !== school_id || data.recorded_by !== user_id) {
-      return res.status(403).json({
-        error: "You do not have permission to delete this payment",
-      });
+    if(data.payment_attachment){
+      await deleteFile(data.payment_attachment);
     }
     await Payment.destroy({
       where: {
         id: req.params.id,
-        trash: true,
-        school_id,
-        recorded_by: user_id,
       },
     });
     res.status(200).json({ message: "Payment permanently deleted" });
@@ -8557,10 +8624,20 @@ const permanentDeleteHomework = async (req, res) => {
     const homework = await Homework.findOne({
       where: { id: id, school_id: school_id ,trash: true},
     });
-
     if (!homework) return res.status(404).json({ error: "Not found" });
+    const homeworkAssignments = await HomeworkAssignment.findAll({
+      where: { homework_id: id },
+    })
+    for (const assignment of homeworkAssignments) {
+      if(assignment.solved_file){
+        await deleteFile(assignment.solved_file);
+      }
+    }
 
     await HomeworkAssignment.destroy({ where: { homework_id: id } });
+    if(homework.file){
+      await deleteFile(homework.file);
+    }
     await homework.destroy();
 
     res.status(200).json({ message: "Deleted successfully" });
@@ -10005,6 +10082,7 @@ const getExamMarksByExamId = async (req, res) => {
     let whereClause = {
       school_id,
       trash: false,
+      exam_id,
     };
     if (class_id) {
       whereClause.class_id = class_id;

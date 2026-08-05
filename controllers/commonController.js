@@ -26,11 +26,6 @@ const { deleteFile } = require("../middlewares/storageUploads");
 
 const { Class, Staff } = require("../models");
 
-const {
-  compressAndSaveFile,
-  deletefilewithfoldername,
-} = require("../utils/fileHandler");
-
 const getStudentsByClassId = async (req, res) => {
   try {
     const { class_id } = req.params;
@@ -846,8 +841,6 @@ const updateDp = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    console.log("req.file:", req.file);
-    console.log("req.uploadedFiles:", req.uploadedFiles);
     let finalDp = user.dp;
     const dpField = req.uploadedFiles?.dp || req.uploadedFiles?.file;
     const newDpUrl = Array.isArray(dpField)

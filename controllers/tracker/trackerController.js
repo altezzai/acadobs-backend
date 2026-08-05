@@ -5,7 +5,6 @@ const { stop: Stop } = require("../../models");
 const { Student } = require("../../models");
 const StudentRouteAssignment = require("../../models/student_route_assignment");
 const { Sequelize } = require("sequelize");
-const { compressAndSaveFile } = require("../../utils/fileHandler");
 const { Op } = require("sequelize");
 const { RouteStopLog } = require("../../models");
 const { deleteFile } = require("../../middlewares/storageUploads");
@@ -59,11 +58,7 @@ const updateDriverById = async (req, res) => {
     const school_id = req.user.school_id;
     const { name, phone, email, address } = req.body || {};
 
-    // let photoPath = undefined;
-    // if (req.file) {
-    //   const uploadPath = "uploads/driver_images/";
-    //   photoPath = await compressAndSaveFile(req.file, uploadPath);
-    // }
+ 
     const driver = await Driver.findOne({
       where: {
         id,

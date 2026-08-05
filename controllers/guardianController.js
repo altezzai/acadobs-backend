@@ -3,10 +3,6 @@ const fs = require("fs");
 const bcrypt = require("bcrypt");
 const { Op, where } = require("sequelize");
 const logger = require("../utils/logger");
-const {
-  compressAndSaveFile,
-  deletefilewithfoldername,
-} = require("../utils/fileHandler");
 const { deleteFile } = require("../middlewares/storageUploads");
 const { normalizeGuardianRelation } = require("../utils/supportingFunction");
 const { Class, StudentRoutes, stop, Mark, InternalMark } = require("../models");
@@ -49,17 +45,20 @@ const updateHomeworkAssignment = async (req, res) => {
     const assignment = await HomeworkAssignment.findOne({
       where: { id, student_id: student_id },
     });
-    console.log(assignment);
     if (!assignment) return res.status(404).json({ error: "Not found" });
-    let fileName = null;
-    if (req.file) {
-      const uploadPath = "uploads/solved_homeworks/";
-      fileName = await compressAndSaveFile(req.file, uploadPath);
+    let fileName = assignment.solved_file;
+    const newFileUrl = req.uploadedFiles?.file?.url || null;
+    if (newFileUrl) {
+      if (assignment.solved_file) {
+        await deleteFile(assignment.solved_file);
+      }
+      fileName = newFileUrl;
     }
+ 
     await assignment.update({
       status,
       points,
-      solved_file: fileName ? fileName : assignment.solved_file,
+      solved_file: fileName,
     });
     res.status(200).json({ message: "Updated successfully", assignment });
   } catch (err) {
@@ -523,7 +522,9 @@ const updateLeaveRequest = async (req, res) => {
       half_section,
     } = req.body;
     const data = await LeaveRequest.findByPk(Id);
-    if (!data) return res.status(404).json({ error: "Not found" });
+    if (!data){
+      return res.status(404).json({ error: "Leave request not found" });
+    }
     const existingRequest = await LeaveRequest.findOne({
       where: {
         school_id: school_id,
@@ -538,10 +539,13 @@ const updateLeaveRequest = async (req, res) => {
       return res.status(400).json({ error: "Leave request already exists" });
     }
     let fileName = data.attachment;
-    if (req.file) {
-      const uploadPath = "uploads/leave_requests/";
-      await deletefilewithfoldername(fileName, uploadPath);
-      fileName = await compressAndSaveFile(req.file, uploadPath);
+    const newFileUrl = req.uploadedFiles?.attachment?.url || null;
+    console.log("New File URL:", newFileUrl);
+    if (newFileUrl) {
+      if (data.attachment) {
+        await deleteFile(data.attachment);
+      }
+      fileName = newFileUrl;
     }
     await data.update({
       student_id: student_id,

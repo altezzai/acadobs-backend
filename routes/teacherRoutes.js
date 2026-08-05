@@ -100,6 +100,7 @@ router.delete(
 router.put(
   "/updateHomeworkAssignment/:id",
   uploadWithErrorHandler(upload.single("file")),
+  storageUploadMiddleware("homeworks"),
   teacherController.updateHomeworkAssignment,
 );
 router.put(
@@ -151,6 +152,7 @@ router.get("/duties/:id", teacherController.getAssignedDutyById);
 router.put(
   "/updateAssignedDuty/:id",
   uploadWithErrorHandler(upload.single("solved_file")),
+  storageUploadMiddleware("duties"),
   teacherController.updateAssignedDuty,
 );
 
@@ -200,6 +202,7 @@ router.patch(
 router.post(
   "/parentNotes",
   uploadWithErrorHandler(upload.single("note_attachment")),
+  storageUploadMiddleware("parent_notes"),
   teacherController.createParentNote,
 );
 router.get("/parentNotes", teacherController.getAllOwnCreatedParentNotes);

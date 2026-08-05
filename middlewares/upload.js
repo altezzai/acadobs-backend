@@ -20,7 +20,6 @@ const uploadWithErrorHandler = (uploadMiddleware) => {
   return (req, res, next) => {
     uploadMiddleware(req, res, (err) => {
       if (err instanceof multer.MulterError) {
-        // File size error
         if (err.code === "LIMIT_FILE_SIZE") {
           return res.status(400).json({
             success: false,
@@ -28,7 +27,6 @@ const uploadWithErrorHandler = (uploadMiddleware) => {
           });
         }
 
-        // Any Multer error
         return res.status(400).json({
           success: false,
           message: "Upload error: " + err.message,
@@ -46,3 +44,4 @@ const uploadWithErrorHandler = (uploadMiddleware) => {
 };
 
 module.exports = { upload, nUpload, uploadWithErrorHandler };
+
