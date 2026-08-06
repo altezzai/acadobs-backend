@@ -35,6 +35,9 @@ const getStudentsByClassId = async (req, res) => {
     const { class_id } = req.params;
     const school_id = req.user.school_id || "";
     const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
     if (!school_id) {
       return res.status(404).json({ error: "School not found" });
     }
@@ -65,6 +68,9 @@ const getStudentsByClassId = async (req, res) => {
         attributes: studentAttributes,
         include: studentInclude,
         order: [["roll_number", "ASC"]],
+        limit,
+        offset,
+        distinct: true,
       });
       count = result.count;
       students = result.rows;
@@ -92,9 +98,11 @@ const getStudentsByClassId = async (req, res) => {
         students = result.rows;
       }
     }
-
+    const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
+      totalPages,
+      currentPage: page,
       students,
     });
   } catch (err) {

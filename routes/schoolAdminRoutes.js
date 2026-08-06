@@ -619,6 +619,8 @@ router.get("/getSchoolsList", publicController.getSchoolsList);
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);
+
+router.get("/getStudentsByClassId/:class_id",commonController.getStudentsByClassId);
 router.get("/getStudentDetailsById/:id", commonController.getStudentDetailsById);
 
 router.get(
