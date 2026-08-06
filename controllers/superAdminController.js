@@ -92,7 +92,7 @@ const createSchool = async (req, res) => {
       .json({ message: "School and admin created successfully", school });
   } catch (error) {
     console.error("Create school error:", error);
-    logger.error("Create school error:", error);
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "schoolId:", req.user.school_id, "error:", "Create school error:", error);
     await transaction.rollback();
     res.status(500).json({ error: error.message });
   }
@@ -123,7 +123,7 @@ const getAllSchools = async (req, res) => {
       schools,
     });
   } catch (error) {
-    logger.error("Error getting schools:", error);
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error getting schools:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -134,7 +134,7 @@ const getSchoolById = async (req, res) => {
     if (!school) return res.status(404).json({ error: "School not found" });
     res.status(200).json({ school });
   } catch (error) {
-    logger.error("Error getting school by ID:", error);
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"role:", req.user.role,"userId:", req.user.user_id,"Error getting school by ID:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -200,7 +200,7 @@ const updateSchool = async (req, res) => {
 
     res.status(200).json({ message: "School updated successfully", school });
   } catch (error) {
-    logger.error("Error updating school:", error);
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error updating school:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -269,7 +269,7 @@ const updateSchoolCredentials = async (req, res) => {
 
 
   } catch (error) {
-    logger.error("Error updating school credentials:", error);
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error updating school credentials:", error);
     res.status(500).json({ error: error.message });
 
   }
@@ -286,7 +286,7 @@ const deleteSchool = async (req, res) => {
       .status(200)
       .json({ message: "School deleted successfully (soft delete)" });
   } catch (error) {
-    logger.error("Error deleting school:", error);
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error deleting school:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -300,7 +300,7 @@ const restoreSchool = async (req, res) => {
 
     res.status(200).json({ message: "School restored successfully" });
   } catch (error) {
-    logger.error("Error restoring school:", error);
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error restoring school:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -313,7 +313,7 @@ const permanentlyDeleteSchool = async (req, res) => {
     await school.destroy();
     res.status(200).json({ message: "School deleted permanently" });
   } catch (error) {
-    logger.error("Error permanently deleting school:", error);
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error permanently deleting school:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -341,7 +341,7 @@ const getTrashedSchools = async (req, res) => {
       schools,
     });
   } catch (error) {
-    logger.error("Error getting trashed schools:", error);
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error getting trashed schools:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -376,10 +376,10 @@ const createClass = async (req, res) => {
       school_id,
     });
     res.status(201).json({ message: "Class created", class: newClass });
-  } catch (err) {
-    logger.error("Error creating class:", err);
-    console.error("Error creating class:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error creating class:", error);
+    console.error("Error creating class:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -431,9 +431,9 @@ const getAllClasses = async (req, res) => {
       currentPage: page,
       classes,
     });
-  } catch (err) {
-    logger.error("Error getting classes:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error getting classes:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -450,9 +450,9 @@ const getClassById = async (req, res) => {
     });
     if (!classData) return res.status(404).json({ message: "Class not found" });
     res.status(200).json(classData);
-  } catch (err) {
-    logger.error("Error fetching class:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error fetching class:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -485,9 +485,9 @@ const updateClass = async (req, res) => {
       { where: { id } }
     );
     res.status(200).json({ message: "Class updated", classData });
-  } catch (err) {
-    logger.error("Error updating class:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error updating class:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -496,9 +496,9 @@ const deleteClass = async (req, res) => {
     const id = req.params.id;
     await Class.update({ trash: true }, { where: { id } });
     res.status(200).json({ message: "Class soft-deleted" });
-  } catch (err) {
-    logger.error("Error deleting class:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error deleting class:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const restoreClass = async (req, res) => {
@@ -506,9 +506,9 @@ const restoreClass = async (req, res) => {
     const id = req.params.id;
     await Class.update({ trash: false }, { where: { id } });
     res.status(200).json({ message: "Class restored" });
-  } catch (err) {
-    logger.error("Error restoring class:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error restoring class:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const permanentDeleteClass = async (req, res) => {
@@ -516,9 +516,9 @@ const permanentDeleteClass = async (req, res) => {
     const id = req.params.id;
     await Class.destroy({ where: { id } });
     res.status(200).json({ message: "Class permanently deleted" });
-  } catch (err) {
-    logger.error("Error permanently deleting class:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error permanently deleting class:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getTrashedClasses = async (req, res) => {
@@ -539,9 +539,9 @@ const getTrashedClasses = async (req, res) => {
       currentPage: page,
       classes,
     });
-  } catch (err) {
-    logger.error("Error getting trashed classes:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error getting trashed classes:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -586,9 +586,9 @@ const createSubject = async (req, res) => {
       is_multi_teacher,
     });
     res.status(201).json(subject);
-  } catch (err) {
-    logger.error("Error creating subject:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error creating subject:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -648,9 +648,9 @@ const getSubjects = async (req, res) => {
       currentPage: page,
       subjects,
     });
-  } catch (err) {
-    logger.error("Error getting subjects:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error getting subjects:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getSubjectById = async (req, res) => {
@@ -670,9 +670,9 @@ const getSubjectById = async (req, res) => {
     });
     if (!subject) return res.status(404).json({ message: "Subject not found" });
     res.status(200).json(subject);
-  } catch (err) {
-    logger.error("Error getting subject by id:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error getting subject by id:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const updateSubject = async (req, res) => {
@@ -711,9 +711,9 @@ const updateSubject = async (req, res) => {
 
     await subject.update({ subject_name, class_range, syllabus_id, is_multi_teacher });
     res.status(200).json(subject);
-  } catch (err) {
-    logger.error("Error updating subject:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error updating subject:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -728,9 +728,9 @@ const deleteSubject = async (req, res) => {
     await subject.save();
 
     res.status(200).json({ message: "Subject deleted (soft)" });
-  } catch (err) {
-    logger.error("Error deleting subject:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error deleting subject:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const restoreSubject = async (req, res) => {
@@ -744,9 +744,9 @@ const restoreSubject = async (req, res) => {
     await subject.save();
 
     res.status(200).json({ message: "Subject restored" });
-  } catch (err) {
-    logger.error("Error restoring subject:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error restoring subject:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getTrashedSubjects = async (req, res) => {
@@ -796,9 +796,9 @@ const getTrashedSubjects = async (req, res) => {
       currentPage: page,
       subjects,
     });
-  } catch (err) {
-    logger.error("Error getting trashed subjects:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error getting trashed subjects:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const permanentlyDeleteSubject = async (req, res) => {
@@ -810,9 +810,9 @@ const permanentlyDeleteSubject = async (req, res) => {
 
     await subject.destroy();
     res.status(200).json({ message: "Subject permanently deleted" });
-  } catch (err) {
-    logger.error("Error permanently deleting subject:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error permanently deleting subject:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getAccountDeleteRequests = async (req, res) => {
@@ -857,9 +857,9 @@ const getAccountDeleteRequests = async (req, res) => {
       currentPage: page,
       requests,
     });
-  } catch (err) {
-    logger.error("Error getting account delete requests:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error getting account delete requests:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const updateAccountDeleteRequests = async (req, res) => {
@@ -872,9 +872,9 @@ const updateAccountDeleteRequests = async (req, res) => {
     }
     await request.update({ status, reason });
     res.status(200).json({ message: "Request status updated", request });
-  } catch (err) {
-    logger.error("Error updating account delete request:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error updating account delete request:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -892,9 +892,9 @@ const createSyllabus = async (req, res) => {
       country,
     });
     res.status(201).json(syllabus);
-  } catch (err) {
-    logger.error("Error creating syllabus:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error creating syllabus:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getSyllabuses = async (req, res) => {
@@ -918,9 +918,9 @@ const getSyllabuses = async (req, res) => {
       currentPage: page,
       syllabuses,
     });
-  } catch (err) {
-    logger.error("Error getting syllabuses:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error getting syllabuses:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getSyllabusById = async (req, res) => {
@@ -931,9 +931,9 @@ const getSyllabusById = async (req, res) => {
       return res.status(404).json({ error: "Syllabus not found" });
     }
     res.status(200).json(syllabus);
-  } catch (err) {
-    logger.error("Error getting syllabus by ID:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error getting syllabus by ID:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const updateSyllabus = async (req, res) => {
@@ -946,9 +946,9 @@ const updateSyllabus = async (req, res) => {
     }
     await syllabus.update({ name, description, level, country });
     res.status(200).json(syllabus);
-  } catch (err) {
-    logger.error("Error updating syllabus:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error updating syllabus:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const deleteSyllabus = async (req, res) => {
@@ -961,9 +961,9 @@ const deleteSyllabus = async (req, res) => {
     syllabus.trash = true;
     await syllabus.save();
     res.status(200).json({ message: "Syllabus deleted (soft)" });
-  } catch (err) {
-    logger.error("Error deleting syllabus:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error deleting syllabus:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const restoreSyllabus = async (req, res) => {
@@ -976,9 +976,9 @@ const restoreSyllabus = async (req, res) => {
     syllabus.trash = false;
     await syllabus.save();
     res.status(200).json({ message: "Syllabus restored successfully" });
-  } catch (err) {
-    logger.error("Error restoring syllabus:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error restoring syllabus:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const permanentlyDeleteSyllabus = async (req, res) => {
@@ -990,9 +990,9 @@ const permanentlyDeleteSyllabus = async (req, res) => {
     }
     await syllabus.destroy();
     res.status(200).json({ message: "Syllabus deleted permanently" });
-  } catch (err) {
-    logger.error("Error permanently deleting syllabus:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error permanently deleting syllabus:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getTrashedSyllabuses = async (req, res) => {
@@ -1016,9 +1016,9 @@ const getTrashedSyllabuses = async (req, res) => {
       currentPage: page,
       trashedSyllabuses,
     });
-  } catch (err) {
-    logger.error("Error getting trashed syllabuses:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error getting trashed syllabuses:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const dashboardCounts = async (req, res) => {
@@ -1056,9 +1056,9 @@ const dashboardCounts = async (req, res) => {
       totalInvoices,
 
     });
-  } catch (err) {
-    logger.error("Error getting dashboard stats:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error getting dashboard stats:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const recentActivities = async (req, res) => {
@@ -1090,9 +1090,9 @@ const recentActivities = async (req, res) => {
       recentTeachers,
       recentGuardians,
     });
-  } catch (err) {
-    logger.error("Error getting recent activities:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error getting recent activities:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 

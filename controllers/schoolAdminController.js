@@ -85,10 +85,10 @@ const createClass = async (req, res) => {
       special,
     });
     res.status(201).json({ message: "Class created", class: newClass });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "Error creating class:", err);
-    console.error("Error creating class:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Error creating class:", error);
+    console.error("Error creating class:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -130,14 +130,14 @@ const getAllClasses = async (req, res) => {
       currentPage: page,
       classes,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error fetching classes:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -153,9 +153,9 @@ const getClassById = async (req, res) => {
     });
     if (!classData) return res.status(404).json({ message: "Class not found" });
     res.status(200).json(classData);
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "Error fetching class:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Error fetching class:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 //i want get year and division of class by class id
@@ -173,9 +173,9 @@ const getClassesByYear = async (req, res) => {
 
     if (!classData) return res.status(404).json({ message: "Class not found" });
     res.status(200).json(classData);
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "Error fetching class:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Error fetching class:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -189,9 +189,9 @@ const updateClass = async (req, res) => {
       { where: { id, school_id: req.user.school_id } },
     );
     res.status(200).json({ message: "Class updated", updated });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "Error updating class:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Error updating class:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -211,9 +211,9 @@ const deleteClass = async (req, res) => {
 
     await Class.update({ trash: true }, { where: { id, school_id } });
     res.status(200).json({ message: "Class soft-deleted" });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "Error deleting class:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Error deleting class:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getSpecialClassesByYear = async (req, res) => {
@@ -231,9 +231,9 @@ const getSpecialClassesByYear = async (req, res) => {
 
     if (!classData) return res.status(404).json({ message: "Special classes not found" });
     res.status(200).json(classData);
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "Error fetching special classes:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Error fetching special classes:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 //get trashed classes
@@ -266,14 +266,14 @@ const getTrashedClasses = async (req, res) => {
       currentPage: page,
       classes,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error fetching trashed classes:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const restoreClass = async (req, res) => {
@@ -298,14 +298,14 @@ const restoreClass = async (req, res) => {
       },
     );
     res.status(200).json({ message: "Class restored" });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error restoring class:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const permanentDeleteClass = async (req, res) => {
@@ -322,14 +322,14 @@ const permanentDeleteClass = async (req, res) => {
     if (!classData) return res.status(404).json({ message: "Class not found" });
     await Class.destroy({ where: { id, school_id } });
     res.status(200).json({ message: "Class permanently deleted" });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error permanently deleting class:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 // Create Subject
@@ -372,14 +372,14 @@ const createSubject = async (req, res) => {
       syllabus_id: schoolData.syllabus_id,
     });
     res.status(201).json(subject);
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error creating subject:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 //managing subjects
@@ -426,14 +426,14 @@ const getSubjects = async (req, res) => {
       currentPage: page,
       subjects,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error getting subjects:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const getSubjectById = async (req, res) => {
@@ -455,14 +455,14 @@ const getSubjectById = async (req, res) => {
     });
     if (!subject) return res.status(404).json({ message: "Subject not found" });
     res.status(200).json(subject);
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error getting subject by ID:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const updateSubject = async (req, res) => {
@@ -499,14 +499,14 @@ const updateSubject = async (req, res) => {
 
     await subject.update({ subject_name, class_range, school_id, is_multi_teacher });
     res.status(200).json(subject);
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error updating subject:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -524,14 +524,14 @@ const deleteSubject = async (req, res) => {
     await subject.save();
 
     res.status(200).json({ message: "Subject deleted (soft)" });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error deleting subject:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const getSubjectsForFilter = async (req, res) => {
@@ -573,14 +573,14 @@ const getSubjectsForFilter = async (req, res) => {
       totalcontent: subjects.length,
       subjects,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error getting subjects for filter:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const getTrashedSubjects = async (req, res) => {
@@ -619,14 +619,14 @@ const getTrashedSubjects = async (req, res) => {
       currentPage: page,
       subjects,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error getting trashed subjects:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 // Restore Subject
@@ -644,14 +644,14 @@ const restoreSubject = async (req, res) => {
     await subject.save();
 
     res.status(200).json({ message: "Subject restored" });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error restoring subject:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -667,14 +667,14 @@ const permanentDeleteSubject = async (req, res) => {
 
     await subject.destroy();
     res.status(200).json({ message: "Subject permanently deleted" });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error permanently deleting subject:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -1102,6 +1102,12 @@ const restoredStaff = async (req, res) => {
     await user.update({ trash: false });
     res.status(200).json({ message: "successfully restored staff " });
   } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error restoring staff:",
+      error,
+    )
     res.status(500).json({ error: error.message });
   }
 };
@@ -1155,14 +1161,14 @@ const getTrashedStaffs = async (req, res) => {
       currentPage: page,
       staff,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error getting trashed staffs:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const permanentDeleteStaff = async (req, res) => {
@@ -1358,12 +1364,12 @@ const getAllStaffPermissions = async (req, res) => {
       currentPage: page,
       data
      });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error getting staff permissions:",
-      err,
+      error,
     );
     res.status(500).json({ error: "Failed to fetch staff permissions" });
   }
@@ -1390,12 +1396,12 @@ const getStaffPermissionByUser = async (req, res) => {
     }
 
     res.json({ success: true, data: permission });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error getting staff permission:",
-      err,
+      error,
     );
     res.status(500).json({ error: "Failed to fetch staff permission" });
   }
@@ -1434,7 +1440,6 @@ const updateStaffPermission = async (req, res) => {
       transportation,
       aiAnalytics,
     } = req.body;
-    console.log("teachers_leaveReuest",req.body.teachers_leaveReuest);
     const permission = await StaffPermission.findOne({
       where: { user_id },
       include: [
@@ -1503,12 +1508,12 @@ const updateStaffPermission = async (req, res) => {
       aiAnalytics,
     });
     res.json({ success: true, data: permission });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error updating staff permission:",
-      err,
+      error,
     );
     res.status(500).json({ error: "Failed to update staff permission" });
   }
@@ -1536,12 +1541,12 @@ const deleteStaffPermission = async (req, res) => {
 
     await permission.destroy();
     res.json({ success: true, message: "Staff permission deleted successfully" });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error deleting staff permission:",
-      err,
+      error,
     );
     res.status(500).json({ error: "Failed to delete staff permission" });
   }
@@ -1727,7 +1732,7 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
 
     return user.id;
   } catch (error) {
-    logger.error("Error creating guardian service:", error);
+    logger.error("schoolId:", req.user.school_id, "Error creating guardian service:", error);
     throw error;
   }
 };
@@ -1764,14 +1769,14 @@ const getAllGuardians = async (req, res) => {
       currentPage: page,
       guardians,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error getting guardians:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const getGuardianById = async (req, res) => {
@@ -1784,14 +1789,14 @@ const getGuardianById = async (req, res) => {
       },
     });
     res.status(200).json(guardians);
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error getting guardians:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -1896,14 +1901,14 @@ const updateGuardian = async (req, res) => {
     });
     //
     res.status(200).json(guardian);
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error updating guardian:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const deleteGuardian = async (req, res) => {
@@ -1918,8 +1923,8 @@ const deleteGuardian = async (req, res) => {
 
     await guardian.update({ trash: true });
     res.status(200).json({ message: "Guardian moved to trash." });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 const getGuardianBySchoolId = async (req, res) => {
@@ -1946,14 +1951,14 @@ const getGuardianBySchoolId = async (req, res) => {
       currentPage: page,
       guardians,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error getting guardians:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const updateGuardianUserPassword = async (req, res) => {
@@ -1969,14 +1974,14 @@ const updateGuardianUserPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await user.update({ password: hashedPassword });
     res.status(200).json({ message: "Password updated successfully" });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error updating guardian user password:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 // Create Student
@@ -2177,14 +2182,14 @@ const createStudent = async (req, res) => {
     });
 
     res.status(201).json({ success: true, student });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error creating student:",
-      err,
+      error,
     );
-    console.error("Error creating student:", err);
+    console.error("Error creating student:", error);
     res.status(500).json({ error: "Failed to create student" });
   }
 };
@@ -2368,16 +2373,16 @@ const bulkCreateStudents = async (req, res) => {
       success: true,
       count: inserted.length,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error bulk creating students:",
-      err,
+      error,
     );
     await transaction.rollback();
-    console.error("Error bulk creating students:", err);
-    return res.status(500).json({ error: err.message });
+    console.error("Error bulk creating students:", error);
+    return res.status(500).json({ error: error.message });
   }
 };
 const getAllStudents = async (req, res) => {
@@ -2435,14 +2440,14 @@ const getAllStudents = async (req, res) => {
     res
       .status(200)
       .json({ totalcontent: count, totalPages, currentPage: page, students });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error fetching students:",
-      err,
+      error,
     );
-    console.error("Error fetching students:", err);
+    console.error("Error fetching students:", error);
     res.status(500).json({ error: "Failed to fetch students" });
   }
 };
@@ -2497,14 +2502,14 @@ const getStudentById = async (req, res) => {
     if (!student) return res.status(404).json({ error: "Student not found" });
 
     res.status(200).json(student);
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error getting student:",
-      err,
+      error,
     );
-    console.error("Error getting student:", err);
+    console.error("Error getting student:", error);
     res.status(500).json({ error: "Failed to get student" });
   }
 };
@@ -2778,14 +2783,14 @@ const updateStudent = async (req, res) => {
 
     const updated = await Student.findByPk(id);
     res.status(200).json({ message: "Student updated successfully", updated });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error updating student:",
-      err,
+      error,
     );
-    console.error("Error updating student:", err);
+    console.error("Error updating student:", error);
     res.status(500).json({ error: "Failed to update student" });
   }
 };
@@ -2825,14 +2830,14 @@ const deleteStudent = async (req, res) => {
     );
 
     res.status(200).json({ message: "Student deleted successfully" });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error deleting student:",
-      err,
+      error,
     );
-    console.error("Error deleting student:", err);
+    console.error("Error deleting student:", error);
     res.status(500).json({ error: "Failed to delete student" });
   }
 };
@@ -2872,14 +2877,14 @@ const restoreStudent = async (req, res) => {
     );
 
     res.status(200).json({ message: "Student restored successfully" });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error restoring student:",
-      err,
+      error,
     );
-    console.error("Error restoring student:", err);
+    console.error("Error restoring student:", error);
     res.status(500).json({ error: "Failed to restore student" });
   }
 };
@@ -3028,15 +3033,15 @@ const permanentDeleteStudent = async (req, res) => {
 
     await transaction.commit();
     res.status(200).json({ message: "Student permanently deleted" });
-  } catch (err) {
+  } catch (error) {
     await transaction.rollback();
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error permanently deleting student:",
-      err,
+      error,
     );
-    console.error("Error permanently deleting student:", err);
+    console.error("Error permanently deleting student:", error);
     res.status(500).json({ error: "Failed to permanently delete student" });
   }
 };
@@ -3073,14 +3078,14 @@ const getTrashedStudents = async (req, res) => {
     res
       .status(200)
       .json({ totalcontent: count, totalPages, currentPage: page, students });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error fetching trashed students:",
-      err,
+      error,
     );
-    console.error("Error fetching trashed students:", err);
+    console.error("Error fetching trashed students:", error);
     res.status(500).json({ error: "Failed to fetch trashed students" });
   }
 };
@@ -3104,25 +3109,25 @@ const bulkUpdateStudentsToAlumni = async (req, res) => {
       res
         .status(200)
         .json({ message: `${result[0]} students updated to alumni` });
-    } catch (err) {
+    } catch (error) {
       await transaction.rollback();
       logger.error(
         "schoolId:",
         req.user.school_id,
         "Error updating students to alumni:",
-        err,
+        error,
       );
-      console.error("Error updating students to alumni:", err);
+      console.error("Error updating students to alumni:", error);
       res.status(500).json({ error: "Failed to update students to alumni" });
     }
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error in bulkUpdateStudentsToAlumni:",
-      err,
+      error,
     );
-    console.error("Error in bulkUpdateStudentsToAlumni:", err);
+    console.error("Error in bulkUpdateStudentsToAlumni:", error);
     res.status(500).json({ error: "Failed to update students to alumni" });
   }
 };
@@ -3157,7 +3162,6 @@ const bulkUpdateStudentsClass = async (req, res) => {
         const existing = await Student.findOne({
           where: { class_id, roll_number: roll, school_id, trash: false },
         });
-        console.log(`Checking roll number ${roll} in class ${class_id}:`, existing ? "exists" : "not found");
        if(existing) {
         return res.status(409).json({
           error: `Roll number ${roll} already exists in class ${class_id}`,
@@ -3173,15 +3177,15 @@ const bulkUpdateStudentsClass = async (req, res) => {
       );
     
       res.status(200).json({ message: `${updatedCount} students updated` });
-    } catch (err) {
+    } catch (error) {
       await transaction.rollback();
       logger.error(
         "schoolId:",
         req.user.school_id,
         "Error updating students class:",
-        err,
+        error,
       );
-      console.error("Error updating students class:", err);
+      console.error("Error updating students class:", error);
       res.status(500).json({ error: "Failed to update students class" });
     }
   };
@@ -3229,14 +3233,14 @@ const getAlumniStudents = async (req, res) => {
     res
       .status(200)
       .json({ totalcontent: count, totalPages, currentPage: page, students });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error fetching students:",
-      err,
+      error,
     );
-    console.error("Error fetching students:", err);
+    console.error("Error fetching students:", error);
     res.status(500).json({ error: "Failed to fetch students" });
   }
 };
@@ -3273,14 +3277,14 @@ const getTrashedAlumniStudents = async (req, res) => {
     res
       .status(200)
       .json({ totalcontent: count, totalPages, currentPage: page, students });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error fetching trashed students:",
-      err,
+      error,
     );
-    console.error("Error fetching trashed students:", err);
+    console.error("Error fetching trashed students:", error);
     res.status(500).json({ error: "Failed to fetch trashed students" });
   }
 };
@@ -3347,17 +3351,17 @@ const createDutyWithAssignments = async (req, res) => {
       duty,
       assignments: createdAssignments,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "createDutyWithAssignments →",
-      err,
+      error,
     );
     if (uploadDir) await deleteFiles(uploadDir);
     await transaction.rollback();
-    console.error("createDutyWithAssignments →", err);
-    res.status(500).json({ error: err.message });
+    console.error("createDutyWithAssignments →", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -3441,8 +3445,8 @@ const getAllTeacherDuties = async (req, res) => {
       currentPage: download === "true" ? null : page,
       duties: formattedData,
     });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "getAllDuties →", err);
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getAllDuties →", error);
     res.status(500).json({ error: "Failed to fetch duties" });
   }
 };
@@ -3526,8 +3530,8 @@ const getAllStaffDuties = async (req, res) => {
       currentPage: download === "true" ? null : page,
       duties: formattedData,
     });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "getAllDuties →", err);
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getAllDuties →", error);
     res.status(500).json({ error: "Failed to fetch duties" });
   }
 };
@@ -3557,8 +3561,8 @@ const getDutyById = async (req, res) => {
     }
 
     res.json(duty);
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "getDutyById →", err);
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getDutyById →", error);
     res.status(500).json({ error: "Failed to fetch duty" });
   }
 };
@@ -3596,8 +3600,8 @@ const updateDuty = async (req, res) => {
       file: finalFile,
     });
     res.json(duty);
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "updateDuty →", err);
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "updateDuty →", error);
     res.status(500).json({ error: "Failed to update duty" });
   }
 };
@@ -3630,9 +3634,9 @@ const updateDutyAssigned = async (req, res) => {
       solved_file: fileName ? fileName : null,
     });
     res.json({ message: "Updated", updatedDuty });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "updateDutyAssigned →", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "updateDutyAssigned →", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const bulkUpdateDutyAssignments = async (req, res) => {
@@ -3730,8 +3734,8 @@ const deleteDuty = async (req, res) => {
     res.status(200).json({
       message: `Deleted successfully.`,
     });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "deleteDuty →", err);
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "deleteDuty →", error);
     res.status(500).json({ error: "Delete failed duty" });
   }
 };
@@ -3755,9 +3759,9 @@ const getTrashedDuties = async (req, res) => {
       currentPage: page,
       duties,
     });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "getTrashedDuties →", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getTrashedDuties →", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -3811,10 +3815,10 @@ const permanentDeleteDuty = async (req, res) => {
     );
     await transaction.commit();
     res.json({ message: "Peremently Deleted Duty" });
-  } catch (err) {
+  } catch (error) {
     await transaction.rollback();
-    logger.error("schoolId:", req.user.school_id, "permanentDeleteDuty →", err);
-    res.status(500).json({ error: err.message });
+    logger.error("schoolId:", req.user.school_id, "permanentDeleteDuty →", error);
+    res.status(500).json({ error: error.message });
   }
 };
 //manage Achievements
@@ -3894,14 +3898,14 @@ const createAchievementWithStudents = async (req, res) => {
       message: "Achievement with students saved successfully",
       achievement,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "createAchievementWithStudents →",
-      err,
+      error,
     );
-    console.error("Error:", err);
+    console.error("Error:", error);
     res.status(500).json({ error: "Server error" });
   }
 };
@@ -3960,6 +3964,7 @@ const getAllAchievements = async (req, res) => {
       achievements,
     });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "error in getAllAchievements →", error);
     console.error("Error fetching achievements:", error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -4262,7 +4267,6 @@ const createEvent = async (req, res) => {
     if (!school_id || !title || !date) {
       return res.status(400).json({ error: "All fields are required" });
     }
-    console.log("event files: ", req.uploadedFiles);
     const existingEvent = await Event.findOne({
       where: { school_id, title, date },
     });
@@ -4568,9 +4572,9 @@ const createPayment = async (req, res) => {
       payment,
       "invoice status": invoice_status,
     });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "createPayment :", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "createPayment :", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -4693,9 +4697,9 @@ const getAllPayments = async (req, res) => {
       currentPage: page,
       payment,
     });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "getAllPayments :", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getAllPayments :", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getDonations = async (req, res) => {
@@ -4778,9 +4782,9 @@ const getDonations = async (req, res) => {
       currentPage: page,
       payment,
     });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "getAllPayments :", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getAllPayments :", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getPaymentById = async (req, res) => {
@@ -4808,8 +4812,8 @@ const getPaymentById = async (req, res) => {
     if (!payment || payment.trash)
       return res.status(404).json({ error: "Payment not found" });
     res.status(200).json(payment);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 const paymentVerification = async (req, res) => {
@@ -4829,8 +4833,8 @@ const paymentVerification = async (req, res) => {
     payment.updated_by = userId;
     await payment.save();
     res.status(200).json(payment);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -4927,9 +4931,9 @@ const updatePayment = async (req, res) => {
       updated_by:userId,
     });
     res.status(200).json({ message: "Payment updated", payment });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "updatePayment :", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "updatePayment :", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -4947,8 +4951,8 @@ const deletePayment = async (req, res) => {
       { where: { id: req.params.id, school_id } },
     );
     res.status(200).json({ message: "Payment soft deleted" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -5070,9 +5074,9 @@ const getTrashedPayments = async (req, res) => {
       currentPage: page,
       payment,
     });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "getAllPayments :", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getAllPayments :", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getTrashedDonations = async (req, res) => {
@@ -5154,9 +5158,9 @@ const getTrashedDonations = async (req, res) => {
       currentPage: page,
       payment,
     });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "getAllPayments :", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getAllPayments :", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const restorePayment = async (req, res) => {
@@ -5173,9 +5177,9 @@ const restorePayment = async (req, res) => {
       { where: { id: req.params.id, school_id, trash: true } },
     );
     res.status(200).json({ message: "Payment restored successfully" });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "restorePayment :", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "restorePayment :", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const permanentDeletePayment = async (req, res) => {
@@ -5199,8 +5203,8 @@ const permanentDeletePayment = async (req, res) => {
       },
     });
     res.status(200).json({ message: "Payment permanently deleted" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 const addSpecialClassStudents = async (req, res) => {
@@ -5248,9 +5252,9 @@ const addSpecialClassStudents = async (req, res) => {
       message: "Students added to special class successfully",
       addedCount: newAssignments.length,
     });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "addSpecialClassStudents:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "addSpecialClassStudents:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -5310,9 +5314,9 @@ const getSpecialClassStudents = async (req, res) => {
       currentPage: page,
       data,
     });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "getSpecialClassStudents:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getSpecialClassStudents:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -5337,9 +5341,9 @@ const deleteSpecialClassStudent = async (req, res) => {
     await assignment.destroy();
 
     res.status(200).json({ message: "Student removed from special class successfully" });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "deleteSpecialClassStudent:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "deleteSpecialClassStudent:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -5382,9 +5386,9 @@ const createInvoice = async (req, res) => {
     }
 
     res.status(201).json(invoice);
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "createInvoice :", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "createInvoice :", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const addInvoiceStudentsbyInvoiceId = async (req, res) => {
@@ -5471,9 +5475,9 @@ const getAllInvoices = async (req, res) => {
       currentPage: page,
       invoices,
     });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "getAllInvoices :", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getAllInvoices :", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getInvoiceById = async (req, res) => {
@@ -5501,8 +5505,8 @@ const getInvoiceById = async (req, res) => {
     });
     if (!invoice) return res.status(404).json({ error: "Invoice not found" });
     res.status(200).json(invoice);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 const updateInvoice = async (req, res) => {
@@ -5522,9 +5526,9 @@ const updateInvoice = async (req, res) => {
       category,
     });
     res.status(200).json({ message: "Invoice updated", invoice });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "updateInvoice :", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "updateInvoice :", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const deleteInvoice = async (req, res) => {
@@ -5535,9 +5539,9 @@ const deleteInvoice = async (req, res) => {
       { where: { id: req.params.id, school_id } },
     );
     res.status(200).json({ message: "Invoice soft deleted" });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "deleteInvoice :", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "deleteInvoice :", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getTrashedInvoices = async (req, res) => {
@@ -5560,9 +5564,9 @@ const getTrashedInvoices = async (req, res) => {
       currentPage: page,
       invoices,
     });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "getTrashedInvoices :", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getTrashedInvoices :", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const restoreInvoice = async (req, res) => {
@@ -5574,9 +5578,9 @@ const restoreInvoice = async (req, res) => {
     if (!invoice) return res.status(404).json({ error: "Invoice not found" });
     await invoice.update({ trash: false });
     res.status(200).json({ message: "Invoice restored" });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "restoreInvoice :", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "restoreInvoice :", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const permanentDeleteInvoiceStudent = async (req, res) => {
@@ -5595,14 +5599,14 @@ const permanentDeleteInvoiceStudent = async (req, res) => {
     }
     await invoiceStudent.destroy();
     res.status(200).json({ message: "Invoice student deleted" });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "permanentDeleteInvoiceStudent :",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 // Leave Request Management
@@ -6624,14 +6628,14 @@ const createNotice = async (req, res) => {
     }
 
     res.status(201).json({ message: "Notice created", notice });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error creating notice:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -6674,8 +6678,14 @@ const getAllNotices = async (req, res) => {
       currentPage: page,
       notices,
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting notices:",
+      error,
+    );
   }
 };
 const getNoticeById = async (req, res) => {
@@ -6713,8 +6723,9 @@ const getNoticeById = async (req, res) => {
       })),
     };
     res.json(formattedNotice);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+    console.error("Error getting notice by id:", error);
   }
 };
 
@@ -6726,8 +6737,6 @@ const updateNotice = async (req, res) => {
     if (!title || !content || !type) {
       return res.status(400).json({ error: "required fields are missing" });
     }
-    console.log("uploaded files:", req.uploadedFiles);
-
     const notice = await Notice.findOne({
       where: { id: id, school_id: school_id, trash: false },
     });
@@ -6769,14 +6778,14 @@ const updateNotice = async (req, res) => {
     }
 
     res.json({ message: "Notice updated" });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error updating notice:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -6790,14 +6799,14 @@ const deleteNotice = async (req, res) => {
     );
     if (!rows) return res.status(404).json({ error: "Not found" });
     res.json({ message: "Notice soft-deleted" });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error deleting notice:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const permanentDeleteNotice = async (req, res) => {
@@ -6814,14 +6823,14 @@ const permanentDeleteNotice = async (req, res) => {
     await NoticeClass.destroy({ where: { notice_id: id } });
     await notice.destroy();
     res.json({ message: "Notice permanently deleted" });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error permanently deleting notice:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const getTrashedNotices = async (req, res) => {
@@ -6856,14 +6865,14 @@ const getTrashedNotices = async (req, res) => {
       currentPage: page,
       notices,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error getting trashed notices:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const restoreNotice = async (req, res) => {
@@ -6876,14 +6885,14 @@ const restoreNotice = async (req, res) => {
     if (!notice) return res.status(404).json({ error: "Not found" });
     await notice.update({ trash: false });
     res.json({ message: "Notice restored" });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error restoring notice:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const getLatestNotices = async (req, res) => {
@@ -7288,7 +7297,6 @@ const getAllTeacherLeaveRequestsforSubstitution = async (req, res) => {
       attributes: ["period_count"],
     });
     const periodCount = SchoolDetails.period_count;
-    console.log(periodCount);
     const whereClause = {
       trash: false,
       school_id,
@@ -7629,6 +7637,7 @@ const getFreeStaffForPeriod = async (req, res) => {
       freeStaff,
     });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getFreeStaffForPeriod error:", error);
     console.error("getFreeStaffForPeriod error:", error);
     return res.status(500).json({ error: error.message });
   }
@@ -7687,9 +7696,9 @@ const createSubstitution = async (req, res) => {
     });
 
     res.status(201).json(substitution);
-  } catch (err) {
-    console.error("Error creating substitution:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error("Error creating substitution:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const bulkCreateSubstitution = async (req, res) => {
@@ -7778,9 +7787,9 @@ const bulkCreateSubstitution = async (req, res) => {
       created: createdSubs,
       failed: errors,
     });
-  } catch (err) {
-    console.error("Error bulk creating substitutions:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error("Error bulk creating substitutions:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getAllSubstitutions = async (req, res) => {
@@ -7828,9 +7837,9 @@ const getAllSubstitutions = async (req, res) => {
       currentPage: page,
       subs: subs,
     });
-  } catch (err) {
-    console.error("Error fetching substitutions:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error("Error fetching substitutions:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getSubstitutionById = async (req, res) => {
@@ -7860,9 +7869,9 @@ const getSubstitutionById = async (req, res) => {
       return res.status(404).json({ error: "Substitution not found" });
     }
     res.json(substitution);
-  } catch (err) {
-    console.error("Error fetching substitution:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error("Error fetching substitution:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -7889,10 +7898,10 @@ const updateSubstitution = async (req, res) => {
       },
     );
     res.json({ message: "Substitution updated", updated });
-  } catch (err) {
-    console.error("Error updating substitution:", err);
-    res.status(500).json({ error: err.message });
-    console.log(err);
+  } catch (error) {
+    console.error("Error updating substitution:", error);
+    res.status(500).json({ error: error.message });
+    console.log(error);
   }
 };
 
@@ -7908,9 +7917,9 @@ const deleteSubstitution = async (req, res) => {
     }
     await TimetableSubstitution.destroy({ where: { id } });
     res.json({ message: "Substitution deleted" });
-  } catch (err) {
-    console.error("Error deleting substitution:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error("Error deleting substitution:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getSchoolAttendanceSummary = async (req, res) => {
@@ -7977,15 +7986,15 @@ const getSchoolAttendanceSummary = async (req, res) => {
       attendanceMarkingCount: attendanceMarkingCount.attendance_count,
       classSummary: Object.values(classSummary),
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error in getSchoolAttendanceSummary:",
-      err,
+      error,
     );
-    console.error("Error in getSchoolAttendanceSummary:", err);
-    res.status(500).json({ error: err.message });
+    console.error("Error in getSchoolAttendanceSummary:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getNavigationBarCounts = async (req, res) => {
@@ -8300,9 +8309,9 @@ const getAllInternalMarks = async (req, res) => {
       marks,
     });
     // res.status(200).json(marks);
-  } catch (err) {
-    logger.error("userId:", req.user.user_id, "Error fetching marks:", err);
-    console.error("Error fetching marks:", err);
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error fetching marks:", error);
+    console.error("Error fetching marks:", error);
     res.status(500).json({ error: "Failed to fetch marks" });
   }
 };
@@ -8331,9 +8340,9 @@ const getInternalmarkById = async (req, res) => {
       return res.status(404).json({ error: "Internal mark not found" });
     }
     res.status(200).json(internalmark);
-  } catch (err) {
-    console.error("Error in getInternalmarkById:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error in getInternalmarkById:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const updateInternalMark = async (req, res) => {
@@ -8362,14 +8371,14 @@ const updateInternalMark = async (req, res) => {
       where: { id: id },
     });
     res.status(200).json({ message: "Exam detail updated", updated });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error updating exam detail:",
-      err,
+      error,
     );
-    console.log(err);
+    
     res.status(500).json({ error: "Update failed" });
   }
 };
@@ -8385,8 +8394,8 @@ const deleteInternalMark = async (req, res) => {
     }
     await InternalMark.update({ trash: true }, { where: { id: id } });
     res.status(200).json({ message: "Exam soft-deleted" });
-  } catch (err) {
-    logger.error("userId:", req.user.user_id, "Error deleting exam:", err);
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error deleting exam:", error);
     res.status(500).json({ error: "Delete failed" });
   }
 };
@@ -8402,9 +8411,9 @@ const restoreInternalMark = async (req, res) => {
     }
     await internalMark.update({ trash: false });
     res.status(200).json({ message: "Internal Mark restored successfully" });
-  } catch (err) {
-    logger.error("userId:", req.user.user_id, "Error restoring internal mark:", err);
-    console.error("Error restoring internal mark:", err);
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error restoring internal mark:", error);
+    console.error("Error restoring internal mark:", error);
     res.status(500).json({ error: "Failed to restore internal mark" });
   }
 };
@@ -8422,9 +8431,9 @@ const permanentDeleteInternalMark = async (req, res) => {
     await internalMark.destroy();
 
     res.status(200).json({ message: "Internal Mark permanently deleted" });
-  } catch (err) {
-    logger.error("userId:", req.user.user_id, "Error permanently deleting internal mark:", err);
-    console.error("Error permanently deleting internal mark:", err);
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error permanently deleting internal mark:", error);
+    console.error("Error permanently deleting internal mark:", error);
     res.status(500).json({ error: "Failed to permanently delete internal mark" });
   }
 };
@@ -8478,14 +8487,14 @@ const getTrashedInternalMarks = async (req, res) => {
       currentPage: page,
       marks,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "Error fetching trashed internal marks:",
-      err,
+      error,
     );
-    console.error("Error fetching trashed internal marks:", err);
+    console.error("Error fetching trashed internal marks:", error);
     res.status(500).json({ error: "Failed to fetch trashed internal marks" });
   }
 };
@@ -8541,9 +8550,9 @@ const getHomeworkById = async (req, res) => {
     };
 
     res.status(200).json(response);
-  } catch (err) {
-    console.error("Error in getHomeworkById:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Error in getHomeworkById:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const updateHomework = async (req, res) => {
@@ -8593,9 +8602,9 @@ const updateHomework = async (req, res) => {
       file: finalFile,
     });
     res.status(200).json({ message: "Updated successfully d", homework });
-  } catch (err) {
-    logger.error("userId:", req.user.user_id, "Error updating homework:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error updating homework:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const deleteHomework = async (req, res) => {
@@ -8612,8 +8621,8 @@ const deleteHomework = async (req, res) => {
     res.status(200).json({
       message: `Deleted successfully,'description : ${homework.title}'.`,
     });
-  } catch (err) {
-    logger.error("userId:", req.user.user_id, "Error deleting homework:", err);
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error deleting homework:", error);
     res.status(500).json({ error: "Delete failed" });
   }
 };
@@ -8641,14 +8650,14 @@ const permanentDeleteHomework = async (req, res) => {
     await homework.destroy();
 
     res.status(200).json({ message: "Deleted successfully" });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error permanently deleting homework:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const restoreHomework = async (req, res) => {
@@ -8748,14 +8757,14 @@ const getTrashedHomework = async (req, res) => {
       currentPage: page,
       homeworks,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error fetching trashed homework:",
-      err,
+      error,
     );  
-  console.error("Error fetching trashed homework:", err);
+  console.error("Error fetching trashed homework:", error);
     res.status(500).json({ error: "Failed to fetch trashed homework" });
   }
 };
@@ -8812,9 +8821,10 @@ const getAttendanceById = async (req, res) => {
     };
 
     res.status(200).json(response);
-  } catch (err) {
-    console.error("Error in getAttendanceById:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error in getAttendanceById:", error);
+    console.error("Error in getAttendanceById:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -8872,7 +8882,7 @@ const createStaffAttendance = async (req, res) => {
       attendance,
     });
   } catch (error) {
-    console.error("Error adding attendance:", error);
+    logger.error("schoolId:", req.user.school_id, "Error adding attendance:", error);
     console.error("Error adding attendance:", error);
     res.status(500).json({ error: "Failed to add attendance" });
   }
@@ -9235,6 +9245,9 @@ const createStop = async (req, res) => {
       stop,
     });
   } catch (error) {
+    logger.error( "schoolId:",
+      req.user.school_id,
+      "Error creating stop:", error);
     console.error("Error creating stop:", error);
     res.status(500).json({ error: "Failed to create stop" });
   }
@@ -9302,6 +9315,7 @@ const createDriver = async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
+    logger.error("schoolId:", req.user.school_id, "Error creating driver:", error);
     console.error("Error creating driver:", error);
     res.status(500).json({ error: error.message });
   }
@@ -9324,6 +9338,7 @@ const getAllDrivers = async (req, res) => {
       data: drivers,
     });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Error fetching drivers:", error);
     console.error("Error fetching drivers:", error);
     return res.status(500).json({
       error: "Failed to fetch drivers",
@@ -9367,7 +9382,7 @@ const createVehicle = async (req, res) => {
       vehicle,
     });
   } catch (error) {
-    logger.error("Error creating vehicle:", error);
+    logger.error("schoolId:", req.user.school_id, "Error creating vehicle:", error);
     console.error("Error creating vehicle:", error);
     res.status(500).json({ error: "Failed to create vehicle" });
   }
@@ -9393,6 +9408,7 @@ const getAllVehicles = async (req, res) => {
       vehicles,
     });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Error fetching vehicles:", error);
     console.error("Error fetching vehicles:", error);
     res.status(500).json({ error: "Failed to fetch vehicles" });
   }
@@ -9422,6 +9438,7 @@ const getVehicleById = async (req, res) => {
       vehicle,
     });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Error fetching vehicle:", error);
     console.error("Error fetching vehicle:", error);
     res.status(500).json({ error: "Failed to fetch vehicle" });
   }
@@ -9472,7 +9489,7 @@ const updateVehicle = async (req, res) => {
       vehicle,
     });
   } catch (error) {
-    logger.error("Error updating vehicle:", error);
+    logger.error("schoolId:", req.user.school_id, "Error updating vehicle:", error);
     console.error("Error updating vehicle:", error);
     res.status(500).json({ error: "Failed to update vehicle" });
   }
@@ -9497,6 +9514,7 @@ const deleteVehicle = async (req, res) => {
     await vehicle.update({ trash: true });
     res.status(200).json({ message: "Vehicle deleted successfully" });
   } catch {
+    logger.error("schoolId:", req.user.school_id, "Error delete vehicle :", error);
     console.error("Error deleting vehicle:", error);
     res.status(500).json({ error: "Failed to delete vehicle" });
   }
@@ -9593,7 +9611,7 @@ const createRoute = async (req, res) => {
       drop_route,
     });
   } catch (error) {
-    logger.error("Error creating route:", error);
+    logger.error("schoolId:", req.user.school_id, "Error creating route:", error);
     console.error("Error creating route:", error);
     res.status(500).json({ error: "Failed to create route" });
   }
@@ -9645,6 +9663,7 @@ const getAllRoutes = async (req, res) => {
       routes: cleanRoutes,
     });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Error fetching vehicle:", error);
     console.error("Error fetching routes:", error);
     res.status(500).json({ error: "Failed to fetch routes" });
   }
@@ -9701,6 +9720,7 @@ const assignStudentToRoute = async (req, res) => {
       students: students.map((s) => ({ id: s.id, name: s.full_name })),
     });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Error assigning student:", error);
     console.error(error);
     res.status(500).json({ error: "Failed to assign student" });
   }
@@ -9762,6 +9782,7 @@ const updateStudentToRoute = async (req, res) => {
       updated_count: students.length,
     });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Update Student To Route Error:", error);
     console.error("Update Student To Route Error:", error);
     return res.status(500).json({
       error: "Failed to update student",
@@ -9819,6 +9840,7 @@ const deleteStudentFromRoute = async (req, res) => {
       removed_count: affectedRows,
     });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Delete Student From Route Error:", error);
     console.error(error);
     return res.status(500).json({
       message: "Internal server error",
@@ -9867,6 +9889,7 @@ const assignDriverToRoutes = async (req, res) => {
       message: "Driver assigned to routes successfully",
     });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Assign Driver To Routes Error:", error);
     console.error("Error assigning driver to routes:", error);
     return res.status(500).json({
       error: "Failed to assign driver to routes",
@@ -9893,6 +9916,7 @@ const getDriversAssignedToRoutes = async (req, res) => {
       data: drivers,
     });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Fetch Drivers Assigned To Routes Error:", error);
     console.error("Error fetching drivers assigned to routes:", error);
     return res.status(500).json({
       error: "Failed to fetch drivers assigned to routes",
@@ -9927,6 +9951,7 @@ const updateIsLock = async (req, res) => {
       data: route,
     });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Update Route Lock Status Error:", error);
     console.log("Error occurred:", error);
     return res.status(500).json({
       message: "Internal server error",
@@ -10015,6 +10040,7 @@ const getDriverLocation = async (req, res) => {
       },
     });
   } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Fetch Driver Error:", error);
     console.error("Error fetching driver:", error);
     return res.status(500).json({
       error: "Failed to fetch driver",
@@ -10212,7 +10238,7 @@ const createExam = async (req, res) => {
       data: exam,
     });
   } catch (error) {
-    logger.error("Error creating exam:", error);
+    logger.error("school_id:", school_id, "Error creating exam:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to create exam",
@@ -10245,7 +10271,7 @@ const editExam = async (req, res) => {
       data: exam,
     });
   } catch (error) {
-    logger.error("Error updating exam:", error);
+    logger.error("school_id:", school_id, "Error updating exam:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to update exam",
@@ -10272,7 +10298,7 @@ const deleteExam = async (req, res) => {
       message: "Exam deleted successfully",
     });
   } catch (error) {
-    logger.error("Error deleting exam:", error);
+    logger.error("school_id:", school_id, "Error deleting exam:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to delete exam",
@@ -10299,7 +10325,7 @@ const restoreExam = async (req, res) => {
       message: "Exam restored successfully",
     });
   } catch (error) {
-    logger.error("Error restoring exam:", error);
+    logger.error("school_id:", school_id, "Error restoring exam:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to restore exam",
@@ -10337,7 +10363,7 @@ const updateExamPublishStatus = async (req, res) => {
       data: exam,
     });
   } catch (error) {
-    logger.error("Error updating exam publish status:", error);
+    logger.error("school_id:", school_id, "Error updating exam publish status:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to update exam publish status",

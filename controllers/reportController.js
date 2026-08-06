@@ -351,10 +351,10 @@ const getAttendanceReport = async (req, res) => {
       currentPage: download === "true" ? null : page,
       reports: formattedData,
     });
-  } catch (err) {
-    logger.error("Error generating attendance report:", err);
-    console.error(err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("Error generating attendance report:", error);
+    console.error(error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getHomeworkReport = async (req, res) => {

@@ -146,13 +146,14 @@ const getSpecialClassStudentsByClassId = async (req, res) => {
     });
   } catch (err) {
     logger.error("schoolId:", req.user.school_id, "getSpecialClassStudents:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const getschoolIdByStudentId = async (student_id) => {
   try {
     const student = await Student.findByPk(student_id);
-    if (!student) console.log("student not found ---");
+    if (!student) 
+      return res.status(404).json({ error: "student not found" });
     const school_id = student.school_id;
     return school_id;
     // res.status(200).json({ school_id });
@@ -175,7 +176,7 @@ const getClassesByYear = async (req, res) => {
     if (!classData) return res.status(404).json({ message: "Class not found" });
     res.status(200).json(classData);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
     logger.error(
       "userId:",
       req.user.user_id,
@@ -211,7 +212,7 @@ const getStaffsForFilter = async (req, res) => {
       "Error fetching staffs for filter:",
       err
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const getStudentDetailsById = async (req, res) => {
@@ -286,7 +287,6 @@ const getStudentDetailsById = async (req, res) => {
        },
      ],
    })
-   console.log("specialClass", specialClass)
     res.status(200).json(student,
       {
         specialClass
@@ -372,7 +372,7 @@ const getHomeworkByStudentId = async (req, res) => {
       "Error in getting homework by student id:",
       err
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const getAttendanceByStudentId = async (req, res) => {
@@ -422,7 +422,7 @@ const getAttendanceByStudentId = async (req, res) => {
       "Error in getting attendance by student id:",
       err
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const getStudentProfile = async (req, res) => {
@@ -535,7 +535,7 @@ const getStudentAttendanceByDate = async (req, res) => {
       "Error in getting student attendance by date:",
       err
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const allAchievements = async (req, res) => {
@@ -597,7 +597,7 @@ const allAchievements = async (req, res) => {
       "Error in getting all achievements:",
       err
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const achievementByStudentId = async (req, res) => {
@@ -657,7 +657,7 @@ const achievementByStudentId = async (req, res) => {
       "Error in getting achievement by student id:",
       err
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 //get internalmark by student id
@@ -708,7 +708,7 @@ const getInternalMarkByStudentId = async (req, res) => {
       "Error in getting internal mark by student id:",
       err
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const getLeaveRequestByStudentId = async (req, res) => {
@@ -862,7 +862,7 @@ const getPaymentByStudnetId = async (req, res) => {
   } catch (err) {
     logger.error("userId:", req.user.user_id, "Error fetching payment:", err);
     console.error("Error fetching payment:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
   const getInvoiceByStudentId = async (req, res) => {
@@ -1167,7 +1167,7 @@ const getAchievementsBySchool = async (req, res) => {
       err
     );
     console.error("Error fetching achievements:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const accountDeleteRequests = async (req, res) => {

@@ -85,6 +85,7 @@ const getRouteById = async (req, res) => {
       .status(200)
       .json({ message: "Route fetched successfully", data: result });
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching route:", error);
     console.log("Error has occured: ", error);
     return res.status(500).json({ error: "Failed to fetch route" });
   }
@@ -163,6 +164,7 @@ const updateRouteById = async (req, res) => {
       data: { pickupRouteName, dropRouteName }
     });
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error updating route:", error);
     console.error("Error updating route:", error);
     return res.status(500).json({
       error: "Failed to update route",
@@ -189,6 +191,7 @@ const deleteRoute = async (req, res) => {
 
     res.status(200).json({ message: "Route deleted successfully" });
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error deleting route:", error);
     console.error("Error deleting route:", error);
     return res.status(500).json({
       error: "Failed to delete route",
