@@ -632,8 +632,8 @@ router.get(
   commonController.getAttendanceByStudentId,
 );
 router.get(
-  "/getAttendanceCountByStudentId/:student_id",
-  commonController.getAttendanceCountByStudentId,
+  "/getStudentProfile/:student_id",
+  commonController.getStudentProfile,
 )
 router.get(
   "/getInvoiceByStudentId/:student_id",

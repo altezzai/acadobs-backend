@@ -221,7 +221,6 @@ const getStudentDetailsById = async (req, res) => {
     if (!school_id) {
       return res.status(404).json({ error: "School not found" });
     }
-    console.log("id-------------:", id);
     const student = await Student.findOne({
       where: { id, school_id, trash: false },
       attributes: [
@@ -288,9 +287,8 @@ const getStudentDetailsById = async (req, res) => {
      ],
    })
    console.log("specialClass", specialClass)
-    res.status(200).json(
+    res.status(200).json(student,
       {
-        student,
         specialClass
       }
     );
@@ -427,7 +425,7 @@ const getAttendanceByStudentId = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-const getAttendanceCountByStudentId = async (req, res) => {
+const getStudentProfile = async (req, res) => {
   try {
     const { student_id } = req.params;
     const school_id = req.user.school_id;
@@ -435,7 +433,16 @@ const getAttendanceCountByStudentId = async (req, res) => {
     const education_year_start =
       schooldata.education_year_start || process.env.EDUCATION_YEAR_START;
 
-    const student = await Student.findOne({ where: { id: student_id, school_id } });
+    const student = await Student.findOne({
+       where: { id: student_id, school_id } ,
+       attributes: ["id","full_name","roll_number","reg_no","class_id","image"],
+       include: [
+        {
+          model: Class,
+          attributes: ["id", "classname"],
+        },
+       ]
+      });
     if (!student) {
       return res.status(404).json({ error: "Student not found" });
     }
@@ -463,6 +470,7 @@ const getAttendanceCountByStudentId = async (req, res) => {
     res.status(200).json({
       message: "Attendance count by student ID",
       attendanceSummary,
+      student
     
     });
   } catch (error) {
@@ -512,7 +520,6 @@ const getStudentAttendanceByDate = async (req, res) => {
       ],
     });
     if (!attendance) return res.status(404).json({ error: "Not found" });
-    // res.status(200).json(attendance);
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       attendance_count:attendance.length,
@@ -1208,7 +1215,7 @@ module.exports = {
   getHomeworkByStudentId,
 
   getAttendanceByStudentId,
-  getAttendanceCountByStudentId,
+  getStudentProfile,
   getStudentAttendanceByDate,
 
   allAchievements,
