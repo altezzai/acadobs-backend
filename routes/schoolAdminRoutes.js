@@ -619,7 +619,7 @@ router.get("/getSchoolsList", publicController.getSchoolsList);
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);
-router.get("/students/:id", commonController.getStudentById);
+router.get("/getStudentDetailsById/:id", commonController.getStudentDetailsById);
 
 router.get(
   "/getHomeworkByStudentId/:student_id",
@@ -629,6 +629,19 @@ router.get(
   "/getAttendanceByStudentId/:student_id",
   commonController.getAttendanceByStudentId,
 );
+router.get(
+  "/getAttendanceCountByStudentId/:student_id",
+  commonController.getAttendanceCountByStudentId,
+)
+router.get(
+  "/getInvoiceByStudentId/:student_id",
+  commonController.getInvoiceByStudentId
+)
+router.get(
+  "/getPaymentByStudnetId/:student_id",
+  commonController.getPaymentByStudnetId
+)
+
 router.get(
   "/getStudentAttendanceByDate/:student_id",
   commonController.getStudentAttendanceByDate,

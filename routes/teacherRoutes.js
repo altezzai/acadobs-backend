@@ -265,7 +265,7 @@ router.get(
 router.get("/getClassesByYear/:year", commonController.getClassesByYear);
 
 //common controller for student
-router.get("/students/:id", commonController.getStudentById);
+router.get("/students/:id", commonController.getStudentDetailsById);
 router.get(
   "/getGuarduianIdbyStudentId",
   commonController.getGuarduianIdbyStudentId,

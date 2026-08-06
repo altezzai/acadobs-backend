@@ -170,6 +170,12 @@ const getInternalMarksById = async (req, res) => {
               required: !isRecordedByUser,
               where: studentWhere,
               attributes: ["id", "full_name", "roll_number"],
+              order: [["full_name", "ASC"]],
+            },
+            {
+              model: User,
+              required: !isRecordedByUser,
+              attributes: ["id", "name"],
             },
           ],
         },

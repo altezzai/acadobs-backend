@@ -552,6 +552,13 @@ const getStudentReportByStudentId = async (req, res) => {
     //ATTENDANCE, MARKS, ACHIEVEMENTS can be added similarly
     const Attendancedata = await AttendanceMarked.findAll({
       where: { student_id },
+      include: [
+        {
+          model: Attendance,
+          attributes: ["date"],
+          where: { date: { [Op.gte]: education_year_start }, trash: false ,school_id},
+        }, 
+      ],
     });
     const attendance = await AttendanceMarked.findAll({
       where: { student_id, createdAt: { [Op.gte]: education_year_start } },

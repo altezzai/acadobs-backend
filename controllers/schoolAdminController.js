@@ -1093,7 +1093,7 @@ const restoredStaff = async (req, res) => {
     const staff = await Staff.findOne({
       where: { id: staff_id, school_id, trash: true },
     });
-    if (staff) return res.status(404).json({ error: "Staff not found" });
+    if (!staff) return res.status(404).json({ error: "Staff not found" });
     const user = await User.findByPk(staff.user_id);
     if (!user && user.trash)
       return res.status(404).json({ error: "user not found" });
