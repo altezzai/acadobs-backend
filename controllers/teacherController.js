@@ -1131,8 +1131,8 @@ const updateHomework = async (req, res) => {
       });
     }
     let subjectIdToUpdate = subject_id;
-    if(subject_id===0 || subject_id){
-      subjectIdToUpdate = existingExam.subject_id;
+    if(subject_id ||subject_id===0 ){
+      subjectIdToUpdate = homework.subject_id;
     }
     let finalFile = homework.file;
     const newFileUrl = req.uploadedFiles?.file?.url || null;
