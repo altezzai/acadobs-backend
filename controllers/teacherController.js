@@ -213,11 +213,10 @@ const updateInternalMark = async (req, res) => {
       exam_id
     } = req.body;
     const existingExam = await InternalMark.findByPk(id);
-    let subjectIdToUpdate = subject_id;
-    if(subject_id===0 || !subject_id){
+  let subjectIdToUpdate = subject_id;
+    if(subject_id===0 || subject_id){
       subjectIdToUpdate = existingExam.subject_id;
     }
-
     const updated = await InternalMark.update(
       {
         subject_id: subjectIdToUpdate,
@@ -1132,7 +1131,7 @@ const updateHomework = async (req, res) => {
       });
     }
     let subjectIdToUpdate = subject_id;
-    if(subject_id===0 || !subject_id){
+    if(subject_id===0 || subject_id){
       subjectIdToUpdate = existingExam.subject_id;
     }
     let finalFile = homework.file;
