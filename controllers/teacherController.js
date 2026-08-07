@@ -1148,7 +1148,7 @@ const updateHomework = async (req, res) => {
     await homework.update({
       title,
       description,
-      subject_id,
+      subject_id: subjectIdToUpdate,
       due_date,
       file: finalFile,
     });
