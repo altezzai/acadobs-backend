@@ -1109,7 +1109,7 @@ const updateHomework = async (req, res) => {
     const { id } = req.params;
     const school_id = req.user.school_id;
     const teacher_id = req.user.user_id;
-    const { title, description, class_id,due_date,subject_id } = req.body;
+    const { title, description,due_date,subject_id } = req.body;
     const homework = await Homework.findOne({
       where: { id: id, school_id: school_id, teacher_id: teacher_id },
     });
@@ -1119,7 +1119,6 @@ const updateHomework = async (req, res) => {
         id: { [Op.ne]: id },
         school_id ,
         teacher_id,
-        class_id,
         subject_id,
         title,
         due_date:due_date,

@@ -344,15 +344,19 @@ const getHomeworkByStudentId = async (req, res) => {
 
             trash: false,
           },
-          attributes: ["id", "description", "due_date", "file", "title"],
+          attributes: ["id", "description", "due_date", "file", "title","type"],
           include: [
             {
               model: User,
-              attributes: ["id", "name"],
+              attributes: ["id","name"],
             },
             {
               model: Subject,
-              attributes: ["id", "subject_name"],
+              attributes: ["id","subject_name"],
+            },
+            {
+              model: Class,
+              attributes: ["id","classname"],
             },
           ],
         },
