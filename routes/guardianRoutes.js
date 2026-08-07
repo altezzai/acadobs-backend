@@ -140,7 +140,7 @@ router.put(
 );
 router.get("/getProfileDetails", guardianController.getProfileDetails);
 
-router.get("/getHomeworkById/:id", guardianController.getHomeworkById);
+router.get("/getHomeworkAssignmentsById/:id", guardianController.getHomeworkAssignmentsById);
 router.get("/getAchievementById/:id", guardianController.getAchievementById);
 router.get("/getExams/:studentId", guardianController.getExamsByStudentId);
 router.get("/getExamMarks/:studentId/:examId", guardianController.getExamMarksByStudentId);

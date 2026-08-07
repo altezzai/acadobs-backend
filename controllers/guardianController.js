@@ -1154,46 +1154,34 @@ const getProfileDetails = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-const getHomeworkById = async (req, res) => {
+const getHomeworkAssignmentsById = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const homework = await Homework.findOne({
-      where: { id, school_id, trash: false },
-
+    const homework = await HomeworkAssignment.findOne({
+      where: {id}, 
       include: [
         {
-          model: HomeworkAssignment,
-          attributes: ["id", "remarks", "points", "solved_file"],
+          model: Homework,
+          where: { school_id, trash: false },
+          attributes: ["id", "title", "description", "date", "subject","file","type"],
           include: [
             {
-              model: HomeworkAssignment,
-              attributes: ["id", "remarks", "points", "solved_file"],
-
-              include: [
-                {
-                  model: Student,
-                  attributes: [
-                    "id",
-                    "reg_no",
-                    "full_name",
-                    "image",
-                    "roll_number",
-                  ],
-                },
-              ],
+              model: Subject,
+              attributes: ["id", "name"],
             },
             {
               model: Class,
               attributes: ["id", "classname"],
             },
             {
-              model: Subject,
-              attributes: ["id", "subject_name"],
+              model: User,
+              attributes: ["id", "name"],
             },
           ],
         },
       ],
+      
       order:[["createdAt", "DESC"]]
     });
 
@@ -1615,7 +1603,7 @@ module.exports = {
   changeIdentifiersAndName,
   getProfileDetails,
 
-  getHomeworkById,
+  getHomeworkAssignmentsById,
   getAchievementById,
   getRoutesForGuardian,
   getExamsByStudentId,
