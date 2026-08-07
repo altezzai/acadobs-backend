@@ -28,7 +28,7 @@ const Guardian = require("../models/guardian");
 const Homework = require("../models/homework");
 const Achievement = require("../models/achievement");
 const StudentAchievement = require("../models/studentachievement");
-
+const { schoolSequelize } = require("../config/connection");
 const { getschoolIdByStudentId } = require("../controllers/commonController");
 // StudentRoutes is already imported above from "../models" on line 11
 
@@ -279,7 +279,7 @@ const getInvoiceByStudentId = async (req, res) => {
   }
 };
 const createPayment = async (req, res) => {
-  const transaction = await sequelize.transaction();
+  const transaction = await schoolSequelize.transaction();
   try {
     const school_id = req.user.school_id;
     const {
