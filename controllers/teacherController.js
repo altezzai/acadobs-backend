@@ -138,7 +138,7 @@ const getInternalMarksById = async (req, res) => {
     });
 
     if (!internalMark) {
-      return res.status(404).json({ error: "Internal mark not found" });
+      return res.status(404).json({ error: "Internal mark not found 25" });
     }
 
     const isRecordedByUser = Number(internalMark.recorded_by) === Number(userId);
@@ -170,11 +170,13 @@ const getInternalMarksById = async (req, res) => {
               where: studentWhere,
               attributes: ["id", "full_name", "roll_number"],
               order: [["full_name", "ASC"]],
-            },
-            {
-              model: User,
-              required: !isRecordedByUser,
-              attributes: ["id", "name"],
+              include: [
+                {
+                  model: Class,
+                  attributes: ["id", "classname"],
+                },
+              ],
+
             },
           ],
         },
