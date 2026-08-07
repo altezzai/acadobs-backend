@@ -22,15 +22,23 @@ const AccountDelete = require("../models/accountdelete");
 const Syllabus = require("../models/syllabus");
 const NewsImage = require("../models/newsimage");
 const SpecialClassStudent = require("../models/special_class_students");
+const InvoiceStudent = require("../models/invoice_students");
+const Invoice = require("../models/invoice");
+const Guardian = require("../models/guardian");
+const Driver = require("../models/tracker/driver");
 const { deleteFile } = require("../middlewares/storageUploads");
 
 const { Class, Staff } = require("../models");
+const { get } = require("../routes/schoolAdminRoutes");
 
 const getStudentsByClassId = async (req, res) => {
   try {
     const { class_id } = req.params;
     const school_id = req.user.school_id || "";
     const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
     if (!school_id) {
       return res.status(404).json({ error: "School not found" });
     }
@@ -61,6 +69,9 @@ const getStudentsByClassId = async (req, res) => {
         attributes: studentAttributes,
         include: studentInclude,
         order: [["roll_number", "ASC"]],
+        limit,
+        offset,
+        distinct: true,
       });
       count = result.count;
       students = result.rows;
@@ -88,9 +99,11 @@ const getStudentsByClassId = async (req, res) => {
         students = result.rows;
       }
     }
-
+    const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
+      totalPages,
+      currentPage: page,
       students,
     });
   } catch (err) {
@@ -134,13 +147,14 @@ const getSpecialClassStudentsByClassId = async (req, res) => {
     });
   } catch (err) {
     logger.error("schoolId:", req.user.school_id, "getSpecialClassStudents:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const getschoolIdByStudentId = async (student_id) => {
   try {
     const student = await Student.findByPk(student_id);
-    if (!student) console.log("student not found ---");
+    if (!student) 
+      return res.status(404).json({ error: "student not found" });
     const school_id = student.school_id;
     return school_id;
     // res.status(200).json({ school_id });
@@ -163,7 +177,7 @@ const getClassesByYear = async (req, res) => {
     if (!classData) return res.status(404).json({ message: "Class not found" });
     res.status(200).json(classData);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
     logger.error(
       "userId:",
       req.user.user_id,
@@ -199,17 +213,16 @@ const getStaffsForFilter = async (req, res) => {
       "Error fetching staffs for filter:",
       err
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
-const getStudentById = async (req, res) => {
+const getStudentDetailsById = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id || "";
     if (!school_id) {
       return res.status(404).json({ error: "School not found" });
     }
-
     const student = await Student.findOne({
       where: { id, school_id, trash: false },
       attributes: [
@@ -226,7 +239,37 @@ const getStudentById = async (req, res) => {
         "status",
       ],
       include: [
-        { model: User, attributes: ["id", "name", "email", "phone", "dp"] },
+        { 
+          model: User, attributes: ["id", "name", "email", "phone", "dp"] ,
+          include: [
+            {
+              model: Guardian,
+              attributes: [
+                "guardian_name",
+                "guardian_contact",
+                "guardian_email",
+                "guardian_job",
+                "guardian_relation",
+                "guardian2_name",
+                "guardian2_contact",
+                "guardian2_job",
+                "guardian2_relation",
+                "father_name",
+                "mother_name",
+                "house_name",
+                "street",
+                "city",
+                "landmark",
+                "district",
+                "state",
+                "country",
+                "post",
+                "pincode",
+              ],            },
+          ]
+
+        },
+
         {
           model: Class,
           attributes: ["id", "year", "division", "classname"],
@@ -235,8 +278,21 @@ const getStudentById = async (req, res) => {
     });
 
     if (!student) return res.status(404).json({ error: "Student not found" });
-
-    res.status(200).json(student);
+   const specialClass = await SpecialClassStudent.findAll({
+     where: { student_id: student.id },
+     attributes: ["class_id"],
+     include: [
+       {
+         model: Class,
+         attributes: ["id", "year", "division", "classname"],
+       },
+     ],
+   })
+    res.status(200).json(student,
+      {
+        specialClass
+      }
+    );
   } catch (err) {
     console.error("Error getting student:", err);
     logger.error("userId:", req.user.user_id, "Error getting student:", err);
@@ -289,15 +345,19 @@ const getHomeworkByStudentId = async (req, res) => {
 
             trash: false,
           },
-          attributes: ["id", "description", "due_date", "file", "title"],
+          attributes: ["id", "description", "due_date", "file", "title","type"],
           include: [
             {
               model: User,
-              attributes: ["id", "name"],
+              attributes: ["id","name"],
             },
             {
               model: Subject,
-              attributes: ["id", "subject_name"],
+              attributes: ["id","subject_name"],
+            },
+            {
+              model: Class,
+              attributes: ["id","classname"],
             },
           ],
         },
@@ -317,7 +377,7 @@ const getHomeworkByStudentId = async (req, res) => {
       "Error in getting homework by student id:",
       err
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const getAttendanceByStudentId = async (req, res) => {
@@ -367,25 +427,81 @@ const getAttendanceByStudentId = async (req, res) => {
       "Error in getting attendance by student id:",
       err
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
+  }
+};
+const getStudentProfile = async (req, res) => {
+  try {
+    const { student_id } = req.params;
+    const school_id = req.user.school_id;
+    const schooldata = await School.findOne({ where: { id: school_id } });
+    const education_year_start =
+      schooldata.education_year_start || process.env.EDUCATION_YEAR_START;
+
+    const student = await Student.findOne({
+       where: { id: student_id, school_id } ,
+       attributes: ["id","full_name","roll_number","reg_no","class_id","image"],
+       include: [
+        {
+          model: Class,
+          attributes: ["id", "classname"],
+        },
+       ]
+      });
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+    const Attendancedata = await AttendanceMarked.findAll({
+      where: { student_id },
+      include: [
+        {
+          model: Attendance,
+          attributes: ["date"],
+          where: { date: { [Op.gte]: education_year_start }, trash: false ,school_id},
+        }, 
+      ]
+    });
+    const attendanceSummary = {
+      present: 0,
+      absent: 0,
+      late: 0,
+      leave: 0,
+    };
+    Attendancedata.forEach((record) => {
+      if (record.status in attendanceSummary) {
+        attendanceSummary[record.status] += 1;
+      }
+    });   
+    res.status(200).json({
+      message: "Attendance count by student ID",
+      attendanceSummary,
+      student
+    
+    });
+  } catch (error) {
+    logger.error("Error generating student report:", error);
+    console.error("Error generating student report:", error);
+    res.status(500).json({ error: "Failed to generate student report" });
   }
 };
 const getStudentAttendanceByDate = async (req, res) => {
   try {
     const student_id = req.params.student_id;
     const school_id = req.user.school_id;
+    const date = req.query.date || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
     const student = await Student.findOne({
       where: { id: student_id, school_id, trash: false },
     });
     if (!student) return res.status(404).json({ error: "student not found" });
-    const id = await getschoolIdByStudentId(student_id);
-    const date = req.query.date || new Date();
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
-    const school = await School.findByPk(id, {
-      attributes: ["attendance_count"],
-    });
+  
+
+    let whereClause = {  trash: false };
+    if (date) {
+      whereClause.date = date;
+    }
     const { count, rows: attendance } = await AttendanceMarked.findAndCountAll({
       offset,
       distinct: true,
@@ -396,7 +512,7 @@ const getStudentAttendanceByDate = async (req, res) => {
       include: [
         {
           model: Attendance,
-          where: { date: date, trash: false },
+          where: whereClause,
           attributes: ["id", "date", "period"],
 
           include: [
@@ -409,10 +525,9 @@ const getStudentAttendanceByDate = async (req, res) => {
       ],
     });
     if (!attendance) return res.status(404).json({ error: "Not found" });
-    // res.status(200).json(attendance);
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
-      attendance_count: school["attendance_count"],
+      attendance_count:attendance.length,
       totalcontent: count,
       totalPages,
       currentPage: page,
@@ -425,7 +540,7 @@ const getStudentAttendanceByDate = async (req, res) => {
       "Error in getting student attendance by date:",
       err
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const allAchievements = async (req, res) => {
@@ -487,7 +602,7 @@ const allAchievements = async (req, res) => {
       "Error in getting all achievements:",
       err
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const achievementByStudentId = async (req, res) => {
@@ -547,7 +662,7 @@ const achievementByStudentId = async (req, res) => {
       "Error in getting achievement by student id:",
       err
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 //get internalmark by student id
@@ -598,7 +713,7 @@ const getInternalMarkByStudentId = async (req, res) => {
       "Error in getting internal mark by student id:",
       err
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const getLeaveRequestByStudentId = async (req, res) => {
@@ -673,6 +788,139 @@ const getLeaveRequestByStudentId = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch leave requests" });
   }
 };
+const getPaymentByStudnetId = async (req, res) => {
+  try {
+    const student_id = req.params.student_id;
+    const school_id = req.user.school_id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const payment_type = req.query.payment_type || "";
+    const payment_status = req.query.payment_status || "";
+    let whereClause = {
+      student_id: student_id,
+      school_id: school_id,
+      trash: false
+    };
+    
+    if(payment_type){
+      whereClause.payment_type = payment_type
+    };
+    if(payment_status){
+      whereClause.payment_status = payment_status
+    }
+     const { count, rows: payments } = await Payment.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: InvoiceStudent,
+          attributes: ["invoice_id", "status"],
+          include: [
+            {
+              model: Invoice,
+              attributes: ["title", "amount", "due_date"],
+            },
+          ],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+      offset,
+      limit,
+      distinct: true
+    });
+  const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      payments });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching payments:",
+      error
+    );
+    console.error("Fetch Error:", error);
+    res.status(500).json({ error: "Failed to fetch payments" });
+  }
+  };
+  const getPaymentById = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    if (!school_id) {
+      return res.status(404).json({ error: "School not found" });
+    }
+
+    const payment = await Payment.findOne({
+      where: { id: req.params.id, school_id, trash: false },
+      include: [
+        {
+          model: Student,
+          attributes: ["id", "full_name", "reg_no", "image"],
+        },
+      ],
+    });
+    if (!payment || payment.trash)
+      return res.status(404).json({ error: "Payment not found" });
+    res.status(200).json(payment);
+  } catch (err) {
+    logger.error("userId:", req.user.user_id, "Error fetching payment:", err);
+    console.error("Error fetching payment:", err);
+    res.status(500).json({ error: error.message });
+  }
+};
+  const getInvoiceByStudentId = async (req, res) => {
+   try{
+    const student_id = req.params.student_id;
+    const school_id = req.user.school_id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const searchQuery = req.query.q || "";
+    let whereClause = {
+      school_id: school_id,
+      trash: false
+    };
+    
+    if(searchQuery){
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: invoices } = await InvoiceStudent.findAndCountAll({
+      where: { student_id: student_id },
+      include: [
+        {
+          model: Invoice,
+          where: whereClause,
+          attributes: ["title", "amount", "due_date"],
+        },
+      ],
+      offset,
+      limit,
+    });
+    
+   const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      invoices,
+    });
+   }catch(error){
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching payments:",
+      error
+    );
+    console.error("Fetch Error:", error);
+    res.status(500).json({ error: "Failed to fetch payments" });
+   }
+  };    
+
 const getLatestEvents = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -869,31 +1117,6 @@ const updateDp = async (req, res) => {
   }
 };
 
-const getPaymentById = async (req, res) => {
-  try {
-    const school_id = req.user.school_id;
-    if (!school_id) {
-      return res.status(404).json({ error: "School not found" });
-    }
-
-    const payment = await Payment.findOne({
-      where: { id: req.params.id, school_id, trash: false },
-      include: [
-        {
-          model: Student,
-          attributes: ["id", "full_name", "reg_no", "image"],
-        },
-      ],
-    });
-    if (!payment || payment.trash)
-      return res.status(404).json({ error: "Payment not found" });
-    res.status(200).json(payment);
-  } catch (err) {
-    logger.error("userId:", req.user.user_id, "Error fetching payment:", err);
-    console.error("Error fetching payment:", err);
-    res.status(500).json({ error: err.message });
-  }
-};
 const getAchievementsBySchool = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -949,7 +1172,7 @@ const getAchievementsBySchool = async (req, res) => {
       err
     );
     console.error("Error fetching achievements:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const accountDeleteRequests = async (req, res) => {
@@ -984,11 +1207,30 @@ const accountDeleteRequests = async (req, res) => {
     res.status(500).json({ error: "Failed to create delete request" });
   }
 };
+const getAllDriverUsers = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+
+    const driverUsers = await User.findAll({
+      where: {
+        role: "driver",
+        school_id,
+        trash: false
+      },
+      attributes: ["id", "full_name", "phone","dp"],
+    });
+    res.status(200).json(driverUsers);
+  } catch (err) {
+    logger.error("Error fetching driver users:", err);
+    console.error("Error fetching driver users:", err);
+    res.status(500).json({ error: "Failed to fetch driver users" });
+  }
+}
 module.exports = {
   getStudentsByClassId,
   getSpecialClassStudentsByClassId,
   getschoolIdByStudentId,
-  getStudentById,
+  getStudentDetailsById,
   getGuarduianIdbyStudentId,
 
   getClassesByYear,
@@ -997,6 +1239,7 @@ module.exports = {
   getHomeworkByStudentId,
 
   getAttendanceByStudentId,
+  getStudentProfile,
   getStudentAttendanceByDate,
 
   allAchievements,
@@ -1006,6 +1249,10 @@ module.exports = {
 
   getLeaveRequestByStudentId,
 
+  getPaymentByStudnetId,
+  getPaymentById,
+  getInvoiceByStudentId,
+
   getLatestEvents,
   getLatestNews,
   getSchoolDetails,
@@ -1014,9 +1261,10 @@ module.exports = {
   updateFcmToken,
   updateDp,
 
-  getPaymentById,
 
   getAchievementsBySchool,
 
   accountDeleteRequests,
+
+  getAllDriverUsers,
 };

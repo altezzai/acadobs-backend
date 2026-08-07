@@ -61,14 +61,14 @@ const updateHomeworkAssignment = async (req, res) => {
       solved_file: fileName,
     });
     res.status(200).json({ message: "Updated successfully", assignment });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error updating homework assignment:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -83,12 +83,12 @@ const getSchoolIdByStudentId = async (student_id) => {
     const school_id = student.school_id;
     return school_id;
     // res.status(200).json({ school_id });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error getting school id by student id:",
-      err,
+      error,
     );
     return "error in getting school id";
   }
@@ -150,14 +150,14 @@ const getNoticeByStudentId = async (req, res) => {
       currentPage: page,
       notices,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error getting notices by student id:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const getPaymentByStudentId = async (req, res) => {
@@ -213,14 +213,14 @@ const getPaymentByStudentId = async (req, res) => {
       currentPage: page,
       payment,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error getting payment by student id:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 const getInvoiceByStudentId = async (req, res) => {
@@ -279,6 +279,7 @@ const getInvoiceByStudentId = async (req, res) => {
   }
 };
 const createPayment = async (req, res) => {
+  const transaction = await sequelize.transaction();
   try {
     const school_id = req.user.school_id;
     const {
@@ -292,17 +293,19 @@ const createPayment = async (req, res) => {
     } = req.body;
 
     if (
+      !student_id ||
       !school_id ||
       !amount ||
       !payment_date ||
       !payment_type ||
       !payment_method
     ) {
-      return res.status(400).json({ error: "All fields are required" });
+      return res.status(400).json({ error: "required fields are missing" });
     }
     //check if transaction_id already unique or null is
     const existingTransaction_id = await Payment.findOne({
       where: { transaction_id },
+      transaction,
     });
     if (
       existingTransaction_id &&
@@ -318,6 +321,7 @@ const createPayment = async (req, res) => {
         payment_date,
         payment_type,
       },
+      transaction,
     });
     if (existingPayment) {
       return res
@@ -339,14 +343,20 @@ const createPayment = async (req, res) => {
       payment_status: "pending",
       recorded_by: req.user.user_id,
       payment_attachment: payment_attachmentUrl ? payment_attachmentUrl : null,
-    });
+    }, { transaction });
+    //update invoice status to paid
+    await InvoiceStudent.update(
+      { status: "waiting_for_approval" },
+      { where: { id: invoice_student_id } },
+      { transaction }
+    )
     res.status(201).json({
       message: "Payment created",
       payment,
     });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "createPayment :", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "createPayment :", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const createLeaveRequest = async (req, res) => {
@@ -540,7 +550,6 @@ const updateLeaveRequest = async (req, res) => {
     }
     let fileName = data.attachment;
     const newFileUrl = req.uploadedFiles?.attachment?.url || null;
-    console.log("New File URL:", newFileUrl);
     if (newFileUrl) {
       if (data.attachment) {
         await deleteFile(data.attachment);
@@ -649,7 +658,6 @@ const getSchoolsByUser = async (req, res) => {
       group: ["school_id"],
     });
     if (!schools || schools.length === 0) {
-      console.log("No schools found for the given user ID");
       return res.status(404).json({ error: "No schools found" });
     }
     res.status(200).json({
@@ -972,15 +980,15 @@ const updateProfileDetails = async (req, res) => {
     res
       .status(200)
       .json({ message: "Guardian profile updated", guardian, user });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error updating guardian profile:",
-      err,
+      error,
     );
-    console.error("Error updating guardian profile:", err);
-    res.status(500).json({ error: err.message });
+    console.error("Error updating guardian profile:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const changeIdentifiersAndName = async (req, res) => {
@@ -1042,29 +1050,23 @@ const changeIdentifiersAndName = async (req, res) => {
       guardian_contact,
     });
     res.status(200).json({ message: "Guardian Identifiers updated", guardian });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error updating guardian profile:",
-      err,
+      error,
     );
-    console.error("Error updating guardian profile:", err);
-    res.status(500).json({ error: err.message });
+    console.error("Error updating guardian profile:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
 //update ownstudent profile details in student table
 const updateStudentProfile = async (req, res) => {
-  console.log(req.params, "-----------");
 
   try {
-    console.log("id:", req.params);
-    console.log("Params:", req.params);
-    console.log("User:", req.user);
-    console.log("Body:", req.body);
-    console.log("Files:", req.file);
-    console.log("Uploaded Files:", req.uploadedFiles);
+   
     const userId = req.user.user_id;
     const { student_id } = req.params;
     const { address } = req.body;
@@ -1093,15 +1095,15 @@ const updateStudentProfile = async (req, res) => {
       address,
     });
     res.status(200).json({ message: "Student profile updated", student });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error updating student profile:",
-      err,
+      error,
     );
-    console.error("Error updating student profile:", err);
-    res.status(500).json({ error: err.message });
+    console.error("Error updating student profile:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getProfileDetails = async (req, res) => {
@@ -1141,70 +1143,58 @@ const getProfileDetails = async (req, res) => {
     res
       .status(200)
       .json({ message: "Guardian profile details", guardian, user });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error getting guardian profile details:",
-      err,
+      error,
     );
-    console.error("Error getting guardian profile details:", err);
-    res.status(500).json({ error: err.message });
+    console.error("Error getting guardian profile details:", error);
+    res.status(500).json({ error: error.message });
   }
 };
-const getHomeworkById = async (req, res) => {
+const getHomeworkAssignmentsById = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const homework = await Homework.findOne({
-      where: { id, school_id, trash: false },
-
+    const homework = await HomeworkAssignment.findOne({
+      where: {id}, 
       include: [
         {
-          model: HomeworkAssignment,
-          attributes: ["id", "remarks", "points", "solved_file"],
+          model: Homework,
+          where: { school_id, trash: false },
+          attributes: ["id", "title", "description","file","type"],
           include: [
             {
-              model: HomeworkAssignment,
-              attributes: ["id", "remarks", "points", "solved_file"],
-
-              include: [
-                {
-                  model: Student,
-                  attributes: [
-                    "id",
-                    "reg_no",
-                    "full_name",
-                    "image",
-                    "roll_number",
-                  ],
-                },
-              ],
+              model: Subject,
+              attributes: ["id", "subject_name"],
             },
             {
               model: Class,
               attributes: ["id", "classname"],
             },
             {
-              model: Subject,
-              attributes: ["id", "subject_name"],
+              model: User,
+              attributes: ["id", "name"],
             },
           ],
         },
       ],
+      
       order:[["createdAt", "DESC"]]
     });
 
     if (!homework) return res.status(404).json({ error: "Not found" });
     res.status(200).json(homework);
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error getting homework by id:",
-      err,
+      error,
     );
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -1317,7 +1307,7 @@ const getRoutesForGuardian = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    console.log("Guardian route fetch error:", error);
+    console.error("Guardian route fetch error:", error);
     return res.status(500).json({
       error: "Internal server error",
     });
@@ -1372,14 +1362,14 @@ const getExamsByStudentId = async (req, res) => {
     });
 
     return res.status(200).json({ exams: examsList });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user ? req.user.user_id : null,
       "Error getting exams by student id:",
-      err,
+      error,
     );
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -1429,7 +1419,7 @@ const getGuardianRouteCount = async (req, res) => {
       total_routes: uniqueRoutes.size,
     });
   } catch (error) {
-    console.log("Guardian route count error:", error);
+    console.error("Guardian route count error:", error);
     return res.status(500).json({
       error: "Internal server error",
     });
@@ -1573,14 +1563,14 @@ const getExamMarksByStudentId = async (req, res) => {
     };
 
     return res.status(200).json(response);
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user ? req.user.user_id : null,
       "Error getting exam marks by student id:",
-      err,
+      error,
     );
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -1613,7 +1603,7 @@ module.exports = {
   changeIdentifiersAndName,
   getProfileDetails,
 
-  getHomeworkById,
+  getHomeworkAssignmentsById,
   getAchievementById,
   getRoutesForGuardian,
   getExamsByStudentId,

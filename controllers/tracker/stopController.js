@@ -1,6 +1,7 @@
-const { stop, Driver, StudentRoutes } = require("../../models");
+const stop = require("../../models/tracker/stop");
+const StudentRoutes = require("../../models/tracker/studentroutes");
+const Driver = require("../../models/tracker/driver");
 
-// getStopById
 const getStopById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -24,6 +25,7 @@ const getStopById = async (req, res) => {
       data: studentStop,
     });
   } catch (error) {
+     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching stop:", error);
     console.error("Error fetching stop:", error);
     return res.status(500).json({
       error: "Failed to fetch stop",
@@ -59,6 +61,7 @@ const updateStopById = async (req, res) => {
       data: studentStop,
     });
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error updating stop:", error);
     console.error("Error updating stop:", error);
     return res.status(500).json({
       error: "Failed to update stop",
@@ -123,6 +126,7 @@ const updateStopForDriver = async (req, res) => {
     });
 
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error updating stop for driver:", error);
     console.log("error in updating stop for driver", error);
     return res.status(500).json({
       error: "Failed to update stop for driver",
@@ -149,6 +153,7 @@ const deleteStop = async (req, res) => {
     await studentStop.update({ trash: true });
     res.status(200).json({ message: "Stop deleted successfully" });
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error deleting stop:", error);
     console.log("error in deleting stop", error);
   }
 };

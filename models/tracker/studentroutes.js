@@ -1,6 +1,6 @@
 "use strict";
 const { DataTypes } = require("sequelize");
-const { schoolSequelize } = require("../config/connection");
+const { schoolSequelize } = require("../../config/connection");
 
 const StudentRoutes = schoolSequelize.define(
   "StudentRoutes",
@@ -10,12 +10,14 @@ const StudentRoutes = schoolSequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
-
+    school_id: {
+      type: DataTypes.INTEGER,
+      defaultValue: null,
+    },
     route_name: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-
     vehicle_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -60,12 +62,6 @@ const StudentRoutes = schoolSequelize.define(
       type: DataTypes.INTEGER,
       defaultValue: null,
     },
-    school_id: {
-      type: DataTypes.INTEGER,
-      defaultValue: null,
-    }
-
-
   },
   {
     tableName: "route",

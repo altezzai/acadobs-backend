@@ -1,12 +1,13 @@
 const { where } = require("sequelize");
-const { Driver, Guardian } = require("../../models");
-const { StudentRoutes } = require("../../models");
-const { stop: Stop } = require("../../models");
-const { Student } = require("../../models");
+const Driver = require("../../models/tracker/driver");
+const Vehicle = require("../../models/tracker/vehicle");
+const StudentRoutes  = require("../../models/tracker/studentroutes");
+const stop = require("../../models/tracker/stop");
+const Student  = require("../../models/student");
 const StudentRouteAssignment = require("../../models/student_route_assignment");
+const  RouteStopLog  = require("../../models/tracker/route_stop_log");
 const { Sequelize } = require("sequelize");
 const { Op } = require("sequelize");
-const { RouteStopLog } = require("../../models");
 const { deleteFile } = require("../../middlewares/storageUploads");
 // getDriverById
 const getDriverById = async (req, res) => {
@@ -43,6 +44,7 @@ const getDriverById = async (req, res) => {
       data: driver,
     });
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching driver:", error);
     console.error("Error fetching driver:", error);
     return res.status(500).json({
       error: "Failed to fetch driver",
@@ -95,6 +97,7 @@ const updateDriverById = async (req, res) => {
       data: driver,
     });
   } catch (error) {
+     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error updating driver:", error);
     console.error("Error updating driver:", error);
     return res.status(500).json({
       error: "Failed to update driver",
@@ -122,6 +125,7 @@ const deleteDriverById = async (req, res) => {
     await driver.update({ trash: true });
     res.status(200).json({ message: "Driver deleted successfully" });
   } catch (error) {
+     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error in deleting driver:", error);
     console.log("Error in deleting driver: ", error);
   }
 };
@@ -137,7 +141,7 @@ const getDriverAssignedRoutesAdmin = async (req, res) => {
         trash: false,
         school_id: school_id
       },
-      attributes: ["id", "name", "phone"],
+      attributes: ["id", "name", "phone","user_id",],
       include: [
         {
           model: StudentRoutes,
@@ -161,6 +165,7 @@ const getDriverAssignedRoutesAdmin = async (req, res) => {
       data: driver.routes,
     });
   } catch (error) {
+     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching driver routes:", error);
     console.error("Error fetching driver routes:", error);
     return res.status(500).json({
       error: "Failed to fetch assigned routes",
@@ -245,6 +250,7 @@ const DriverAssignedRoutes = async (req, res) => {
       data: driver.routes,
     });
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching driver routes:", error);
     console.error("Error fetching driver routes:", error);
     return res.status(500).json({
       error: "Failed to fetch assigned routes",
@@ -258,6 +264,7 @@ const createStopForDriver = async (req, res) => {
   try {
     const { route_id, stop_name, priority, latitude, longitude } = req.body;
     const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
 
     if (!route_id || !stop_name) {
       return res.status(400).json({ message: "Fields are missing" });
@@ -266,9 +273,9 @@ const createStopForDriver = async (req, res) => {
       where: {
         user_id,
         trash: false,
+        school_id,
       },
     });
-
 
     if (!driver) {
       return res.status(404).json({ message: "Driver not found" });
@@ -278,15 +285,8 @@ const createStopForDriver = async (req, res) => {
       where: {
         id: route_id,
         trash: false,
+        driver_id: user_id,
       },
-      include: [
-        {
-          model: Driver,
-          as: "drivers",
-          where: { id: driver.id },
-          through: { attributes: [] },
-        },
-      ],
     });
 
     if (!route) {
@@ -299,13 +299,12 @@ const createStopForDriver = async (req, res) => {
       where: {
         route_id,
         stop_name,
-        priority,
         trash: false,
       },
     });
     if (existingStop) {
       return res.status(400).json({
-        message: "Stop name and priority already exists for this route",
+        message: "Stop name  already exists for this route",
       });
     }
 
@@ -324,84 +323,11 @@ const createStopForDriver = async (req, res) => {
       stop,
     });
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error creating stop:", error);
     console.error("Error creating stop:", error);
     res.status(500).json({ error: "Failed to create stop" });
   }
 };
-
-//to get stops details with students for a driver
-// const getStopsForDriver = async (req, res) => {
-//   try {
-//     const { route_id } = req.params;
-//     const user_id = req.user.user_id;
-//     const driver = await Driver.findOne({
-//       where: {
-//         user_id,
-//         trash: false,
-//       },
-//     });
-//     if (!driver) {
-//       return res.status(404).json({ message: "Driver not found" });
-//     }
-//     const stops = await Stop.findAll({
-//       where: { route_id, trash: false, },
-//       attributes: ["id", "stop_name", "priority", "longitude", "latitude", "arrived", "arrived_time",],
-//       include: [
-//         {
-//           model: StudentRoutes,
-//           as: "route",
-//           attributes: ["route_name", "type", "isLock"],
-
-//         },
-//         {
-//           model: Student,
-//           as: "students",
-//           attributes: ["id", "full_name", "reg_no"],
-//           include: [
-//             {
-//               model: Guardian,
-//               as: "guardian",
-//               attributes: ["guardian_name", "guardian_contact"]
-//             }
-//           ]
-//         }
-//       ],
-
-//     });
-
-//     const result = stops.map((s) => {
-//       return {
-//         id: s.id,
-//         stop_name: s.stop_name,
-//         priority: s.priority,
-//         longitude: s.longitude,
-//         latitude: s.latitude,
-//         route_name: s.route.route_name,
-//         route_type: s.route.type,
-//         isLock: s.route.isLock,
-//         arrived: s.arrived,
-//         arrived_time: s.arrived_time,
-//         students: s.students.map((student) => ({
-//           id: student.id,
-//           full_name: student.full_name,
-//           reg_no: student.reg_no,
-//           guardian_name: student.guardian?.guardian_name || null,
-//           guardian_contact: student.guardian?.guardian_contact || null,
-//         })),
-//       }
-//     })
-
-//     return res.status(200).json({
-//       message: "Stops fetched successfully",
-//       data: result,
-//     });
-//   } catch (error) {
-//     console.error("Error fetching stops:", error);
-//     return res.status(500).json({
-//       error: "Failed to fetch stops",
-//     });
-//   }
-// };
 
 const getStopsForDriver = async (req, res) => {
   try {
@@ -529,6 +455,7 @@ const getStopsForDriver = async (req, res) => {
     });
 
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching stops:", error);
     console.error("Error fetching stops:", error);
     return res.status(500).json({
       error: "Failed to fetch stops",
@@ -615,6 +542,7 @@ const assignStudentsToStop = async (req, res) => {
       assigned_count: students.length,
     });
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error assigning students to stop:", error);
     console.error("Error assigning students to stop:", error);
     res.status(500).json({
       error: "Failed to assign students to stop",
@@ -695,6 +623,7 @@ const deleteStudentsFromStop = async (req, res) => {
     });
 
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error deleting students from stop:", error);
     console.error("Error deleting students from stop:", error);
     return res.status(500).json({
       error: "Failed to delete students from stop",
@@ -773,6 +702,7 @@ const getMyStudents = async (req, res) => {
       data: students,
     });
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching students:", error);
     console.error("Error fetching students:", error);
     return res.status(500).json({
       error: "Failed to fetch students",
@@ -862,6 +792,7 @@ const getStopDetailsForDriver = async (req, res) => {
     });
 
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error in fetching stop details:", error);
     console.log("Error in fetching stop details: ", error);
     return res.status(500).json({
       error: "Failed to fetch stop details"
@@ -931,6 +862,7 @@ const updateRouteActive = async (req, res) => {
     });
 
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error in activating the route:", error);
     console.log("Failed to activate the route:", error);
     return res.status(500).json({
       error: "Internal server error",
@@ -1041,6 +973,7 @@ const updateStopandStudent = async (req, res) => {
     });
 
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error in updating stop and student:", error);
     console.log("Failed to update stop and student:", error);
     return res.status(500).json({
       error: "Internal server error",
@@ -1087,6 +1020,7 @@ const routeInactive = async (req, res) => {
     });
 
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error in inactivating the route:", error);
     console.log("Failed to inactivate the route: ", error);
     return res.status(500).json({
       error: "Internal server error",
@@ -1169,6 +1103,7 @@ const bulkStopCreation = async (req, res) => {
       stops: createdStops,
     });
   } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error in creating stop:", error);
     console.error("Error creating stop:", error);
     res.status(500).json({ error: "Failed to create stop" });
   }

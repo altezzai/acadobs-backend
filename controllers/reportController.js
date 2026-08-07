@@ -351,10 +351,10 @@ const getAttendanceReport = async (req, res) => {
       currentPage: download === "true" ? null : page,
       reports: formattedData,
     });
-  } catch (err) {
-    logger.error("Error generating attendance report:", err);
-    console.error(err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("Error generating attendance report:", error);
+    console.error(error);
+    res.status(500).json({ error: error.message });
   }
 };
 const getHomeworkReport = async (req, res) => {
@@ -552,6 +552,13 @@ const getStudentReportByStudentId = async (req, res) => {
     //ATTENDANCE, MARKS, ACHIEVEMENTS can be added similarly
     const Attendancedata = await AttendanceMarked.findAll({
       where: { student_id },
+      include: [
+        {
+          model: Attendance,
+          attributes: ["date"],
+          where: { date: { [Op.gte]: education_year_start }, trash: false ,school_id},
+        }, 
+      ],
     });
     const attendance = await AttendanceMarked.findAll({
       where: { student_id, createdAt: { [Op.gte]: education_year_start } },

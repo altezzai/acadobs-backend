@@ -85,9 +85,9 @@ const login = async (req, res) => {
 
     };
     res.status(200).json({ message: "Login successful", token, refreshToken, userData });
-  } catch (err) {
-    logger.error("Error logging in:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("Error logging in:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -137,9 +137,9 @@ const refreshToken = async (req, res) => {
     );
 
     res.status(200).json({ token, refreshToken: newRefreshToken });
-  } catch (err) {
-    logger.error("Error refreshing token:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("Error refreshing token:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -157,9 +157,9 @@ const logout = async (req, res) => {
     }
 
     res.status(200).json({ message: "Logged out successfully" });
-  } catch (err) {
-    logger.error("Error during logout:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error("Error during logout:", error);
+    res.status(500).json({ error: error.message });
   }
 }
 const getSchoolsList = async (req, res) => {

@@ -1,6 +1,6 @@
 "use strict";
 const { DataTypes } = require("sequelize");
-const { schoolSequelize } = require("../config/connection");
+const { schoolSequelize } = require("../../config/connection");
 
 const Driver = schoolSequelize.define(
   "Driver",
@@ -10,7 +10,10 @@ const Driver = schoolSequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
-
+    school_id: {
+      type: DataTypes.INTEGER,
+      defaultValue: null,
+    },
     user_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -54,10 +57,7 @@ const Driver = schoolSequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
-    school_id: {
-      type: DataTypes.INTEGER,
-      defaultValue: null,
-    }
+ 
   },
   {
     tableName: "driver",
@@ -65,26 +65,4 @@ const Driver = schoolSequelize.define(
   }
 );
 
-// // Associations
-// Driver.associate = (models) => {
-//   // Driver → User
-//   Driver.belongsTo(models.User, {
-//     foreignKey: "user_id",
-//     as: "user",
-//   });
-
-//   // Driver → Vehicles (One-to-Many)
-//   Driver.hasMany(models.Vehicle, {
-//     foreignKey: "driver_id",
-//     as: "vehicles",
-//   });
-
-//   // Driver ↔ Route (Many-to-Many)
-//   Driver.belongsToMany(models.Route, {
-//     through: "route_drivers",
-//     foreignKey: "driver_id",
-//     otherKey: "route_id",
-//     as: "routes",
-//   });
-// };
 module.exports = Driver;
