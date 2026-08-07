@@ -1,5 +1,12 @@
-const { StudentRoutes, Student, Guardian, StudentRouteAssignment, Driver } = require("../../models");
-const Stop = require("../../models/stop");
+const Stop = require("../../models/tracker/stop");
+const StudentRoutes = require("../../models/tracker/studentroutes");
+const Driver = require("../../models/tracker/driver");
+const Vehicle = require("../../models/tracker/vehicle");
+const Student = require("../../models/student");
+const StudentRouteAssignment = require("../../models/student_route_assignment");
+const Guardian = require("../../models/guardian");
+const { Sequelize } = require("sequelize");
+const { Op } = require("sequelize");
 
 //getRouteById
 const getRouteById = async (req, res) => {

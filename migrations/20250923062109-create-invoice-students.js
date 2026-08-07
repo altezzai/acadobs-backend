@@ -14,7 +14,7 @@ module.exports = {
         references: { model: "students", key: "id" },
       },
       status: {
-        type: Sequelize.ENUM("pending", "partially_paid", "paid", "overdue"),
+        type: Sequelize.ENUM("pending", "partially_paid", "paid", "overdue","waiting_for_approval"),
         defaultValue: "pending",
       },
       createdAt: {

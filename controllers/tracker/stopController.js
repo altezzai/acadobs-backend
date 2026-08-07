@@ -1,6 +1,7 @@
-const { stop, Driver, StudentRoutes } = require("../../models");
+const stop = require("../../models/tracker/stop");
+const StudentRoutes = require("../../models/tracker/studentroutes");
+const Driver = require("../../models/tracker/driver");
 
-// getStopById
 const getStopById = async (req, res) => {
   try {
     const { id } = req.params;

@@ -2,6 +2,7 @@ const moment = require("moment");
 const bcrypt = require("bcrypt");
 const { Op, where } = require("sequelize");
 const logger = require("../utils/logger");
+const { schoolSequelize } = require("../config/connection");
 
 const {
   normalizeGender,
@@ -39,17 +40,17 @@ const Homework = require("../models/homework");
 const HomeworkAssignment = require("../models/homeworkassignment");
 const StaffAttendance = require("../models/staff_attendance");
 const Syllabus = require("../models/syllabus");
+const { School } = require("../models");
 const StudentRouteAssignment = require("../models/student_route_assignment");
-const RouteStopLog = require("../models/route_stop_log");
+const RouteStopLog = require("../models/tracker/route_stop_log");
 const StudentTransfer = require("../models/student_transfer");
-const { School, StudentRoutes } = require("../models");
-const { schoolSequelize } = require("../config/connection");
-const studentRoutes = require("../models/studentroutes");
-const RouteDrivers = require("../models/route_drivers");
-const Stop = require("../models/stop");
-const { Driver } = require("../models");
-const { Vehicle } = require("../models");
-const studentroutes = require("../models/studentroutes");
+const StudentRoutes = require("../models/tracker/studentroutes");
+const studentRoutes = require("../models/tracker/studentroutes");
+const RouteDrivers = require("../models/tracker/route_drivers");
+const Stop = require("../models/tracker/stop");
+const Driver  = require("../models/tracker/driver");
+const Vehicle  = require("../models/tracker/vehicle");
+const studentroutes = require("../models/tracker/studentroutes");
 const { error } = require("winston");
 const { Console } = require("winston/lib/winston/transports");
 const { deleteFile } = require("../middlewares/storageUploads");
@@ -9221,7 +9222,7 @@ const createStop = async (req, res) => {
     const existingStop = await Stop.findOne({
       where: {
         route_id,
-        priority,
+        stop_name,
         trash: false,
       },
     });

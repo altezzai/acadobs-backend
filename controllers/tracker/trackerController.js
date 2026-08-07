@@ -1,12 +1,13 @@
 const { where } = require("sequelize");
-const { Driver, Guardian } = require("../../models");
-const { StudentRoutes } = require("../../models");
-const { stop: Stop } = require("../../models");
-const { Student } = require("../../models");
+const Driver = require("../../models/tracker/driver");
+const Vehicle = require("../../models/tracker/vehicle");
+const StudentRoutes  = require("../../models/tracker/studentroutes");
+const stop = require("../../models/tracker/stop");
+const Student  = require("../../models/student");
 const StudentRouteAssignment = require("../../models/student_route_assignment");
+const  RouteStopLog  = require("../../models/tracker/route_stop_log");
 const { Sequelize } = require("sequelize");
 const { Op } = require("sequelize");
-const { RouteStopLog } = require("../../models");
 const { deleteFile } = require("../../middlewares/storageUploads");
 // getDriverById
 const getDriverById = async (req, res) => {
@@ -263,6 +264,7 @@ const createStopForDriver = async (req, res) => {
   try {
     const { route_id, stop_name, priority, latitude, longitude } = req.body;
     const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
 
     if (!route_id || !stop_name) {
       return res.status(400).json({ message: "Fields are missing" });
@@ -271,9 +273,9 @@ const createStopForDriver = async (req, res) => {
       where: {
         user_id,
         trash: false,
+        school_id,
       },
     });
-
 
     if (!driver) {
       return res.status(404).json({ message: "Driver not found" });
@@ -283,15 +285,8 @@ const createStopForDriver = async (req, res) => {
       where: {
         id: route_id,
         trash: false,
+        driver_id: user_id,
       },
-      include: [
-        {
-          model: Driver,
-          as: "drivers",
-          where: { id: driver.id },
-          through: { attributes: [] },
-        },
-      ],
     });
 
     if (!route) {
@@ -304,13 +299,12 @@ const createStopForDriver = async (req, res) => {
       where: {
         route_id,
         stop_name,
-        priority,
         trash: false,
       },
     });
     if (existingStop) {
       return res.status(400).json({
-        message: "Stop name and priority already exists for this route",
+        message: "Stop name  already exists for this route",
       });
     }
 

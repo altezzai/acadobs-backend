@@ -1,6 +1,6 @@
 "use strict";
 const { DataTypes } = require("sequelize");
-const { schoolSequelize } = require("../config/connection");
+const { schoolSequelize } = require("../../config/connection");
 
 const Stop = schoolSequelize.define(
   "Stop",
@@ -23,7 +23,6 @@ const Stop = schoolSequelize.define(
 
     priority: {
       type: DataTypes.INTEGER,
-      unique: true,
       allowNull: true,
     },
 

@@ -8,7 +8,7 @@ const InvoiceStudent = schoolSequelize.define(
     invoice_id: { type: DataTypes.INTEGER, allowNull: false },
     student_id: { type: DataTypes.INTEGER, allowNull: false },
     status: {
-      type: DataTypes.ENUM("pending", "partially_paid", "paid", "overdue"),
+      type: DataTypes.ENUM("pending", "partially_paid", "paid", "overdue","waiting_for_approval"),
       defaultValue: "pending",
     },
     createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },

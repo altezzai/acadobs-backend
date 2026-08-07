@@ -279,6 +279,7 @@ const getInvoiceByStudentId = async (req, res) => {
   }
 };
 const createPayment = async (req, res) => {
+  const transaction = await sequelize.transaction();
   try {
     const school_id = req.user.school_id;
     const {
@@ -292,17 +293,19 @@ const createPayment = async (req, res) => {
     } = req.body;
 
     if (
+      !student_id ||
       !school_id ||
       !amount ||
       !payment_date ||
       !payment_type ||
       !payment_method
     ) {
-      return res.status(400).json({ error: "All fields are required" });
+      return res.status(400).json({ error: "required fields are missing" });
     }
     //check if transaction_id already unique or null is
     const existingTransaction_id = await Payment.findOne({
       where: { transaction_id },
+      transaction,
     });
     if (
       existingTransaction_id &&
@@ -318,6 +321,7 @@ const createPayment = async (req, res) => {
         payment_date,
         payment_type,
       },
+      transaction,
     });
     if (existingPayment) {
       return res
@@ -339,7 +343,13 @@ const createPayment = async (req, res) => {
       payment_status: "pending",
       recorded_by: req.user.user_id,
       payment_attachment: payment_attachmentUrl ? payment_attachmentUrl : null,
-    });
+    }, { transaction });
+    //update invoice status to paid
+    await InvoiceStudent.update(
+      { status: "waiting_for_approval" },
+      { where: { id: invoice_student_id } },
+      { transaction }
+    )
     res.status(201).json({
       message: "Payment created",
       payment,
