@@ -1164,11 +1164,11 @@ const getHomeworkAssignmentsById = async (req, res) => {
         {
           model: Homework,
           where: { school_id, trash: false },
-          attributes: ["id", "title", "description", "subject","file","type"],
+          attributes: ["id", "title", "description","file","type"],
           include: [
             {
               model: Subject,
-              attributes: ["id", "name"],
+              attributes: ["id", "subject_name"],
             },
             {
               model: Class,
