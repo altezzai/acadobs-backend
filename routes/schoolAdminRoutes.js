@@ -668,5 +668,6 @@ router.get(
   "/getStudentsByClassId/:class_id",
   commonController.getStudentsByClassId,
 );
+router.get("/getAllDriverUsers", commonController.getAllDriverUsers);
 
 module.exports = router;

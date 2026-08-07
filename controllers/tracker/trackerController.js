@@ -141,7 +141,7 @@ const getDriverAssignedRoutesAdmin = async (req, res) => {
         trash: false,
         school_id: school_id
       },
-      attributes: ["id", "name", "phone"],
+      attributes: ["id", "name", "phone","user_id",],
       include: [
         {
           model: StudentRoutes,

@@ -25,6 +25,7 @@ const SpecialClassStudent = require("../models/special_class_students");
 const InvoiceStudent = require("../models/invoice_students");
 const Invoice = require("../models/invoice");
 const Guardian = require("../models/guardian");
+const Driver = require("../models/tracker/driver");
 const { deleteFile } = require("../middlewares/storageUploads");
 
 const { Class, Staff } = require("../models");
@@ -1206,6 +1207,25 @@ const accountDeleteRequests = async (req, res) => {
     res.status(500).json({ error: "Failed to create delete request" });
   }
 };
+const getAllDriverUsers = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+
+    const driverUsers = await User.findAll({
+      where: {
+        role: "driver",
+        school_id,
+        trash: false
+      },
+      attributes: ["id", "full_name", "phone","dp"],
+    });
+    res.status(200).json(driverUsers);
+  } catch (err) {
+    logger.error("Error fetching driver users:", err);
+    console.error("Error fetching driver users:", err);
+    res.status(500).json({ error: "Failed to fetch driver users" });
+  }
+}
 module.exports = {
   getStudentsByClassId,
   getSpecialClassStudentsByClassId,
@@ -1245,4 +1265,6 @@ module.exports = {
   getAchievementsBySchool,
 
   accountDeleteRequests,
+
+  getAllDriverUsers,
 };

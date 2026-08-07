@@ -9330,7 +9330,7 @@ const getAllDrivers = async (req, res) => {
         trash: false,
         school_id,
       },
-      attributes: ["id", "name", "phone", "email", "photo", "address"],
+      attributes: ["id", "name", "phone", "email", "photo", "address","user_id"],
       order: [["createdAt", "DESC"]],
     });
 
