@@ -194,7 +194,7 @@ const getPaymentByStudentId = async (req, res) => {
       include: [
         {
           model: InvoiceStudent,
-          attributes: ["id", "invoice_id"],
+          attributes: ["id", "invoice_id","student_id", "status"],
           required: false,
           include: [
             {
