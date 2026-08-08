@@ -4820,22 +4820,135 @@ const getPaymentById = async (req, res) => {
 const paymentVerification = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const userId=req.user.user_id;
-    const id= req.params.id;
+    const userId = req.user.user_id;
+    const id = req.params.id;
     const status = req.body.status;
-    const payment = await Payment.findOne({
-      where: { id, school_id, trash: false },
-    });
-    if (!payment) {
-      return res.status(404).json({ error: "Payment not found" });
+    if (!["completed", "failed"].includes(status)) {
+      return res.status(400).json({
+        error: "Invalid payment status",
+      });
     }
-    //change status to completed or pending
-    payment.payment_status = status;
-    payment.updated_by = userId;
-    await payment.save();
-    res.status(200).json(payment);
+
+    const result = await schoolSequelize.transaction(async (transaction) => {
+      const payment = await Payment.findOne({
+        where: {
+          id,
+          school_id,
+          trash: false,
+        },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      if (!payment) {
+        throw new Error("Payment not found");
+      }
+
+      payment.payment_status = status;
+      payment.updated_by = userId;
+
+      await payment.save({
+        transaction,
+      });
+
+      let invoice_status = "";
+
+      if (
+        status === "completed" &&
+        payment.invoice_student_id
+      ) {
+        const invoiceStudent = await InvoiceStudent.findOne({
+          where: {
+            id: payment.invoice_student_id,
+          },
+          include: [
+            {
+              model: Invoice,
+              attributes: ["id", "amount"],
+            },
+          ],
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        if (!invoiceStudent) {
+          throw new Error("Invoice student not found");
+        }
+
+        const totalPaid =
+          (await Payment.sum("amount", {
+            where: {
+              invoice_student_id: payment.invoice_student_id,
+              payment_status: "completed",
+              trash: false,
+            },
+            transaction,
+          })) || 0;
+
+        const invoiceAmount =
+          Number(invoiceStudent?.Invoice?.amount) || 0;
+
+        const paidAmount = Number(totalPaid);
+
+        if (paidAmount >= invoiceAmount) {
+          await invoiceStudent.update(
+            {
+              status: "paid",
+            },
+            {
+              transaction,
+            }
+          );
+
+          invoice_status = "paid";
+        } else {
+          await invoiceStudent.update(
+            {
+              status: "partially_paid",
+            },
+            {
+              transaction,
+            }
+          );
+
+          invoice_status = "partially_paid";
+        }
+      }
+      return {
+        payment,
+        invoice_status,
+      };
+    });
+
+    return res.status(200).json({
+      message: "Payment verification successful",
+      payment: result.payment,
+      invoice_status: result.invoice_status,
+    });
+
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "paymentVerification:",
+      error
+    );
+
+    if (error.message === "Payment not found") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+
+    if (error.message === "Invoice student not found") {
+      return res.status(404).json({
+        error: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      error: error.message,
+    });
   }
 };
 
