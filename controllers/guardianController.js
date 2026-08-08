@@ -279,8 +279,6 @@ const getInvoiceByStudentId = async (req, res) => {
   }
 };
 const createPayment = async (req, res) => {
-  const transaction = await schoolSequelize.transaction();
-
   try {
     const school_id = req.user.school_id;
 
@@ -294,7 +292,6 @@ const createPayment = async (req, res) => {
       payment_method,
     } = req.body;
 
-    // Validate required fields
     if (
       !student_id ||
       !school_id ||
@@ -303,104 +300,111 @@ const createPayment = async (req, res) => {
       !payment_date ||
       !payment_type
     ) {
-      await transaction.rollback();
-
       return res.status(400).json({
         error: "Required fields are missing",
       });
     }
 
-    // Check transaction_id only if provided
-    if (transaction_id) {
-      const existingTransaction = await Payment.findOne({
-        where: {
-          transaction_id,
-        },
-        transaction,
-      });
+    const payment = await schoolSequelize.transaction(async (transaction) => {
 
-      if (existingTransaction) {
-        await transaction.rollback();
-
-        return res.status(400).json({
-          error: "Transaction ID already exists",
+      // Check transaction ID
+      if (transaction_id) {
+        const existingTransaction = await Payment.findOne({
+          where: {
+            transaction_id,
+          },
+          transaction,
         });
+
+        if (existingTransaction) {
+          throw new Error("Transaction ID already exists");
+        }
       }
-    }
 
-    // Check duplicate payment
-    const existingPayment = await Payment.findOne({
-      where: {
-        school_id,
-        student_id,
-        amount,
-        payment_date,
-        payment_type,
-      },
-      transaction,
-    });
-
-    if (existingPayment) {
-      await transaction.rollback();
-
-      return res.status(400).json({
-        error: "Payment with the same details already exists",
-      });
-    }
-
-    const payment_attachmentUrl =
-      req.uploadedFiles?.payment_attachment?.url || null;
-
-    // Create payment
-    const payment = await Payment.create(
-      {
-        school_id,
-        student_id,
-        invoice_student_id,
-        amount,
-        payment_date,
-        payment_type,
-        transaction_id: transaction_id || null,
-        payment_method,
-        payment_status: "pending",
-        recorded_by: req.user.user_id,
-        payment_attachment: payment_attachmentUrl,
-      },
-      {
-        transaction,
-      }
-    );
-
-    // Update invoice status
-    await InvoiceStudent.update(
-      {
-        status: "waiting_for_approval",
-      },
-      {
+      // Check duplicate payment
+      const existingPayment = await Payment.findOne({
         where: {
-          id: invoice_student_id,
+          school_id,
+          student_id,
+          amount,
+          payment_date,
+          payment_type,
         },
         transaction,
-      }
-    );
+      });
 
-    // Commit transaction
-    await transaction.commit();
+      if (existingPayment) {
+        throw new Error(
+          "Payment with the same details already exists"
+        );
+      }
+
+      const payment_attachmentUrl =
+        req.uploadedFiles?.payment_attachment?.url || null;
+
+      // Create payment
+      const payment = await Payment.create(
+        {
+          school_id,
+          student_id,
+          invoice_student_id,
+          amount,
+          payment_date,
+          payment_type,
+          transaction_id: transaction_id || null,
+          payment_method,
+          payment_status: "pending",
+          recorded_by: req.user.user_id,
+          payment_attachment: payment_attachmentUrl,
+        },
+        {
+          transaction,
+        }
+      );
+
+      // Update invoice
+      await InvoiceStudent.update(
+        {
+          status: "waiting_for_approval",
+        },
+        {
+          where: {
+            id: invoice_student_id,
+          },
+          transaction,
+        }
+      );
+
+      return payment;
+    });
 
     return res.status(201).json({
       message: "Payment created",
       payment,
     });
-  } catch (error) {
-    // Rollback transaction if anything fails
-    await transaction.rollback();
 
+  } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "createPayment:",
       error
     );
+
+    if (error.message === "Transaction ID already exists") {
+      return res.status(400).json({
+        error: error.message,
+      });
+    }
+
+    if (
+      error.message ===
+      "Payment with the same details already exists"
+    ) {
+      return res.status(400).json({
+        error: error.message,
+      });
+    }
 
     return res.status(500).json({
       error: error.message,
