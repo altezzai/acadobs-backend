@@ -296,9 +296,9 @@ const createPayment = async (req, res) => {
       !student_id ||
       !school_id ||
       !amount ||
+      !invoice_student_id ||
       !payment_date ||
-      !payment_type ||
-      !payment_method
+      !payment_type
     ) {
       return res.status(400).json({ error: "required fields are missing" });
     }
@@ -347,8 +347,7 @@ const createPayment = async (req, res) => {
     //update invoice status to paid
     await InvoiceStudent.update(
       { status: "waiting_for_approval" },
-      { where: { id: invoice_student_id } },
-      { transaction }
+      { where: { id: invoice_student_id }, transaction },
     )
     res.status(201).json({
       message: "Payment created",
