@@ -8,22 +8,6 @@ const { body, param } = require("express-validator");
 const { validate } = require("../middlewares/validateMiddleware");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
 
-router.put(
-  "/updateHomeworkAssignment/:id",
-  uploadWithErrorHandler(upload.single("file")),
-  storageUploadMiddleware("homework_assignments"),
-  [
-    body("status")
-      .optional()
-      .customSanitizer((val) => (val === "null" ? null : val))
-      .isString()
-      .trim()
-      .escape(),
-    body("points").optional().isNumeric(),
-    body("student_id").notEmpty().trim().escape(),
-  ],
-  guardianController.updateHomeworkAssignment,
-);
 
 router.get(
   "/getNoticeByStudentId/:student_id",
@@ -79,6 +63,8 @@ router.put(
 router.delete("/leaveRequest/:id", guardianController.deleteLeaveRequest);
 
 router.get("/getSchoolsByUser", guardianController.getSchoolsByUser);
+router.get("/getSchoolById/:id", guardianController.getSchoolById);
+  
 router.get(
   "/getStudentsUnderGuardianBySchoolId/:school_id",
   guardianController.getStudentsUnderGuardianBySchoolId,
@@ -144,7 +130,12 @@ router.put(
   guardianController.changeIdentifiersAndName,
 );
 router.get("/getProfileDetails", guardianController.getProfileDetails);
-
+router.put(
+  "/updateHomeworkAssignment/:id",
+  uploadWithErrorHandler(upload.single("file")),
+  storageUploadMiddleware("homework_assignments"),
+  guardianController.updateHomeworkAssignment,
+);
 router.get("/getHomeworkAssignmentsById/:id", guardianController.getHomeworkAssignmentsById);
 router.get("/getAchievementById/:id", guardianController.getAchievementById);
 router.get("/getExams/:studentId", guardianController.getExamsByStudentId);
