@@ -280,8 +280,10 @@ const getInvoiceByStudentId = async (req, res) => {
 };
 const createPayment = async (req, res) => {
   const transaction = await schoolSequelize.transaction();
+
   try {
     const school_id = req.user.school_id;
+
     const {
       student_id,
       invoice_student_id,
@@ -292,27 +294,41 @@ const createPayment = async (req, res) => {
       payment_method,
     } = req.body;
 
+    // Validate required fields
     if (
       !student_id ||
       !school_id ||
-      !amount ||
+      amount == null ||
       !invoice_student_id ||
       !payment_date ||
       !payment_type
     ) {
-      return res.status(400).json({ error: "required fields are missing" });
+      await transaction.rollback();
+
+      return res.status(400).json({
+        error: "Required fields are missing",
+      });
     }
-    //check if transaction_id already unique or null is
-    const existingTransaction_id = await Payment.findOne({
-      where: { transaction_id },
-      transaction,
-    });
-    if (
-      existingTransaction_id &&
-      existingTransaction_id.transaction_id !== ""
-    ) {
-      return res.status(400).json({ error: "Transaction ID already exists" });
+
+    // Check transaction_id only if provided
+    if (transaction_id) {
+      const existingTransaction = await Payment.findOne({
+        where: {
+          transaction_id,
+        },
+        transaction,
+      });
+
+      if (existingTransaction) {
+        await transaction.rollback();
+
+        return res.status(400).json({
+          error: "Transaction ID already exists",
+        });
+      }
     }
+
+    // Check duplicate payment
     const existingPayment = await Payment.findOne({
       where: {
         school_id,
@@ -323,39 +339,72 @@ const createPayment = async (req, res) => {
       },
       transaction,
     });
+
     if (existingPayment) {
-      return res
-        .status(400)
-        .json({ error: "Payment with the same details already exists" });
+      await transaction.rollback();
+
+      return res.status(400).json({
+        error: "Payment with the same details already exists",
+      });
     }
+
     const payment_attachmentUrl =
       req.uploadedFiles?.payment_attachment?.url || null;
 
-    const payment = await Payment.create({
-      school_id,
-      student_id,
-      invoice_student_id,
-      amount,
-      payment_date,
-      payment_type,
-      transaction_id,
-      payment_method,
-      payment_status: "pending",
-      recorded_by: req.user.user_id,
-      payment_attachment: payment_attachmentUrl ? payment_attachmentUrl : null,
-    }, { transaction });
-    //update invoice status to paid
+    // Create payment
+    const payment = await Payment.create(
+      {
+        school_id,
+        student_id,
+        invoice_student_id,
+        amount,
+        payment_date,
+        payment_type,
+        transaction_id: transaction_id || null,
+        payment_method,
+        payment_status: "pending",
+        recorded_by: req.user.user_id,
+        payment_attachment: payment_attachmentUrl,
+      },
+      {
+        transaction,
+      }
+    );
+
+    // Update invoice status
     await InvoiceStudent.update(
-      { status: "waiting_for_approval" },
-      { where: { id: invoice_student_id }, transaction },
-    )
-    res.status(201).json({
+      {
+        status: "waiting_for_approval",
+      },
+      {
+        where: {
+          id: invoice_student_id,
+        },
+        transaction,
+      }
+    );
+
+    // Commit transaction
+    await transaction.commit();
+
+    return res.status(201).json({
       message: "Payment created",
       payment,
     });
   } catch (error) {
-    logger.error("schoolId:", req.user.school_id, "createPayment :", error);
-    res.status(500).json({ error: error.message });
+    // Rollback transaction if anything fails
+    await transaction.rollback();
+
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "createPayment:",
+      error
+    );
+
+    return res.status(500).json({
+      error: error.message,
+    });
   }
 };
 const createLeaveRequest = async (req, res) => {
