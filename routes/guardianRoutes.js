@@ -43,7 +43,12 @@ router.post(
   storageUploadMiddleware("payment_attachments"),
   guardianController.createPayment,
 );
-
+router.put(
+  "/payments/:id",
+  uploadWithErrorHandler(upload.single("payment_attachment")),
+  storageUploadMiddleware("payment_attachments"),
+  guardianController.updatePayment,
+)
 const leaveRequestValidation = [
   body("student_id").notEmpty().trim().escape(),
   body("from_date").notEmpty().trim().escape(),

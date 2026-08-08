@@ -411,6 +411,76 @@ const createPayment = async (req, res) => {
     });
   }
 };
+//update payment
+const updatePayment = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const school_id = req.user.school_id;
+    const userId = req.user.user_id;
+    const {
+      amount,
+      payment_date,
+      transaction_id,
+      payment_method,
+    } = req.body;
+    const payment = await Payment.findOne({
+      where: { id, school_id, trash: false ,recorded_by:userId},
+    });
+    if (!payment) {
+      return res.status(404).json({ error: "Payment not found" });
+  }
+  if(payment.payment_status ==="completed") 
+      return res.status(400).json({ error: "Payment already completed" });
+    const existingTransaction_id = await Payment.findOne({
+      where: { transaction_id, id: { [Op.ne]: req.params.id } },
+    });
+    if (
+      existingTransaction_id &&
+      existingTransaction_id.transaction_id !== ""
+    ) {
+      return res.status(400).json({ error: "Transaction ID already exists" });
+    }
+    const existingPayment = await Payment.findOne({
+      where: {
+        id: { [Op.ne]: req.params.id },
+        school_id,
+        amount: amount || payment.amount,
+        payment_date: payment_date || payment.payment_date,
+        payment_method: payment_method || payment.payment_method,
+        payment_type: payment.payment_type,
+        recorded_by:userId,
+        student_id: payment.student_id,
+        invoice_student_id: payment.invoice_student_id,
+      },
+    })
+    if(existingPayment) return res.status(400).json({ error: "Payment with the same details already exists" });
+  
+    let fileName = req.body.payment_type;
+    const newFile = req.uploadedFiles?.payment_attachment?.url || null;
+    if (newFile) {
+      if (payment.payment_attachment) {
+        await deleteFile(payment.payment_attachment);
+      }
+      fileName = newFile;
+    }
+    await Payment.update(
+      {
+        amount: amount || payment.amount,
+        payment_date: payment_date || payment.payment_date,
+        transaction_id: transaction_id || payment.transaction_id,
+        payment_method: payment_method || payment.payment_method,
+        payment_attachment: fileName,
+      },
+      {
+        where: { id },
+      }
+    );
+    res.status(200).json({ message: "Payment updated successfully" });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "updatePayment:", error);
+    res.status(500).json({ error: error.message });
+  }
+}
 const createLeaveRequest = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -1635,6 +1705,7 @@ module.exports = {
   getPaymentByStudentId,
   getInvoiceByStudentId,
   createPayment,
+  updatePayment,
 
   createLeaveRequest,
   getAllLeaveRequests,
