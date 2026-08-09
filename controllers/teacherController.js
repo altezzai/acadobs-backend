@@ -18,6 +18,7 @@ const StudentAchievement = require("../models/studentachievement");
 const LeaveRequest = require("../models/leaverequest");
 const Notice = require("../models/notice");
 const ParentNote = require("../models/parent_note");
+const ParentNoteStudent = require("../models/parent_note_student");
 const Timetable = require("../models/timetables");
 const TimetableSubstitution = require("../models/timetable_substitutions");
 const Staff = require("../models/staff");
@@ -29,12 +30,8 @@ const StaffPermission = require("../models/staff_permissions");
 
 const { Homework, HomeworkAssignment } = require("../models");
 const {
-  getGuarduianIdbyStudentId,
   getStaffsForFilter,
 } = require("./commonController");
-const {
-  sendMessageWithParentNote,
-} = require("../socketHandlers/messageHandlers");
 const { sendPushNotification } = require("../utils/notifcationHandler");
 const { deleteFile } = require("../middlewares/storageUploads");
 const Exam = require("../models/exams");
@@ -2937,18 +2934,37 @@ const getStudentLeaveRequestsForClassTeacher = async (req, res) => {
 
 //parent note section
 
+const normalizeStudentIds = (studentIds) => {
+  if (!Array.isArray(studentIds)) return [];
+  const uniqueIds = new Set(
+    studentIds
+      .map((id) => Number(id))
+      .filter((id) => Number.isInteger(id) && id > 0),
+  );
+  return [...uniqueIds];
+};
+
 const createParentNote = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const recorded_by = req.user.user_id;
-
     const { note_title, note_content, studentIds } = req.body;
+
+    if (!note_title || !note_content) {
+      return res.status(400).json({ error: "Note title and content are required" });
+    }
+
+    const normalizedStudentIds = normalizeStudentIds(studentIds);
+    if (normalizedStudentIds.length === 0) {
+      return res.status(400).json({ error: "At least one student is required" });
+    }
+
     const existingNote = await ParentNote.findOne({
       where: {
         school_id,
         note_title,
-        note_content,
         recorded_by,
+        trash: false,
       },
     });
 
@@ -2956,7 +2972,7 @@ const createParentNote = async (req, res) => {
       return res.status(400).json({ error: "Note already exists" });
     }
 
-    const fileName = req.uploadedFiles?.attachment?.url || null;
+    const fileName = req.uploadedFiles?.note_attachment?.url || null;
     const note = await ParentNote.create({
       school_id,
       note_title,
@@ -2964,36 +2980,16 @@ const createParentNote = async (req, res) => {
       note_attachment: fileName,
       recorded_by,
     });
-    if (studentIds && Array.isArray(studentIds)) {
-      for (const student_id of studentIds) {
-        const guardianId = await getGuarduianIdbyStudentId(student_id);
-        if (guardianId) {
-          // build message payload
-          const messageData = {
-            receiver_id: guardianId,
-            student_id,
-            parentnote_id: note.id,
-          };
 
-          await sendMessageWithParentNote(
-            req.io,
-            { user: req.user, emit: () => {} },
-            messageData,
-          );
+    await ParentNoteStudent.bulkCreate(
+      normalizedStudentIds.map((student_id) => ({
+        parentnote_id: note.id,
+        student_id,
+      })),
+    );
 
-          // OR directly emit here
-          // req.io.to(`user_${guardianId}`).emit("parentNoteMsg", {
-          //   type: "parent_notes",
-          //   type_id: note.note_id,
-          //   message: note_title,
-          //   student_id,
-          //   createdAt: new Date(),
-          // });
-        }
-      }
-    }
 
-    res.status(201).json(note);
+    res.status(201).json({ message: "Parent note created successfully", note });
   } catch (error) {
     logger.error(
       "userId:",
@@ -3005,7 +3001,7 @@ const createParentNote = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-const getAllOwnCreatedParentNotes = async (req, res) => {
+const getAllParentNotesByTeacher = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const recorded_by = req.user.user_id;
@@ -3016,6 +3012,7 @@ const getAllOwnCreatedParentNotes = async (req, res) => {
     const whereClause = {
       school_id,
       recorded_by,
+      trash: false,
     };
     if (searchQuery) {
       whereClause[Op.or] = [
@@ -3028,6 +3025,20 @@ const getAllOwnCreatedParentNotes = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
+      include: [
+        {
+          model: ParentNoteStudent,
+          attributes: ["id", "student_id", "status"],
+          where: { trash: false },
+          required: false,
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "reg_no", "class_id"],
+            },
+          ],
+        },
+      ],
       order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
@@ -3056,7 +3067,21 @@ const getParentNoteById = async (req, res) => {
     const recorded_by = req.user.user_id;
 
     const note = await ParentNote.findOne({
-      where: { id, school_id, recorded_by },
+      where: { id, school_id, recorded_by, trash: false },
+      include: [
+        {
+          model: ParentNoteStudent,
+          attributes: ["id", "student_id", "status"],
+          where: { trash: false },
+          required: false,
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "reg_no", "class_id"],
+            },
+          ],
+        },
+      ],
     });
 
     if (!note) {
@@ -3081,29 +3106,31 @@ const updateParentNote = async (req, res) => {
     const school_id = req.user.school_id;
     const recorded_by = req.user.user_id;
 
-    const { note_title, note_content } = req.body;
-    const existingNote = await ParentNote.findOne({
-      where: {
-        school_id,
-        recorded_by,
-        note_title,
-        note_content,
-        id: { [Op.ne]: noteId },
-      },
-    });
-    if (existingNote) {
-      return res.status(400).json({ error: "Note with same content exists" });
-    }
+    const { note_title, note_content, studentIds } = req.body;
+
     const note = await ParentNote.findOne({
-      where: { id: noteId, school_id, recorded_by },
+      where: { id: noteId, school_id, recorded_by, trash: false },
     });
 
     if (!note) {
       return res.status(404).json({ error: "Parent note not found" });
     }
 
+    const existingNote = await ParentNote.findOne({
+      where: {
+        school_id,
+        recorded_by,
+        note_title,
+        trash: false,
+        id: { [Op.ne]: noteId },
+      },
+    });
+    if (existingNote) {
+      return res.status(400).json({ error: "Note with same title exists" });
+    }
+
     let fileName = note.note_attachment;
-    const newFileUrl = req.uploadedFiles?.attachment?.url || null;
+    const newFileUrl = req.uploadedFiles?.note_attachment?.url || null;
 
     if (newFileUrl) {
       if (fileName) {
@@ -3111,13 +3138,43 @@ const updateParentNote = async (req, res) => {
       }
       fileName = newFileUrl;
     }
-    await note.update({
-      note_title,
-      note_content,
+
+  const updatedNote =  await note.update({
+      note_title: note_title || note.note_title,
+      note_content: note_content || note.note_content,
       note_attachment: fileName,
     });
 
-    res.status(200).json(note);
+    if (Array.isArray(studentIds)) {
+      const normalizedStudentIds = normalizeStudentIds(studentIds);
+      const existingLinks = await ParentNoteStudent.findAll({
+        where: { parentnote_id: noteId, trash: false },
+      });
+      const existingIds = new Set(existingLinks.map((item) => item.student_id));
+      const incomingIds = new Set(normalizedStudentIds);
+
+      const linksToCreate = normalizedStudentIds
+        .filter((student_id) => !existingIds.has(student_id))
+        .map((student_id) => ({
+          parentnote_id: noteId,
+          student_id
+        }));
+
+      if (linksToCreate.length > 0) {
+        await ParentNoteStudent.bulkCreate(linksToCreate);
+      }
+
+      const linksToDelete = existingLinks.filter(
+        (item) => !incomingIds.has(item.student_id),
+      );
+      if (linksToDelete.length > 0) {
+        await ParentNoteStudent.destroy({
+          where: { id: linksToDelete.map((item) => item.id) },
+        });
+      }
+    }
+
+    res.status(200).json({  message: "Parent note updated successfully", updatedNote });
   } catch (error) {
     logger.error(
       "userId:",
@@ -3137,13 +3194,17 @@ const deleteParentNote = async (req, res) => {
     const recorded_by = req.user.user_id;
 
     const note = await ParentNote.findOne({
-      where: { id: noteId, school_id, recorded_by },
+      where: { id: noteId, school_id, recorded_by, trash: false },
     });
 
     if (!note) {
       return res.status(404).json({ error: "Parent note not found" });
     }
     await note.update({ trash: true });
+    await ParentNoteStudent.update(
+      { trash: true },
+      { where: { parentnote_id: noteId } },
+    );
     res.status(200).json({ message: "Parent note deleted successfully" });
   } catch (error) {
     logger.error(
@@ -3156,6 +3217,126 @@ const deleteParentNote = async (req, res) => {
     res.status(500).json({ error: "Failed to delete parent note" });
   }
 };
+const getTrashedParentNotes = async (req, res) => {
+  try {
+   const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const searchQuery = req.query.q || "";
+    const whereClause = {
+      school_id,
+      recorded_by,
+      trash: true,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { note_title: { [Op.like]: `%${searchQuery}%` } },
+        { note_content: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: notes } = await ParentNote.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        {
+          model: ParentNoteStudent,
+          attributes: ["id", "student_id", "status"],
+          where: { trash: false },
+          required: false,
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "reg_no", "class_id"],
+            },
+          ],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      notes,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching trashed parent notes:",
+      error,
+    );
+    console.error("Error fetching trashed parent notes:", error);
+    res.status(500).json({ error: "Failed to fetch trashed parent notes" });
+  }
+}
+
+const restoreParentNote = async (req, res) => {
+  try {
+    const noteId = req.params.id;
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+
+    const note = await ParentNote.findOne({
+      where: { id: noteId, school_id, recorded_by, trash: true },
+    });
+
+    if (!note) {
+      return res.status(404).json({ error: "Parent note not found" });
+    }
+    await note.update({ trash: false });
+    await ParentNoteStudent.update(
+      { trash: false },
+      { where: { parentnote_id: noteId } },
+    );
+    res.status(200).json({ message: "Parent note restored successfully" });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error restoring parent note:",
+      error,
+    );
+    console.error("Error restoring parent note:", error);
+    res.status(500).json({ error: "Failed to restore parent note" });
+  }
+}
+const permanentlyDeleteParentNote = async (req, res) => {
+  try {
+    const noteId = req.params.id;
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+
+    const note = await ParentNote.findOne({
+      where: { id: noteId, school_id, recorded_by, trash: true },
+    });
+
+    if (!note) {
+      return res.status(404).json({ error: "Parent note not found" });
+    }
+    if (note.note_attachment) {
+      deleteFile(note.note_attachment);
+    }
+    await note.destroy();
+    await ParentNoteStudent.destroy({ where: { parentnote_id: noteId } });
+    res.status(200).json({ message: "Parent note deleted permanently" });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error permanently deleting parent note:",
+      error,
+    );
+    console.error("Error permanently deleting parent note:", error);
+    res.status(500).json({ error: "Failed to permanently delete parent note" });
+  }
+}
 const getTodayTimetableForStaff = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -4031,10 +4212,13 @@ module.exports = {
   leaveRequestPermission,
 
   createParentNote,
-  getAllOwnCreatedParentNotes,
+  getAllParentNotesByTeacher,
   getParentNoteById,
   updateParentNote,
   deleteParentNote,
+  restoreParentNote,
+  getTrashedParentNotes,
+
 
   getTodayTimetableForStaff,
   getAllDaysTimetableForStaff,

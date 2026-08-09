@@ -28,6 +28,8 @@ const Guardian = require("../models/guardian");
 const Homework = require("../models/homework");
 const Achievement = require("../models/achievement");
 const StudentAchievement = require("../models/studentachievement");
+const ParentNote = require("../models/parent_note");
+const ParentNoteStudent = require("../models/parent_note_student");
 const { schoolSequelize } = require("../config/connection");
 const { getschoolIdByStudentId } = require("../controllers/commonController");
 // StudentRoutes is already imported above from "../models" on line 11
@@ -1663,6 +1665,136 @@ const getExamMarksByStudentId = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+const getParentNotesByStudentId = async (req, res) => {
+  try {
+    const { student_id } = req.params;
+    const school_id = req.user.school_id;
+    const guardian_id = req.user.user_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const student = await Student.findOne({
+      where: { id: student_id, guardian_id: guardian_id, trash: false },
+    });
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+    let whereClause = { 
+      school_id,
+      trash: false, 
+       };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { note: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { rows: notes, count } = await ParentNote.findAndCountAll({
+      offset,
+      limit,
+      distinct: true,
+      where: whereClause,
+      include: [
+        {
+          model: ParentNoteStudent,
+          attributes: ["id", "student_id", "status"],
+          where: { student_id, trash: false },
+          required: true,
+        },
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data: notes,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user ? req.user.user_id : null,
+      "Error getting parent notes by student id:",
+      error,
+    );
+    return res.status(500).json({ error: error.message });
+  }
+};
+const getParentNotesByIdAndStudentId = async (req, res) => {
+  try {
+    const { id, student_id } = req.params;
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+    if(!id || !student_id){
+      return res.status(404).json({ error: "Missing required fields" });
+    }
+    const student = await Student.findOne({
+      where: { id: student_id, guardian_id: recorded_by, trash: false },
+    });
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+     const note = await ParentNote.findOne({
+      where: { id, school_id, trash: false },
+      include: [
+        {
+          model: ParentNoteStudent,
+          attributes: ["id", "student_id", "status"],
+          where: { student_id, trash: false },
+          required: false,
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "reg_no", "class_id"],
+            },
+          ],
+        },
+      ],
+    });
+    if (!note) {
+      return res.status(404).json({ error: "Note not found" });
+    }
+    await ParentNoteStudent.update(
+      { status: true },
+      { where: { parentnote_id: id, student_id } }
+    )
+    return res.status(200).json(note);
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user ? req.user.user_id : null,
+      "Error getting parent notes by id:",
+      error,
+    );
+    return res.status(500).json({ error: error.message });
+  }
+}
+const getParentNoteUnseenCount = async (req, res) => {
+  try {
+    const { student_id } = req.params;
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+    const student = await Student.findOne({
+      where: { id: student_id, guardian_id: recorded_by, trash: false },
+    });
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+  const unseednCount = await ParentNoteStudent.count({
+    where: { student_id, status: false },
+  });
+  return res.status(200).json({ unseenCount: unseednCount });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user ? req.user.user_id : null,
+      "Error getting parent notes by id:",
+      error,
+    );
+    return res.status(500).json({ error: error.message });
+  }
+}
 
 module.exports = {
   updateHomeworkAssignment,
@@ -1695,7 +1827,6 @@ module.exports = {
   changeIdentifiersAndName,
   getProfileDetails,
 
-  
   getAchievementById,
   getRoutesForGuardian,
   getExamsByStudentId,
@@ -1703,4 +1834,8 @@ module.exports = {
   getGuardianRouteCount,
   getStopsByRouteId,
   getStopsForParent,
+
+  getParentNotesByStudentId,
+  getParentNotesByIdAndStudentId,
+  getParentNoteUnseenCount,
 };

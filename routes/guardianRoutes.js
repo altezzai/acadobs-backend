@@ -140,6 +140,11 @@ router.get("/getAchievementById/:id", guardianController.getAchievementById);
 router.get("/getExams/:studentId", guardianController.getExamsByStudentId);
 router.get("/getExamMarks/:studentId/:examId", guardianController.getExamMarksByStudentId);
 
+router.get("/getParentNotesByStudentId/:student_id", guardianController.getParentNotesByStudentId);
+router.get("/getParentNotesByIdAndStudentId/:id/:student_id", guardianController.getParentNotesByIdAndStudentId);
+router.get("/getParentNoteUnseenCount/:student_id", guardianController.getParentNoteUnseenCount);
+
+
 //common controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);

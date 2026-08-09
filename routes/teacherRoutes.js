@@ -205,14 +205,17 @@ router.post(
   storageUploadMiddleware("parent_notes"),
   teacherController.createParentNote,
 );
-router.get("/parentNotes", teacherController.getAllOwnCreatedParentNotes);
+router.get("/parentNotes", teacherController.getAllParentNotesByTeacher);
 router.get("/parentNotes/:id", teacherController.getParentNoteById);
 router.put(
   "/parentNotes/:id",
   uploadWithErrorHandler(upload.single("note_attachment")),
+  storageUploadMiddleware("parent_notes"),
   teacherController.updateParentNote,
 );
 router.delete("/parentNotes/:id", teacherController.deleteParentNote);
+router.patch("/parentNotes/:id", teacherController.restoreParentNote);
+router.get("/getTrashedParentNotes", teacherController.getTrashedParentNotes);
 
 //timetable
 router.get(
