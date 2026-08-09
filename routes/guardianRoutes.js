@@ -8,22 +8,6 @@ const { body, param } = require("express-validator");
 const { validate } = require("../middlewares/validateMiddleware");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
 
-router.put(
-  "/updateHomeworkAssignment/:id",
-  uploadWithErrorHandler(upload.single("file")),
-  storageUploadMiddleware("homework_assignments"),
-  [
-    body("status")
-      .optional()
-      .customSanitizer((val) => (val === "null" ? null : val))
-      .isString()
-      .trim()
-      .escape(),
-    body("points").optional().isNumeric(),
-    body("student_id").notEmpty().trim().escape(),
-  ],
-  guardianController.updateHomeworkAssignment,
-);
 
 router.get(
   "/getNoticeByStudentId/:student_id",
@@ -43,7 +27,12 @@ router.post(
   storageUploadMiddleware("payment_attachments"),
   guardianController.createPayment,
 );
-
+router.put(
+  "/payments/:id",
+  uploadWithErrorHandler(upload.single("payment_attachment")),
+  storageUploadMiddleware("payment_attachments"),
+  guardianController.updatePayment,
+)
 const leaveRequestValidation = [
   body("student_id").notEmpty().trim().escape(),
   body("from_date").notEmpty().trim().escape(),
@@ -74,6 +63,8 @@ router.put(
 router.delete("/leaveRequest/:id", guardianController.deleteLeaveRequest);
 
 router.get("/getSchoolsByUser", guardianController.getSchoolsByUser);
+router.get("/getSchoolById/:id", guardianController.getSchoolById);
+  
 router.get(
   "/getStudentsUnderGuardianBySchoolId/:school_id",
   guardianController.getStudentsUnderGuardianBySchoolId,
@@ -139,8 +130,12 @@ router.put(
   guardianController.changeIdentifiersAndName,
 );
 router.get("/getProfileDetails", guardianController.getProfileDetails);
-
-router.get("/getHomeworkAssignmentsById/:id", guardianController.getHomeworkAssignmentsById);
+router.put(
+  "/updateHomeworkAssignment/:id",
+  uploadWithErrorHandler(upload.single("file")),
+  storageUploadMiddleware("homework_assignments"),
+  guardianController.updateHomeworkAssignment,
+);
 router.get("/getAchievementById/:id", guardianController.getAchievementById);
 router.get("/getExams/:studentId", guardianController.getExamsByStudentId);
 router.get("/getExamMarks/:studentId/:examId", guardianController.getExamMarksByStudentId);
@@ -148,7 +143,10 @@ router.get("/getExamMarks/:studentId/:examId", guardianController.getExamMarksBy
 //common controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);
+router.get("/getLatestNotices", commonController.getLatestNotices);
+
 router.get("/students/:id", commonController.getStudentDetailsById);
+router.get("/getHomeworkByIdAndStudentId/:id/:student_id", commonController.getHomeworkByIdAndStudentId);
 router.get(
   "/getHomeworkByStudentId/:student_id",
   commonController.getHomeworkByStudentId,

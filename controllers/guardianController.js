@@ -32,45 +32,6 @@ const { schoolSequelize } = require("../config/connection");
 const { getschoolIdByStudentId } = require("../controllers/commonController");
 // StudentRoutes is already imported above from "../models" on line 11
 
-const updateHomeworkAssignment = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const { status, points, student_id } = req.body;
-    const guardian_id = req.user.user_id;
-    const student = await Student.findOne({
-      where: { id: student_id, guardian_id: guardian_id },
-    });
-    if (!student) return res.status(404).json({ error: "student not found" });
-    const assignment = await HomeworkAssignment.findOne({
-      where: { id, student_id: student_id },
-    });
-    if (!assignment) return res.status(404).json({ error: "Not found" });
-    let fileName = assignment.solved_file;
-    const newFileUrl = req.uploadedFiles?.file?.url || null;
-    if (newFileUrl) {
-      if (assignment.solved_file) {
-        await deleteFile(assignment.solved_file);
-      }
-      fileName = newFileUrl;
-    }
- 
-    await assignment.update({
-      status,
-      points,
-      solved_file: fileName,
-    });
-    res.status(200).json({ message: "Updated successfully", assignment });
-  } catch (error) {
-    logger.error(
-      "userId:",
-      req.user.user_id,
-      "Error updating homework assignment:",
-      error,
-    );
-    res.status(500).json({ error: error.message });
-  }
-};
 
 const getSchoolIdByStudentId = async (student_id) => {
   try {
@@ -194,7 +155,7 @@ const getPaymentByStudentId = async (req, res) => {
       include: [
         {
           model: InvoiceStudent,
-          attributes: ["invoice_id"],
+          attributes: ["id", "invoice_id","student_id", "status"],
           required: false,
           include: [
             {
@@ -411,6 +372,76 @@ const createPayment = async (req, res) => {
     });
   }
 };
+//update payment
+const updatePayment = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const school_id = req.user.school_id;
+    const userId = req.user.user_id;
+    const {
+      amount,
+      payment_date,
+      transaction_id,
+      payment_method,
+    } = req.body;
+    const payment = await Payment.findOne({
+      where: { id, school_id, trash: false ,recorded_by:userId},
+    });
+    if (!payment) {
+      return res.status(404).json({ error: "Payment not found" });
+  }
+  if(payment.payment_status ==="completed") 
+      return res.status(400).json({ error: "Payment already completed" });
+    const existingTransaction_id = await Payment.findOne({
+      where: { transaction_id, id: { [Op.ne]: req.params.id } },
+    });
+    if (
+      existingTransaction_id &&
+      existingTransaction_id.transaction_id !== ""
+    ) {
+      return res.status(400).json({ error: "Transaction ID already exists" });
+    }
+    const existingPayment = await Payment.findOne({
+      where: {
+        id: { [Op.ne]: req.params.id },
+        school_id,
+        amount: amount || payment.amount,
+        payment_date: payment_date || payment.payment_date,
+        payment_method: payment_method || payment.payment_method,
+        payment_type: payment.payment_type,
+        recorded_by:userId,
+        student_id: payment.student_id,
+        invoice_student_id: payment.invoice_student_id,
+      },
+    })
+    if(existingPayment) return res.status(400).json({ error: "Payment with the same details already exists" });
+  
+    let fileName = req.body.payment_type;
+    const newFile = req.uploadedFiles?.payment_attachment?.url || null;
+    if (newFile) {
+      if (payment.payment_attachment) {
+        await deleteFile(payment.payment_attachment);
+      }
+      fileName = newFile;
+    }
+    await Payment.update(
+      {
+        amount: amount || payment.amount,
+        payment_date: payment_date || payment.payment_date,
+        transaction_id: transaction_id || payment.transaction_id,
+        payment_method: payment_method || payment.payment_method,
+        payment_attachment: fileName,
+      },
+      {
+        where: { id },
+      }
+    );
+    res.status(200).json({ message: "Payment updated successfully" });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "updatePayment:", error);
+    res.status(500).json({ error: error.message });
+  }
+}
 const createLeaveRequest = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -722,6 +753,20 @@ const getSchoolsByUser = async (req, res) => {
     return null;
   }
 };
+const getSchoolById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school = await School.findOne({
+       where: { id , trash: false}, 
+       attributes:["id","name","address","phone","email","logo","bg_image","primary_colour","secondary_colour","status","location"],
+    });
+    if (!school) return res.status(404).json({ error: "School not found" });
+    res.status(200).json({ school });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"role:", req.user.role,"userId:", req.user.user_id,"Error getting school by ID:", error);
+    res.status(500).json({ error: error.message });
+  }
+}
 
 const getStaffsBySchoolId = async (req, res) => {
   try {
@@ -1206,44 +1251,37 @@ const getProfileDetails = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-const getHomeworkAssignmentsById = async (req, res) => {
+const updateHomeworkAssignment = async (req, res) => {
   try {
     const { id } = req.params;
-    const school_id = req.user.school_id;
-    const homework = await HomeworkAssignment.findOne({
-      where: {id}, 
-      include: [
-        {
-          model: Homework,
-          where: { school_id, trash: false },
-          attributes: ["id", "title", "description","file","type"],
-          include: [
-            {
-              model: Subject,
-              attributes: ["id", "subject_name"],
-            },
-            {
-              model: Class,
-              attributes: ["id", "classname"],
-            },
-            {
-              model: User,
-              attributes: ["id", "name"],
-            },
-          ],
-        },
-      ],
-      
-      order:[["createdAt", "DESC"]]
+    const { remarks } = req.body;
+    const guardian_id = req.user.user_id;
+    const assignment = await HomeworkAssignment.findByPk(id);
+    if (!assignment) return res.status(404).json({ error: "homework assignment not found" });
+    const student = await Student.findOne({
+      where: { id: assignment.student_id, guardian_id: guardian_id },
     });
-
-    if (!homework) return res.status(404).json({ error: "Not found" });
-    res.status(200).json(homework);
+    if (!student) return res.status(404).json({ error: "student not found" });
+    
+    let fileName = assignment.solved_file;
+    const newFileUrl = req.uploadedFiles?.file?.url || null;
+    if (newFileUrl) {
+      if (assignment.solved_file) {
+        await deleteFile(assignment.solved_file);
+      }
+      fileName = newFileUrl;
+    }
+ 
+    await assignment.update({
+      remarks,
+      solved_file: fileName,
+    });
+    res.status(200).json({ message: "Updated successfully", assignment });
   } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
-      "Error getting homework by id:",
+      "Error updating homework assignment:",
       error,
     );
     res.status(500).json({ error: error.message });
@@ -1635,6 +1673,7 @@ module.exports = {
   getPaymentByStudentId,
   getInvoiceByStudentId,
   createPayment,
+  updatePayment,
 
   createLeaveRequest,
   getAllLeaveRequests,
@@ -1644,6 +1683,7 @@ module.exports = {
 
   getStudentsUnderGuardianBySchoolId,
   getSchoolsByUser,
+  getSchoolById,
   getStaffsBySchoolId,
 
   getTodayTimetableByStudentId,
@@ -1655,7 +1695,7 @@ module.exports = {
   changeIdentifiersAndName,
   getProfileDetails,
 
-  getHomeworkAssignmentsById,
+  
   getAchievementById,
   getRoutesForGuardian,
   getExamsByStudentId,
