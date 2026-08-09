@@ -412,13 +412,13 @@ const getHomeworkByIdAndStudentId = async (req, res) => {
     if(!id || !student_id) return res.status(400).json({ error: "Missing required parameters" });
     const homework = await Homework.findOne({
       where: { id, school_id },
-      attributes: ["id", "title", "description", "due_date","file"],
+      attributes: ["id", "title", "description", "due_date","file","type"],
       include: [
         {
           model: HomeworkAssignment,
           required: true,
           where: { student_id : student_id },
-          attributes: ["id", "remarks", "points", "solved_file","type"],
+          attributes: ["id", "remarks", "points", "solved_file"],
         },
         {model: Class,attributes: ["id", "classname"], },
         {model: Subject,attributes: ["id", "subject_name"],},
