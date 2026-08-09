@@ -45,6 +45,8 @@ const Session = require("./session");
 const StudentTransfer = require("./student_transfer");
 const SpecialClassStudent = require("./special_class_students");
 const Event = require("./event");
+const ParentNote = require("./parent_note");
+const ParentNoteStudent = require("./parent_note_student");
 
 // Relations
 
@@ -166,6 +168,12 @@ NewsImage.belongsTo(News, {
 Event.belongsTo(School, { foreignKey: "school_id" });
 Event.belongsTo(User, { foreignKey: "recorded_by" });
 
+ParentNote.belongsTo(School, { foreignKey: "school_id" });
+ParentNote.belongsTo(User, { foreignKey: "recorded_by" });
+ParentNote.hasMany(ParentNoteStudent, { foreignKey: "parentnote_id" });
+ParentNoteStudent.belongsTo(ParentNote, { foreignKey: "parentnote_id" });
+ParentNoteStudent.belongsTo(Student, { foreignKey: "student_id" });
+Student.hasMany(ParentNoteStudent, { foreignKey: "student_id" });
 
 // Notice associations
 Notice.belongsTo(School, { foreignKey: "school_id" });
