@@ -106,13 +106,13 @@ const getStudentsByClassId = async (req, res) => {
       currentPage: page,
       students,
     });
-  } catch (err) {
-    console.error("Error fetching students by class ID:", err);
+  } catch (error) {
+    console.error("Error fetching students by class ID:", error);
     logger.error(
       "userId:",
       req.user.user_id,
       "Error fetching students by class ID:",
-      err
+      error
     );
     res.status(500).json({ error: "Failed to fetch students by class ID" });
   }
@@ -145,8 +145,8 @@ const getSpecialClassStudentsByClassId = async (req, res) => {
       class: classRecord,
       students,
     });
-  } catch (err) {
-    logger.error("schoolId:", req.user.school_id, "getSpecialClassStudents:", err);
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getSpecialClassStudents:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -158,7 +158,7 @@ const getschoolIdByStudentId = async (student_id) => {
     const school_id = student.school_id;
     return school_id;
     // res.status(200).json({ school_id });
-  } catch (err) {
+  } catch (error) {
     return "error in getting school id";
   }
 };
@@ -176,13 +176,13 @@ const getClassesByYear = async (req, res) => {
 
     if (!classData) return res.status(404).json({ message: "Class not found" });
     res.status(200).json(classData);
-  } catch (err) {
+  } catch (error) {
     res.status(500).json({ error: error.message });
     logger.error(
       "userId:",
       req.user.user_id,
       "Error fetching classes by year:",
-      err
+      error
     );
   }
 };
@@ -206,12 +206,12 @@ const getStaffsForFilter = async (req, res) => {
       attributes: ["id", "name", "phone"],
     });
     res.status(200).json(staffs);
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error fetching staffs for filter:",
-      err
+      error
     );
     res.status(500).json({ error: error.message });
   }
@@ -293,9 +293,9 @@ const getStudentDetailsById = async (req, res) => {
         specialClass
       }
     );
-  } catch (err) {
-    console.error("Error getting student:", err);
-    logger.error("userId:", req.user.user_id, "Error getting student:", err);
+  } catch (error) {
+    console.error("Error getting student:", error);
+    logger.error("userId:", req.user.user_id, "Error getting student:", error);
     res.status(500).json({ error: "Failed to get student" });
   }
 };
@@ -310,8 +310,8 @@ const getGuarduianIdbyStudentId = async (student_id) => {
     }
     const guardian_id = student.guardian_id;
     return guardian_id;
-  } catch (err) {
-    console.error("Error in getting guardian id:", err);
+  } catch (error) {
+    console.error("Error in getting guardian id:", error);
     return "error in getting guardian id";
   }
 };
@@ -395,12 +395,12 @@ const getHomeworkByStudentId = async (req, res) => {
       currentPage: page,
       groupedHomework,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error in getting homework by student id:",
-      err
+      error
     );
     res.status(500).json({ error: error.message });
   }
@@ -478,12 +478,12 @@ const getAttendanceByStudentId = async (req, res) => {
       currentPage: page,
       attendance,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error in getting attendance by student id:",
-      err
+      error
     );
     res.status(500).json({ error: error.message });
   }
@@ -591,12 +591,12 @@ const getStudentAttendanceByDate = async (req, res) => {
       currentPage: page,
       attendance,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error in getting student attendance by date:",
-      err
+      error
     );
     res.status(500).json({ error: error.message });
   }
@@ -653,12 +653,12 @@ const allAchievements = async (req, res) => {
       currentPage: page,
       achievements,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error in getting all achievements:",
-      err
+      error
     );
     res.status(500).json({ error: error.message });
   }
@@ -713,12 +713,12 @@ const achievementByStudentId = async (req, res) => {
       currentPage: page,
       achievement,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error in getting achievement by student id:",
-      err
+      error
     );
     res.status(500).json({ error: error.message });
   }
@@ -764,12 +764,12 @@ const getInternalMarkByStudentId = async (req, res) => {
       currentPage: page,
       Mark,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error in getting internal mark by student id:",
-      err
+      error
     );
     res.status(500).json({ error: error.message });
   }
@@ -922,9 +922,9 @@ const getPaymentByStudnetId = async (req, res) => {
     if (!payment || payment.trash)
       return res.status(404).json({ error: "Payment not found" });
     res.status(200).json(payment);
-  } catch (err) {
-    logger.error("userId:", req.user.user_id, "Error fetching payment:", err);
-    console.error("Error fetching payment:", err);
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error fetching payment:", error);
+    console.error("Error fetching payment:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -1150,9 +1150,9 @@ const changePassword = async (req, res) => {
     user.password = await bcrypt.hash(newPassword, 10);
     await user.save();
     res.status(200).json({ message: "Password changed successfully" });
-  } catch (err) {
-    logger.error("userId:", req.user.user_id, "Error changing password:", err);
-    console.error("Error changing password:", err);
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error changing password:", error);
+    console.error("Error changing password:", error);
     res.status(500).json({ error: "Failed to change password" });
   }
 };
@@ -1167,9 +1167,9 @@ const updateFcmToken = async (req, res) => {
     user.fcm_token = fcm_token;
     await user.save();
     res.status(200).json({ message: "FCM token updated successfully" });
-  } catch (err) {
-    logger.error("userId:", req.user.user_id, "Error updating FCM token:", err);
-    console.error("Error updating FCM token:", err);
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error updating FCM token:", error);
+    console.error("Error updating FCM token:", error);
     res.status(500).json({ error: "Failed to update FCM token" });
   }
 };
@@ -1197,14 +1197,14 @@ const updateDp = async (req, res) => {
     await user.update({ dp: finalDp });
 
     res.status(200).json({ message: "Profile picture updated successfully" });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error updating profile picture:",
-      err
+      error
     );
-    console.error("Error updating profile picture:", err);
+    console.error("Error updating profile picture:", error);
     res.status(500).json({ error: "Failed to update profile picture" });
   }
 };
@@ -1256,14 +1256,14 @@ const getAchievementsBySchool = async (req, res) => {
       currentPage: page,
       achievements,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error fetching achievements:",
-      err
+      error
     );
-    console.error("Error fetching achievements:", err);
+    console.error("Error fetching achievements:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -1288,14 +1288,14 @@ const accountDeleteRequests = async (req, res) => {
     res
       .status(200)
       .json({ message: "Delete request created successfully", deleteRequest });
-  } catch (err) {
+  } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error creating delete request:",
-      err
+      error
     );
-    console.error("Error creating delete request:", err);
+    console.error("Error creating delete request:", error);
     res.status(500).json({ error: "Failed to create delete request" });
   }
 };
@@ -1312,9 +1312,9 @@ const getAllDriverUsers = async (req, res) => {
       attributes: ["id", "full_name", "phone","dp"],
     });
     res.status(200).json(driverUsers);
-  } catch (err) {
-    logger.error("Error fetching driver users:", err);
-    console.error("Error fetching driver users:", err);
+  } catch (error) {
+    logger.error("Error fetching driver users:", error);
+    console.error("Error fetching driver users:", error);
     res.status(500).json({ error: "Failed to fetch driver users" });
   }
 }
