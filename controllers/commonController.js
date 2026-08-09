@@ -329,46 +329,71 @@ const getHomeworkByStudentId = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    let whereClause = {
+    school_id,
+    trash: false,
+    };
 
-    const { count, rows: homework } = await HomeworkAssignment.findAndCountAll({
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows } = await Homework.findAndCountAll({
       offset,
-      distinct: true,
       limit,
-      where: { student_id: student_id },
+      distinct: true,
+      where: whereClause,
+      attributes: [
+        "id",
+        "title",
+        "description",
+        "due_date",
+        "class_id",
+        "createdAt",
+      ],
       include: [
         {
-          model: Homework,
-          where: {
-            description: {
-              [Op.like]: `%${searchQuery}%`,
-            },
-
-            trash: false,
-          },
-          attributes: ["id", "description", "due_date", "file", "title","type"],
-          include: [
-            {
-              model: User,
-              attributes: ["id","name"],
-            },
-            {
-              model: Subject,
-              attributes: ["id","subject_name"],
-            },
-            {
-              model: Class,
-              attributes: ["id","classname"],
-            },
-          ],
+          model: HomeworkAssignment,
+          required: True,
+          where: { student_id: student_id },
+          attributes: ["id", "remarks", "points", "solved_file"],
+        },
+        {
+          model: User,
+          attributes: ["id", "name"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name"],
+        },
+        {
+          model: Class,
+          attributes: ["id", "classname"],
         },
       ],
+
+      order: [["createdAt", "DESC"]],
     });
+    const grouped = rows.reduce((acc, hw) => {
+      const dateKey = hw.createdAt.toISOString().split("T")[0];
+      // const dateKey = hw.createdAt;
+      if (!acc[dateKey]) acc[dateKey] = [];
+      acc[dateKey].push(hw);
+      return acc;
+    }, {});
+
+    const groupedHomework = Object.keys(grouped).map((date) => ({
+      date,
+      homeworks: grouped[date],
+    }));
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
       totalPages,
       currentPage: page,
-      homework,
+      groupedHomework,
     });
   } catch (err) {
     logger.error(
@@ -987,7 +1012,41 @@ const getLatestNews = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch news" });
   }
 };
-
+const getLatestNotices = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 3;
+    const offset = (page - 1) * limit;
+    const { count, rows: notices } = await Notice.findAndCountAll({
+      where: {
+        school_id: school_id,
+        [Op.or]: [{ type: "all" }, { type: "staffs" }],
+      },
+      order: [["createdAt", "DESC"]],
+      limit: limit,
+      offset,
+      distinct: true,
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      notices,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching latest notices:",
+      error,
+    );
+    console.error("Error fetching notices:", error);
+    res.status(500).json({ error: "Failed to fetch notices" });
+  }
+};
 const getSchoolDetails = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -1255,6 +1314,7 @@ module.exports = {
 
   getLatestEvents,
   getLatestNews,
+  getLatestNotices,
   getSchoolDetails,
 
   changePassword,

@@ -136,7 +136,7 @@ router.put(
   storageUploadMiddleware("homework_assignments"),
   guardianController.updateHomeworkAssignment,
 );
-router.get("/getHomeworkAssignmentsById/:id", guardianController.getHomeworkAssignmentsById);
+router.get("/getHomeworkByIdAndStudentId/:id/:student_id", guardianController.getHomeworkByIdAndStudentId);
 router.get("/getAchievementById/:id", guardianController.getAchievementById);
 router.get("/getExams/:studentId", guardianController.getExamsByStudentId);
 router.get("/getExamMarks/:studentId/:examId", guardianController.getExamMarksByStudentId);
@@ -144,6 +144,8 @@ router.get("/getExamMarks/:studentId/:examId", guardianController.getExamMarksBy
 //common controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);
+router.get("/getLatestNotices", commonController.getLatestNotices);
+
 router.get("/students/:id", commonController.getStudentDetailsById);
 router.get(
   "/getHomeworkByStudentId/:student_id",

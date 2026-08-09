@@ -1251,37 +1251,27 @@ const getProfileDetails = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-const getHomeworkAssignmentsById = async (req, res) => {
+const getHomeworkByIdAndStudentId = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id, student_id } = req.params;
     const school_id = req.user.school_id;
-    const homework = await HomeworkAssignment.findOne({
-      where: {id}, 
+    if(!id || !student_id) return res.status(400).json({ error: "Missing required parameters" });
+    const homework = await Homework.findOne({
+      where: { id, school_id },
+      attributes: ["id", "title", "description", "due_date","file"],
       include: [
         {
-          model: Homework,
-          where: { school_id, trash: false },
-          attributes: ["id", "title", "description","file","type"],
-          include: [
-            {
-              model: Subject,
-              attributes: ["id", "subject_name"],
-            },
-            {
-              model: Class,
-              attributes: ["id", "classname"],
-            },
-            {
-              model: User,
-              attributes: ["id", "name"],
-            },
-          ],
+          model: HomeworkAssignment,
+          required: true,
+          where: { student_id : student_id },
+          attributes: ["id", "remarks", "points", "solved_file","type"],
         },
-      ],
-      
-      order:[["createdAt", "DESC"]]
-    });
+        {model: Class,attributes: ["id", "classname"], },
+        {model: Subject,attributes: ["id", "subject_name"],},
+        {model: User, attributes: ["id", "name"] },
 
+      ],
+  });
     if (!homework) return res.status(404).json({ error: "Not found" });
     res.status(200).json(homework);
   } catch (error) {
@@ -1738,7 +1728,7 @@ module.exports = {
   changeIdentifiersAndName,
   getProfileDetails,
 
-  getHomeworkAssignmentsById,
+  getHomeworkByIdAndStudentId,
   getAchievementById,
   getRoutesForGuardian,
   getExamsByStudentId,

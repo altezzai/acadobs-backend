@@ -228,7 +228,6 @@ router.get("/getMyClassTodayTimetable", teacherController.getMyClassTodayTimetab
 router.get("/getMyClassAllDayTimetable", teacherController.getMyClassAllDayTimetable);
 
 router.get("/getNavigationBarCounts", teacherController.getNavigationBarCounts);
-router.get("/getLatestNotices", teacherController.getLatestNotices);
 
 router.post("/markSelfAttendance", teacherController.markSelfAttendance);
 router.put(
@@ -253,6 +252,7 @@ router.get("/getMyPermissions", teacherController.getMyPermissions);
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);
+router.get("/getLatestNotices", commonController.getLatestNotices);
 
 router.get(
   "/getStudentsByClassId/:class_id",
