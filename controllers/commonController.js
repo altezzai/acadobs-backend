@@ -26,6 +26,7 @@ const InvoiceStudent = require("../models/invoice_students");
 const Invoice = require("../models/invoice");
 const Guardian = require("../models/guardian");
 const Driver = require("../models/tracker/driver");
+const Notice = require("../models/notice");
 const { deleteFile } = require("../middlewares/storageUploads");
 
 const { Class, Staff } = require("../models");
