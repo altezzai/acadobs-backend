@@ -270,6 +270,8 @@ router.get(
   "/getGuarduianIdbyStudentId",
   commonController.getGuarduianIdbyStudentId,
 );
+router.get("/getHomeworkByIdAndStudentId/:id/:student_id",
+   commonController.getHomeworkByIdAndStudentId);
 router.get(
   "/getHomeworkByStudentId/:student_id",
   commonController.getHomeworkByStudentId,

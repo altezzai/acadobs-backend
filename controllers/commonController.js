@@ -405,6 +405,39 @@ const getHomeworkByStudentId = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getHomeworkByIdAndStudentId = async (req, res) => {
+  try {
+    const { id, student_id } = req.params;
+    const school_id = req.user.school_id;
+    if(!id || !student_id) return res.status(400).json({ error: "Missing required parameters" });
+    const homework = await Homework.findOne({
+      where: { id, school_id },
+      attributes: ["id", "title", "description", "due_date","file"],
+      include: [
+        {
+          model: HomeworkAssignment,
+          required: true,
+          where: { student_id : student_id },
+          attributes: ["id", "remarks", "points", "solved_file","type"],
+        },
+        {model: Class,attributes: ["id", "classname"], },
+        {model: Subject,attributes: ["id", "subject_name"],},
+        {model: User, attributes: ["id", "name"] },
+
+      ],
+  });
+    if (!homework) return res.status(404).json({ error: "Not found" });
+    res.status(200).json(homework);
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error getting homework by id:",
+      error,
+    );
+    res.status(500).json({ error: error.message });
+  }
+};
 const getAttendanceByStudentId = async (req, res) => {
   try {
     const { student_id } = req.params;
@@ -1296,6 +1329,7 @@ module.exports = {
   getStaffsForFilter,
 
   getHomeworkByStudentId,
+  getHomeworkByIdAndStudentId,
 
   getAttendanceByStudentId,
   getStudentProfile,
