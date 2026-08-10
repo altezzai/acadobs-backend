@@ -75,6 +75,10 @@ router.patch(
 //my class exam mark
 router.get("/getMyClassExamMark",teacherController.getMyClassExamMark);
 router.get("/getMyClassInternalMark",teacherController.getMyClassInternalMark);
+router.post(
+  "/getmissingStudentsListfromCLassId/:class_id",
+  teacherController.getmissingStudentsListfromCLassId,
+);
 
 // Homework
 router.post(

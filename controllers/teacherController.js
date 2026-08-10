@@ -27,6 +27,7 @@ const Message = require("../models/messages");
 const StaffAttendance = require("../models/staff_attendance");
 const StaffSubject = require("../models/staffsubject");
 const StaffPermission = require("../models/staff_permissions");
+const SpecialClassStudent = require("../models/special_class_students");
 
 const { Homework, HomeworkAssignment } = require("../models");
 const {
@@ -2932,6 +2933,97 @@ const getStudentLeaveRequestsForClassTeacher = async (req, res) => {
   }
 };
 
+const getmissingStudentsListfromCLassId = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const classId = req.params.class_id;
+    const rawStudentIds = req.body.studentIds || [];
+
+    if (!school_id) {
+      return res.status(400).json({ error: "School context is missing" });
+    }
+
+    if (!classId) {
+      return res.status(400).json({ error: "classid is required" });
+    }
+
+    const classRecord = await Class.findOne({
+      where: { id: classId, school_id, trash: false },
+      attributes: ["id", "classname", "special"],
+    });
+
+    if (!classRecord) {
+      return res.status(404).json({ error: "Class not found" });
+    }
+
+    const insertedIds = Array.isArray(rawStudentIds)
+      ? rawStudentIds
+          .map((id) => Number(id))
+          .filter((id) => Number.isInteger(id) && id > 0)
+      : [];
+
+    let studentIds = [];
+
+    if (classRecord.special === true) {
+      const assignments = await SpecialClassStudent.findAll({
+        where: { class_id: classId },
+        attributes: ["student_id"],
+      });
+      studentIds = assignments.map((entry) => Number(entry.student_id));
+    } else {
+      const students = await Student.findAll({
+        where: { class_id: classId, school_id, trash: false, alumni: false },
+        attributes: ["id"],
+      });
+      studentIds = students.map((student) => Number(student.id));
+    }
+
+    const missingStudentIds = studentIds.filter(
+      (studentId) => !insertedIds.includes(studentId),
+    );
+
+    const missingStudents = missingStudentIds.length
+      ? await Student.findAll({
+          where: {
+            id: missingStudentIds,
+            school_id,
+            trash: false,
+            alumni: false,
+          },
+          attributes: [
+            "id",
+            "full_name",
+            "reg_no",
+            "roll_number",
+            "class_id",
+            "image",
+          ],
+          order: [["roll_number", "ASC"]],
+          include: [
+            { model: Class, attributes: ["id", "year", "division", "classname"] },
+          ],
+        })
+      : [];
+
+    return res.status(200).json({
+      class_id: classId,
+      totalMissing: missingStudents.length,
+      missingStudents,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user?.user_id,
+      "Error fetching missing students by class id:",
+      error,
+    );
+    console.error("Error fetching missing students by class id:", error);
+    return res.status(500).json({ error: error.message || "Failed to fetch missing students" });
+  }
+};
+
+const getMissingStudentsListFromClassId = getmissingStudentsListfromCLassId;
+
 //parent note section
 
 const normalizeStudentIds = (studentIds) => {
@@ -4174,6 +4266,8 @@ module.exports = {
   bulkUpdateHomeworkAssignments,
   getHomeworkAssignmentById,
   getHomeworkByTeacher,
+  getmissingStudentsListfromCLassId,
+  getMissingStudentsListFromClassId,
 
   createAttendance,
   getAllAttendance,
