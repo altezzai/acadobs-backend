@@ -8430,6 +8430,71 @@ const getAllInternalMarks = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch marks" });
   }
 };
+const getAllTermExams = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const class_id = req.query.class_id || null;
+    const subject_id = req.query.subject_id || null;
+    const teacher_id = req.query.teacher_id || null;
+    const exam_id = req.query.exam_id || null;
+    const internal_name = req.query.internal_name || null;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    let whereClause = {
+      school_id,
+      trash: false,
+      exam_id:{[Op.ne]:null},
+    };
+    if (class_id) {
+      whereClause.class_id = class_id;
+    }
+    if (subject_id) {
+      whereClause.subject_id = subject_id;
+    }
+    if (teacher_id) {
+      whereClause.recorded_by = teacher_id;
+    }
+    if(exam_id){
+      whereClause.exam_id = exam_id;
+    }
+    if(internal_name){
+      whereClause.internal_name = internal_name;
+    }
+    if(searchQuery){
+      whereClause[Op.or] = [
+        { internal_name: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: marks } = await InternalMark.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      marks,
+    });
+    // res.status(200).json(marks);
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error fetching marks:", error);
+    console.error("Error fetching marks:", error);
+    res.status(500).json({ error: "Failed to fetch marks" });
+  }
+};
 const getInternalmarkById = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -10664,6 +10729,7 @@ module.exports = {
   dashboardCounts,
 
   getAllInternalMarks,
+  getAllTermExams,
   getInternalmarkById,
   updateInternalMark,
   deleteInternalMark,

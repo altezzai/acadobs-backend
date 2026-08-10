@@ -1256,7 +1256,6 @@ const getProfileDetails = async (req, res) => {
 const updateHomeworkAssignment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { remarks } = req.body;
     const guardian_id = req.user.user_id;
     const assignment = await HomeworkAssignment.findByPk(id);
     if (!assignment) return res.status(404).json({ error: "homework assignment not found" });
@@ -1275,7 +1274,6 @@ const updateHomeworkAssignment = async (req, res) => {
     }
  
     await assignment.update({
-      remarks,
       solved_file: fileName,
     });
     res.status(200).json({ message: "Updated successfully", assignment });

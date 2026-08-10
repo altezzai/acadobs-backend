@@ -452,6 +452,7 @@ router.get(
 router.get("/dashboardCounts", schoolAdminController.dashboardCounts);
 
 router.get("/getAllInternalMarks", schoolAdminController.getAllInternalMarks);
+router.get("/getAllTermExams", schoolAdminController.getAllTermExams);
 router.get("/getInternalmarkById/:id",schoolAdminController.getInternalmarkById,);
 router.put("/updateInternalmark/:id", schoolAdminController.updateInternalMark);  
 router.delete("/deleteInternalmark/:id", schoolAdminController.deleteInternalMark);
