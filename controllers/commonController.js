@@ -360,6 +360,12 @@ const getHomeworkByStudentId = async (req, res) => {
           required: true,
           where: { student_id: student_id },
           attributes: ["id", "remarks", "points", "solved_file"],
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "reg_no", "roll_number"],
+            },
+          ]
         },
         {
           model: User,

@@ -885,6 +885,7 @@ const getStaffs = async (req, res) => {
         trash: false,
       },
       attributes: ["id", "name", "email", "dp"],
+      order: [["name", "ASC"]],
     });
 
     res.status(200).json(users);
@@ -10256,7 +10257,6 @@ const getExamMarksByExamId = async (req, res) => {
         { model: Subject, attributes: ["id", "subject_name"] },
       ],
       order: [
-        ["recorded_by", "ASC"],
         ["id", "DESC"],
       ],
     });

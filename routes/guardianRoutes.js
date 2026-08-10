@@ -132,7 +132,7 @@ router.put(
 router.get("/getProfileDetails", guardianController.getProfileDetails);
 router.put(
   "/updateHomeworkAssignment/:id",
-  uploadWithErrorHandler(upload.single("file")),
+  uploadWithErrorHandler(upload.single("solved_file")),
   storageUploadMiddleware("homework_assignments"),
   guardianController.updateHomeworkAssignment,
 );

@@ -1266,7 +1266,7 @@ const updateHomeworkAssignment = async (req, res) => {
     if (!student) return res.status(404).json({ error: "student not found" });
     
     let fileName = assignment.solved_file;
-    const newFileUrl = req.uploadedFiles?.file?.url || null;
+    const newFileUrl = req.uploadedFiles?.solved_file?.url || null;
     if (newFileUrl) {
       if (assignment.solved_file) {
         await deleteFile(assignment.solved_file);

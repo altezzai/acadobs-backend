@@ -1106,12 +1106,16 @@ const updateHomework = async (req, res) => {
       where: { id: id, school_id: school_id, teacher_id: teacher_id },
     });
     if (!homework) return res.status(404).json({ error: "Not found" });
+     let subjectIdToUpdate = subject_id;
+    if( subject_id === "0" || !subject_id){
+      subjectIdToUpdate = homework.subject_id;
+    }
     const existingHomework = await Homework.findOne({
       where: {
         id: { [Op.ne]: id },
         school_id ,
         teacher_id,
-        subject_id,
+        subject_id: subjectIdToUpdate,
         title,
         due_date:due_date,
         trash: false,
@@ -1123,24 +1127,19 @@ const updateHomework = async (req, res) => {
         homework: existingHomework,
       });
     }
-    let subjectIdToUpdate = subject_id;
-    if(subject_id ||subject_id===0 ){
-      subjectIdToUpdate = homework.subject_id;
-    }
     let finalFile = homework.file;
     const newFileUrl = req.uploadedFiles?.file?.url || null;
     if (newFileUrl) {
       if (homework.file) {
         await deleteFile(homework.file);
       }
-
       finalFile = newFileUrl;
     }
 
     await homework.update({
       title,
       description,
-      subject_id: subjectIdToUpdate,
+      subject_id: subjectIdToUpdate || homework.subject_id,
       due_date,
       file: finalFile,
     });
