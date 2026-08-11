@@ -1378,7 +1378,7 @@ const getAllDriverUsers = async (req, res) => {
         school_id,
         trash: false
       },
-      attributes: ["id", "full_name", "phone","dp"],
+      attributes: ["id", "name", "phone","dp"],
     });
     res.status(200).json(driverUsers);
   } catch (error) {
