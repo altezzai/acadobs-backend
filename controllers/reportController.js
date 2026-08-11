@@ -1,4 +1,5 @@
-const { Op, where, DATEONLY } = require("sequelize");
+const { Op, where, DATEONLY ,Sequelize} = require("sequelize");
+
 const User = require("../models/user");
 const logger = require("../utils/logger");
 // const Student = require("../models/student");
@@ -13,17 +14,21 @@ const Marks = require("../models/marks");
 const Subject = require("../models/subject");
 const LeaveRequest = require("../models/leaverequest");
 const School = require("../models/school");
-// const Event = require("../models/event");
-// const News = require("../models/news");
 const Invoice = require("../models/invoice");
 const InvoiceStudent = require("../models/invoice_students");
 const Payment = require("../models/payment");
 const Student = require("../models/student");
 const Guardian = require("../models/guardian");
-
+const Staff = require("../models/staff");
+const Staffsubject = require("../models/staffsubject");
+const SpecialClassStudent = require("../models/special_class_students");
+const Exam = require("../models/exams");
+const Mark= require("../models/marks");
 const { Class } = require("../models");
 const { schoolSequelize } = require("../config/connection");
 const e = require("express");
+const PDFDocument = require("pdfkit-table");
+
 
 const getInvoiceReport = async (req, res) => {
   try {
@@ -800,11 +805,509 @@ const getInternalmarksReport = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch internal marks" });
   }
 };
+const getClassWaiseTermMarksPdf= async (req, res) => {
+  try {
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const exam_id = req.query.exam_id;
+    const internal_name = req.query.internal_name;
+    const class_id = req.query.class_id ||"";
+    if (!exam_id && !internal_name) {
+      return res.status(400).json({
+        error: "Please provide either exam_id or internal_name",
+      });
+    }
+
+    const classRecord = await Staff.findOne({
+      where: {
+        user_id,
+        school_id,
+        trash: false,
+      },
+      attributes: ["class_id"],
+    });
+    let classId = class_id ? Number(class_id) : classRecord?.class_id || null;
+    if (class_id) {
+      classId = class_id;
+    }
+    if (!classId) {
+      return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+
+    const students = await Student.findAll({
+      where: {
+        class_id: classId,
+        trash: false,
+      },
+      attributes: [
+        "id",
+        "full_name",
+        "roll_number",
+      ],
+      order: [
+        ["roll_number", "ASC"],
+      ],
+    });
+
+    if (!students.length) {
+      return res.status(404).json({
+        error: "No students found in this class",
+      });
+    }
+
+    const studentClassSubQuery = Sequelize.literal(`(
+      SELECT DISTINCT m.internal_id
+      FROM marks m
+      INNER JOIN students s
+        ON s.id = m.student_id
+      WHERE s.class_id = ${classId}
+    )`);
+
+    const internalWhere = {
+      [Op.and]: [
+        {
+          trash: false,
+          school_id,
+        },
+        {
+          [Op.or]: [
+            {
+              class_id: classId,
+            },
+            {
+              id: {
+                [Op.in]: studentClassSubQuery,
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    if (exam_id) {
+      internalWhere[Op.and].push({
+        exam_id,
+      });
+    }
+
+    if (internal_name) {
+      internalWhere[Op.and].push({
+        internal_name: {
+          [Op.like]: `%${internal_name}%`,
+        },
+      });
+    }
+
+    // --------------------------------------------------
+    // Get Internal Marks
+    // IMPORTANT: no limit / offset
+    // --------------------------------------------------
+
+    const internals = await InternalMark.findAll({
+      where: internalWhere,
+
+      include: [
+        {
+          model: Subject,
+          attributes: [
+            "id",
+            "subject_name",
+            "is_multi_teacher",
+          ],
+        },
+
+        {
+          model: Exam,
+          attributes: [
+            "id",
+            "exam_name",
+            "education_year",
+          ],
+        },
+
+        {
+          model: Mark,
+          attributes: [
+            "id",
+            "student_id",
+            "marks_obtained",
+            "status",
+          ],
+          include: [
+            {
+              model: Student,
+              where: {
+                class_id: classId,
+                trash: false,
+              },
+              attributes: [
+                "id",
+                "full_name",
+                "roll_number",
+              ],
+            },
+          ],
+        },
+      ],
+
+      order: [
+        [
+          { model: Subject },
+          "subject_name",
+          "ASC",
+        ],
+        ["date", "ASC"],
+      ],
+
+      distinct: true,
+    });
+
+    if (!internals.length) {
+      return res.status(404).json({
+        error: "No marks found for the selected criteria",
+      });
+    }
+
+    // --------------------------------------------------
+    // Prepare Subjects
+    // --------------------------------------------------
+
+    const subjects = [];
+    const subjectMap = {};
+
+    internals.forEach((internal) => {
+      const subject = internal.Subject;
+
+      if (!subject?.id) {
+        return;
+      }
+
+      if (!subjectMap[subject.id]) {
+        subjectMap[subject.id] = {
+          id: subject.id,
+          name: subject.subject_name,
+          max_marks: internal.max_marks,
+        };
+
+        subjects.push(subjectMap[subject.id]);
+      }
+    });
+
+    const marksLookup = {};
+
+    internals.forEach((internal) => {
+      const subjectId = internal.Subject?.id;
+
+      if (!subjectId) {
+        return;
+      }
+
+      if (!marksLookup[subjectId]) {
+        marksLookup[subjectId] = {};
+      }
+
+      (internal.Marks || []).forEach((mark) => {
+        const studentId = mark.student_id;
+
+        if (!marksLookup[subjectId][studentId]) {
+          marksLookup[subjectId][studentId] = {
+            marks_obtained: mark.marks_obtained,
+            status: mark.status,
+          };
+        }
+      });
+    });
+
+  const exam = await Exam.findOne({
+    where: {
+      id: exam_id,
+      school_id,
+      trash: false,
+    },
+  });
+  const examName = exam?.exam_name || null;
+  const educationYear = exam?.education_year || null;
+
+    // --------------------------------------------------
+    // Create PDF
+    // --------------------------------------------------
+
+    doc = new PDFDocument({
+      size: "A4",
+      layout: "landscape",
+
+      margins: {
+        top: 40,
+        bottom: 40,
+        left: 30,
+        right: 30,
+      },
+
+      bufferPages: true,
+    });
+
+    const fileName =
+      `class-${classId}-marks-report.pdf`;
+
+    res.setHeader(
+      "Content-Type",
+      "application/pdf"
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${fileName}"`
+    );
+
+    // Pipe PDF to response
+    doc.pipe(res);
+
+    // --------------------------------------------------
+    // PDF TITLE
+    // --------------------------------------------------
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(18)
+      .text(
+        "STUDENT MARKS REPORT",
+        {
+          align: "center",
+        }
+      );
+
+    doc.moveDown(0.5);
+
+    // --------------------------------------------------
+    // Report Information
+    // --------------------------------------------------
+
+    doc
+      .font("Helvetica")
+      .fontSize(10);
+
+    doc.text(
+      `Class: ${classId}`,
+      40,
+      75
+    );
+
+    doc.text(
+      `Exam: ${examName}`,
+      250,
+      75
+    );
+
+    doc.text(
+      `Internal: ${internal_name || "-"}`,
+      500,
+      75
+    );
+
+    if (educationYear) {
+      doc.text(
+        `Academic Year: ${educationYear}`,
+        40,
+        90
+      );
+    }
+
+    // --------------------------------------------------
+    // TABLE HEADERS
+    // --------------------------------------------------
+
+    const tableHeaders = [
+      {
+        label: "Roll No",
+        property: "roll_number",
+        width: 55,
+      },
+
+      {
+        label: "Student Name",
+        property: "student_name",
+        width: 150,
+      },
+    ];
+
+    subjects.forEach((subject) => {
+      tableHeaders.push({
+        label: `${subject.name}\n(${subject.max_marks ?? "-"})`,
+        property: `subject_${subject.id}`,
+        width: 70,
+      });
+    });
+
+    tableHeaders.push({
+      label: "Total",
+      property: "total",
+      width: 65,
+    });
+
+    // --------------------------------------------------
+    // TABLE ROWS
+    //
+    // IMPORTANT:
+    // pdfkit-table requires ARRAY rows.
+    // --------------------------------------------------
+
+    const tableRows = students.map((student) => {
+      const row = [];
+
+      // Roll number
+      row.push(
+        student.roll_number ?? "-"
+      );
+
+      // Student name
+      row.push(
+        student.full_name ?? "-"
+      );
+
+      let total = 0;
+
+      // Subjects
+      subjects.forEach((subject) => {
+        const mark =
+          marksLookup[subject.id]?.[student.id];
+
+        let displayMark = "-";
+
+        if (mark) {
+          const status =
+            mark.status
+              ? String(mark.status).toLowerCase()
+              : "";
+
+          if (
+            status &&
+            status !== "present"
+          ) {
+            displayMark = mark.status;
+          } else if (
+            mark.marks_obtained !== null &&
+            mark.marks_obtained !== undefined
+          ) {
+            displayMark =
+              mark.marks_obtained;
+
+            const numericMark =
+              Number(mark.marks_obtained);
+
+            if (!isNaN(numericMark)) {
+              total += numericMark;
+            }
+          }
+        }
+
+        row.push(displayMark);
+      });
+
+      // Total
+      row.push(total);
+
+      return row;
+    });
+
+    // --------------------------------------------------
+    // Draw Table
+    // --------------------------------------------------
+
+    await doc.table(
+      {
+        headers: tableHeaders,
+        rows: tableRows,
+      },
+      {
+        x: 30,
+        y: 110,
+
+        width: 780,
+
+        padding: 5,
+
+        columnSpacing: 3,
+
+        prepareHeader: () => {
+          doc
+            .font("Helvetica-Bold")
+            .fontSize(8);
+        },
+
+        prepareRow: (
+          row,
+          indexColumn,
+          indexRow,
+          rectRow,
+          rectCell
+        ) => {
+          doc
+            .font("Helvetica")
+            .fontSize(8);
+        },
+      }
+    );
+
+    // --------------------------------------------------
+    // Page numbers
+    // --------------------------------------------------
+
+    const range = doc.bufferedPageRange();
+
+    for (
+      let i = range.start;
+      i < range.start + range.count;
+      i++
+    ) {
+      doc.switchToPage(i);
+
+      doc
+        .font("Helvetica")
+        .fontSize(8)
+        .text(
+          `Page ${i + 1} of ${range.count}`,
+          30,
+          570,
+          {
+            width: 780,
+            align: "center",
+          }
+        );
+    }
+
+    // --------------------------------------------------
+    // Finish
+    // --------------------------------------------------
+
+    doc.end();
+
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error generating class marks PDF:",
+      error
+    );
+
+    console.error(
+      "Error generating class marks PDF:",
+      error
+    );
+
+    if (!res.headersSent) {
+      return res.status(500).json({
+        error: error.message,
+      });
+    }
+  }
+};
 module.exports = {
   getInvoiceReport,
   getPaymentReport,
   getAttendanceReport,
   getHomeworkReport,
   getStudentReportByStudentId,
-  getInternalmarksReport,
+  getInternalmarksReport, 
+  getClassWaiseTermMarksPdf,
+
 };

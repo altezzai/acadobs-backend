@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const teacherController = require("../controllers/teacherController");
 const commonController = require("../controllers/commonController");
+const reportController = require("../controllers/reportController");
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
 
@@ -56,7 +57,7 @@ router.delete("/internalmarks/:id", teacherController.deleteInternalMark);
 router.put("/updateMark/:mark_id", teacherController.updateMark);
 router.put("/bulkUpdateMarks", teacherController.bulkUpdateMarks);
 router.get("/myMultiTeacherSubjectInternalMarks", teacherController.getMultiTeacherSubjectInternalMarks);
-router.get("/MyClassTermMarksInTableFormat", teacherController.getMyClassTermMarksInTableFormat);
+router.get("/getClassWaiseTermMarksPdf", reportController.getClassWaiseTermMarksPdf);
 
 router.get(
   "/getInternalMarkByRecordedBy",
