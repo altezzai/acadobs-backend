@@ -174,6 +174,10 @@ router.get(
   commonController.getInternalMarkByStudentId,
 );
 router.get(
+  "/getTermExamByStudentId/:student_id",
+  commonController.getTermExamByStudentId,
+);
+router.get(
   "/getLeaveRequestByStudentId/:student_id",
   commonController.getLeaveRequestByStudentId,
 );

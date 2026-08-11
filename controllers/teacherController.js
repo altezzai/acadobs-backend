@@ -4205,16 +4205,10 @@ const getMultiTeacherSubjectInternalMarks = async (req, res) => {
       order: [["createdAt", "DESC"]],
     });
 
-    const subjectDetails = await Subject.findAll({
-      where: { id: { [Op.in]: subjectIds } },
-      attributes: ["id", "subject_name", "is_multi_teacher"],
-    });
-
     res.status(200).json({
       totalcontent: count,
       totalPages: Math.ceil(count / limit),
       currentPage: page,
-      subjects: subjectDetails,
       internalMarks,
     });
   } catch (error) {
