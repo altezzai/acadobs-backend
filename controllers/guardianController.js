@@ -5,7 +5,11 @@ const { Op, where } = require("sequelize");
 const logger = require("../utils/logger");
 const { deleteFile } = require("../middlewares/storageUploads");
 const { normalizeGuardianRelation } = require("../utils/supportingFunction");
-const { Class, StudentRoutes, stop, Mark, InternalMark } = require("../models");
+const { Class } = require("../models");
+const Mark = require("../models/marks");
+const InternalMark = require("../models/internal_marks");
+const Routes = require("../models/tracker/routes");
+const Stop = require("../models/tracker/stop");
 const Exams = require("../models/exams");
 const HomeworkAssignment = require("../models/homeworkassignment");
 const Student = require("../models/student");
@@ -32,7 +36,7 @@ const ParentNote = require("../models/parent_note");
 const ParentNoteStudent = require("../models/parent_note_student");
 const { schoolSequelize } = require("../config/connection");
 const { getschoolIdByStudentId } = require("../controllers/commonController");
-// StudentRoutes is already imported above from "../models" on line 11
+// Routes is already imported above from "../models" on line 11
 
 
 const getSchoolIdByStudentId = async (student_id) => {
@@ -1256,7 +1260,6 @@ const getProfileDetails = async (req, res) => {
 const updateHomeworkAssignment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { remarks } = req.body;
     const guardian_id = req.user.user_id;
     const assignment = await HomeworkAssignment.findByPk(id);
     if (!assignment) return res.status(404).json({ error: "homework assignment not found" });
@@ -1266,7 +1269,7 @@ const updateHomeworkAssignment = async (req, res) => {
     if (!student) return res.status(404).json({ error: "student not found" });
     
     let fileName = assignment.solved_file;
-    const newFileUrl = req.uploadedFiles?.file?.url || null;
+    const newFileUrl = req.uploadedFiles?.solved_file?.url || null;
     if (newFileUrl) {
       if (assignment.solved_file) {
         await deleteFile(assignment.solved_file);
@@ -1275,7 +1278,6 @@ const updateHomeworkAssignment = async (req, res) => {
     }
  
     await assignment.update({
-      remarks,
       solved_file: fileName,
     });
     res.status(200).json({ message: "Updated successfully", assignment });
@@ -1358,7 +1360,7 @@ const getRoutesForGuardian = async (req, res) => {
       attributes: ["id", "full_name", "reg_no"],
       include: [
         {
-          model: StudentRoutes,
+          model: Routes,
           as: "routes",
           attributes: ["id", "route_name", "type", "active"],
           through: { attributes: [] },
@@ -1486,7 +1488,7 @@ const getGuardianRouteCount = async (req, res) => {
       attributes: [],
       include: [
         {
-          model: StudentRoutes,
+          model: Routes,
           as: "routes",
           attributes: ["id"],
           required: true,
@@ -1563,7 +1565,7 @@ const getStopsForParent = async (req, res) => {
       attributes: ["id", "stop_name", "priority", "arrived"],
       include: [
         {
-          model: StudentRoutes,
+          model: Routes,
           as: "route",
           attributes: ["route_name", "type"],
           include: [

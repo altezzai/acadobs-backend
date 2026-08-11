@@ -289,11 +289,10 @@ const getStudentDetailsById = async (req, res) => {
        },
      ],
    })
-    res.status(200).json(student,
-      {
-        specialClass
-      }
-    );
+  res.status(200).json({
+  ...student.toJSON(),
+  specialClass: specialClass || [],
+});
   } catch (error) {
     console.error("Error getting student:", error);
     logger.error("userId:", req.user.user_id, "Error getting student:", error);
@@ -359,7 +358,7 @@ const getHomeworkByStudentId = async (req, res) => {
           model: HomeworkAssignment,
           required: true,
           where: { student_id: student_id },
-          attributes: ["id", "remarks", "points", "solved_file"],
+          attributes: ["id"],
         },
         {
           model: User,
@@ -420,6 +419,12 @@ const getHomeworkByIdAndStudentId = async (req, res) => {
           required: true,
           where: { student_id : student_id },
           attributes: ["id", "remarks", "points", "solved_file"],
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "reg_no", "roll_number"],
+            },
+          ],
         },
         {model: Class,attributes: ["id", "classname"], },
         {model: Subject,attributes: ["id", "subject_name"],},
@@ -733,21 +738,84 @@ const getInternalMarkByStudentId = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-
-    // Assuming you have a model for InternalMark
+    let whereClause = {
+      trash: false,
+      school_id: school_id,
+      exam_id: null,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
     const { count, rows: Mark } = await Marks.findAndCountAll({
       offset,
       distinct: true,
       limit,
       where: { student_id: student_id },
-
       include: [
         {
           model: InternalMark,
-          where: {
-            trash: false,
-            school_id: school_id,
-          },
+          where: whereClause,
+          include: [
+            {
+              model: Subject,
+              attributes: ["id", "subject_name"],
+            },
+          ],
+        },
+      ],
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      Mark,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error in getting internal mark by student id:",
+      error
+    );
+    res.status(500).json({ error: error.message });
+  }
+};
+const getTermExamByStudentId = async (req, res) => {
+  try {
+    const { student_id } = req.params;
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const exam_id = req.query.exam_id || null;
+    const offset = (page - 1) * limit;
+    let whereClause = {
+      trash: false,
+      school_id: school_id,
+      exam_id: { [Op.ne]: null },
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if (exam_id) {
+      whereClause.exam_id = exam_id;
+    }
+    const { count, rows: Mark } = await Marks.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: { student_id: student_id },
+      include: [
+        {
+          model: InternalMark,
+          where: whereClause,
           include: [
             {
               model: Subject,
@@ -1340,6 +1408,7 @@ module.exports = {
   achievementByStudentId,
 
   getInternalMarkByStudentId,
+  getTermExamByStudentId,
 
   getLeaveRequestByStudentId,
 

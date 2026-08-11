@@ -10,27 +10,35 @@ const Vehicle = schoolSequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
-
+    school_id: {
+      type: DataTypes.INTEGER,
+      defaultValue: null,
+    },
+    driver_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     type: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-
     model: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-
     vehicle_number: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-
     photo: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-
+  
+    trash: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     createdAt: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
@@ -39,20 +47,6 @@ const Vehicle = schoolSequelize.define(
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
-
-    driver_id: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-
-    trash: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
-    school_id: {
-      type: DataTypes.INTEGER,
-      defaultValue: null,
-    }
   },
   {
     tableName: "vehicle",

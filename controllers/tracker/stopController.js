@@ -1,7 +1,7 @@
 const stop = require("../../models/tracker/stop");
-const StudentRoutes = require("../../models/tracker/studentroutes");
+const Routes = require("../../models/tracker/routes");
 const Driver = require("../../models/tracker/driver");
-
+const logger = require("../../utils/logger");
 const getStopById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -95,7 +95,7 @@ const updateStopForDriver = async (req, res) => {
       },
       include: [
         {
-          model: StudentRoutes,
+          model: Routes,
           as: "route",
           attributes: ["id", "isLock"],
         },

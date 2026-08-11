@@ -452,12 +452,15 @@ router.get(
 router.get("/dashboardCounts", schoolAdminController.dashboardCounts);
 
 router.get("/getAllInternalMarks", schoolAdminController.getAllInternalMarks);
+router.get("/getAllTermExams", schoolAdminController.getAllTermExams);
 router.get("/getInternalmarkById/:id",schoolAdminController.getInternalmarkById,);
 router.put("/updateInternalmark/:id", schoolAdminController.updateInternalMark);  
 router.delete("/deleteInternalmark/:id", schoolAdminController.deleteInternalMark);
 router.get("/getTrashedInternalmarks", schoolAdminController.getTrashedInternalMarks);
+router.get("/getTrashedTermExams", schoolAdminController.getTrashedTermExams);
 router.patch("/restoreInternalmark/:id",schoolAdminController.restoreInternalMark);
 router.delete("/permanentDeleteInternalmark/:id",schoolAdminController.permanentDeleteInternalMark,);
+router.get("/getClassWaiseTermMarksPdf", reportController.getClassWaiseTermMarksPdf);
 
 router.get("/getHomeworkById/:id", schoolAdminController.getHomeworkById);
 router.put("/updateHomework/:id", schoolAdminController.updateHomework);
@@ -657,7 +660,10 @@ router.get(
   "/getInternalMarkByStudentId/:student_id",
   commonController.getInternalMarkByStudentId,
 );
-
+router.get(
+  "/getTermExamByStudentId/:student_id",
+  commonController.getTermExamByStudentId,
+);
 router.get(
   "/getLeaveRequestByStudentId/:student_id",
   commonController.getLeaveRequestByStudentId,

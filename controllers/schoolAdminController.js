@@ -44,13 +44,11 @@ const { School } = require("../models");
 const StudentRouteAssignment = require("../models/student_route_assignment");
 const RouteStopLog = require("../models/tracker/route_stop_log");
 const StudentTransfer = require("../models/student_transfer");
-const StudentRoutes = require("../models/tracker/studentroutes");
-const studentRoutes = require("../models/tracker/studentroutes");
 const RouteDrivers = require("../models/tracker/route_drivers");
 const Stop = require("../models/tracker/stop");
 const Driver  = require("../models/tracker/driver");
 const Vehicle  = require("../models/tracker/vehicle");
-const studentroutes = require("../models/tracker/studentroutes");
+const Routes = require("../models/tracker/routes");
 const { error } = require("winston");
 const { Console } = require("winston/lib/winston/transports");
 const { deleteFile } = require("../middlewares/storageUploads");
@@ -885,6 +883,7 @@ const getStaffs = async (req, res) => {
         trash: false,
       },
       attributes: ["id", "name", "email", "dp"],
+      order: [["name", "ASC"]],
     });
 
     res.status(200).json(users);
@@ -8411,6 +8410,7 @@ const getAllInternalMarks = async (req, res) => {
         { model: School, attributes: ["id", "name"] },
         { model: Class, attributes: ["id", "year", "division", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
+        { model: User, attributes: ["name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
       ],
       order: [["createdAt", "DESC"]],
@@ -8423,6 +8423,71 @@ const getAllInternalMarks = async (req, res) => {
       marks,
     });
     // res.status(200).json(marks);
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error fetching marks:", error);
+    console.error("Error fetching marks:", error);
+    res.status(500).json({ error: "Failed to fetch marks" });
+  }
+};
+const getAllTermExams = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const class_id = req.query.class_id || null;
+    const subject_id = req.query.subject_id || null;
+    const teacher_id = req.query.teacher_id || null;
+    const exam_id = req.query.exam_id || null;
+    const internal_name = req.query.internal_name || null;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    let whereClause = {
+      school_id,
+      trash: false,
+      exam_id:{[Op.ne]:null},
+    };
+    if (class_id) {
+      whereClause.class_id = class_id;
+    }
+    if (subject_id) {
+      whereClause.subject_id = subject_id;
+    }
+    if (teacher_id) {
+      whereClause.recorded_by = teacher_id;
+    }
+    if(exam_id){
+      whereClause.exam_id = exam_id;
+    }
+    if(internal_name){
+      whereClause.internal_name = internal_name;
+    }
+    if(searchQuery){
+      whereClause[Op.or] = [
+        { internal_name: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: marks } = await InternalMark.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: User, attributes: ["name"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      marks,
+    });
   } catch (error) {
     logger.error("userId:", req.user.user_id, "Error fetching marks:", error);
     console.error("Error fetching marks:", error);
@@ -8590,6 +8655,7 @@ const getTrashedInternalMarks = async (req, res) => {
         { model: School, attributes: ["id", "name"] },
         { model: Class, attributes: ["id", "year", "division", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
+        { model: User, attributes: ["name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
       ],
       order: [["createdAt", "DESC"]],
@@ -8610,6 +8676,72 @@ const getTrashedInternalMarks = async (req, res) => {
     );
     console.error("Error fetching trashed internal marks:", error);
     res.status(500).json({ error: "Failed to fetch trashed internal marks" });
+  }
+};
+const getTrashedTermExams = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const class_id = req.query.class_id || null;
+    const subject_id = req.query.subject_id || null;
+    const teacher_id = req.query.teacher_id || null;
+    const exam_id = req.query.exam_id || null;
+    const internal_name = req.query.internal_name || null;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    let whereClause = {
+      school_id,
+      trash: true,
+      exam_id:{[Op.ne]:null},
+    };
+    if (class_id) {
+      whereClause.class_id = class_id;
+    }
+    if (subject_id) {
+      whereClause.subject_id = subject_id;
+    }
+    if (teacher_id) {
+      whereClause.recorded_by = teacher_id;
+    }
+    if(exam_id){
+      whereClause.exam_id = exam_id;
+    }
+    if(internal_name){
+      whereClause.internal_name = internal_name;
+    }
+    if(searchQuery){
+      whereClause[Op.or] = [
+        { internal_name: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: marks } = await InternalMark.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      include: [
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: User, attributes: ["name"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      marks,
+    });
+    // res.status(200).json(marks);
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error fetching marks:", error);
+    console.error("Error fetching marks:", error);
+    res.status(500).json({ error: "Failed to fetch marks" });
   }
 };
 const getHomeworkById = async (req, res) => {
@@ -9324,7 +9456,7 @@ const createStop = async (req, res) => {
     if (!route_id || !stop_name) {
       return res.status(400).json({ message: "Fields are missing" });
     }
-    const route = await studentroutes.findOne({
+    const route = await Routes.findOne({
       where: { id: route_id, trash: false },
     });
 
@@ -9683,13 +9815,13 @@ const createRoute = async (req, res) => {
       ? `${stop}-${start}-${route_no}`
       : `${stop}-${start}`;
 
-    const pickup_route = await studentroutes.create({
+    const pickup_route = await Routes.create({
       school_id: school_id,
       route_name: pickupRouteName,
       vehicle_id: vehicle_id || null,
       driver_id: driver_id || null,
       type: "PICKUP",
-      isLock: isLock ?? true,
+      isLock: isLock ?? false,
       pickId: null,
       trash: false,
     });
@@ -9702,7 +9834,7 @@ const createRoute = async (req, res) => {
 
     let drop_route = null;
     if (hasDropRoute) {
-      drop_route = await studentroutes.create({
+      drop_route = await Routes.create({
         school_id: school_id,
         route_name: dropRouteName,
         vehicle_id: vehicle_id ?? null,
@@ -9734,7 +9866,7 @@ const createRoute = async (req, res) => {
 const getAllRoutes = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const routes = await studentroutes.findAll({
+    const routes = await Routes.findAll({
       where: {
         trash: false,
         school_id: school_id,
@@ -9755,7 +9887,7 @@ const getAllRoutes = async (req, res) => {
 
       order: [["createdAt", "DESC"]],
     });
-    const dropRoutes = await studentroutes.findAll({
+    const dropRoutes = await Routes.findAll({
       where: { type: "DROP", trash: false, school_id: school_id },
       attributes: ["pickId"],
     });
@@ -9798,7 +9930,7 @@ const assignStudentToRoute = async (req, res) => {
         .json({ message: "student_id and route_id required" });
     }
 
-    const pickupRoute = await studentroutes.findOne({
+    const pickupRoute = await Routes.findOne({
       where: { id: route_id, trash: false, school_id: school_id },
     });
 
@@ -9815,7 +9947,7 @@ const assignStudentToRoute = async (req, res) => {
     }
     await pickupRoute.addStudents(students);
     if (hasAssignToDropRoute) {
-      const dropRoute = await studentroutes.findOne({
+      const dropRoute = await Routes.findOne({
         where: { pickId: route_id, trash: false, school_id: school_id },
       });
 
@@ -9856,7 +9988,7 @@ const updateStudentToRoute = async (req, res) => {
       });
     }
 
-    const route = await studentroutes.findOne({
+    const route = await Routes.findOne({
       where: { id: route_id, trash: false, school_id: school_id },
     });
 
@@ -9920,7 +10052,7 @@ const deleteStudentFromRoute = async (req, res) => {
       });
     }
 
-    const routeInstance = await studentroutes.findOne({
+    const routeInstance = await Routes.findOne({
       where: { id: route_id, trash: false, school_id: school_id },
     });
 
@@ -9984,7 +10116,7 @@ const assignDriverToRoutes = async (req, res) => {
       });
     }
 
-    const routes = await studentroutes.findAll({
+    const routes = await Routes.findAll({
       where: {
         id: routeIds,
         school_id: school_id,
@@ -10018,7 +10150,7 @@ const getDriversAssignedToRoutes = async (req, res) => {
       where: { trash: false, school_id: school_id },
       include: [
         {
-          model: studentroutes,
+          model: Routes,
           as: "routes",
           attributes: ["id", "route_name"],
         },
@@ -10043,7 +10175,7 @@ const updateIsLock = async (req, res) => {
     const { route_id } = req.params;
     const { isLock } = req.body;
     const school_id = req.user.school_id;
-    const route = await studentRoutes.findOne({
+    const route = await Routes.findOne({
       where: {
         id: route_id,
         trash: false,
@@ -10085,7 +10217,7 @@ const getDriverLocation = async (req, res) => {
       },
       include: [
         {
-          model: studentroutes,
+          model: Routes,
           as: "routes",
           attributes: ["id", "route_name", "active", "activated_by_driver_id"],
           include: [
@@ -10256,7 +10388,6 @@ const getExamMarksByExamId = async (req, res) => {
         { model: Subject, attributes: ["id", "subject_name"] },
       ],
       order: [
-        ["recorded_by", "ASC"],
         ["id", "DESC"],
       ],
     });
@@ -10664,12 +10795,14 @@ module.exports = {
   dashboardCounts,
 
   getAllInternalMarks,
+  getAllTermExams,
   getInternalmarkById,
   updateInternalMark,
   deleteInternalMark,
   restoreInternalMark,
   permanentDeleteInternalMark,
   getTrashedInternalMarks,
+  getTrashedTermExams,
 
   getHomeworkById,
   updateHomework,
