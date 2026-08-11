@@ -457,6 +457,7 @@ router.get("/getInternalmarkById/:id",schoolAdminController.getInternalmarkById,
 router.put("/updateInternalmark/:id", schoolAdminController.updateInternalMark);  
 router.delete("/deleteInternalmark/:id", schoolAdminController.deleteInternalMark);
 router.get("/getTrashedInternalmarks", schoolAdminController.getTrashedInternalMarks);
+router.get("/getTrashedTermExams", schoolAdminController.getTrashedTermExams);
 router.patch("/restoreInternalmark/:id",schoolAdminController.restoreInternalMark);
 router.delete("/permanentDeleteInternalmark/:id",schoolAdminController.permanentDeleteInternalMark,);
 router.get("/getClassWaiseTermMarksPdf", reportController.getClassWaiseTermMarksPdf);

@@ -22,13 +22,14 @@ const newsPermission = checkStaffPermission("news");
 const noticePermission = checkStaffPermission("notice");
 const timetablePermission = checkStaffPermission("timetable");
 const examPermission = checkStaffPermission("exam");
+const commonInternalPermission =checkStaffPermission(["marks","exam"]);
 const studentPermission = checkStaffPermission("students");
 const dutyPermission = checkStaffPermission(["staffs_duties", "teachers_duties"]);
 const teacherDutyPermission = checkStaffPermission("teachers_duties");
 const staffDutyPermission = checkStaffPermission("staffs_duties");
 const attendancePermission = checkStaffPermission(["staffs_attendance", "teachers_attendance"]);
 const homeworkPermission = checkStaffPermission("homeworks");
-const markPermission = checkStaffPermission("marks");
+const internalMarksPermission = checkStaffPermission("marks");
 const studentsAttendancePermission = checkStaffPermission("attendance");
 const transportationPermission = checkStaffPermission("transportation");
 const reportPermission = checkStaffPermission([
@@ -426,6 +427,17 @@ router.get(
 );
 router.get("/dashboardCounts", schoolAdminController.dashboardCounts);
 
+router.get("/getAllInternalMarks", internalMarksPermission,schoolAdminController.getAllInternalMarks);
+router.get("/getAllTermExams",examPermission, schoolAdminController.getAllTermExams);
+router.get("/getInternalmarkById/:id",commonInternalPermission,schoolAdminController.getInternalmarkById,);
+router.put("/updateInternalmark/:id", commonInternalPermission,schoolAdminController.updateInternalMark);  
+router.delete("/deleteInternalmark/:id",commonInternalPermission, schoolAdminController.deleteInternalMark);
+router.get("/getTrashedInternalmarks",internalMarksPermission, schoolAdminController.getTrashedInternalMarks);
+router.get("/getTrashedTermExams",examPermission, schoolAdminController.getTrashedTermExams);
+router.patch("/restoreInternalmark/:id",commonInternalPermission,schoolAdminController.restoreInternalMark);
+router.delete("/permanentDeleteInternalmark/:id",commonInternalPermission,schoolAdminController.permanentDeleteInternalMark,);
+router.get("/getClassWaiseTermMarksPdf",examPermission, reportController.getClassWaiseTermMarksPdf);
+
 //staff attendance
 
 router.post("/staffAttendance",attendancePermission, schoolAdminController.createStaffAttendance);
@@ -621,7 +633,7 @@ router.get(
 );
 router.get(
   "/getInternalMarkByStudentId/:student_id",
-  markPermission,
+  internalMarksPermission,
   commonController.getInternalMarkByStudentId,
 );
 
