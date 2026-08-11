@@ -2,8 +2,8 @@
 const { DataTypes } = require("sequelize");
 const { schoolSequelize } = require("../../config/connection");
 
-const StudentRoutes = schoolSequelize.define(
-  "StudentRoutes",
+const Routes = schoolSequelize.define(
+  "Routes",
   {
     id: {
       type: DataTypes.INTEGER,
@@ -69,4 +69,4 @@ const StudentRoutes = schoolSequelize.define(
   },
 );
 
-module.exports = StudentRoutes;
+module.exports = Routes;

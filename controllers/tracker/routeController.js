@@ -1,12 +1,15 @@
 const Stop = require("../../models/tracker/stop");
-const StudentRoutes = require("../../models/tracker/studentroutes");
+const Routes = require("../../models/tracker/routes");
 const Driver = require("../../models/tracker/driver");
 const Vehicle = require("../../models/tracker/vehicle");
 const Student = require("../../models/student");
 const StudentRouteAssignment = require("../../models/student_route_assignment");
 const Guardian = require("../../models/guardian");
+const User = require("../../models/user");
 const { Sequelize } = require("sequelize");
 const { Op } = require("sequelize");
+const logger = require("../../utils/logger");
+
 
 //getRouteById
 const getRouteById = async (req, res) => {
@@ -18,7 +21,7 @@ const getRouteById = async (req, res) => {
         message: "school not found"
       });
     }
-    const studentroute = await StudentRoutes.findOne({
+    const studentroute = await Routes.findOne({
       where: { id: id, school_id: school_id, trash: false },
       attributes: ["id", "route_name", "vehicle_id", "type"],
       include: [
@@ -44,9 +47,8 @@ const getRouteById = async (req, res) => {
           },
           include: [
             {
-              model: Guardian,
-              as: "guardian",
-              attributes: ["id", "guardian_name", "guardian_contact"],
+              model: User,
+              attributes: ["id", "name", "phone"],
             },
           ],
         },
@@ -79,11 +81,11 @@ const getRouteById = async (req, res) => {
         reg_no: student.reg_no,
         full_name: student.full_name,
         address: student.address,
-        guardian: student.guardian
+        guardian: student.User
           ? {
-            id: student.guardian.id,
-            guardian_name: student.guardian.guardian_name,
-            guardian_contact: student.guardian.guardian_contact,
+            id: student.User.id,
+            guardian_name: student.User.name,
+            guardian_contact: student.User.phone,
           }
           : null
       })) ?? []
@@ -104,7 +106,7 @@ const updateRouteById = async (req, res) => {
     const { id } = req.params;
     const school_id = req.user.school_id;
     const { start, stop, route_no, vehicle_id, driver_id, isLock, hasDropRoute } = req.body;
-    const pickupRoute = await StudentRoutes.findOne({
+    const pickupRoute = await Routes.findOne({
       where: {
         id: id,
         school_id: school_id, trash: false,
@@ -132,7 +134,7 @@ const updateRouteById = async (req, res) => {
       await pickupRoute.setDrivers(Array.isArray(driver_id) ? driver_id : [driver_id]);
     }
 
-    const dropRoute = await StudentRoutes.findOne({
+    const dropRoute = await Routes.findOne({
       where: { pickId: pickupRoute.id, school_id: school_id, trash: false }
     });
 
@@ -146,11 +148,10 @@ const updateRouteById = async (req, res) => {
       if (driver_id) {
         await dropRoute.setDrivers(Array.isArray(driver_id) ? driver_id : [driver_id]);
       }
-
     }
     //creates drop route if not exists
     if (hasDropRoute && !dropRoute) {
-      const newDropRoute = await StudentRoutes.create({
+      const newDropRoute = await Routes.create({
         school_id: school_id,
         route_name: dropRouteName,
         vehicle_id: vehicle_id ?? pickupRoute.vehicle_id,
@@ -184,7 +185,7 @@ const deleteRoute = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const studentroute = await StudentRoutes.findOne({
+    const studentroute = await Routes.findOne({
       where: {
         id: id,
         school_id: school_id,

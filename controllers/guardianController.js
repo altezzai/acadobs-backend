@@ -5,7 +5,11 @@ const { Op, where } = require("sequelize");
 const logger = require("../utils/logger");
 const { deleteFile } = require("../middlewares/storageUploads");
 const { normalizeGuardianRelation } = require("../utils/supportingFunction");
-const { Class, StudentRoutes, stop, Mark, InternalMark } = require("../models");
+const { Class } = require("../models");
+const Mark = require("../models/marks");
+const InternalMark = require("../models/internal_marks");
+const Routes = require("../models/tracker/routes");
+const Stop = require("../models/tracker/stop");
 const Exams = require("../models/exams");
 const HomeworkAssignment = require("../models/homeworkassignment");
 const Student = require("../models/student");
@@ -32,7 +36,7 @@ const ParentNote = require("../models/parent_note");
 const ParentNoteStudent = require("../models/parent_note_student");
 const { schoolSequelize } = require("../config/connection");
 const { getschoolIdByStudentId } = require("../controllers/commonController");
-// StudentRoutes is already imported above from "../models" on line 11
+// Routes is already imported above from "../models" on line 11
 
 
 const getSchoolIdByStudentId = async (student_id) => {
@@ -1356,7 +1360,7 @@ const getRoutesForGuardian = async (req, res) => {
       attributes: ["id", "full_name", "reg_no"],
       include: [
         {
-          model: StudentRoutes,
+          model: Routes,
           as: "routes",
           attributes: ["id", "route_name", "type", "active"],
           through: { attributes: [] },
@@ -1484,7 +1488,7 @@ const getGuardianRouteCount = async (req, res) => {
       attributes: [],
       include: [
         {
-          model: StudentRoutes,
+          model: Routes,
           as: "routes",
           attributes: ["id"],
           required: true,
@@ -1561,7 +1565,7 @@ const getStopsForParent = async (req, res) => {
       attributes: ["id", "stop_name", "priority", "arrived"],
       include: [
         {
-          model: StudentRoutes,
+          model: Routes,
           as: "route",
           attributes: ["route_name", "type"],
           include: [

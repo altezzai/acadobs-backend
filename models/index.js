@@ -35,9 +35,9 @@ const AccountDelete = require("./accountdelete");
 const Syllabus = require("./syllabus");
 const Driver = require("./tracker/driver");
 const Vehicle = require("./tracker/vehicle");
-const route = require("./tracker/studentroutes");
+const route = require("./tracker/routes");
 const stop = require("./tracker/stop");
-const StudentRoutes = require("./tracker/studentroutes");
+const Routes = require("./tracker/routes");
 const StudentRouteAssignment = require("./student_route_assignment");
 const RouteDrivers = require("./tracker/route_drivers");
 const RouteStopLog = require("./tracker/route_stop_log");
@@ -116,8 +116,6 @@ StudentAchievement.belongsTo(Student, { foreignKey: "student_id" });
 Student.belongsTo(Class, { foreignKey: "class_id" });
 Student.belongsTo(School, { foreignKey: "school_id" });
 Student.belongsTo(User, { foreignKey: "guardian_id" });
-Student.belongsTo(Guardian, { foreignKey: "guardian_id" });
-Guardian.hasMany(Student, { foreignKey: "guardian_id" });
 User.hasOne(Student, { foreignKey: "guardian_id" });
 User.hasOne(Guardian, { foreignKey: "user_id" });
 Session.belongsTo(User, { foreignKey: "user_id" });
@@ -268,17 +266,17 @@ Vehicle.hasMany(route, {
   foreignKey: "vehicle_id",
 });
 
-StudentRoutes.belongsTo(School, {
+Routes.belongsTo(School, {
   foreignKey: "school_id",
   as: "school",
 });
 //route stop log assovciations
-RouteStopLog.belongsTo(StudentRoutes, {
+RouteStopLog.belongsTo(Routes, {
   foreignKey: "route_id",
   as: "route",
 });
 
-StudentRoutes.hasMany(RouteStopLog, {
+Routes.hasMany(RouteStopLog, {
   foreignKey: "route_id",
   as: "routeLogs",
 });
@@ -316,9 +314,9 @@ Student.hasMany(RouteStopLog, {
 // RouteStopLog.belongsTo(route, { foreignKey: "route_id", as: "route" });
 // RouteStopLog.belongsTo(Driver, { foreignKey: "driver_id", as: "driver" });
 
-// School.hasMany(StudentRoutes, {
+// School.hasMany(Routes, {
 //   foreignKey: "school_id",
-//   as: "studentroutes",
+//   as: "Routes",
 // });
 
 // StudentTransfer associations
@@ -370,7 +368,7 @@ module.exports = {
   Vehicle,
   route,
   stop,
-  StudentRoutes,
+  Routes,
   StudentRouteAssignment,
   RouteDrivers,
   RouteStopLog,

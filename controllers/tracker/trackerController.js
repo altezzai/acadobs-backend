@@ -1,7 +1,7 @@
 const { where } = require("sequelize");
 const Driver = require("../../models/tracker/driver");
 const Vehicle = require("../../models/tracker/vehicle");
-const StudentRoutes  = require("../../models/tracker/studentroutes");
+const Routes  = require("../../models/tracker/routes");
 const stop = require("../../models/tracker/stop");
 const Student  = require("../../models/student");
 const StudentRouteAssignment = require("../../models/student_route_assignment");
@@ -9,6 +9,7 @@ const  RouteStopLog  = require("../../models/tracker/route_stop_log");
 const { Sequelize } = require("sequelize");
 const { Op } = require("sequelize");
 const { deleteFile } = require("../../middlewares/storageUploads");
+const logger = require("../../utils/logger");
 // getDriverById
 const getDriverById = async (req, res) => {
   try {
@@ -23,7 +24,7 @@ const getDriverById = async (req, res) => {
       attributes: ["id", "name", "phone", "email", "photo", "address"],
       include: [
         {
-          model: StudentRoutes,
+          model: Routes,
           as: "routes",
           attributes: ["id", "route_name", "vehicle_id", "type", "active", "activated_at"],
           through: {
@@ -144,7 +145,7 @@ const getDriverAssignedRoutesAdmin = async (req, res) => {
       attributes: ["id", "name", "phone","user_id",],
       include: [
         {
-          model: StudentRoutes,
+          model: Routes,
           as: "routes",
           attributes: ["id", "route_name", "vehicle_id", "type", "active", "activated_at"],
           through: {
@@ -187,7 +188,7 @@ const DriverAssignedRoutes = async (req, res) => {
       attributes: ["name", "phone"],
       include: [
         {
-          model: StudentRoutes,
+          model: Routes,
           as: "routes",
           attributes: [
             "id",
@@ -281,7 +282,7 @@ const createStopForDriver = async (req, res) => {
       return res.status(404).json({ message: "Driver not found" });
     }
 
-    const route = await StudentRoutes.findOne({
+    const route = await Routes.findOne({
       where: {
         id: route_id,
         trash: false,
@@ -345,7 +346,7 @@ const getStopsForDriver = async (req, res) => {
       return res.status(404).json({ message: "Driver not found" });
     }
 
-    const route = await StudentRoutes.findOne({
+    const route = await Routes.findOne({
       where: {
         id: route_id,
         trash: false,
@@ -394,7 +395,7 @@ const getStopsForDriver = async (req, res) => {
       attributes: ["id", "stop_name", "priority", "longitude", "latitude"],
       include: [
         {
-          model: StudentRoutes,
+          model: Routes,
           as: "route",
           attributes: ["route_name", "type", "isLock"],
         },
@@ -492,7 +493,7 @@ const assignStudentsToStop = async (req, res) => {
       where: { id: stop_id, trash: false },
       include: [
         {
-          model: StudentRoutes,
+          model: Routes,
           as: "route",
           include: [
             {
@@ -571,7 +572,7 @@ const deleteStudentsFromStop = async (req, res) => {
       where: { id: stop_id, trash: false },
       include: [
         {
-          model: StudentRoutes,
+          model: Routes,
           as: "route",
           attributes: ["id", "isLock"],
           include: [
@@ -644,7 +645,7 @@ const getMyStudents = async (req, res) => {
     }
 
     // Verify if the route exists and is assigned to the driver
-    const route = await StudentRoutes.findOne({
+    const route = await Routes.findOne({
       where: { id: route_id, trash: false },
       include: [
         {
@@ -757,7 +758,7 @@ const getStopDetailsForDriver = async (req, res) => {
 
         },
         {
-          model: StudentRoutes,
+          model: Routes,
           as: "route",
           attributes: ["id"],
         }
@@ -822,7 +823,7 @@ const updateRouteActive = async (req, res) => {
       });
     }
 
-    const existingActiveRoute = await StudentRoutes.findOne({
+    const existingActiveRoute = await Routes.findOne({
       where: {
         active: true,
         activated_by_driver_id: driver.id,
@@ -836,7 +837,7 @@ const updateRouteActive = async (req, res) => {
       });
     }
 
-    const route = await StudentRoutes.findOne({
+    const route = await Routes.findOne({
       where: { id: route_id, trash: false },
       include: [
         {
@@ -892,7 +893,7 @@ const updateStopandStudent = async (req, res) => {
         message: "Driver profile not found",
       });
     }
-    const activeRoute = await StudentRoutes.findOne({
+    const activeRoute = await Routes.findOne({
       where: {
         activated_by_driver_id: driver.id,
         active: true,
@@ -996,7 +997,7 @@ const routeInactive = async (req, res) => {
       });
     }
 
-    const inactiveroute = await StudentRoutes.findOne({
+    const inactiveroute = await Routes.findOne({
       where: {
         id: route_id,
         activated_by_driver_id: driver.id,
@@ -1051,7 +1052,7 @@ const bulkStopCreation = async (req, res) => {
       return res.status(404).json({ message: "Driver not found" });
     }
 
-    const route = await StudentRoutes.findOne({
+    const route = await Routes.findOne({
       where: {
         id: route_id,
         trash: false,
