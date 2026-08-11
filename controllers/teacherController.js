@@ -39,14 +39,15 @@ const Exam = require("../models/exams");
 
 const createInternalMarkWithMarks = async (req, res) => {
   try {
-    const school_id = req.user.school_id || "";
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id ;
+
     const {
       class_id,
       subject_id,
       internal_name,
       max_marks,
       date,
-      recorded_by,
       marks,
       exam_id,
     } = req.body;
@@ -72,6 +73,7 @@ const createInternalMarkWithMarks = async (req, res) => {
     if (existingInternal) {
       return res.status(400).json({
         error: "Internal mark already exists",
+
       });
     }
     if(!marks || marks.length === 0) {
@@ -111,6 +113,60 @@ const createInternalMarkWithMarks = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+const checkExistingInternal = async (req, res) => {
+  try {
+    const school_id = req.user.school_id ;
+    const recorded_by = req.user.user_id ;
+    const {
+      class_id,
+      subject_id,
+      internal_name,
+      date,
+      exam_id,
+    } = req.body;
+    if (!school_id || !class_id || !subject_id || !internal_name || !date) {
+      return res.status(400).json({ error: "Missing or invalid fields" });
+    }
+    const existingWhere = {
+      school_id,
+      class_id,
+      subject_id,
+      internal_name,
+    };
+    if (exam_id !== null && exam_id !== undefined && exam_id !== "") {
+      existingWhere.exam_id = exam_id;
+    } else {
+      existingWhere.date = date;
+    }
+
+    const existingInternal = await InternalMark.findOne({
+      where: existingWhere,
+    });
+    let status=false
+    if (existingInternal) {
+      status=true
+    }
+    return res.status(200).json({
+      success: status,
+      message: "Internal mark status fetched successfully",
+      class_id,
+      subject_id,
+      internal_name,
+      date,
+      exam_id
+    })
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error creating internal mark and marks:",
+      error,
+    );
+    console.error("Error creating internal mark and marks:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 
 const getExams = async (req, res) => {
   try {
@@ -148,11 +204,10 @@ const getInternalMarksById = async (req, res) => {
     });
 
     if (!internalMark) {
-      return res.status(404).json({ error: "Internal mark not found 25" });
+      return res.status(404).json({ error: "Internal mark not found" });
     }
-
     const isRecordedByUser = Number(internalMark.recorded_by) === Number(userId);
-    const staff = isRecordedByUser
+    const staff = isRecordedByUser 
       ? null
       : await Staff.findOne({
           where: { user_id: userId, school_id: schoolId, trash: false },
@@ -198,7 +253,7 @@ const getInternalMarksById = async (req, res) => {
       ],
     });
     if (!internal) {
-      return res.status(404).json({ error: "Internal mark not found" });
+      return res.status(404).json({ error: "Internal mark data not found" });
     }
     res.status(200).json(internal);
   } catch (error) {
@@ -211,7 +266,64 @@ const getInternalMarksById = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+const getInternalMarksByIdWithSubject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.user_id;
+    const school_id = req.user.school_id;
+    const subject_id = req.query.subject_id;
+    if(!subject_id){
+      return res.status(403).json({ error: "subjectid is required" });
+    }
+    let whereClause = {
+      id,
+      school_id,
+      trash: false,
+      subject_id
+    };
+     const internal = await InternalMark.findOne({
+      where: whereClause,
+      include: [
+        {
+          model: Mark,
+          attributes: ["id", "marks_obtained", "status"],
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "roll_number"],
+              order: [["full_name", "ASC"]],
+              include: [
+                {
+                  model: Class,
+                  attributes: ["id", "classname"],
+                },
+              ],
 
+            },
+          ],
+        },
+        { model: School, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "year", "division", "classname"] },
+        { model: Subject, attributes: ["id", "subject_name"] },
+        { model: Exam, attributes: ["id", "exam_name", "education_year"] },
+        { model: User, attributes: ["id", "name"] },
+      ],
+    });
+    if (!internal) {
+      return res.status(404).json({ error: "Internal mark data not found" });
+    }
+    res.status(200).json(internal);
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      " Error fetching internal mark:",
+      error,
+    );
+    res.status(500).json({ error: "Internal server error" });
+  }
+  
+}
 const updateInternalMark = async (req, res) => {
   try {
     const { id } = req.params;
@@ -268,7 +380,81 @@ const updateMark = async (req, res) => {
     res.status(500).json({ error: "Update failed" });
   }
 };
+const createNewMarksByInternalId = async (req, res) => {
+  try {
+    const { internal_id } = req.params;
+    const userId = req.user.user_id;
+    const school_id = req.user.school_id;
+    const marks = req.body;
+    if (!internal_id) {
+      return res.status(400).json({
+        error: "Internal mark ID is required",
+      });
+    }
 
+    if (!Array.isArray(marks) || marks.length === 0) {
+      return res.status(400).json({
+        error: "Marks are required and must be an array",
+      });
+    }
+
+    const internalMark = await InternalMark.findOne({
+      where: {
+        id: internal_id,
+        school_id,
+        recorded_by: userId,
+        trash: false,
+      },
+    });
+
+    if (!internalMark) {
+      return res.status(404).json({
+        error: "Internal mark not found",
+      });
+    }
+
+    for (const mark of marks) {
+      if (!mark.student_id) {
+        return res.status(400).json({
+          error: "student_id is required for every mark",
+        });
+      }
+
+      if (
+        mark.marks_obtained === undefined ||
+        mark.marks_obtained === null
+      ) {
+        return res.status(400).json({
+          error: `marks_obtained is required for student ${mark.student_id}`,
+        });
+      }
+    }
+
+    const marksData = marks.map((mark) => ({
+      student_id: mark.student_id,
+      marks_obtained: mark.marks_obtained,
+      status: mark.status || "present",
+      internal_id: internal_id,
+    }));
+    const newMarks = await Mark.bulkCreate(marksData);
+
+    return res.status(201).json({
+      message: "Marks created successfully",
+      newMarks,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error creating marks:",
+      error
+    );
+    console.error("Error creating marks:", error);
+    return res.status(500).json({
+      error: "Marks creation failed",
+    });
+  }
+};
 const deleteInternalMark = async (req, res) => {
   try {
     const { id } = req.params;
@@ -287,6 +473,30 @@ const deleteInternalMark = async (req, res) => {
     res.status(500).json({ error: "Delete failed" });
   }
 };
+const deleteMarkById = async (req, res) => {
+  try {
+    const { mark_id } = req.params;
+    const userId = req.user.user_id;
+    const mark = await Mark.findOne({
+      where: { id: mark_id},
+    });
+    if (!mark) {
+      return res.status(404).json({ error: "Mark not found" });
+    }
+    const internalMark = await InternalMark.findOne({
+      where: { id: mark.internal_id, recorded_by: userId, trash: false },
+    })
+    if (!internalMark) {
+      return res.status(404).json({ error: "Internal mark not found" });
+    }
+    await Mark.destroy({ where: { id: mark_id } });
+    res.status(200).json({ message: "Mark soft-deleted" });
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error deleting mark:", error);
+    res.status(500).json({ error: "Delete failed" });
+  }
+  
+}
 //update bulk marks
 const bulkUpdateMarks = async (req, res) => {
   try {
@@ -421,143 +631,6 @@ const getExamMarkByRecordedBy = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch exams" });
   }
 };
-// const getMyClassTermMarksInTableFormat = async (req, res) => {
-//   try {
-//     const user_id = req.user.user_id;
-//     const school_id = req.user.school_id;
-//     const exam_id = req.query.exam_id;
-//     const internal_name = req.query.internal_name;
-//     const page = parseInt(req.query.page, 10) || 1;
-//     const limit = parseInt(req.query.limit, 10) || 20;
-//     const offset = (page - 1) * limit;
-//     if(!exam_id && !internal_name){
-//       return res.status(400).json({ error: "Please provide either exam_id or internal_name" });
-//     }
-//     const classRecord = await Staff.findOne({
-//       where: { user_id, school_id, trash: false },
-//       attributes: ["class_id"],
-//     });
-//     if (!classRecord?.class_id) {
-//       return res.status(403).json({ error: "You are not assigned to a class" });
-//     }
-
-//     const teacherClassId = classRecord.class_id;
-
-//     const students = await Student.findAll({
-//       where: { class_id: teacherClassId, trash: false },
-//       attributes: ["id", "full_name", "roll_number"],
-//       order: [["roll_number", "ASC"]],
-//     });
-
-//     const studentClassSubQuery = Sequelize.literal(`(
-//       SELECT DISTINCT m.internal_id
-//       FROM marks m
-//       INNER JOIN students s ON s.id = m.student_id
-//       WHERE s.class_id = ${teacherClassId}
-//     )`);
-
-//     const internalWhere = {
-//       [Op.and]: [
-//         { trash: false, school_id },
-//         {
-//           [Op.or]: [
-//             { class_id: teacherClassId },
-//             { id: { [Op.in]: studentClassSubQuery } },
-//           ],
-//         },
-//       ],
-//     };
-
-//     if (exam_id) {
-//       internalWhere[Op.and].push({ exam_id });
-//     }
-//     if (internal_name) {
-//       internalWhere[Op.and].push({
-//         internal_name: { [Op.like]: `%${internal_name}%` },
-//       });
-//     }
-
-//     const internals = await InternalMark.findAll({
-//       where: internalWhere,
-//       include: [
-//         { model: Subject, attributes: ["id", "subject_name", "is_multi_teacher"] },
-//         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
-//         {
-//           model: Mark,
-//           attributes: ["id", "student_id", "marks_obtained", "status"],
-//           include: [
-//             {
-//               model: Student,
-//               where: { class_id: teacherClassId, trash: false },
-//               attributes: ["id", "full_name", "roll_number"],
-//             },
-//           ],
-//         },
-//       ],
-//       order: [[{ model: Subject }, "subject_name", "ASC"], ["date", "ASC"]],
-//       limit,
-//       offset,
-//       distinct: true,
-//     });
-
-//     const count = await InternalMark.count({
-//       where: internalWhere,
-//       distinct: true,
-//       col: "id",
-//     });
-
-//     const subjectGroups = {};
-//     internals.forEach((internal) => {
-//       const subject = internal.Subject || {};
-//       if (!subject.id) return;
-
-//       if (!subjectGroups[subject.id]) {
-//         subjectGroups[subject.id] = {
-//           subject_id: subject.id,
-//           subject_name: subject.subject_name,
-//           is_multi_teacher: subject.is_multi_teacher,
-//           internals: [],
-//         };
-//       }
-
-//       const studentMarks = (internal.Marks || []).map((mark) => ({
-//         id: mark.id,
-//         student_id: mark.student_id,
-//         full_name: mark.Student?.full_name || null,
-//         roll_number: mark.Student?.roll_number || null,
-//         marks_obtained: mark.marks_obtained,
-//         status: mark.status,
-//       }));
-
-//       subjectGroups[subject.id].internals.push({
-//         internal_id: internal.id,
-//         internal_name: internal.internal_name,
-//         exam_id: internal.exam_id,
-//         max_marks: internal.max_marks,
-//         date: internal.date,
-//         studentMarks,
-//       });
-//     });
-
-//     res.status(200).json({
-//       class_id: teacherClassId,
-//       students,
-//       subjectGroups: Object.values(subjectGroups),
-//       totalcontent: count,
-//       totalPages: Math.ceil(count / limit),
-//       currentPage: page,
-//     });
-//   } catch (error) {
-//     logger.error(
-//       "userId:",
-//       req.user.user_id,
-//       "Error fetching class term marks:",
-//       error,
-//     );
-//     console.error("Error fetching class term marks:", error);
-//     res.status(500).json({ error: error.message });
-//   }
-// };
 const getMyClassInternalMark = async (req, res) => {
   try {
     const user_id =req.user.user_id;
@@ -4245,10 +4318,14 @@ const getMyPermissions = async (req, res) => {
 
 module.exports = {
   createInternalMarkWithMarks,
+  checkExistingInternal,
   getInternalMarksById,
+  getInternalMarksByIdWithSubject,
   updateInternalMark,
   updateMark,
+  createNewMarksByInternalId,
   deleteInternalMark,
+  deleteMarkById,
   getInternalMarkByRecordedBy,
   bulkUpdateMarks,
   getExams,

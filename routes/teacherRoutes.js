@@ -51,9 +51,12 @@ router.use((req, res, next) => {
 router.get("/getExams", teacherController.getExams);
 // Internal Exam
 router.post("/internalmarks", teacherController.createInternalMarkWithMarks);
+router.post("/checkExistingInternal", teacherController.checkExistingInternal);
 router.get("/internalmarks/:id", teacherController.getInternalMarksById);
 router.put("/internalmarks/:id", teacherController.updateInternalMark);
 router.delete("/internalmarks/:id", teacherController.deleteInternalMark);
+router.get("/getInternalMarksByIdWithSubject/:id", teacherController.getInternalMarksByIdWithSubject);
+router.post("/createNewMarksByInternalId/:internal_id", teacherController.createNewMarksByInternalId);
 router.put("/updateMark/:mark_id", teacherController.updateMark);
 router.put("/bulkUpdateMarks", teacherController.bulkUpdateMarks);
 router.get("/myMultiTeacherSubjectInternalMarks", teacherController.getMultiTeacherSubjectInternalMarks);

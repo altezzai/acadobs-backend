@@ -8412,6 +8412,7 @@ const getAllInternalMarks = async (req, res) => {
         { model: School, attributes: ["id", "name"] },
         { model: Class, attributes: ["id", "year", "division", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
+        { model: User, attributes: ["name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
       ],
       order: [["createdAt", "DESC"]],
@@ -8477,6 +8478,7 @@ const getAllTermExams = async (req, res) => {
         { model: School, attributes: ["id", "name"] },
         { model: Class, attributes: ["id", "year", "division", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
+        { model: User, attributes: ["name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
       ],
       order: [["createdAt", "DESC"]],
@@ -8488,7 +8490,6 @@ const getAllTermExams = async (req, res) => {
       currentPage: page,
       marks,
     });
-    // res.status(200).json(marks);
   } catch (error) {
     logger.error("userId:", req.user.user_id, "Error fetching marks:", error);
     console.error("Error fetching marks:", error);
@@ -8656,6 +8657,7 @@ const getTrashedInternalMarks = async (req, res) => {
         { model: School, attributes: ["id", "name"] },
         { model: Class, attributes: ["id", "year", "division", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
+        { model: User, attributes: ["name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
       ],
       order: [["createdAt", "DESC"]],
@@ -8725,6 +8727,7 @@ const getTrashedTermExams = async (req, res) => {
         { model: School, attributes: ["id", "name"] },
         { model: Class, attributes: ["id", "year", "division", "classname"] },
         { model: Subject, attributes: ["id", "subject_name"] },
+        { model: User, attributes: ["name"] },
         { model: Exam, attributes: ["id", "exam_name", "education_year"] },
       ],
       order: [["createdAt", "DESC"]],
