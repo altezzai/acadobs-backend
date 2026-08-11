@@ -289,11 +289,10 @@ const getStudentDetailsById = async (req, res) => {
        },
      ],
    })
-    res.status(200).json(student,
-      {
-        specialClass
-      }
-    );
+  res.status(200).json({
+  ...student.toJSON(),
+  specialClass: specialClass || [],
+});
   } catch (error) {
     console.error("Error getting student:", error);
     logger.error("userId:", req.user.user_id, "Error getting student:", error);
