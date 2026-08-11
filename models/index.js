@@ -116,6 +116,8 @@ StudentAchievement.belongsTo(Student, { foreignKey: "student_id" });
 Student.belongsTo(Class, { foreignKey: "class_id" });
 Student.belongsTo(School, { foreignKey: "school_id" });
 Student.belongsTo(User, { foreignKey: "guardian_id" });
+Student.belongsTo(Guardian, { foreignKey: "guardian_id" });
+Guardian.hasMany(Student, { foreignKey: "guardian_id" });
 User.hasOne(Student, { foreignKey: "guardian_id" });
 User.hasOne(Guardian, { foreignKey: "user_id" });
 Session.belongsTo(User, { foreignKey: "user_id" });
@@ -238,16 +240,6 @@ Student.belongsTo(stop, {
   foreignKey: "stop_id",
   as: "stop",
 });
-
-Student.belongsTo(Guardian, {
-  foreignKey: "guardian_id",
-  as: "guardian",
-});
-Guardian.hasMany(Student, {
-  foreignKey: "guardian_id",
-  as: "students",
-});
-
 route.hasMany(Student, { foreignKey: "route_id", as: "Student" });
 Student.belongsTo(route, {
   foreignKey: "route_id",

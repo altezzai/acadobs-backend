@@ -805,13 +805,17 @@ const getInternalmarksReport = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch internal marks" });
   }
 };
-const getClassWaiseTermMarksPdf= async (req, res) => {
+const getClassWaiseTermMarksPdf = async (req, res) => {
+  let doc = null;
+
   try {
     const user_id = req.user.user_id;
     const school_id = req.user.school_id;
+
     const exam_id = req.query.exam_id;
     const internal_name = req.query.internal_name;
-    const class_id = req.query.class_id ||"";
+    const class_id = req.query.class_id || "";
+
     if (!exam_id && !internal_name) {
       return res.status(400).json({
         error: "Please provide either exam_id or internal_name",
@@ -826,13 +830,38 @@ const getClassWaiseTermMarksPdf= async (req, res) => {
       },
       attributes: ["class_id"],
     });
-    let classId = class_id ? Number(class_id) : classRecord?.class_id || null;
-    if (class_id) {
-      classId = class_id;
-    }
+
+    const classId = class_id
+      ? Number(class_id)
+      : Number(classRecord?.class_id || 0);
+
     if (!classId) {
-      return res.status(403).json({ error: "You are not assigned to a class" });
+      return res.status(403).json({
+        error: "You are not assigned to a class",
+      });
     }
+
+    if (isNaN(classId)) {
+      return res.status(400).json({
+        error: "Invalid class_id",
+      });
+    }
+
+    const classData = await Class.findOne({
+      where: {
+        id: classId,
+        school_id,
+        trash: false,
+      },
+    });
+
+    if (!classData) {
+      return res.status(404).json({
+        error: "Class not found",
+      });
+    }
+
+    const className = classData.classname;
 
     const students = await Student.findAll({
       where: {
@@ -898,11 +927,6 @@ const getClassWaiseTermMarksPdf= async (req, res) => {
       });
     }
 
-    // --------------------------------------------------
-    // Get Internal Marks
-    // IMPORTANT: no limit / offset
-    // --------------------------------------------------
-
     const internals = await InternalMark.findAll({
       where: internalWhere,
 
@@ -915,7 +939,6 @@ const getClassWaiseTermMarksPdf= async (req, res) => {
             "is_multi_teacher",
           ],
         },
-
         {
           model: Exam,
           attributes: [
@@ -924,7 +947,6 @@ const getClassWaiseTermMarksPdf= async (req, res) => {
             "education_year",
           ],
         },
-
         {
           model: Mark,
           attributes: [
@@ -967,10 +989,6 @@ const getClassWaiseTermMarksPdf= async (req, res) => {
         error: "No marks found for the selected criteria",
       });
     }
-
-    // --------------------------------------------------
-    // Prepare Subjects
-    // --------------------------------------------------
 
     const subjects = [];
     const subjectMap = {};
@@ -1018,36 +1036,50 @@ const getClassWaiseTermMarksPdf= async (req, res) => {
       });
     });
 
-  const exam = await Exam.findOne({
-    where: {
-      id: exam_id,
-      school_id,
-      trash: false,
-    },
-  });
-  const examName = exam?.exam_name || null;
-  const educationYear = exam?.education_year || null;
+    const firstExam = internals.find(
+      (item) => item.Exam
+    )?.Exam;
 
-    // --------------------------------------------------
-    // Create PDF
-    // --------------------------------------------------
+    let examName = firstExam?.exam_name || "-";
+    let educationYear = firstExam?.education_year || "-";
+
+    if (exam_id) {
+      const exam = await Exam.findOne({
+        where: {
+          id: exam_id,
+          school_id,
+          trash: false,
+        },
+        attributes: [
+          "id",
+          "exam_name",
+          "education_year",
+        ],
+      });
+
+      if (exam) {
+        examName = exam.exam_name || "-";
+        educationYear = exam.education_year || "-";
+      }
+    }
 
     doc = new PDFDocument({
       size: "A4",
       layout: "landscape",
-
       margins: {
         top: 40,
         bottom: 40,
         left: 30,
         right: 30,
       },
-
       bufferPages: true,
     });
 
+    const safeClassName = String(className || classId)
+      .replace(/[^a-zA-Z0-9-_]/g, "_");
+
     const fileName =
-      `class-${classId}-marks-report.pdf`;
+      `class-${safeClassName}-marks-report.pdf`;
 
     res.setHeader(
       "Content-Type",
@@ -1059,12 +1091,7 @@ const getClassWaiseTermMarksPdf= async (req, res) => {
       `inline; filename="${fileName}"`
     );
 
-    // Pipe PDF to response
     doc.pipe(res);
-
-    // --------------------------------------------------
-    // PDF TITLE
-    // --------------------------------------------------
 
     doc
       .font("Helvetica-Bold")
@@ -1078,43 +1105,45 @@ const getClassWaiseTermMarksPdf= async (req, res) => {
 
     doc.moveDown(0.5);
 
-    // --------------------------------------------------
-    // Report Information
-    // --------------------------------------------------
-
     doc
       .font("Helvetica")
       .fontSize(10);
 
     doc.text(
-      `Class: ${classId}`,
+      `Class: ${className}`,
       40,
-      75
+      75,
+      {
+        lineBreak: false,
+      }
     );
 
     doc.text(
       `Exam: ${examName}`,
       250,
-      75
+      75,
+      {
+        lineBreak: false,
+      }
     );
 
     doc.text(
       `Internal: ${internal_name || "-"}`,
-      500,
-      75
+      450,
+      75,
+      {
+        lineBreak: false,
+      }
     );
 
-    if (educationYear) {
-      doc.text(
-        `Academic Year: ${educationYear}`,
-        40,
-        90
-      );
-    }
-
-    // --------------------------------------------------
-    // TABLE HEADERS
-    // --------------------------------------------------
+    doc.text(
+      `Academic Year: ${educationYear}`,
+      650,
+      75,
+      {
+        lineBreak: false,
+      }
+    );
 
     const tableHeaders = [
       {
@@ -1122,7 +1151,6 @@ const getClassWaiseTermMarksPdf= async (req, res) => {
         property: "roll_number",
         width: 55,
       },
-
       {
         label: "Student Name",
         property: "student_name",
@@ -1144,29 +1172,19 @@ const getClassWaiseTermMarksPdf= async (req, res) => {
       width: 65,
     });
 
-    // --------------------------------------------------
-    // TABLE ROWS
-    //
-    // IMPORTANT:
-    // pdfkit-table requires ARRAY rows.
-    // --------------------------------------------------
-
     const tableRows = students.map((student) => {
       const row = [];
 
-      // Roll number
       row.push(
         student.roll_number ?? "-"
       );
 
-      // Student name
       row.push(
         student.full_name ?? "-"
       );
 
       let total = 0;
 
-      // Subjects
       subjects.forEach((subject) => {
         const mark =
           marksLookup[subject.id]?.[student.id];
@@ -1174,10 +1192,9 @@ const getClassWaiseTermMarksPdf= async (req, res) => {
         let displayMark = "-";
 
         if (mark) {
-          const status =
-            mark.status
-              ? String(mark.status).toLowerCase()
-              : "";
+          const status = mark.status
+            ? String(mark.status).toLowerCase()
+            : "";
 
           if (
             status &&
@@ -1203,15 +1220,10 @@ const getClassWaiseTermMarksPdf= async (req, res) => {
         row.push(displayMark);
       });
 
-      // Total
       row.push(total);
 
       return row;
     });
-
-    // --------------------------------------------------
-    // Draw Table
-    // --------------------------------------------------
 
     await doc.table(
       {
@@ -1221,11 +1233,8 @@ const getClassWaiseTermMarksPdf= async (req, res) => {
       {
         x: 30,
         y: 110,
-
         width: 780,
-
         padding: 5,
-
         columnSpacing: 3,
 
         prepareHeader: () => {
@@ -1234,23 +1243,13 @@ const getClassWaiseTermMarksPdf= async (req, res) => {
             .fontSize(8);
         },
 
-        prepareRow: (
-          row,
-          indexColumn,
-          indexRow,
-          rectRow,
-          rectCell
-        ) => {
+        prepareRow: () => {
           doc
             .font("Helvetica")
             .fontSize(8);
         },
       }
     );
-
-    // --------------------------------------------------
-    // Page numbers
-    // --------------------------------------------------
 
     const range = doc.bufferedPageRange();
 
@@ -1267,17 +1266,14 @@ const getClassWaiseTermMarksPdf= async (req, res) => {
         .text(
           `Page ${i + 1} of ${range.count}`,
           30,
-          570,
+          540,
           {
             width: 780,
             align: "center",
+            lineBreak: false,
           }
         );
     }
-
-    // --------------------------------------------------
-    // Finish
-    // --------------------------------------------------
 
     doc.end();
 
@@ -1298,6 +1294,17 @@ const getClassWaiseTermMarksPdf= async (req, res) => {
       return res.status(500).json({
         error: error.message,
       });
+    }
+
+    if (doc) {
+      try {
+        doc.destroy(error);
+      } catch (destroyError) {
+        console.error(
+          "Error destroying PDF document:",
+          destroyError
+        );
+      }
     }
   }
 };

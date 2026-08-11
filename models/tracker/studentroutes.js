@@ -26,25 +26,13 @@ const StudentRoutes = schoolSequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-
-    createdAt: {
-      type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW,
-    },
-
-    trash: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
-
     type: {
       type: DataTypes.ENUM("PICKUP", "DROP"),
       allowNull: true,
     },
-
     isLock: {
       type: DataTypes.BOOLEAN,
-      defaultValue: true,
+      defaultValue: false,
     },
     active: {
       type: DataTypes.BOOLEAN,
@@ -61,6 +49,18 @@ const StudentRoutes = schoolSequelize.define(
     pickId: {
       type: DataTypes.INTEGER,
       defaultValue: null,
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+    },
+    trash: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
     },
   },
   {
