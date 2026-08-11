@@ -235,6 +235,26 @@ const getSpecialClassesByYear = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getWithOutSpecialClassesByYear = async (req, res) => {
+  try {
+    const year = req.params.year;
+    const school_id = req.user.school_id;
+    const classData = await Class.findAll({
+      where: {
+        year: year,
+        school_id: school_id,
+        special: false,
+      },
+      attributes: ["id", "division", "classname"],
+    });
+
+    if (!classData) return res.status(404).json({ message: "Special classes not found" });
+    res.status(200).json(classData);
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Error fetching special classes:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
 //get trashed classes
 const getTrashedClasses = async (req, res) => {
   try {
@@ -10625,6 +10645,7 @@ module.exports = {
   deleteClass,
   getClassesByYear,
   getSpecialClassesByYear,
+  getWithOutSpecialClassesByYear,
   getTrashedClasses,
   restoreClass,
   permanentDeleteClass,

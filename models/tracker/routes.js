@@ -65,7 +65,7 @@ const Routes = schoolSequelize.define(
   },
   {
     tableName: "route",
-    timestamps: false,
+    timestamps: true,
   },
 );
 
