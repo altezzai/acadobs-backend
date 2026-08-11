@@ -20,6 +20,7 @@ router.put("/classes/:id", schoolAdminController.updateClass);
 router.delete("/classes/:id", schoolAdminController.deleteClass);
 router.patch("/classes/:id", schoolAdminController.restoreClass);
 router.get("/getSpecialClassesByYear/:year", schoolAdminController.getSpecialClassesByYear); // Get classes by year
+router.get("/getWithOutSpecialClassesByYear/:year", schoolAdminController.getWithOutSpecialClassesByYear); // Get classes by year
 router.get("/getTrashedClasses", schoolAdminController.getTrashedClasses);
 router.delete(
   "/permanentDeleteClass/:id",
