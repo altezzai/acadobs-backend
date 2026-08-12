@@ -146,7 +146,7 @@ const getPaymentByStudentId = async (req, res) => {
     };
     if (searchQuery) {
       whereClause[Op.or] = [
-        { payment_type: { [Op.like]: `%${searchQuery}%` } },
+        { payment_category: { [Op.like]: `%${searchQuery}%` } },
         { amount: { [Op.like]: `%${searchQuery}%` } },
       ];
     }
@@ -254,7 +254,7 @@ const createPayment = async (req, res) => {
       invoice_student_id,
       amount,
       payment_date,
-      payment_type,
+      payment_category,
       transaction_id,
       payment_method,
     } = req.body;
@@ -265,7 +265,7 @@ const createPayment = async (req, res) => {
       amount == null ||
       !invoice_student_id ||
       !payment_date ||
-      !payment_type
+      !payment_category
     ) {
       return res.status(400).json({
         error: "Required fields are missing",
@@ -295,7 +295,7 @@ const createPayment = async (req, res) => {
           student_id,
           amount,
           payment_date,
-          payment_type,
+          payment_category,
         },
         transaction,
       });
@@ -317,7 +317,7 @@ const createPayment = async (req, res) => {
           invoice_student_id,
           amount,
           payment_date,
-          payment_type,
+          payment_category,
           transaction_id: transaction_id || null,
           payment_method,
           payment_status: "pending",
@@ -414,7 +414,7 @@ const updatePayment = async (req, res) => {
         amount: amount || payment.amount,
         payment_date: payment_date || payment.payment_date,
         payment_method: payment_method || payment.payment_method,
-        payment_type: payment.payment_type,
+        payment_category: payment.payment_category,
         recorded_by:userId,
         student_id: payment.student_id,
         invoice_student_id: payment.invoice_student_id,
@@ -422,7 +422,7 @@ const updatePayment = async (req, res) => {
     })
     if(existingPayment) return res.status(400).json({ error: "Payment with the same details already exists" });
   
-    let fileName = req.body.payment_type;
+    let fileName =payment.payment_attachment;
     const newFile = req.uploadedFiles?.payment_attachment?.url || null;
     if (newFile) {
       if (payment.payment_attachment) {

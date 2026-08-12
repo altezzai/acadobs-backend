@@ -18,7 +18,7 @@ module.exports = {
         allowNull: true,
         references: { model: "invoice_students", key: "id" },
       },
-      payment_type: {
+      payment_category: {
         type: Sequelize.ENUM(
           "tuition",
           "admission",
@@ -71,7 +71,7 @@ module.exports = {
         "invoice_student_id",
         "school_id",
         "student_id",
-        "payment_type",
+        "payment_category",
         "payment_date",
         "payment_status",
       ],
@@ -84,8 +84,8 @@ module.exports = {
     await queryInterface.addIndex("payments", ["student_id"], {
       name: "payments_student_id_idx",
     });
-    await queryInterface.addIndex("payments", ["payment_type"], {
-      name: "payments_payment_type_idx",
+    await queryInterface.addIndex("payments", ["payment_category"], {
+      name: "payments_payment_category_idx",
     });
     await queryInterface.addIndex("payments", ["payment_status"], {
       name: "payments_payment_status_idx",

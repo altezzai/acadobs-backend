@@ -922,7 +922,7 @@ const getPaymentByStudnetId = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    const payment_type = req.query.payment_type || "";
+    const payment_category = req.query.payment_category || "";
     const payment_status = req.query.payment_status || "";
     let whereClause = {
       student_id: student_id,
@@ -930,8 +930,8 @@ const getPaymentByStudnetId = async (req, res) => {
       trash: false
     };
     
-    if(payment_type){
-      whereClause.payment_type = payment_type
+    if(payment_category){
+      whereClause.payment_category = payment_category
     };
     if(payment_status){
       whereClause.payment_status = payment_status
