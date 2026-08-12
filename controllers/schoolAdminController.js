@@ -4508,7 +4508,7 @@ const createPayment = async (req, res) => {
       invoice_student_id,
       amount,
       payment_date,
-      payment_type,
+      payment_category,
       transaction_id,
       payment_method,
       payment_status,
@@ -4518,7 +4518,7 @@ const createPayment = async (req, res) => {
       !school_id ||
       !amount ||
       !payment_date ||
-      !payment_type ||
+      !payment_category ||
       !payment_method
     ) {
       return res.status(400).json({ error: "All fields are required" });
@@ -4539,7 +4539,7 @@ const createPayment = async (req, res) => {
         student_id,
         amount,
         payment_date,
-        payment_type,
+        payment_category,
       },
     });
     if (existingPayment) {
@@ -4554,7 +4554,7 @@ const createPayment = async (req, res) => {
       invoice_student_id,
       amount,
       payment_date,
-      payment_type,
+      payment_category,
       transaction_id,
       payment_method,
       payment_status,
@@ -4602,7 +4602,7 @@ const getAllPayments = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
-    const payment_type = req.query.payment_type || "";
+    const payment_category = req.query.payment_category || "";
     const payment_method = req.query.payment_method || "";
     const payment_status = req.query.payment_status || "";
     const class_id = req.query.class_id || null;
@@ -4614,7 +4614,7 @@ const getAllPayments = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     if (
-      payment_type &&
+      payment_category &&
       ![
         "tuition",
         "admission",
@@ -4628,7 +4628,7 @@ const getAllPayments = async (req, res) => {
         "event",
         "excursion",
         "other",
-      ].includes(payment_type)
+      ].includes(payment_category)
     )
       return res
         .status(400)
@@ -4636,11 +4636,11 @@ const getAllPayments = async (req, res) => {
     let whereClause = {
       trash: false,
       school_id: school_id,
-      payment_type: { [Op.ne]: "donation" },
+      payment_category: { [Op.ne]: "donation" },
     };
 
-    if (payment_type) {
-      whereClause.payment_type = payment_type;
+    if (payment_category) {
+      whereClause.payment_category = payment_category;
     }
     if (payment_method) {
       whereClause.payment_method = payment_method;
@@ -4739,7 +4739,7 @@ const getDonations = async (req, res) => {
     let whereClause = {
       trash: false,
       school_id: school_id,
-      payment_type: "donation",
+      payment_category: "donation",
     };
 
     if (payment_method) {
@@ -4979,14 +4979,14 @@ const updatePayment = async (req, res) => {
       student_id,
       amount,
       payment_date,
-      payment_type,
+      payment_category,
       transaction_id,
       payment_status,
       payment_method,
     } = req.body;
-    if (!amount || !payment_date || !payment_type || !student_id) {
+    if (!amount || !payment_date || !payment_category || !student_id) {
       return res.status(400).json({
-        error: "student_id,amount,payment_date,payment_type are required",
+        error: "student_id,amount,payment_date,payment_category are required",
       });
     }
     const Id = req.params.id;
@@ -5011,7 +5011,7 @@ const updatePayment = async (req, res) => {
         student_id,
         amount,
         payment_date,
-        payment_type,
+        payment_category,
 
         id: { [Op.ne]: Id },
       },
@@ -5057,7 +5057,7 @@ const updatePayment = async (req, res) => {
       student_id,
       amount,
       payment_date,
-      payment_type,
+      payment_category,
       transaction_id,
       payment_status,
       payment_method,
@@ -5093,7 +5093,7 @@ const getTrashedPayments = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
-    const payment_type = req.query.payment_type || "";
+    const payment_category = req.query.payment_category || "";
     const payment_method = req.query.payment_method || "";
     const payment_status = req.query.payment_status || "";
     const class_id = req.query.class_id || null;
@@ -5105,7 +5105,7 @@ const getTrashedPayments = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     if (
-      payment_type &&
+      payment_category &&
       ![
         "tuition",
         "admission",
@@ -5119,7 +5119,7 @@ const getTrashedPayments = async (req, res) => {
         "event",
         "excursion",
         "other",
-      ].includes(payment_type)
+      ].includes(payment_category)
     )
       return res
         .status(400)
@@ -5127,11 +5127,11 @@ const getTrashedPayments = async (req, res) => {
     let whereClause = {
       trash: true,
       school_id: school_id,
-      payment_type: { [Op.ne]: "donation" },
+      payment_category: { [Op.ne]: "donation" },
     };
 
-    if (payment_type) {
-      whereClause.payment_type = payment_type;
+    if (payment_category) {
+      whereClause.payment_category = payment_category;
     }
     if (payment_method) {
       whereClause.payment_method = payment_method;
@@ -5229,7 +5229,7 @@ const getTrashedDonations = async (req, res) => {
     let whereClause = {
       trash: true,
       school_id: school_id,
-      payment_type: "donation",
+      payment_category: "donation",
     };
     if (payment_method) {
       whereClause.payment_method = payment_method;

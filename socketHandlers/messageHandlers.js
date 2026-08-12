@@ -274,7 +274,7 @@ const getMessages = async (io, socket, data) => {
               attributes: [
                 "id",
                 "amount",
-                "payment_type",
+                "payment_category",
                 "payment_date",
                 "payment_status",
               ],

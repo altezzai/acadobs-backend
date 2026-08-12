@@ -153,7 +153,7 @@ const getPaymentReport = async (req, res) => {
       year,
       download,
       payment_status,
-      payment_type,
+      payment_category,
       student_id,
     } = req.query;
     const start_date = req.query.start_date || null;
@@ -182,8 +182,8 @@ const getPaymentReport = async (req, res) => {
     if (payment_status) {
       whereClause.payment_status = payment_status;
     }
-    if (payment_type) {
-      whereClause.payment_type = payment_type;
+    if (payment_category) {
+      whereClause.payment_category = payment_category;
     }
     if (start_date) {
       const startDate = new Date(start_date);

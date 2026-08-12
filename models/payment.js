@@ -8,7 +8,7 @@ const Payment = schoolSequelize.define(
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     school_id: { type: DataTypes.INTEGER, allowNull: false },
     student_id: { type: DataTypes.INTEGER, allowNull: true },
-    payment_type: {
+    payment_category: {
       type: DataTypes.ENUM(
         "tuition",
         "admission",
