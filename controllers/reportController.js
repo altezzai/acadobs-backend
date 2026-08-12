@@ -1322,6 +1322,14 @@ const getprograsReportByStudentId = async (req, res) => {
       });
     }
 
+    const studentId = Number(student_id);
+
+    if (isNaN(studentId)) {
+      return res.status(400).json({
+        error: "Invalid student_id",
+      });
+    }
+
     const today = new Date();
 
     const month = today.getMonth() + 1;
@@ -1337,7 +1345,7 @@ const getprograsReportByStudentId = async (req, res) => {
 
     const student = await Student.findOne({
       where: {
-        id: student_id,
+        id: studentId,
         school_id,
         trash: false,
       },
@@ -1372,7 +1380,7 @@ const getprograsReportByStudentId = async (req, res) => {
         error: "Student class not found",
       });
     }
-console.log("educationYear---",educationYear)
+
     const exams = await Exam.findAll({
       where: {
         school_id,
@@ -1399,13 +1407,6 @@ console.log("educationYear---",educationYear)
       (exam) => exam.id
     );
 
-    const studentInternalSubQuery =
-      Sequelize.literal(`(
-        SELECT DISTINCT m.internal_id
-        FROM marks m
-        WHERE m.student_id = ${Number(student_id)}
-      )`);
-
     const internals = await InternalMark.findAll({
       where: {
         school_id,
@@ -1419,7 +1420,11 @@ console.log("educationYear---",educationYear)
           },
           {
             id: {
-              [Op.in]: studentInternalSubQuery,
+              [Op.in]: Sequelize.literal(`(
+                SELECT DISTINCT m.internal_id
+                FROM marks m
+                WHERE m.student_id = ${studentId}
+              )`),
             },
           },
         ],
@@ -1449,7 +1454,7 @@ console.log("educationYear---",educationYear)
           model: Mark,
           required: false,
           where: {
-            student_id: student.id,
+            student_id: studentId,
           },
           attributes: [
             "id",
@@ -1502,19 +1507,31 @@ console.log("educationYear---",educationYear)
         return;
       }
 
+      const internalName = String(
+        internal.internal_name || ""
+      ).trim();
+
+      if (!internalName) {
+        return;
+      }
+
+      const normalizedInternalName =
+        internalName.toLowerCase();
+
       const exists =
         examMap[examId].internals.some(
           (item) =>
-            item.internal_id === internal.id
+            item.internal_name
+              .trim()
+              .toLowerCase() ===
+            normalizedInternalName
         );
 
       if (!exists) {
         examMap[examId].internals.push({
           internal_id: internal.id,
-          internal_name:
-            internal.internal_name,
-          max_marks:
-            internal.max_marks,
+          internal_name: internalName,
+          max_marks: internal.max_marks,
           date: internal.date,
         });
       }
@@ -1522,7 +1539,8 @@ console.log("educationYear---",educationYear)
 
     const reportExams =
       Object.values(examMap).filter(
-        (exam) => exam.internals.length > 0
+        (exam) =>
+          exam.internals.length > 0
       );
 
     const subjectsMap = {};
@@ -1531,6 +1549,14 @@ console.log("educationYear---",educationYear)
       const subject = internal.Subject;
 
       if (!subject?.id) {
+        return;
+      }
+
+      const internalName = String(
+        internal.internal_name || ""
+      ).trim();
+
+      if (!internalName) {
         return;
       }
 
@@ -1545,23 +1571,51 @@ console.log("educationYear---",educationYear)
         };
       }
 
+      const markKey =
+        `${internal.exam_id}_${internalName
+          .toLowerCase()}`;
+
       const studentMark =
         internal.Marks?.[0];
 
-      subjectsMap[subject.id].marks[
-        internal.id
-      ] = {
-        internal_id: internal.id,
-        exam_id: internal.exam_id,
-        internal_name:
-          internal.internal_name,
-        max_marks:
-          internal.max_marks,
-        marks_obtained:
-          studentMark?.marks_obtained ?? null,
-        status:
-          studentMark?.status ?? null,
-      };
+      if (
+        !subjectsMap[subject.id].marks[
+          markKey
+        ]
+      ) {
+        subjectsMap[subject.id].marks[
+          markKey
+        ] = {
+          internal_id: internal.id,
+          exam_id: internal.exam_id,
+          internal_name: internalName,
+          max_marks: internal.max_marks,
+          marks_obtained:
+            studentMark?.marks_obtained ??
+            null,
+          status:
+            studentMark?.status ?? null,
+        };
+      } else {
+        const existingMark =
+          subjectsMap[subject.id].marks[
+            markKey
+          ];
+
+        if (
+          existingMark.marks_obtained === null &&
+          studentMark?.marks_obtained !==
+            null &&
+          studentMark?.marks_obtained !==
+            undefined
+        ) {
+          existingMark.marks_obtained =
+            studentMark.marks_obtained;
+
+          existingMark.status =
+            studentMark.status ?? null;
+        }
+      }
     });
 
     const subjects =
@@ -1586,20 +1640,50 @@ console.log("educationYear---",educationYear)
     });
 
     const columns = [];
+    const usedColumns = new Set();
 
     reportExams.forEach((exam) => {
       exam.internals.forEach(
         (internal) => {
+          const normalizedInternalName =
+            String(
+              internal.internal_name || ""
+            )
+              .trim()
+              .toLowerCase();
+
+          const uniqueKey =
+            `${exam.exam_id}_${normalizedInternalName}`;
+
+          if (
+            usedColumns.has(uniqueKey)
+          ) {
+            return;
+          }
+
+          usedColumns.add(uniqueKey);
+
+          const safeInternalName =
+            normalizedInternalName
+              .replace(/[^a-zA-Z0-9]+/g, "_")
+              .replace(/^_+|_+$/g, "");
+
           columns.push({
             key:
-              `exam_${exam.exam_id}_internal_${internal.internal_id}`,
-            exam_id: exam.exam_id,
+              `exam_${exam.exam_id}_internal_${safeInternalName}`,
+
+            exam_id:
+              exam.exam_id,
+
             exam_name:
               exam.exam_name,
+
             internal_id:
               internal.internal_id,
+
             internal_name:
               internal.internal_name,
+
             max_marks:
               internal.max_marks,
           });
@@ -1607,36 +1691,47 @@ console.log("educationYear---",educationYear)
       );
     });
 
-    const tableRows = subjects.map(
-      (subject) => {
+    const tableRows =
+      subjects.map((subject) => {
         const row = {
           subject_id:
             subject.subject_id,
+
           subject_name:
             subject.subject_name,
+
           priority:
             subject.priority,
         };
 
         columns.forEach((column) => {
+          const markKey =
+            `${column.exam_id}_${String(
+              column.internal_name
+            )
+              .trim()
+              .toLowerCase()}`;
+
           const mark =
-            subject.marks[
-              column.internal_id
-            ];
+            subject.marks[markKey];
 
           row[column.key] = {
             marks_obtained:
-              mark?.marks_obtained ?? null,
+              mark?.marks_obtained ??
+              null,
+
             status:
               mark?.status ?? null,
+
             max_marks:
-              column.max_marks ?? null,
+              column.max_marks ??
+              mark?.max_marks ??
+              null,
           };
         });
 
         return row;
-      }
-    );
+      });
 
     return res.status(200).json({
       education_year: educationYear,
