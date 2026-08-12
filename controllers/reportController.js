@@ -937,6 +937,7 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
             "id",
             "subject_name",
             "is_multi_teacher",
+            "priority",
           ],
         },
         {
@@ -973,15 +974,13 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
       ],
 
       order: [
-        [
-          { model: Subject },
-          "subject_name",
-          "ASC",
-        ],
-        ["date", "ASC"],
+      [
+        { model: Subject },
+        "priority",
+        "ASC",
       ],
-
-      distinct: true,
+      ["date", "ASC"],
+    ],
     });
 
     if (!internals.length) {
@@ -1005,12 +1004,16 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
           id: subject.id,
           name: subject.subject_name,
           max_marks: internal.max_marks,
+          priority: subject.priority ?? 999999,
         };
 
         subjects.push(subjectMap[subject.id]);
       }
     });
 
+    subjects.sort((a, b) => {
+      return Number(a.priority) - Number(b.priority);
+    })
     const marksLookup = {};
 
     internals.forEach((internal) => {

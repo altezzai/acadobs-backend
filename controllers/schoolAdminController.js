@@ -359,7 +359,7 @@ const createSubject = async (req, res) => {
       where: { id: school_id },
       attributes: ["syllabus_id"],
     });
-    const { subject_name, class_range,is_multi_teacher } = req.body;
+    const { subject_name, class_range,is_multi_teacher,priority } = req.body;
     if (!subject_name || !class_range || !school_id) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
@@ -389,6 +389,7 @@ const createSubject = async (req, res) => {
       school_id,
       is_multi_teacher,
       syllabus_id: schoolData.syllabus_id,
+      priority,
     });
     res.status(201).json(subject);
   } catch (error) {
@@ -428,7 +429,7 @@ const getSubjects = async (req, res) => {
       offset,
       distinct: true,
       limit,
-      attributes: ["id", "subject_name", "class_range", "is_multi_teacher"],
+      attributes: ["id", "subject_name", "class_range", "is_multi_teacher", "priority"],
       where: whereClause,
       include: [
         {
@@ -488,7 +489,7 @@ const updateSubject = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const { subject_name, class_range, is_multi_teacher } = req.body;
+    const { subject_name, class_range, is_multi_teacher, priority } = req.body;
     const subject = await Subject.findOne({
       where: {
         id,
@@ -516,7 +517,7 @@ const updateSubject = async (req, res) => {
       });
     }
 
-    await subject.update({ subject_name, class_range, school_id, is_multi_teacher });
+    await subject.update({ subject_name, class_range, school_id, is_multi_teacher ,priority});
     res.status(200).json(subject);
   } catch (error) {
     logger.error(
@@ -577,7 +578,7 @@ const getSubjectsForFilter = async (req, res) => {
       ];
     }
     if (range) {
-      whereClause.range = range;
+      whereClause.class_range = range;
     }
     if (is_multi_teacher !== null) {
       whereClause.is_multi_teacher = is_multi_teacher;
@@ -586,7 +587,7 @@ const getSubjectsForFilter = async (req, res) => {
     const subjects = await Subject.findAll({
       distinct: true,
       where: whereClause,
-      attributes: ["id", "subject_name"],
+      attributes: ["id", "subject_name", "class_range", "is_multi_teacher", "priority"],
     });
     res.status(200).json({
       totalcontent: subjects.length,
@@ -673,8 +674,6 @@ const restoreSubject = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
-// Permanent Delete Subject
 const permanentDeleteSubject = async (req, res) => {
   try {
     const school_id = req.user.school_id;

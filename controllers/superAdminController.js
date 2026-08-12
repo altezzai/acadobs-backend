@@ -548,7 +548,7 @@ const getTrashedClasses = async (req, res) => {
 const createSubject = async (req, res) => {
   try {
     const school_id = req.body.school_id || null;
-    const { subject_name, class_range, syllabus_id,is_multi_teacher } = req.body;
+    const { subject_name, class_range, syllabus_id,is_multi_teacher,priority } = req.body;
     if (!subject_name || !class_range) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
@@ -584,6 +584,7 @@ const createSubject = async (req, res) => {
       syllabus_id,
       school_id: school_id ? school_id : null,
       is_multi_teacher,
+      priority,
     });
     res.status(201).json(subject);
   } catch (error) {
@@ -678,7 +679,7 @@ const getSubjectById = async (req, res) => {
 const updateSubject = async (req, res) => {
   try {
     const { id } = req.params;
-    const { subject_name, class_range, syllabus_id ,is_multi_teacher} = req.body;
+    const { subject_name, class_range, syllabus_id ,is_multi_teacher,priority} = req.body;
 
     const exists = await Subject.findOne({
       where: {

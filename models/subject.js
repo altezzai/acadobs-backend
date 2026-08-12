@@ -10,6 +10,10 @@ const Subject = schoolSequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
+    school_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     subject_name: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -17,10 +21,6 @@ const Subject = schoolSequelize.define(
     class_range: {
       type: DataTypes.ENUM("FS", "PS", "MS", "SS", "common", "other"),
       allowNull: false,
-    },
-    school_id: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
     },
     syllabus_id: {
       type: DataTypes.INTEGER,
@@ -30,6 +30,11 @@ const Subject = schoolSequelize.define(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
+    },
+    priority: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 11,
     },
     trash: {
       type: DataTypes.BOOLEAN,

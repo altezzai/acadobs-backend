@@ -4149,12 +4149,13 @@ const getSubjects = async (req, res) => {
       ];
     }
     if (range) {
-      whereClause.range = range;
+      whereClause.class_range = range;
     }
 
     const subjects = await Subject.findAll({
       distinct: true,
       where: whereClause,
+      order: [["subject_name", "ASC"]],
     });
     res.status(200).json({
       totalcontent: subjects.length,
@@ -4188,6 +4189,7 @@ const getStaffSubjects = async (req, res) => {
     const subjects = await Subject.findAll({
       distinct: true,
       attributes: ["id", "subject_name"],
+      where: whereClause,
       include: [
         {
           model: StaffSubject,
@@ -4195,7 +4197,7 @@ const getStaffSubjects = async (req, res) => {
           attributes: [],
         },
       ],
-      where: whereClause,
+      order: [["subject_name", "ASC"]],
     });
     res.status(200).json({
       totalcontent: subjects.length,
