@@ -940,6 +940,7 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
             "priority",
           ],
         },
+
         {
           model: Exam,
           attributes: [
@@ -948,6 +949,7 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
             "education_year",
           ],
         },
+
         {
           model: Mark,
           attributes: [
@@ -974,13 +976,15 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
       ],
 
       order: [
-      [
-        { model: Subject },
-        "priority",
-        "ASC",
+        [
+          { model: Subject },
+          "priority",
+          "ASC",
+        ],
+        ["date", "ASC"],
       ],
-      ["date", "ASC"],
-    ],
+
+      distinct: true,
     });
 
     if (!internals.length) {
@@ -1012,8 +1016,18 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
     });
 
     subjects.sort((a, b) => {
-      return Number(a.priority) - Number(b.priority);
-    })
+      const priorityA = Number(a.priority ?? 999999);
+      const priorityB = Number(b.priority ?? 999999);
+
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      return String(a.name).localeCompare(
+        String(b.name)
+      );
+    });
+
     const marksLookup = {};
 
     internals.forEach((internal) => {
@@ -1044,7 +1058,8 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
     )?.Exam;
 
     let examName = firstExam?.exam_name || "-";
-    let educationYear = firstExam?.education_year || "-";
+    let educationYear =
+      firstExam?.education_year || "-";
 
     if (exam_id) {
       const exam = await Exam.findOne({
@@ -1062,24 +1077,31 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
 
       if (exam) {
         examName = exam.exam_name || "-";
-        educationYear = exam.education_year || "-";
+        educationYear =
+          exam.education_year || "-";
       }
     }
 
     doc = new PDFDocument({
       size: "A4",
       layout: "landscape",
+
       margins: {
         top: 40,
         bottom: 40,
         left: 30,
         right: 30,
       },
+
       bufferPages: true,
     });
 
-    const safeClassName = String(className || classId)
-      .replace(/[^a-zA-Z0-9-_]/g, "_");
+    const safeClassName = String(
+      className || classId
+    ).replace(
+      /[^a-zA-Z0-9-_]/g,
+      "_"
+    );
 
     const fileName =
       `class-${safeClassName}-marks-report.pdf`;
@@ -1103,18 +1125,17 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
         "STUDENT MARKS REPORT",
         {
           align: "center",
+          lineBreak: true,
         }
       );
 
-    doc.moveDown(0.5);
-
     doc
       .font("Helvetica")
-      .fontSize(10);
+      .fontSize(9);
 
     doc.text(
       `Class: ${className}`,
-      40,
+      30,
       75,
       {
         lineBreak: false,
@@ -1123,7 +1144,7 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
 
     doc.text(
       `Exam: ${examName}`,
-      250,
+      230,
       75,
       {
         lineBreak: false,
@@ -1132,7 +1153,7 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
 
     doc.text(
       `Internal: ${internal_name || "-"}`,
-      450,
+      430,
       75,
       {
         lineBreak: false,
@@ -1148,16 +1169,71 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
       }
     );
 
+    const pageWidth = 842;
+    const leftMargin = 30;
+    const rightMargin = 30;
+
+    const usableWidth =
+      pageWidth -
+      leftMargin -
+      rightMargin;
+
+    const subjectCount = subjects.length;
+
+    const rollWidth = 48;
+
+    let studentNameWidth;
+
+    if (subjectCount <= 6) {
+      studentNameWidth = 145;
+    } else if (subjectCount <= 8) {
+      studentNameWidth = 135;
+    } else if (subjectCount <= 10) {
+      studentNameWidth = 125;
+    } else if (subjectCount <= 12) {
+      studentNameWidth = 115;
+    } else {
+      studentNameWidth = 105;
+    }
+
+    const totalWidth = 55;
+
+    const remainingWidth =
+      usableWidth -
+      rollWidth -
+      studentNameWidth -
+      totalWidth;
+
+    let subjectWidth =
+      remainingWidth / subjectCount;
+
+    const minimumSubjectWidth = 38;
+    const maximumSubjectWidth = 75;
+
+    subjectWidth = Math.max(
+      minimumSubjectWidth,
+      Math.min(
+        maximumSubjectWidth,
+        subjectWidth
+      )
+    );
+
+    const actualTableWidth =
+      rollWidth +
+      studentNameWidth +
+      totalWidth +
+      subjectWidth * subjectCount;
+
     const tableHeaders = [
       {
         label: "Roll No",
         property: "roll_number",
-        width: 55,
+        width: rollWidth,
       },
       {
         label: "Student Name",
         property: "student_name",
-        width: 150,
+        width: studentNameWidth,
       },
     ];
 
@@ -1165,14 +1241,14 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
       tableHeaders.push({
         label: `${subject.name}\n(${subject.max_marks ?? "-"})`,
         property: `subject_${subject.id}`,
-        width: 70,
+        width: subjectWidth,
       });
     });
 
     tableHeaders.push({
       label: "Total",
       property: "total",
-      width: 65,
+      width: totalWidth,
     });
 
     const tableRows = students.map((student) => {
@@ -1190,20 +1266,25 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
 
       subjects.forEach((subject) => {
         const mark =
-          marksLookup[subject.id]?.[student.id];
+          marksLookup[
+            subject.id
+          ]?.[student.id];
 
         let displayMark = "-";
 
         if (mark) {
           const status = mark.status
-            ? String(mark.status).toLowerCase()
+            ? String(
+                mark.status
+              ).toLowerCase()
             : "";
 
           if (
             status &&
             status !== "present"
           ) {
-            displayMark = mark.status;
+            displayMark =
+              mark.status;
           } else if (
             mark.marks_obtained !== null &&
             mark.marks_obtained !== undefined
@@ -1212,9 +1293,13 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
               mark.marks_obtained;
 
             const numericMark =
-              Number(mark.marks_obtained);
+              Number(
+                mark.marks_obtained
+              );
 
-            if (!isNaN(numericMark)) {
+            if (
+              !isNaN(numericMark)
+            ) {
               total += numericMark;
             }
           }
@@ -1234,31 +1319,51 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
         rows: tableRows,
       },
       {
-        x: 30,
+        x: leftMargin,
         y: 110,
-        width: 780,
-        padding: 5,
-        columnSpacing: 3,
+
+        width: actualTableWidth,
+
+        padding: subjectCount >= 10
+          ? 3
+          : 5,
+
+        columnSpacing: 1,
 
         prepareHeader: () => {
           doc
             .font("Helvetica-Bold")
-            .fontSize(8);
+            .fontSize(
+              subjectCount >= 12
+                ? 6
+                : subjectCount >= 10
+                ? 7
+                : 8
+            );
         },
 
         prepareRow: () => {
           doc
             .font("Helvetica")
-            .fontSize(8);
+            .fontSize(
+              subjectCount >= 12
+                ? 6
+                : subjectCount >= 10
+                ? 7
+                : 8
+            );
         },
       }
     );
 
-    const range = doc.bufferedPageRange();
+    const range =
+      doc.bufferedPageRange();
 
     for (
       let i = range.start;
-      i < range.start + range.count;
+      i <
+        range.start +
+          range.count;
       i++
     ) {
       doc.switchToPage(i);
@@ -1304,7 +1409,7 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
         doc.destroy(error);
       } catch (destroyError) {
         console.error(
-          "Error destroying PDF document:",
+          "Error destroying PDF:",
           destroyError
         );
       }
@@ -1485,7 +1590,7 @@ const getprograsReportByStudentId = async (req, res) => {
     if (!internals.length) {
       return res.status(404).json({
         error:
-          "No internal marks found for this student",
+          "No data found for this student",
       });
     }
 
