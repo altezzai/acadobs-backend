@@ -335,8 +335,8 @@ const updateInternalMark = async (req, res) => {
       exam_id
     } = req.body;
     const existingExam = await InternalMark.findByPk(id);
-  let subjectIdToUpdate = subject_id;
-    if(subject_id===0 || subject_id){
+    let subjectIdToUpdate = subject_id;
+    if(subject_id=== "0" || !subject_id){
       subjectIdToUpdate = existingExam.subject_id;
     }
     const updated = await InternalMark.update(
@@ -536,7 +536,7 @@ const bulkUpdateMarks = async (req, res) => {
 };
 const getInternalMarkByRecordedBy = async (req, res) => {
   try {
-    const { recorded_by } = req.query;
+    const recorded_by = req.user.user_id;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
