@@ -57,10 +57,12 @@ router.put("/internalmarks/:id", teacherController.updateInternalMark);
 router.delete("/internalmarks/:id", teacherController.deleteInternalMark);
 router.get("/getInternalMarksByIdWithSubject/:id", teacherController.getInternalMarksByIdWithSubject);
 router.post("/createNewMarksByInternalId/:internal_id", teacherController.createNewMarksByInternalId);
+router.delete("/deleteMarkById/:mark_id", teacherController.deleteMarkById);  
 router.put("/updateMark/:mark_id", teacherController.updateMark);
 router.put("/bulkUpdateMarks", teacherController.bulkUpdateMarks);
 router.get("/myMultiTeacherSubjectInternalMarks", teacherController.getMultiTeacherSubjectInternalMarks);
 router.get("/getClassWaiseTermMarksPdf", reportController.getClassWaiseTermMarksPdf);
+router.get("/getprograsReportByStudentId/:student_id", reportController.getprograsReportByStudentId);
 
 router.get(
   "/getInternalMarkByRecordedBy",
@@ -80,8 +82,8 @@ router.patch(
 router.get("/getMyClassExamMark",teacherController.getMyClassExamMark);
 router.get("/getMyClassInternalMark",teacherController.getMyClassInternalMark);
 router.post(
-  "/getmissingStudentsListfromCLassId/:class_id",
-  teacherController.getmissingStudentsListfromCLassId,
+  "/getMissingStudentsListfromClassId/:class_id",
+  teacherController.getMissingStudentsListfromClassId,
 );
 
 // Homework

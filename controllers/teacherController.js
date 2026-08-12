@@ -327,6 +327,7 @@ const getInternalMarksByIdWithSubject = async (req, res) => {
 const updateInternalMark = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const{
       subject_id,
       internal_name,
@@ -335,10 +336,37 @@ const updateInternalMark = async (req, res) => {
       exam_id
     } = req.body;
     const existingExam = await InternalMark.findByPk(id);
-  let subjectIdToUpdate = subject_id;
-    if(subject_id===0 || subject_id){
+
+    if (!existingExam) {
+      return res.status(404).json({ error: "Internal mark not found" });
+    }
+
+    let subjectIdToUpdate = subject_id;
+    if(subject_id=== "0" || !subject_id){
       subjectIdToUpdate = existingExam.subject_id;
     }
+
+    const existingWhere = {
+      id: { [Op.ne]: id },
+      school_id,
+      class_id: existingExam.class_id,
+      subject_id:subjectIdToUpdate,
+      internal_name:internal_name ? internal_name : existingExam.internal_name,
+    };
+
+    if (exam_id !== null && exam_id !== undefined && exam_id !== "") {
+      existingWhere.exam_id = exam_id ? exam_id : existingExam.exam_id;
+    } else {
+      existingWhere.date = date ? date : existingExam.date;
+    }
+
+    const existingInternal = await InternalMark.findOne({
+      where: existingWhere,
+    });
+    if (existingInternal) {
+      return res.status(400).json({ error: "Internal mark already exists" });
+    }
+    
     const updated = await InternalMark.update(
       {
         subject_id: subjectIdToUpdate,
@@ -536,7 +564,7 @@ const bulkUpdateMarks = async (req, res) => {
 };
 const getInternalMarkByRecordedBy = async (req, res) => {
   try {
-    const { recorded_by } = req.query;
+    const recorded_by = req.user.user_id;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -3018,7 +3046,7 @@ const getStudentLeaveRequestsForClassTeacher = async (req, res) => {
   }
 };
 
-const getmissingStudentsListfromCLassId = async (req, res) => {
+const getMissingStudentsListfromClassId = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const classId = req.params.class_id;
@@ -3107,7 +3135,6 @@ const getmissingStudentsListfromCLassId = async (req, res) => {
   }
 };
 
-const getMissingStudentsListFromClassId = getmissingStudentsListfromCLassId;
 
 //parent note section
 
@@ -4350,8 +4377,8 @@ module.exports = {
   bulkUpdateHomeworkAssignments,
   getHomeworkAssignmentById,
   getHomeworkByTeacher,
-  getmissingStudentsListfromCLassId,
-  getMissingStudentsListFromClassId,
+  getMissingStudentsListfromClassId,
+
 
   createAttendance,
   getAllAttendance,

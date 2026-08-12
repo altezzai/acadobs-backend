@@ -1311,6 +1311,370 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
     }
   }
 };
+const getprograsReportByStudentId = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const student_id = req.params.student_id;
+
+    if (!student_id) {
+      return res.status(400).json({
+        error: "Please provide student_id",
+      });
+    }
+
+    const today = new Date();
+
+    const month = today.getMonth() + 1;
+    const year = today.getFullYear();
+
+    const academicStartYear =
+      month >= 6 ? year : year - 1;
+
+    const educationYear =
+      `${academicStartYear}-${String(
+        academicStartYear + 1
+      ).slice(-2)}`;
+
+    const student = await Student.findOne({
+      where: {
+        id: student_id,
+        school_id,
+        trash: false,
+      },
+      attributes: [
+        "id",
+        "full_name",
+        "roll_number",
+        "class_id",
+      ],
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        error: "Student not found",
+      });
+    }
+
+    const classData = await Class.findOne({
+      where: {
+        id: student.class_id,
+        school_id,
+        trash: false,
+      },
+      attributes: [
+        "id",
+        "classname",
+      ],
+    });
+
+    if (!classData) {
+      return res.status(404).json({
+        error: "Student class not found",
+      });
+    }
+console.log("educationYear---",educationYear)
+    const exams = await Exam.findAll({
+      where: {
+        school_id,
+        education_year: educationYear,
+        trash: false,
+      },
+      attributes: [
+        "id",
+        "exam_name",
+        "education_year",
+      ],
+      order: [
+        ["id", "ASC"],
+      ],
+    });
+
+    if (!exams.length) {
+      return res.status(404).json({
+        error: `No exams found for education year ${educationYear}`,
+      });
+    }
+
+    const examIds = exams.map(
+      (exam) => exam.id
+    );
+
+    const studentInternalSubQuery =
+      Sequelize.literal(`(
+        SELECT DISTINCT m.internal_id
+        FROM marks m
+        WHERE m.student_id = ${Number(student_id)}
+      )`);
+
+    const internals = await InternalMark.findAll({
+      where: {
+        school_id,
+        trash: false,
+        exam_id: {
+          [Op.in]: examIds,
+        },
+        [Op.or]: [
+          {
+            class_id: student.class_id,
+          },
+          {
+            id: {
+              [Op.in]: studentInternalSubQuery,
+            },
+          },
+        ],
+      },
+
+      include: [
+        {
+          model: Subject,
+          attributes: [
+            "id",
+            "subject_name",
+            "priority",
+            "is_multi_teacher",
+          ],
+        },
+
+        {
+          model: Exam,
+          attributes: [
+            "id",
+            "exam_name",
+            "education_year",
+          ],
+        },
+
+        {
+          model: Mark,
+          required: false,
+          where: {
+            student_id: student.id,
+          },
+          attributes: [
+            "id",
+            "student_id",
+            "marks_obtained",
+            "status",
+          ],
+        },
+      ],
+
+      order: [
+        [
+          { model: Subject },
+          "priority",
+          "ASC",
+        ],
+        [
+          { model: Subject },
+          "subject_name",
+          "ASC",
+        ],
+        ["date", "ASC"],
+      ],
+
+      distinct: true,
+    });
+
+    if (!internals.length) {
+      return res.status(404).json({
+        error:
+          "No internal marks found for this student",
+      });
+    }
+
+    const examMap = {};
+
+    exams.forEach((exam) => {
+      examMap[exam.id] = {
+        exam_id: exam.id,
+        exam_name: exam.exam_name,
+        education_year: exam.education_year,
+        internals: [],
+      };
+    });
+
+    internals.forEach((internal) => {
+      const examId = internal.exam_id;
+
+      if (!examMap[examId]) {
+        return;
+      }
+
+      const exists =
+        examMap[examId].internals.some(
+          (item) =>
+            item.internal_id === internal.id
+        );
+
+      if (!exists) {
+        examMap[examId].internals.push({
+          internal_id: internal.id,
+          internal_name:
+            internal.internal_name,
+          max_marks:
+            internal.max_marks,
+          date: internal.date,
+        });
+      }
+    });
+
+    const reportExams =
+      Object.values(examMap).filter(
+        (exam) => exam.internals.length > 0
+      );
+
+    const subjectsMap = {};
+
+    internals.forEach((internal) => {
+      const subject = internal.Subject;
+
+      if (!subject?.id) {
+        return;
+      }
+
+      if (!subjectsMap[subject.id]) {
+        subjectsMap[subject.id] = {
+          subject_id: subject.id,
+          subject_name:
+            subject.subject_name,
+          priority:
+            subject.priority ?? 999999,
+          marks: {},
+        };
+      }
+
+      const studentMark =
+        internal.Marks?.[0];
+
+      subjectsMap[subject.id].marks[
+        internal.id
+      ] = {
+        internal_id: internal.id,
+        exam_id: internal.exam_id,
+        internal_name:
+          internal.internal_name,
+        max_marks:
+          internal.max_marks,
+        marks_obtained:
+          studentMark?.marks_obtained ?? null,
+        status:
+          studentMark?.status ?? null,
+      };
+    });
+
+    const subjects =
+      Object.values(subjectsMap);
+
+    subjects.sort((a, b) => {
+      const priorityA =
+        Number(a.priority ?? 999999);
+
+      const priorityB =
+        Number(b.priority ?? 999999);
+
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      return String(
+        a.subject_name
+      ).localeCompare(
+        String(b.subject_name)
+      );
+    });
+
+    const columns = [];
+
+    reportExams.forEach((exam) => {
+      exam.internals.forEach(
+        (internal) => {
+          columns.push({
+            key:
+              `exam_${exam.exam_id}_internal_${internal.internal_id}`,
+            exam_id: exam.exam_id,
+            exam_name:
+              exam.exam_name,
+            internal_id:
+              internal.internal_id,
+            internal_name:
+              internal.internal_name,
+            max_marks:
+              internal.max_marks,
+          });
+        }
+      );
+    });
+
+    const tableRows = subjects.map(
+      (subject) => {
+        const row = {
+          subject_id:
+            subject.subject_id,
+          subject_name:
+            subject.subject_name,
+          priority:
+            subject.priority,
+        };
+
+        columns.forEach((column) => {
+          const mark =
+            subject.marks[
+              column.internal_id
+            ];
+
+          row[column.key] = {
+            marks_obtained:
+              mark?.marks_obtained ?? null,
+            status:
+              mark?.status ?? null,
+            max_marks:
+              column.max_marks ?? null,
+          };
+        });
+
+        return row;
+      }
+    );
+
+    return res.status(200).json({
+      education_year: educationYear,
+
+      student: {
+        id: student.id,
+        full_name: student.full_name,
+        roll_number: student.roll_number,
+        class_id: student.class_id,
+        class_name:
+          classData.classname,
+      },
+
+      exams: reportExams,
+
+      columns,
+
+      subjects: tableRows,
+    });
+
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error generating student progress report:",
+      error
+    );
+
+    console.error(
+      "Error generating student progress report:",
+      error
+    );
+
+    return res.status(500).json({
+      error: error.message,
+    });
+  }
+};
 module.exports = {
   getInvoiceReport,
   getPaymentReport,
@@ -1319,5 +1683,5 @@ module.exports = {
   getStudentReportByStudentId,
   getInternalmarksReport, 
   getClassWaiseTermMarksPdf,
-
+  getprograsReportByStudentId,
 };
