@@ -922,7 +922,7 @@ const updateStaff = async (req, res) => {
   try {
     const { staff_id } = req.params;
     const school_id = req.user.school_id;
-    const { role, qualification, address, class_id, subjects, staff_incharge } = req.body;
+    const { name,role, qualification, address, class_id, subjects, staff_incharge } = req.body;
 
     const staff = await Staff.findOne({
       where: { id: staff_id, school_id },
@@ -963,6 +963,7 @@ const updateStaff = async (req, res) => {
     await user.update(
       {
         role,
+        name,
         dp: finalDp,
       },
       { transaction },
