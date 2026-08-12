@@ -3018,7 +3018,7 @@ const getStudentLeaveRequestsForClassTeacher = async (req, res) => {
   }
 };
 
-const getmissingStudentsListfromCLassId = async (req, res) => {
+const getMissingStudentsListfromClassId = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const classId = req.params.class_id;
@@ -3107,7 +3107,6 @@ const getmissingStudentsListfromCLassId = async (req, res) => {
   }
 };
 
-const getMissingStudentsListFromClassId = getmissingStudentsListfromCLassId;
 
 //parent note section
 
@@ -4350,8 +4349,8 @@ module.exports = {
   bulkUpdateHomeworkAssignments,
   getHomeworkAssignmentById,
   getHomeworkByTeacher,
-  getmissingStudentsListfromCLassId,
-  getMissingStudentsListFromClassId,
+  getMissingStudentsListfromClassId,
+
 
   createAttendance,
   getAllAttendance,

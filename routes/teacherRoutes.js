@@ -82,8 +82,8 @@ router.patch(
 router.get("/getMyClassExamMark",teacherController.getMyClassExamMark);
 router.get("/getMyClassInternalMark",teacherController.getMyClassInternalMark);
 router.post(
-  "/getmissingStudentsListfromCLassId/:class_id",
-  teacherController.getmissingStudentsListfromCLassId,
+  "/getMissingStudentsListfromClassId/:class_id",
+  teacherController.getMissingStudentsListfromClassId,
 );
 
 // Homework
