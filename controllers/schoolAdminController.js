@@ -2945,12 +2945,12 @@ const permanentDeleteStudent = async (req, res) => {
       await transaction.rollback();
       return res.status(400).json({ error: "Unable to delete this user because other records are linked to this account." });
     }
+    if(payments){
     for (const payment of payments) {
       if (payment.payment_attachment) {
         await deleteFile(payment.payment_attachment);
       }
     }
-    //update the payment table student_id  null for student_id
     await Payment.update(
       { 
         student_id: null,
@@ -2958,7 +2958,7 @@ const permanentDeleteStudent = async (req, res) => {
        },
       { where: { student_id: id }, transaction },
     );
-
+  }
     await InvoiceStudent.destroy({
       where: { student_id: id },
       transaction,
