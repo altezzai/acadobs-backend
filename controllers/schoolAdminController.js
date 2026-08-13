@@ -2911,7 +2911,6 @@ const restoreStudent = async (req, res) => {
 
 const permanentDeleteStudent = async (req, res) => {
   const transaction = await schoolSequelize.transaction();
-
   try {
     const school_id = req.user.school_id;
     const role = req.user.role;
@@ -8547,28 +8546,56 @@ const getInternalmarkById = async (req, res) => {
 const updateInternalMark = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const{
       exam_id,
       subject_id,
       internal_name,
       date,
+      teacher_id
     } = req.body;
-    const existingExam = await InternalMark.findByPk(id);
+    const existingExam = await InternalMark.findOne({ where: { id, school_id } });
+
+    if (!existingExam) {
+      return res.status(404).json({ error: "Internal mark not found" });
+    }
+
     let subjectIdToUpdate = subject_id;
     if(subject_id===0 || !subject_id){
       subjectIdToUpdate = existingExam.subject_id;
     }
-
+     const existingWhere = {
+        id: { [Op.ne]: id },
+        school_id,
+        class_id: existingExam.class_id,
+        subject_id:subjectIdToUpdate,
+        internal_name:internal_name ? internal_name : existingExam.internal_name,
+      };
+  
+      if (exam_id !== null && exam_id !== undefined && exam_id !== "") {
+        existingWhere.exam_id = exam_id ? exam_id : existingExam.exam_id;
+      } else {
+        existingWhere.date = date ? date : existingExam.date;
+      }
+  
+      const existingInternal = await InternalMark.findOne({
+        where: existingWhere,
+      });
+      if (existingInternal) {
+        return res.status(400).json({ error: "Internal mark already exists" });
+      }
     const updated = await InternalMark.update(
       {
         subject_id: subjectIdToUpdate,
         internal_name,
         date,
-        exam_id
+        exam_id,
+        recorded_by:teacher_id ? teacher_id : existingExam.recorded_by
       },
       {
       where: { id: id },
     });
+
     res.status(200).json({ message: "Exam detail updated", updated });
   } catch (error) {
     logger.error(
