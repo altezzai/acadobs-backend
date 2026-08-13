@@ -7,7 +7,7 @@ const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
 
 const {
-  verifyTeacherOrStaff,
+  verifyTeacherOrStaff,staffAccess
 } = require("../middlewares/teacherMiddleware");
 
 const staffAllowedRoutes = [
@@ -19,6 +19,7 @@ const staffAllowedRoutes = [
   "/getLatestEvents",
   "/getLatestNews",
   "/getAchievementsBySchool",
+  "/getAchievementById",
   "/todayAttendanceStatus",
   "/markSelfAttendance",
   "/markCheckOutSelfAttendance",
@@ -26,7 +27,6 @@ const staffAllowedRoutes = [
   "/updateProfileDetails",
   "/changePassword",
   "/updateDp",
-  "/achievements/:id",
 ];
 
 router.use(verifyTeacherOrStaff);
@@ -34,7 +34,8 @@ router.use((req, res, next) => {
   const user = req.user;
   if (user && user.role === "staff") {
     const path = req.path;
-    const allowed = staffAllowedRoutes.some((route) =>
+    const isGetAchievementById = req.method === "GET" && /^\/achievements\/\d+$/.test(path);
+    const allowed = isGetAchievementById || staffAllowedRoutes.some((route) =>
       path === route || path.startsWith(`${route}/`),
     );
 
@@ -63,7 +64,7 @@ router.put("/bulkUpdateMarks", teacherController.bulkUpdateMarks);
 router.get("/myMultiTeacherSubjectInternalMarks", teacherController.getMultiTeacherSubjectInternalMarks);
 router.get("/getClassWaiseTermMarksPdf", reportController.getClassWaiseTermMarksPdf);
 router.get("/getprograsReportByStudentId/:student_id", reportController.getprograsReportByStudentId);
-router.get("/getMissingStudnetsFromClassByInternalMarkId/:id", teacherController.getMissingStudnetsFromClassByInternalMarkId);
+router.get("/getMissingStudentsFromClassByInternalMarkId/:id", teacherController.getMissingStudentsFromClassByInternalMarkId);
 router.get("/getMissingStudentsListfromClassId/:id", teacherController.getMissingStudentsListfromClassId);
 
 router.get(
@@ -81,8 +82,8 @@ router.patch(
   "/restoreInternalMark/:id",
   teacherController.restoreInternalMark);
 router.get(
-    "/getMissingStudentsfromClassByHomeworkid/:id",
-    teacherController.getMissingStudentsfromClassByHomeworkid,
+    "/getMissingStudentsfromClassByHomeworkId/:id",
+    teacherController.getMissingStudentsfromClassByHomeworkId,
   );
 //my class exam mark
 router.get("/getMyClassExamMark",teacherController.getMyClassExamMark);
@@ -179,10 +180,9 @@ router.put(
 
 router.post(
   "/achievements",
-  uploadWithErrorHandler(upload.any()),
   teacherController.createAchievementWithStudents,
 );
-router.get("/achievements", teacherController.getAllAchievementsByStaffId);
+router.get("/allAchievements", teacherController.getAllAchievementsByStaffId);
 router.get("/achievements/:id", teacherController.getAchievementById);
 router.put("/achievements/:id", teacherController.updateAchievement);
 router.delete("/achievements/:id", teacherController.deleteAchievement);
@@ -308,11 +308,7 @@ router.get(
   "/getStudentAttendanceByDate/:student_id",
   commonController.getStudentAttendanceByDate,
 );
-router.get("/allAchievements", commonController.allAchievements);
-router.get(
-  "/achievementByStudentId/:student_id",
-  commonController.achievementByStudentId,
-);
+
 router.get(
   "/getInternalMarkByStudentId/:student_id",
   commonController.getInternalMarkByStudentId,
@@ -338,7 +334,15 @@ router.put(
 
 router.get("/getPaymentById/:id", commonController.getPaymentById);
 router.get(
+  "/achievementByStudentId/:student_id",
+  commonController.achievementByStudentId,
+);
+router.get(
   "/getAchievementsBySchool",
   commonController.getAchievementsBySchool,
+);
+router.get(
+  "/getAchievementById/:id",
+  commonController.getAchievementById,
 );
 module.exports = router;

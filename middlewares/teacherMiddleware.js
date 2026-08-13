@@ -23,5 +23,13 @@ const verifyTeacherOrStaff = (req, res, next) => {
 
   return res.status(403).json({ message: "Forbidden: Teachers or Staff only" });
 };
+const staffAccess = (req, res, next) => {
+  if (req.user?.role === "staff" || req.user?.role === "teacher") {
+    return next();
+  }
 
-module.exports = { verifyTeacher, verifyTeacherOrStaff };
+  return res.status(403).json({
+    message: "Forbidden",
+  });
+};
+module.exports = { verifyTeacher, verifyTeacherOrStaff ,staffAccess};

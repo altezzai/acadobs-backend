@@ -626,7 +626,7 @@ router.get(
   "/getStudentAttendanceByDate/:student_id",studentsAttendancePermission,
   commonController.getStudentAttendanceByDate,
 );
-router.get("/allAchievements", achievementPermission,commonController.allAchievements);
+router.get("/allAchievements", achievementPermission,commonController.getAchievementsBySchool);
 router.get(
   "/achievementByStudentId/:student_id",achievementPermission,
   commonController.achievementByStudentId,

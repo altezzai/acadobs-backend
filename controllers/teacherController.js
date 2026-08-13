@@ -935,7 +935,7 @@ const restoreInternalMark = async (req, res) => {
     res.status(500).json({ error: "Failed to restore internal mark" });
   }
 };
-const getMissingStudnetsFromClassByInternalMarkId = async (req, res) => {
+const getMissingStudentsFromClassByInternalMarkId = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
@@ -1817,7 +1817,7 @@ const getHomeworkByTeacher = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-const getMissingStudentsfromClassByHomeworkid = async (req, res) => {
+const getMissingStudentsfromClassByHomeworkId = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
@@ -2779,8 +2779,6 @@ const createAchievementWithStudents = async (req, res) => {
       recorded_by,
     });
 
-    const uploadPath = "uploads/achievement_proofs/";
-
     const studentAchievements = await Promise.all(
       parsedStudents.map(async (student, index) => {
        
@@ -2814,7 +2812,6 @@ const createAchievementWithStudents = async (req, res) => {
 const getAllAchievementsByStaffId = async (req, res) => {
   try {
     const staffId = req.user.user_id;
-
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -2859,7 +2856,10 @@ const getAllAchievementsByStaffId = async (req, res) => {
 
 const getAchievementById = async (req, res) => {
   try {
-    const achievement = await Achievement.findByPk(req.params.id, {
+     const id = req.params.id;
+    const school_id = req.user.school_id;
+    const achievement = await Achievement.findOne({
+      where: { id, school_id, trash: false },
       attributes: ["id", "title", "description", "category", "level", "date"],
       include: [
         {
@@ -4705,7 +4705,7 @@ module.exports = {
   getTrashedExamMarkByRecordedBy,
   getTrashedInternalMarkByRecordedBy,
   restoreInternalMark,
-  getMissingStudnetsFromClassByInternalMarkId,
+  getMissingStudentsFromClassByInternalMarkId,
 
   createHomeworkWithAssignments,
   getAllHomework,
@@ -4721,9 +4721,9 @@ module.exports = {
   bulkUpdateHomeworkAssignments,
   getHomeworkAssignmentById,
   getHomeworkByTeacher,
-  getMissingStudentsfromClassByHomeworkid,
+  getMissingStudentsfromClassByHomeworkId,
   getMissingStudentsListfromClassId,
-  
+
   createAttendance,
   getAllAttendance,
   updateAttendance,

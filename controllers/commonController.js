@@ -31,6 +31,7 @@ const { deleteFile } = require("../middlewares/storageUploads");
 
 const { Class, Staff } = require("../models");
 const { get } = require("../routes/schoolAdminRoutes");
+const { level } = require("winston");
 
 const getStudentsByClassId = async (req, res) => {
   try {
@@ -607,36 +608,61 @@ const getStudentAttendanceByDate = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-const allAchievements = async (req, res) => {
+const accountDeleteRequests = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const reason = req.body.reason || "";
+
+    const existingRequest = await AccountDelete.findOne({
+      where: { user_id: userId },
+    });
+
+    if (existingRequest) {
+      return res.status(400).json({ error: "Delete request already exists" });
+    }
+
+    const deleteRequest = await AccountDelete.create({
+      user_id: userId,
+      reason,
+    });
+
+    res
+      .status(200)
+      .json({ message: "Delete request created successfully", deleteRequest });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error creating delete request:",
+      error
+    );
+    console.error("Error creating delete request:", error);
+    res.status(500).json({ error: "Failed to create delete request" });
+  }
+};
+const getAchievementsBySchool = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     if (!school_id) {
       return res.status(404).json({ error: "School not found" });
     }
-
-    const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 3;
     const offset = (page - 1) * limit;
     const whereClause = {
+      school_id,
       trash: false,
-      school_id: school_id,
+      level: {
+        [Op.ne]: "class",
+      },
     };
-    if (searchQuery) {
-      whereClause[Op.or] = [
-        { title: { [Op.like]: `%${searchQuery}%` } },
-        { description: { [Op.like]: `%${searchQuery}%` } },
-      ];
-    }
-    const { count, rows: achievements } = await Achievement.findAndCountAll({
-      offset,
-      distinct: true, // Add this line
-      limit,
-      where: whereClause, // Add this line
+    const count = await Achievement.count({ where: whereClause });
+    const achievements = await Achievement.findAll({
+      where: whereClause,
       include: [
         {
           model: StudentAchievement,
-          attributes: ["student_id", "status", "proof_document", "remarks"],
+          attributes: ["status", "remarks"],
           include: [
             {
               model: Student,
@@ -644,13 +670,16 @@ const allAchievements = async (req, res) => {
               include: [
                 {
                   model: Class,
-                  attributes: ["id", "classname", "year", "division"],
+                  attributes: ["id", "classname"],
                 },
               ],
             },
           ],
         },
       ],
+      order: [["createdAt", "DESC"]],
+      limit,
+      offset,
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -663,12 +692,14 @@ const allAchievements = async (req, res) => {
     logger.error(
       "userId:",
       req.user.user_id,
-      "Error in getting all achievements:",
+      "Error fetching achievements:",
       error
     );
+    console.error("Error fetching achievements:", error);
     res.status(500).json({ error: error.message });
   }
 };
+
 const achievementByStudentId = async (req, res) => {
   try {
     const { student_id } = req.params;
@@ -727,6 +758,45 @@ const achievementByStudentId = async (req, res) => {
       error
     );
     res.status(500).json({ error: error.message });
+  }
+};
+const getAchievementById = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const school_id = req.user.school_id;
+    const achievement = await Achievement.findOne({
+      where: { id, school_id, trash: false },
+      attributes: ["id", "title", "description", "category", "level", "date"],
+      include: [
+        {
+          model: StudentAchievement,
+          attributes: ["student_id", "status", "proof_document", "remarks"],
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "reg_no", "image"],
+              include: [
+                {
+                  model: Class,
+                  attributes: ["id", "classname", "year", "division"],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: User,
+          attributes: ["id", "name"],
+        },
+      ],
+    });
+    if (!achievement) {
+      return res.status(404).json({ error: "Achievement not found" });
+    }
+    res.status(200).json(achievement);
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "getAchievementById :", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 //get internalmark by student id
@@ -1278,96 +1348,7 @@ const updateDp = async (req, res) => {
   }
 };
 
-const getAchievementsBySchool = async (req, res) => {
-  try {
-    const school_id = req.user.school_id;
-    if (!school_id) {
-      return res.status(404).json({ error: "School not found" });
-    }
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 3;
-    const offset = (page - 1) * limit;
-    const whereClause = {
-      school_id,
-      trash: false,
-      level: {
-        [Op.ne]: "class",
-      },
-    };
-    const count = await Achievement.count({ where: whereClause });
-    const achievements = await Achievement.findAll({
-      where: whereClause,
-      include: [
-        {
-          model: StudentAchievement,
-          attributes: ["status", "remarks"],
-          include: [
-            {
-              model: Student,
-              attributes: ["id", "full_name", "reg_no", "image"],
-              include: [
-                {
-                  model: Class,
-                  attributes: ["id", "classname"],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-      limit,
-      offset,
-    });
-    const totalPages = Math.ceil(count / limit);
-    res.status(200).json({
-      totalcontent: count,
-      totalPages,
-      currentPage: page,
-      achievements,
-    });
-  } catch (error) {
-    logger.error(
-      "userId:",
-      req.user.user_id,
-      "Error fetching achievements:",
-      error
-    );
-    console.error("Error fetching achievements:", error);
-    res.status(500).json({ error: error.message });
-  }
-};
-const accountDeleteRequests = async (req, res) => {
-  try {
-    const userId = req.user.user_id;
-    const reason = req.body.reason || "";
 
-    const existingRequest = await AccountDelete.findOne({
-      where: { user_id: userId },
-    });
-
-    if (existingRequest) {
-      return res.status(400).json({ error: "Delete request already exists" });
-    }
-
-    const deleteRequest = await AccountDelete.create({
-      user_id: userId,
-      reason,
-    });
-
-    res
-      .status(200)
-      .json({ message: "Delete request created successfully", deleteRequest });
-  } catch (error) {
-    logger.error(
-      "userId:",
-      req.user.user_id,
-      "Error creating delete request:",
-      error
-    );
-    console.error("Error creating delete request:", error);
-    res.status(500).json({ error: "Failed to create delete request" });
-  }
-};
 const getAllDriverUsers = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -1404,8 +1385,9 @@ module.exports = {
   getStudentProfile,
   getStudentAttendanceByDate,
 
-  allAchievements,
+  getAchievementsBySchool,
   achievementByStudentId,
+  getAchievementById,
 
   getInternalMarkByStudentId,
   getTermExamByStudentId,
@@ -1424,9 +1406,6 @@ module.exports = {
   changePassword,
   updateFcmToken,
   updateDp,
-
-
-  getAchievementsBySchool,
 
   accountDeleteRequests,
 
