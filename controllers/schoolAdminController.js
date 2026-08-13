@@ -8518,7 +8518,7 @@ const getInternalmarkById = async (req, res) => {
     const school_id = req.user.school_id;
     const { id } = req.params;
     const internalmark = await InternalMark.findOne({
-      attributes: ["id", "internal_name", "max_marks", "date", "exam_id","subject_id"],
+      attributes: ["id", "internal_name", "max_marks", "date", "exam_id","subject_id","recorded_by"],
       where: { id, school_id },
       include: [
         { model: Class, attributes: ["classname"] },
