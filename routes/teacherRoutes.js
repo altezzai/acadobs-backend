@@ -113,6 +113,15 @@ router.put(
   storageUploadMiddleware("homeworks"),
   teacherController.updateHomeworkAssignment,
 );
+router.delete(
+  "/deleteHomeworkAssignment/:id",
+  teacherController.deleteHomeworkAssignment,
+);
+router.post(
+  "/createNewHomeworkAssignment/:homework_id",
+  teacherController.createNewHomeworkAssignment,
+);
+
 router.put(
   "/bulkUpdateHomeworkAssignments/",
   teacherController.bulkUpdateHomeworkAssignments,

@@ -1296,7 +1296,53 @@ const updateHomeworkAssignment = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const createNewHomeworkAssignment = async (req, res) => {
+  try {
+    const  id  = req.params.homework_id;
+    const school_id = req.user.school_id;
+    const teacher_id = req.user.user_id;
+    const assignments = req.body;
 
+    if (!id) return res.status(400).json({ error: "Invalid request" });
+
+    const homework = await Homework.findOne({
+      where: { id, school_id, teacher_id },
+    });
+    if (!homework) return res.status(404).json({ error: "Not found" });
+
+  if (!Array.isArray(assignments) || assignments.length === 0) {
+        return res.status(400).json({
+          error: "assignments are required and must be an array",
+        });
+      }
+       for (const assignment of assignments) {
+      if (!assignment.student_id) {
+        return res.status(400).json({
+          error: "student_id is required for every assignment",
+        });
+      }
+    }
+
+    const assignmentData = assignments.map((assignment) => ({
+      student_id: assignment.student_id,
+      points: assignment.points,
+      remarks: assignment.remarks,
+      homework_id: id,
+    }));
+
+    const assignment = await HomeworkAssignment.bulkCreate(assignmentData);
+  
+    res.status(200).json({ message: "Added successfully", assignment });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error adding new homework assignment:",
+      error,
+    );
+    res.status(500).json({ error: error.message });
+  }
+}
 // DELETE
 const deleteHomework = async (req, res) => {
   try {
@@ -1318,6 +1364,36 @@ const deleteHomework = async (req, res) => {
     res.status(500).json({ error: "Delete failed" });
   }
 };
+const deleteHomeworkAssignment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
+
+    const assignment = await HomeworkAssignment.findByPk(id);
+    if (!assignment) return res.status(404).json({ error: "Not found" });
+
+    const homework = await Homework.findOne({
+      where: { id: assignment.homework_id,school_id,teacher_id:user_id },
+    });
+    if (!homework) return res.status(404).json({ error: "Not found or unauthorized" });
+     const solvedFile = assignment.solved_file;
+    if (solvedFile) {
+      await deleteFile(solvedFile);
+    }
+    await assignment.destroy();
+
+    res.status(200).json({ message: "Deleted successfully" });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error deleting homework assignment:",
+      error,
+    );
+    res.status(500).json({ error: "Delete failed" });
+  }
+}
 const permanentDeleteHomework = async (req, res) => {
   try {
     const { id } = req.params;
@@ -4372,7 +4448,9 @@ module.exports = {
   updateHomework,
   deleteHomework,
   restoreHomework,
-  updateHomeworkAssignment,
+  updateHomeworkAssignment, 
+  createNewHomeworkAssignment,
+  deleteHomeworkAssignment,
   permanentDeleteHomework,
   bulkUpdateHomeworkAssignments,
   getHomeworkAssignmentById,
