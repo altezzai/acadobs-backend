@@ -63,6 +63,8 @@ router.put("/bulkUpdateMarks", teacherController.bulkUpdateMarks);
 router.get("/myMultiTeacherSubjectInternalMarks", teacherController.getMultiTeacherSubjectInternalMarks);
 router.get("/getClassWaiseTermMarksPdf", reportController.getClassWaiseTermMarksPdf);
 router.get("/getprograsReportByStudentId/:student_id", reportController.getprograsReportByStudentId);
+router.get("/getMissingStudnetsFromClassByInternalMarkId/:id", teacherController.getMissingStudnetsFromClassByInternalMarkId);
+router.get("/getMissingStudentsListfromClassId/:id", teacherController.getMissingStudentsListfromClassId);
 
 router.get(
   "/getInternalMarkByRecordedBy",
@@ -78,13 +80,13 @@ router.get(
 router.patch(
   "/restoreInternalMark/:id",
   teacherController.restoreInternalMark);
+router.get(
+    "/getMissingStudentsfromClassByHomeworkid/:id",
+    teacherController.getMissingStudentsfromClassByHomeworkid,
+  );
 //my class exam mark
 router.get("/getMyClassExamMark",teacherController.getMyClassExamMark);
 router.get("/getMyClassInternalMark",teacherController.getMyClassInternalMark);
-router.post(
-  "/getMissingStudentsListfromClassId/:class_id",
-  teacherController.getMissingStudentsListfromClassId,
-);
 
 // Homework
 router.post(
@@ -113,13 +115,13 @@ router.put(
   storageUploadMiddleware("homeworks"),
   teacherController.updateHomeworkAssignment,
 );
-router.delete(
-  "/deleteHomeworkAssignment/:id",
-  teacherController.deleteHomeworkAssignment,
-);
 router.post(
   "/createNewHomeworkAssignment/:homework_id",
   teacherController.createNewHomeworkAssignment,
+);
+router.delete(
+  "/deleteHomeworkAssignment/:id",
+  teacherController.deleteHomeworkAssignment,
 );
 
 router.put(
