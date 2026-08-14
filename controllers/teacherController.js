@@ -1553,6 +1553,7 @@ const createNewHomeworkAssignment = async (req, res) => {
       where: { id, school_id, teacher_id },
     });
     if (!homework) return res.status(404).json({ error: "Not found" });
+    
 
   if (!Array.isArray(assignments) || assignments.length === 0) {
         return res.status(400).json({
@@ -1565,8 +1566,19 @@ const createNewHomeworkAssignment = async (req, res) => {
           error: "student_id is required for every assignment",
         });
       }
+      const existingAssignment = await HomeworkAssignment.findOne({
+        where: {
+          homework_id: id,
+          student_id: assignment.student_id,
+        },
+      })
+      if (existingAssignment) {
+        return res.status(200).json({
+          message: "Assignment already exists",
+          assignment: existingAssignment,
+        });
+      }
     }
-
     const assignmentData = assignments.map((assignment) => ({
       student_id: assignment.student_id,
       points: assignment.points,
@@ -1576,7 +1588,7 @@ const createNewHomeworkAssignment = async (req, res) => {
 
     const assignment = await HomeworkAssignment.bulkCreate(assignmentData);
   
-    res.status(200).json({ message: "Added successfully", assignment });
+    res.status(200).json({ message: "Added successfully", assignmentData });
   } catch (error) {
     logger.error(
       "userId:",

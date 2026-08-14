@@ -5406,22 +5406,21 @@ const getSpecialClassStudents = async (req, res) => {
     if (searchQuery) {
       studentWhere.full_name = { [Op.like]: `%${searchQuery}%` };
     }
-    let whereClause = [];
+    const whereClause = [];
     if (class_id) {
-      whereClause.push({ class_id });
+      whereClause.class_id = class_id;
     }
     if (student_id) {
-      whereClause.push({ student_id });
+      whereClause.student_id = student_id;
     }
     const { count, rows: data } = await SpecialClassStudent.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: { [Op.and]: whereClause },
+      where: whereClause,
       include: [
         {
           model: Class,
-          where: { school_id },
           attributes: ["id", "year", "division", "classname"],
         },
         {
