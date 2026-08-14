@@ -1,4 +1,4 @@
-const stop = require("../../models/tracker/stop");
+const Stop = require("../../models/tracker/stop");
 const Routes = require("../../models/tracker/routes");
 const Driver = require("../../models/tracker/driver");
 const logger = require("../../utils/logger");
@@ -6,7 +6,7 @@ const getStopById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const studentStop = await stop.findOne({
+    const studentStop = await Stop.findOne({
       where: {
         id,
         trash: false,
@@ -14,7 +14,7 @@ const getStopById = async (req, res) => {
       attributes: ["route_id", "stop_name", "longitude", "latitude"],
     });
 
-    if (!stop) {
+    if (!studentStop) {
       return res.status(404).json({
         message: "Stop not found",
       });
@@ -38,7 +38,7 @@ const updateStopById = async (req, res) => {
   try {
     const { id } = req.params;
     const { stop_name, longitude, latitude } = req.body;
-    const studentStop = await stop.findOne({
+    const studentStop = await Stop.findOne({
       where: {
         id,
         trash: false,
@@ -88,7 +88,7 @@ const updateStopForDriver = async (req, res) => {
       });
     }
 
-    const stopData = await stop.findOne({
+    const stopData = await Stop.findOne({
       where: {
         id: stopId,
         trash: false,
@@ -138,7 +138,7 @@ const updateStopForDriver = async (req, res) => {
 const deleteStop = async (req, res) => {
   try {
     const { id } = req.params;
-    const studentStop = await stop.findOne({
+    const studentStop = await Stop.findOne({
       where: {
         id,
         trash: false,
