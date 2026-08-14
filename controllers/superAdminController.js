@@ -197,6 +197,18 @@ const updateSchool = async (req, res) => {
       primary_colour,
       secondary_colour,
     });
+    await User.update(
+      {
+        name,
+        dp: finalLogo,
+      },
+      {
+        where: {
+          role: "admin",
+          school_id: id,
+        },
+      }
+    );
 
     res.status(200).json({ message: "School updated successfully", school });
   } catch (error) {
