@@ -653,7 +653,7 @@ router.get(
   "/getStudentAttendanceByDate/:student_id",
   commonController.getStudentAttendanceByDate,
 );
-router.get("/allAchievements", commonController.allAchievements);
+router.get("/allAchievements", commonController.getAchievementsBySchool);
 router.get(
   "/achievementByStudentId/:student_id",
   commonController.achievementByStudentId,

@@ -2911,7 +2911,6 @@ const restoreStudent = async (req, res) => {
 
 const permanentDeleteStudent = async (req, res) => {
   const transaction = await schoolSequelize.transaction();
-
   try {
     const school_id = req.user.school_id;
     const role = req.user.role;
@@ -5407,22 +5406,21 @@ const getSpecialClassStudents = async (req, res) => {
     if (searchQuery) {
       studentWhere.full_name = { [Op.like]: `%${searchQuery}%` };
     }
-    let whereClause = [];
+    const whereClause = [];
     if (class_id) {
-      whereClause.push({ class_id });
+      whereClause.class_id = class_id;
     }
     if (student_id) {
-      whereClause.push({ student_id });
+      whereClause.student_id = student_id;
     }
     const { count, rows: data } = await SpecialClassStudent.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: { [Op.and]: whereClause },
+      where: whereClause,
       include: [
         {
           model: Class,
-          where: { school_id },
           attributes: ["id", "year", "division", "classname"],
         },
         {
@@ -8519,7 +8517,7 @@ const getInternalmarkById = async (req, res) => {
     const school_id = req.user.school_id;
     const { id } = req.params;
     const internalmark = await InternalMark.findOne({
-      attributes: ["id", "internal_name", "max_marks", "date", "exam_id","subject_id"],
+      attributes: ["id", "internal_name", "max_marks", "date", "exam_id","subject_id","recorded_by"],
       where: { id, school_id },
       include: [
         { model: Class, attributes: ["classname"] },
@@ -8547,28 +8545,56 @@ const getInternalmarkById = async (req, res) => {
 const updateInternalMark = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const{
       exam_id,
       subject_id,
       internal_name,
       date,
+      teacher_id
     } = req.body;
-    const existingExam = await InternalMark.findByPk(id);
+    const existingExam = await InternalMark.findOne({ where: { id, school_id } });
+
+    if (!existingExam) {
+      return res.status(404).json({ error: "Internal mark not found" });
+    }
+
     let subjectIdToUpdate = subject_id;
     if(subject_id===0 || !subject_id){
       subjectIdToUpdate = existingExam.subject_id;
     }
-
+     const existingWhere = {
+        id: { [Op.ne]: id },
+        school_id,
+        class_id: existingExam.class_id,
+        subject_id:subjectIdToUpdate,
+        internal_name:internal_name ? internal_name : existingExam.internal_name,
+      };
+  
+      if (exam_id !== null && exam_id !== undefined && exam_id !== "") {
+        existingWhere.exam_id = exam_id ? exam_id : existingExam.exam_id;
+      } else {
+        existingWhere.date = date ? date : existingExam.date;
+      }
+  
+      const existingInternal = await InternalMark.findOne({
+        where: existingWhere,
+      });
+      if (existingInternal) {
+        return res.status(400).json({ error: "Internal mark already exists" });
+      }
     const updated = await InternalMark.update(
       {
         subject_id: subjectIdToUpdate,
         internal_name,
         date,
-        exam_id
+        exam_id,
+        recorded_by:teacher_id ? teacher_id : existingExam.recorded_by
       },
       {
       where: { id: id },
     });
+
     res.status(200).json({ message: "Exam detail updated", updated });
   } catch (error) {
     logger.error(

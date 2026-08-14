@@ -818,6 +818,7 @@ const getMyClassExamMark = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch exams" });
   }
 };
+
 const getTrashedInternalMarkByRecordedBy = async (req, res) => {
   try {
     const { recorded_by } = req.query;
@@ -934,7 +935,250 @@ const restoreInternalMark = async (req, res) => {
     res.status(500).json({ error: "Failed to restore internal mark" });
   }
 };
+const getMissingStudentsFromClassByInternalMarkId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const userId = req.user.user_id;
 
+    const internalMark = await InternalMark.findOne({
+      where: {
+        id,
+        school_id,
+        trash: false,
+      },
+      attributes: [
+        "id",
+        "class_id",
+        "subject_id",
+        "exam_id",
+        "internal_name",
+      ],
+    });
+
+    if (!internalMark) {
+      return res.status(404).json({
+        error: "Internal mark not found",
+      });
+    }
+
+    let classId = internalMark.class_id;
+
+    if (!classId) {
+      const mark = await Mark.findOne({
+        where: {
+          internal_id: internalMark.id,
+        },
+        attributes: ["student_id"],
+        include: [
+          {
+            model: Student,
+            attributes: ["id", "class_id"],
+          },
+        ],
+      });
+
+      classId = mark?.Student?.class_id || null;
+    }
+
+    if (!classId) {
+      return res.status(400).json({
+        error: "Class not found for this internal mark",
+      });
+    }
+
+    const classData = await Class.findOne({
+      where: {
+        id: classId,
+        school_id,
+        trash: false,
+      },
+      attributes: [
+        "id",
+        "year",
+        "division",
+        "classname",
+      ],
+    });
+
+    if (!classData) {
+      return res.status(404).json({
+        error: "Class not found",
+      });
+    }
+
+    const students = await Student.findAll({
+      where: {
+        class_id: classId,
+        school_id,
+        trash: false,
+      },
+      attributes: [
+        "id",
+        "full_name",
+        "roll_number",
+        "image",
+      ],
+      order: [
+        ["roll_number", "ASC"],
+      ],
+    });
+
+    if (!students.length) {
+      return res.status(200).json({
+        internal_mark_id: internalMark.id,
+        class: classData,
+        total_students: 0,
+        marked_students: 0,
+        missing_students: 0,
+        students: [],
+      });
+    }
+
+    const marks = await Mark.findAll({
+      where: {
+        internal_id: internalMark.id,
+      },
+      attributes: [
+        "student_id",
+      ],
+    });
+
+    const markedStudentIds = new Set(
+      marks.map(
+        (mark) => Number(mark.student_id)
+      )
+    );
+
+    const missingStudents = students.filter(
+      (student) =>
+        !markedStudentIds.has(
+          Number(student.id)
+        )
+    );
+
+    return res.status(200).json({
+      internal_mark_id: internalMark.id,
+
+      class: classId,
+      total_students: students.length,
+
+      marked_students:
+        students.length -
+        missingStudents.length,
+
+      missing_students:
+        missingStudents.length,
+
+      students: missingStudents,
+    });
+
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching missing students from internal mark:",
+      error
+    );
+
+    console.error(
+      "Error fetching missing students from internal mark:",
+      error
+    );
+
+    return res.status(500).json({
+      error: error.message,
+    });
+  }
+};
+const getMissingStudentsListfromClassId = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const classId = req.params.class_id;
+    const rawStudentIds = req.body.studentIds || [];
+
+    if (!school_id) {
+      return res.status(400).json({ error: "School context is missing" });
+    }
+
+    if (!classId) {
+      return res.status(400).json({ error: "classid is required" });
+    }
+
+    const classRecord = await Class.findOne({
+      where: { id: classId, school_id, trash: false },
+      attributes: ["id", "classname", "special"],
+    });
+
+    if (!classRecord) {
+      return res.status(404).json({ error: "Class not found" });
+    }
+
+    const insertedIds = Array.isArray(rawStudentIds)
+      ? rawStudentIds
+          .map((id) => Number(id))
+          .filter((id) => Number.isInteger(id) && id > 0)
+      : [];
+
+    let studentIds = [];
+
+    if (classRecord.special === true) {
+      const assignments = await SpecialClassStudent.findAll({
+        where: { class_id: classId },
+        attributes: ["student_id"],
+      });
+      studentIds = assignments.map((entry) => Number(entry.student_id));
+    } else {
+      const students = await Student.findAll({
+        where: { class_id: classId, school_id, trash: false, alumni: false },
+        attributes: ["id"],
+      });
+      studentIds = students.map((student) => Number(student.id));
+    }
+
+    const missingStudentIds = studentIds.filter(
+      (studentId) => !insertedIds.includes(studentId),
+    );
+
+    const missingStudents = missingStudentIds.length
+      ? await Student.findAll({
+          where: {
+            id: missingStudentIds,
+            school_id,
+            trash: false,
+            alumni: false,
+          },
+          attributes: [
+            "id",
+            "full_name",
+            "reg_no",
+            "roll_number",
+            "class_id",
+            "image",
+          ],
+          order: [["roll_number", "ASC"]],
+          include: [
+            { model: Class, attributes: ["id", "year", "division", "classname"] },
+          ],
+        })
+      : [];
+
+    return res.status(200).json({
+      class_id: classId,
+      totalMissing: missingStudents.length,
+      missingStudents,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user?.user_id,
+      "Error fetching missing students by class id:",
+      error,
+    );
+    console.error("Error fetching missing students by class id:", error);
+    return res.status(500).json({ error: error.message || "Failed to fetch missing students" });
+  }
+};
 const createHomeworkWithAssignments = async (req, res) => {
   try {
     const school_id = req.user.school_id || "";
@@ -1296,7 +1540,65 @@ const updateHomeworkAssignment = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const createNewHomeworkAssignment = async (req, res) => {
+  try {
+    const  id  = req.params.homework_id;
+    const school_id = req.user.school_id;
+    const teacher_id = req.user.user_id;
+    const assignments = req.body;
 
+    if (!id) return res.status(400).json({ error: "Invalid request" });
+
+    const homework = await Homework.findOne({
+      where: { id, school_id, teacher_id },
+    });
+    if (!homework) return res.status(404).json({ error: "Not found" });
+    
+
+  if (!Array.isArray(assignments) || assignments.length === 0) {
+        return res.status(400).json({
+          error: "assignments are required and must be an array",
+        });
+      }
+       for (const assignment of assignments) {
+      if (!assignment.student_id) {
+        return res.status(400).json({
+          error: "student_id is required for every assignment",
+        });
+      }
+      const existingAssignment = await HomeworkAssignment.findOne({
+        where: {
+          homework_id: id,
+          student_id: assignment.student_id,
+        },
+      })
+      if (existingAssignment) {
+        return res.status(200).json({
+          message: "Assignment already exists",
+          assignment: existingAssignment,
+        });
+      }
+    }
+    const assignmentData = assignments.map((assignment) => ({
+      student_id: assignment.student_id,
+      points: assignment.points,
+      remarks: assignment.remarks,
+      homework_id: id,
+    }));
+
+    const assignment = await HomeworkAssignment.bulkCreate(assignmentData);
+  
+    res.status(200).json({ message: "Added successfully", assignmentData });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error adding new homework assignment:",
+      error,
+    );
+    res.status(500).json({ error: error.message });
+  }
+}
 // DELETE
 const deleteHomework = async (req, res) => {
   try {
@@ -1318,6 +1620,36 @@ const deleteHomework = async (req, res) => {
     res.status(500).json({ error: "Delete failed" });
   }
 };
+const deleteHomeworkAssignment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
+
+    const assignment = await HomeworkAssignment.findByPk(id);
+    if (!assignment) return res.status(404).json({ error: "Not found" });
+
+    const homework = await Homework.findOne({
+      where: { id: assignment.homework_id,school_id,teacher_id:user_id },
+    });
+    if (!homework) return res.status(404).json({ error: "Not found or unauthorized" });
+     const solvedFile = assignment.solved_file;
+    if (solvedFile) {
+      await deleteFile(solvedFile);
+    }
+    await assignment.destroy();
+
+    res.status(200).json({ message: "Deleted successfully" });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error deleting homework assignment:",
+      error,
+    );
+    res.status(500).json({ error: "Delete failed" });
+  }
+}
 const permanentDeleteHomework = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1495,6 +1827,116 @@ const getHomeworkByTeacher = async (req, res) => {
     );
 
     res.status(500).json({ error: error.message });
+  }
+};
+const getMissingStudentsfromClassByHomeworkId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const teacher_id = req.user.user_id;
+
+    const homework = await Homework.findOne({
+      where: {
+        id,
+        school_id,
+        trash: false,
+        teacher_id,
+      },
+      attributes: [
+        "id",
+        "class_id",
+      ],
+    });
+
+    if (!homework) {
+      return res.status(404).json({
+        error: "Homework not found",
+      });
+    }
+
+    if (!homework.class_id) {
+      return res.status(400).json({
+        error: "Homework is not assigned to a class",
+      });
+    }
+
+    const students = await Student.findAll({
+      where: {
+        class_id: homework.class_id,
+        school_id,
+        trash: false,
+      },
+      attributes: [
+        "id",
+        "full_name",
+        "roll_number",
+        "image",
+      ],
+      order: [
+        ["roll_number", "ASC"],
+      ],
+    });
+
+    if (!students.length) {
+      return res.status(200).json({
+        homework_id: homework.id,
+        class_id: homework.class_id,
+        total_students: 0,
+        assigned_students: 0,
+        missing_students: 0,
+        students: [],
+      });
+    }
+
+    const assignments = await HomeworkAssignment.findAll({
+      where: {
+        homework_id: homework.id,
+      },
+      attributes: [
+        "student_id",
+      ],
+    });
+
+    const assignedStudentIds = new Set(
+      assignments.map(
+        (assignment) =>
+          Number(assignment.student_id)
+      )
+    );
+
+    const missingStudents = students.filter(
+      (student) =>
+        !assignedStudentIds.has(
+          Number(student.id)
+        )
+    );
+
+    return res.status(200).json({
+      homework_id: homework.id,
+      class_id: homework.class_id,
+      total_students: students.length,
+      assigned_students: students.length -
+        missingStudents.length,
+      missing_students: missingStudents.length,
+      students: missingStudents,
+    });
+
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching missing homework students:",
+      error
+    );
+
+    console.error(
+      "Error fetching missing homework students:",
+      error
+    );
+
+    return res.status(500).json({
+      error: error.message,
+    });
   }
 };
 const createAttendance = async (req, res) => {
@@ -2349,8 +2791,6 @@ const createAchievementWithStudents = async (req, res) => {
       recorded_by,
     });
 
-    const uploadPath = "uploads/achievement_proofs/";
-
     const studentAchievements = await Promise.all(
       parsedStudents.map(async (student, index) => {
        
@@ -2384,7 +2824,6 @@ const createAchievementWithStudents = async (req, res) => {
 const getAllAchievementsByStaffId = async (req, res) => {
   try {
     const staffId = req.user.user_id;
-
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -2429,7 +2868,10 @@ const getAllAchievementsByStaffId = async (req, res) => {
 
 const getAchievementById = async (req, res) => {
   try {
-    const achievement = await Achievement.findByPk(req.params.id, {
+     const id = req.params.id;
+    const school_id = req.user.school_id;
+    const achievement = await Achievement.findOne({
+      where: { id, school_id, trash: false },
       attributes: ["id", "title", "description", "category", "level", "date"],
       include: [
         {
@@ -3043,95 +3485,6 @@ const getStudentLeaveRequestsForClassTeacher = async (req, res) => {
     );
     console.error("Error fetching leave requests:", error);
     res.status(500).json({ error: "Failed to fetch leave requests" });
-  }
-};
-
-const getMissingStudentsListfromClassId = async (req, res) => {
-  try {
-    const school_id = req.user.school_id;
-    const classId = req.params.class_id;
-    const rawStudentIds = req.body.studentIds || [];
-
-    if (!school_id) {
-      return res.status(400).json({ error: "School context is missing" });
-    }
-
-    if (!classId) {
-      return res.status(400).json({ error: "classid is required" });
-    }
-
-    const classRecord = await Class.findOne({
-      where: { id: classId, school_id, trash: false },
-      attributes: ["id", "classname", "special"],
-    });
-
-    if (!classRecord) {
-      return res.status(404).json({ error: "Class not found" });
-    }
-
-    const insertedIds = Array.isArray(rawStudentIds)
-      ? rawStudentIds
-          .map((id) => Number(id))
-          .filter((id) => Number.isInteger(id) && id > 0)
-      : [];
-
-    let studentIds = [];
-
-    if (classRecord.special === true) {
-      const assignments = await SpecialClassStudent.findAll({
-        where: { class_id: classId },
-        attributes: ["student_id"],
-      });
-      studentIds = assignments.map((entry) => Number(entry.student_id));
-    } else {
-      const students = await Student.findAll({
-        where: { class_id: classId, school_id, trash: false, alumni: false },
-        attributes: ["id"],
-      });
-      studentIds = students.map((student) => Number(student.id));
-    }
-
-    const missingStudentIds = studentIds.filter(
-      (studentId) => !insertedIds.includes(studentId),
-    );
-
-    const missingStudents = missingStudentIds.length
-      ? await Student.findAll({
-          where: {
-            id: missingStudentIds,
-            school_id,
-            trash: false,
-            alumni: false,
-          },
-          attributes: [
-            "id",
-            "full_name",
-            "reg_no",
-            "roll_number",
-            "class_id",
-            "image",
-          ],
-          order: [["roll_number", "ASC"]],
-          include: [
-            { model: Class, attributes: ["id", "year", "division", "classname"] },
-          ],
-        })
-      : [];
-
-    return res.status(200).json({
-      class_id: classId,
-      totalMissing: missingStudents.length,
-      missingStudents,
-    });
-  } catch (error) {
-    logger.error(
-      "userId:",
-      req.user?.user_id,
-      "Error fetching missing students by class id:",
-      error,
-    );
-    console.error("Error fetching missing students by class id:", error);
-    return res.status(500).json({ error: error.message || "Failed to fetch missing students" });
   }
 };
 
@@ -4364,6 +4717,7 @@ module.exports = {
   getTrashedExamMarkByRecordedBy,
   getTrashedInternalMarkByRecordedBy,
   restoreInternalMark,
+  getMissingStudentsFromClassByInternalMarkId,
 
   createHomeworkWithAssignments,
   getAllHomework,
@@ -4372,13 +4726,15 @@ module.exports = {
   updateHomework,
   deleteHomework,
   restoreHomework,
-  updateHomeworkAssignment,
+  updateHomeworkAssignment, 
+  createNewHomeworkAssignment,
+  deleteHomeworkAssignment,
   permanentDeleteHomework,
   bulkUpdateHomeworkAssignments,
   getHomeworkAssignmentById,
   getHomeworkByTeacher,
+  getMissingStudentsfromClassByHomeworkId,
   getMissingStudentsListfromClassId,
-
 
   createAttendance,
   getAllAttendance,
