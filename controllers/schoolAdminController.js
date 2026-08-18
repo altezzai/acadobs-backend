@@ -3953,7 +3953,8 @@ const getAllAchievements = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
-      attributes: ["id", "title", "description", "category", "level", "date"],
+      attributes: ["id", "title", "description", "category", "level", "date","createdAt"],
+      order: [["createdAt", "DESC"]],
       include: [
         {
           model: Student,
@@ -3972,7 +3973,6 @@ const getAllAchievements = async (req, res) => {
           ],
         },
       ],
-      order: [["createdAt", "DESC"]],
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -4534,9 +4534,9 @@ const createPayment = async (req, res) => {
     }
     const existingPayment = await Payment.findOne({
       where: {
+        invoice_student_id,
         school_id,
         student_id,
-        amount,
         payment_date,
         payment_category,
       },
@@ -4546,7 +4546,10 @@ const createPayment = async (req, res) => {
         .status(400)
         .json({ error: "Payment with the same details already exists" });
     }
-
+    let transcation_status=payment_status;
+   if(payment_category === "donation" && !payment_status ){
+      transcation_status = "completed";
+    }
     const payment = await Payment.create({
       school_id,
       student_id,
@@ -4556,11 +4559,13 @@ const createPayment = async (req, res) => {
       payment_category,
       transaction_id,
       payment_method,
-      payment_status,
+      payment_status:transcation_status,
       recorded_by: userId,
       updated_by: userId,
     });
     let invoice_status = "";
+
+ 
     if (payment_status === "completed" && invoice_student_id) {
       const invoiceStudent = await InvoiceStudent.findOne({
         where: { id: invoice_student_id },
@@ -6048,11 +6053,13 @@ const staffLeaveRequestPermission = async (req, res) => {
           school_id,
           staff_id,
           date: date.format("YYYY-MM-DD"),
-          status: "On Leave",
+          status: "Leave",
           check_in_time: null,
           check_out_time: null,
           created_at: new Date(),
           updated_at: new Date(),
+          marked_method: "Leaverequest",
+          marked_by: user_id,
         });
       }
 
@@ -9159,12 +9166,12 @@ const createStaffAttendance = async (req, res) => {
       date,
       status,
       check_in_time:
-        check_in_time || check_in_time || status === "present"
+        check_in_time || status === "Present"
           ? new Date().toISOString()
           : null,
       check_out_time: check_out_time || null,
       total_hours,
-      marked_by: req.user.user_id,
+      marked_by: staff_id,
       marked_method: "Manual",
       remarks,
     });
@@ -9231,7 +9238,7 @@ const getAllStaffAttendance = async (req, res) => {
     const staff_id = req.query.staff_id;
     const start_date = req.query.start_date;
     const end_date = req.query.end_date;
-    const role = req.query.role;
+    const role = req.query.role || "";
     const download = req.query.download || "";
     const searchQuery = req.query.q || "";
     let { page = 1, limit = 10 } = req.query;
@@ -9251,7 +9258,7 @@ const getAllStaffAttendance = async (req, res) => {
       whereClause.date = { [Op.between]: [start_date, end_date] };
     }
 
-    let userWhere = {};
+    let userWhere = {trash: false, school_id};
     if (searchQuery) {
       userWhere.name = { [Op.like]: `%${searchQuery}%` };
     }
@@ -9276,7 +9283,7 @@ const getAllStaffAttendance = async (req, res) => {
         {
           model: User,
           where: userWhere,
-          attributes: ["id", "name", "role"],
+          attributes: ["id", "name", "role","dp"],
           required: true,
         },
       ],
@@ -9333,6 +9340,7 @@ const getStaffAttendanceByDate = async (req, res) => {
     const whereClause = {
       role: { [Op.in]: ["teacher", "staff"] },
       school_id,
+      trash: false,
     };
     if (role) {
       whereClause.role = role;
@@ -10341,14 +10349,15 @@ const getDriverLocation = async (req, res) => {
 };
 
 const getExams = async (req, res) => {
-  try {
-    const school_id = req.user.school_id || "";
-     const searchQuery = req.query.q || "";
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10; 
-    const offset = page && limit ? (page - 1) * limit : 0;
-    let whereClause = {
-      school_id,
+    try {
+      const school_id = req.user.school_id || "";
+      const searchQuery = req.query.q || "";
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10; 
+      const offset = page && limit ? (page - 1) * limit : 0;
+      let whereClause = {
+        school_id,
+        trash: false,
     };
     if (searchQuery) {
       whereClause[Op.or] = [{ exam_name: { [Op.like]: `%${searchQuery}%` } }];
@@ -10381,6 +10390,48 @@ const getExams = async (req, res) => {
     });
   }
 };
+const getTrashedExams = async (req, res) => {
+     try {
+      const school_id = req.user.school_id || "";
+      const searchQuery = req.query.q || "";
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10; 
+      const offset = page && limit ? (page - 1) * limit : 0;
+      let whereClause = {
+        school_id,
+        trash: true,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [{ exam_name: { [Op.like]: `%${searchQuery}%` } }];
+    }
+    const { count, rows: exams } = await Exam.findAndCountAll({
+      offset,
+      limit,
+      distinct: true,
+      where: whereClause,
+      order: [
+        ["publish", "ASC"],
+        ["education_year", "DESC"],
+        ["id", "DESC"],
+      ],
+    });
+   
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data: exams,
+    });
+  } catch (e) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch exams",
+      error: e.message,
+    });
+  }
+}
 
 const getExamMarksByExamId = async (req, res) => {
   try {
@@ -10624,6 +10675,40 @@ const restoreExam = async (req, res) => {
     });
   }
 };
+const permanentDeleteExam = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+
+    const exam = await Exam.findOne({ where: { id, school_id, trash: true } });
+
+    if (!exam) {
+      return res.status(404).json({ error: "Exam not found in trash" });
+    }
+    const internalMarks = await InternalMark.findAll({
+      where: { exam_id: id, trash: false },
+    });    
+    if (internalMarks.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot permanently delete exam with associated internal marks",
+      });
+    }
+    await exam.destroy();
+
+    return res.status(200).json({
+      success: true,
+      message: "Exam permanently deleted",
+    });
+  } catch (error) {
+    logger.error("school_id:", school_id, "Error permanently deleting exam:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to permanently delete exam",
+      error: error.message,
+    });
+  }
+}
 
 const updateExamPublishStatus = async (req, res) => {
   try {
@@ -10892,5 +10977,7 @@ module.exports = {
   createExam,
   editExam,
   deleteExam,
+  getTrashedExams,
+  permanentDeleteExam,
   restoreExam,
 };

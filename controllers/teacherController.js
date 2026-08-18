@@ -4252,8 +4252,24 @@ const markSelfAttendance = async (req, res) => {
   try {
     const staff_id = req.user.user_id;
     const school_id = req.user.school_id;
-    const { status, remarks, latitude, longitude,marked_device_id } = req.body;
+    const { remarks, latitude, longitude,marked_device_id } = req.body;
     const date = new Date().toISOString().split("T")[0];
+
+      const existing = await StaffAttendance.findOne({
+      where: { staff_id, school_id, date, trash: false },
+    });
+   
+    if (existing) {
+       if (existing.status === "Leave") {
+      return res
+        .status(400)
+        .json({ message: "You are on leave" });
+      
+    }
+      return res
+        .status(400)
+        .json({ message: "Attendance already marked for today" });
+    }
 
     if (!latitude || !longitude) {
       return res.status(400).json({
@@ -4282,21 +4298,11 @@ const markSelfAttendance = async (req, res) => {
       });
     }
 
-    const existing = await StaffAttendance.findOne({
-      where: { staff_id, school_id, date, trash: false },
-    });
-
-    if (existing) {
-      return res
-        .status(400)
-        .json({ message: "Attendance already marked for today" });
-    }
-
     const newAttendance = await StaffAttendance.create({
       school_id,
       staff_id,
       date,
-      status: status || "Present",
+      status:"Present",
       check_in_time: new Date(),
       marked_by: staff_id,
       marked_method: "Self",
@@ -4318,7 +4324,18 @@ const markSelfAttendance = async (req, res) => {
       "Error marking attendance:",
       error,
     );
-    console.error("Error marking attendance:", error);
+    logger.error("Error marking attendance show the veriable:", error.message);
+    console.error("Error marking attendance:",
+       staff_id,
+      date,
+      status,
+      "check_in_time:", new Date(),
+      "marked_by:" ,staff_id,
+      "marked_method:", marked_method,
+      remarks,
+      "latitude:", latitude,
+      "longitude:", longitude
+    );
     res.status(500).json({ error: "Failed to mark attendance" });
   }
 };
@@ -4409,9 +4426,8 @@ const todayAttendanceStatus = async (req, res) => {
     if (attendanceRecords) {
       if (attendanceRecords.check_out_time) {
         status = "Checked Out";
-      } else {
+      } else if (attendanceRecords.check_in_time) {
         status = "Checked In";
-        attendanceRecords.dataValues.can_check_out = true;
       }
     }
     res.status(200).json({
