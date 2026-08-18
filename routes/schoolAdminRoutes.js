@@ -498,8 +498,10 @@ router.post("/exams", schoolAdminController.createExam);
 router.put("/exams/:id", schoolAdminController.editExam);
 router.delete("/exams/:id", schoolAdminController.deleteExam);
 router.patch("/exams/:id/restore", schoolAdminController.restoreExam);
-
 router.get("/getExams", schoolAdminController.getExams);
+router.get("/getTrashedExams", schoolAdminController.getTrashedExams);
+router.delete("/permanentDeleteExam/:id", schoolAdminController.permanentDeleteExam);
+
 router.get(
   "/getExamMarksByExamId/:exam_id",
   schoolAdminController.getExamMarksByExamId,

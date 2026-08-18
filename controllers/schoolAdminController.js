@@ -4534,9 +4534,9 @@ const createPayment = async (req, res) => {
     }
     const existingPayment = await Payment.findOne({
       where: {
+        invoice_student_id,
         school_id,
         student_id,
-        amount,
         payment_date,
         payment_category,
       },
@@ -4546,7 +4546,10 @@ const createPayment = async (req, res) => {
         .status(400)
         .json({ error: "Payment with the same details already exists" });
     }
-
+    let transcation_status=payment_status;
+   if(payment_category === "donation" && !payment_status ){
+      transcation_status = "completed";
+    }
     const payment = await Payment.create({
       school_id,
       student_id,
@@ -4556,11 +4559,13 @@ const createPayment = async (req, res) => {
       payment_category,
       transaction_id,
       payment_method,
-      payment_status,
+      payment_status:transcation_status,
       recorded_by: userId,
       updated_by: userId,
     });
     let invoice_status = "";
+
+ 
     if (payment_status === "completed" && invoice_student_id) {
       const invoiceStudent = await InvoiceStudent.findOne({
         where: { id: invoice_student_id },
@@ -10341,14 +10346,15 @@ const getDriverLocation = async (req, res) => {
 };
 
 const getExams = async (req, res) => {
-  try {
-    const school_id = req.user.school_id || "";
-     const searchQuery = req.query.q || "";
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10; 
-    const offset = page && limit ? (page - 1) * limit : 0;
-    let whereClause = {
-      school_id,
+    try {
+      const school_id = req.user.school_id || "";
+      const searchQuery = req.query.q || "";
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10; 
+      const offset = page && limit ? (page - 1) * limit : 0;
+      let whereClause = {
+        school_id,
+        trash: false,
     };
     if (searchQuery) {
       whereClause[Op.or] = [{ exam_name: { [Op.like]: `%${searchQuery}%` } }];
@@ -10381,6 +10387,48 @@ const getExams = async (req, res) => {
     });
   }
 };
+const getTrashedExams = async (req, res) => {
+     try {
+      const school_id = req.user.school_id || "";
+      const searchQuery = req.query.q || "";
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10; 
+      const offset = page && limit ? (page - 1) * limit : 0;
+      let whereClause = {
+        school_id,
+        trash: true,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [{ exam_name: { [Op.like]: `%${searchQuery}%` } }];
+    }
+    const { count, rows: exams } = await Exam.findAndCountAll({
+      offset,
+      limit,
+      distinct: true,
+      where: whereClause,
+      order: [
+        ["publish", "ASC"],
+        ["education_year", "DESC"],
+        ["id", "DESC"],
+      ],
+    });
+   
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data: exams,
+    });
+  } catch (e) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch exams",
+      error: e.message,
+    });
+  }
+}
 
 const getExamMarksByExamId = async (req, res) => {
   try {
@@ -10624,6 +10672,40 @@ const restoreExam = async (req, res) => {
     });
   }
 };
+const permanentDeleteExam = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+
+    const exam = await Exam.findOne({ where: { id, school_id, trash: true } });
+
+    if (!exam) {
+      return res.status(404).json({ error: "Exam not found in trash" });
+    }
+    const internalMarks = await InternalMark.findAll({
+      where: { exam_id: id, trash: false },
+    });    
+    if (internalMarks.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot permanently delete exam with associated internal marks",
+      });
+    }
+    await exam.destroy();
+
+    return res.status(200).json({
+      success: true,
+      message: "Exam permanently deleted",
+    });
+  } catch (error) {
+    logger.error("school_id:", school_id, "Error permanently deleting exam:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to permanently delete exam",
+      error: error.message,
+    });
+  }
+}
 
 const updateExamPublishStatus = async (req, res) => {
   try {
@@ -10892,5 +10974,7 @@ module.exports = {
   createExam,
   editExam,
   deleteExam,
+  getTrashedExams,
+  permanentDeleteExam,
   restoreExam,
 };

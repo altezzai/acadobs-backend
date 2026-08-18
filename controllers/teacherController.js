@@ -4317,7 +4317,18 @@ const markSelfAttendance = async (req, res) => {
       "Error marking attendance:",
       error,
     );
-    console.error("Error marking attendance:", error);
+    logger.error("Error marking attendance show the veriable:", error.message);
+    console.error("Error marking attendance:",
+       staff_id,
+      date,
+      status,
+      "check_in_time:", new Date(),
+      "marked_by:" ,staff_id,
+      "marked_method:", marked_method,
+      remarks,
+      "latitude:", latitude,
+      "longitude:", longitude
+    );
     res.status(500).json({ error: "Failed to mark attendance" });
   }
 };
