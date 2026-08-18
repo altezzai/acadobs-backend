@@ -4260,7 +4260,7 @@ const markSelfAttendance = async (req, res) => {
     });
    
     if (existing) {
-       if (existing.status === "leave") {
+       if (existing.status === "Leave") {
       return res
         .status(400)
         .json({ message: "You are on leave" });
