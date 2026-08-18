@@ -9236,7 +9236,7 @@ const getAllStaffAttendance = async (req, res) => {
     const staff_id = req.query.staff_id;
     const start_date = req.query.start_date;
     const end_date = req.query.end_date;
-    const role = req.query.role;
+    const role = req.query.role || "";
     const download = req.query.download || "";
     const searchQuery = req.query.q || "";
     let { page = 1, limit = 10 } = req.query;
@@ -9256,7 +9256,7 @@ const getAllStaffAttendance = async (req, res) => {
       whereClause.date = { [Op.between]: [start_date, end_date] };
     }
 
-    let userWhere = {};
+    let userWhere = {trash: false, school_id};
     if (searchQuery) {
       userWhere.name = { [Op.like]: `%${searchQuery}%` };
     }
@@ -9281,7 +9281,7 @@ const getAllStaffAttendance = async (req, res) => {
         {
           model: User,
           where: userWhere,
-          attributes: ["id", "name", "role"],
+          attributes: ["id", "name", "role","dp"],
           required: true,
         },
       ],
@@ -9338,6 +9338,7 @@ const getStaffAttendanceByDate = async (req, res) => {
     const whereClause = {
       role: { [Op.in]: ["teacher", "staff"] },
       school_id,
+      trash: false,
     };
     if (role) {
       whereClause.role = role;
