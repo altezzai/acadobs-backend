@@ -3953,7 +3953,8 @@ const getAllAchievements = async (req, res) => {
       distinct: true,
       limit,
       where: whereClause,
-      attributes: ["id", "title", "description", "category", "level", "date"],
+      attributes: ["id", "title", "description", "category", "level", "date","createdAt"],
+      order: [["createdAt", "DESC"]],
       include: [
         {
           model: Student,
@@ -3972,7 +3973,6 @@ const getAllAchievements = async (req, res) => {
           ],
         },
       ],
-      order: [["createdAt", "DESC"]],
     });
 
     const totalPages = Math.ceil(count / limit);
