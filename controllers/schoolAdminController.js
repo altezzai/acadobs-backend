@@ -9159,12 +9159,12 @@ const createStaffAttendance = async (req, res) => {
       date,
       status,
       check_in_time:
-        check_in_time || check_in_time || status === "present"
+        check_in_time || status === "Present"
           ? new Date().toISOString()
           : null,
       check_out_time: check_out_time || null,
       total_hours,
-      marked_by: req.user.user_id,
+      marked_by: staff_id,
       marked_method: "Manual",
       remarks,
     });
