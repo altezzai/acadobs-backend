@@ -6037,7 +6037,7 @@ const staffLeaveRequestPermission = async (req, res) => {
     await leaveRequest.save();
 
     // If approved, add attendance entries for the leave period
-    if (status === "approved") {
+    if (status === "approved" && leaveRequest.leave_duration === "full") {
       const fromDate = moment(leaveRequest.from_date);
       const toDate = moment(leaveRequest.to_date);
 
