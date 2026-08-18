@@ -49,7 +49,7 @@ module.exports = {
         allowNull: true,
       },
       marked_method: {
-        type: Sequelize.ENUM("Manual", "Self", "Biometric"),
+        type: Sequelize.ENUM("Manual", "Self", "Biometric","Leaverequest"),
         defaultValue: "Manual",
       },
       remarks: {

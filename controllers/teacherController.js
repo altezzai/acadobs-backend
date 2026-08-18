@@ -4258,7 +4258,14 @@ const markSelfAttendance = async (req, res) => {
       const existing = await StaffAttendance.findOne({
       where: { staff_id, school_id, date, trash: false },
     });
+   
     if (existing) {
+       if (existing.status === "Leaverequest") {
+      return res
+        .status(400)
+        .json({ message: "You are on leave" });
+      
+    }
       return res
         .status(400)
         .json({ message: "Attendance already marked for today" });

@@ -6053,11 +6053,13 @@ const staffLeaveRequestPermission = async (req, res) => {
           school_id,
           staff_id,
           date: date.format("YYYY-MM-DD"),
-          status: "On Leave",
+          status: "Leave",
           check_in_time: null,
           check_out_time: null,
           created_at: new Date(),
           updated_at: new Date(),
+          marked_method: "Leaverequest",
+          marked_by: user_id,
         });
       }
 

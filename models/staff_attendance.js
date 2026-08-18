@@ -29,7 +29,7 @@ const StaffAttendance = schoolSequelize.define(
     total_hours: DataTypes.DECIMAL(5, 2),
     marked_by: DataTypes.INTEGER,
     marked_method: {
-      type: DataTypes.ENUM("Manual", "Self", "Biometric"),
+      type: DataTypes.ENUM("Manual", "Self", "Biometric","Leaverequest"),
       defaultValue: "Manual",
     },
     remarks: DataTypes.TEXT,
