@@ -1387,7 +1387,7 @@ const getMyPrfileAndSchoolDetails = async (req, res) => {
     const school_id = req.user.school_id;
     const user = await User.findOne({
       where: { id: userId },
-      attributes: ["id", "name", "email", "phone", "dp"],
+      attributes: ["id", "name", "email", "phone", "dp", "role"],
     });
     if (!user) {
       return res.status(404).json({ error: "User not found" });
