@@ -648,6 +648,7 @@ router.get(
   "/getStudentsByClassId/:class_id",
   commonController.getStudentsByClassId,
 );
+router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);
 
 //teacher controller
 router.get("/getMyPermissions", teacherController.getMyPermissions);

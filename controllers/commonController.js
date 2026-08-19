@@ -1368,6 +1368,41 @@ const getAllDriverUsers = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch driver users" });
   }
 }
+//
+const getLeaveTypes = async (req, res) => {
+  try {
+    const leaveTypes = [
+      "sick", "casual", "emergency", "vacation", "onduty","c-off","other"
+    ]
+    res.status(200).json(leaveTypes);
+  } catch (error) {
+    logger.error("Error fetching leave types:", error);
+    console.error("Error fetching leave types:", error);
+    res.status(500).json({ error: "Failed to fetch leave types" });
+  }
+}
+const getMyPrfileAndSchoolDetails = async (req, res) => {
+  try{
+    const userId = req.user.user_id;
+    const school_id = req.user.school_id;
+    const user = await User.findOne({
+      where: { id: userId },
+      attributes: ["id", "name", "email", "phone", "dp"],
+    });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    const school = await School.findOne({
+      where: { id: school_id },
+      attributes: ["id", "name","logo","bg_image","primary_colour", "secondary_colour"],
+    })
+    res.status(200).json({ user, school });
+  }catch(error){
+    logger.error("userId:", req.user.user_id, "Error fetching profile details:", error);
+    console.error("Error fetching profile details:", error);
+    res.status(500).json({ error: "Failed to fetch profile details" });
+  }
+}
 module.exports = {
   getStudentsByClassId,
   getSpecialClassStudentsByClassId,
@@ -1410,4 +1445,7 @@ module.exports = {
   accountDeleteRequests,
 
   getAllDriverUsers,
+
+  getLeaveTypes,
+  getMyPrfileAndSchoolDetails,
 };

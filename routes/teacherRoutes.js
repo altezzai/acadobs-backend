@@ -15,6 +15,7 @@ const staffAllowedRoutes = [
   "/duties",
   "/updateAssignedDuty",
   "/leaveRequest",
+  "/getLeaveTypes",
   "/getLatestNotices",
   "/getLatestEvents",
   "/getLatestNews",
@@ -27,6 +28,7 @@ const staffAllowedRoutes = [
   "/updateProfileDetails",
   "/changePassword",
   "/updateDp",
+  "/getMyPrfileAndSchoolDetails"
 ];
 
 router.use(verifyTeacherOrStaff);
@@ -209,6 +211,8 @@ router.put(
 );
 router.delete("/leaveRequest/:id", teacherController.deleteLeaveRequest);
 router.patch("/leaveRequest/:id", teacherController.restoreLeaveRequest);
+router.get("/getLeaveTypes", commonController.getLeaveTypes);
+
 //student leave request for class teacher
 router.get(
   "/getStudentLeaveRequestsForClassTeacher",
@@ -345,4 +349,5 @@ router.get(
   "/getAchievementById/:id",
   commonController.getAchievementById,
 );
+router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);
 module.exports = router;

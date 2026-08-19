@@ -679,5 +679,8 @@ router.get(
   commonController.getStudentsByClassId,
 );
 router.get("/getAllDriverUsers", commonController.getAllDriverUsers);
+router.get("/getLeaveTypes", commonController.getLeaveTypes);
+router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);
+
 
 module.exports = router;
