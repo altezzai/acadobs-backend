@@ -6,6 +6,7 @@ const Stop = require("../../models/tracker/stop");
 const Student  = require("../../models/student");
 const StudentRouteAssignment = require("../../models/student_route_assignment");
 const  RouteStopLog  = require("../../models/tracker/route_stop_log");
+const Guardian = require("../../models/guardian");
 const { Sequelize } = require("sequelize");
 const { Op } = require("sequelize");
 const { deleteFile } = require("../../middlewares/storageUploads");

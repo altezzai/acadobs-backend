@@ -5411,7 +5411,7 @@ const getSpecialClassStudents = async (req, res) => {
     if (searchQuery) {
       studentWhere.full_name = { [Op.like]: `%${searchQuery}%` };
     }
-    const whereClause = [];
+    let whereClause = {};
     if (class_id) {
       whereClause.class_id = class_id;
     }
