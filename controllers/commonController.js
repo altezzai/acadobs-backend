@@ -11,6 +11,7 @@ const Attendance = require("../models/attendance");
 const Achievement = require("../models/achievement");
 const StudentAchievement = require("../models/studentachievement");
 const InternalMark = require("../models/internal_marks");
+const Exams = require("../models/exams");
 const Subject = require("../models/subject");
 const Marks = require("../models/marks");
 const LeaveRequest = require("../models/leaverequest");
@@ -891,9 +892,21 @@ const getTermExamByStudentId = async (req, res) => {
               model: Subject,
               attributes: ["id", "subject_name"],
             },
+            {
+              model: Exams,
+              required:true,
+              attributes: ["id", "exam_name"],
+              where: { trash: false, publish: true },
+            },
+            {
+              model: User,
+              attributes: ["id", "name"],
+            },
           ],
-        },
+        }, 
       ],
+       order: [["createdAt", "DESC"]],
+
     });
 
     const totalPages = Math.ceil(count / limit);

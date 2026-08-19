@@ -17,6 +17,14 @@ const Mark = schoolSequelize.define(
       type: DataTypes.ENUM("absent", "present"),
       defaultValue: "absent",
     },
+    createdAt: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+    },
   },
   {
     tableName: "marks",
