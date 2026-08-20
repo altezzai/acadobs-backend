@@ -4,7 +4,7 @@ const Vehicle = require("../models/tracker/vehicle");
 const Routes  = require("../models/tracker/routes");
 const Stop = require("../models/tracker/stop");
 const Student  = require("../models/student");
-const StudentRouteAssignment = require("../models/student_route_assignment");
+const StudentRouteAssignment = require("../models/tracker/student_route_assignment");
 const  RouteStopLog  = require("../models/tracker/route_stop_log");
 const Guardian = require("../models/guardian");
 const LiveLocation = require("../models/tracker/livelocation");
@@ -1182,7 +1182,7 @@ const getRouteById = async (req, res) => {
     }
     const studentroute = await Routes.findOne({
       where: { id: id, school_id: school_id, trash: false },
-      attributes: ["id", "route_name", "vehicle_id", "type"],
+      attributes: ["id", "route_name", "vehicle_id", "type","driver_id","active"],
       include: [
         {
           model: User,
@@ -1199,11 +1199,17 @@ const getRouteById = async (req, res) => {
             "full_name",
             "address",
           ],
-          through: {
-            model: StudentRouteAssignment,
-            attributes: [],
-            where: { trash: false },
-          },
+          include: [
+            {
+              model: User,
+              attributes: ["name", "phone"],
+            },
+          ],
+          // through: {
+          //   model: StudentRouteAssignment,
+          //   attributes: [],
+          //   where: { trash: false },
+          // },
         },
         {
           model: Stop,
@@ -1215,14 +1221,13 @@ const getRouteById = async (req, res) => {
     if (!studentroute) {
       return res.status(404).json({ message: "No route found" });
     }
-
     const result = {
       id: studentroute.id,
       route_name: studentroute.route_name,
       vehicle_id: studentroute.vehicle_id,
       type: studentroute.type,
 
-      driver: studentroute.drivers?.[0]?.name || null,
+      driver: studentroute.driver.name,
       stops: studentroute.stops?.map(stop => ({
         id: stop.id,
         stop_name: stop.stop_name,
