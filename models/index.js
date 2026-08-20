@@ -223,8 +223,8 @@ Routes.belongsToMany(User, {
 //   as: "routes",
 // });
 
-Driver.belongsTo(User,{ foreignKey: "user_id" });
-User.belongsTo(Driver, { foreignKey: "user_id" });
+Driver.belongsTo(User, { foreignKey: "user_id", as: "user" });
+User.hasMany(Driver, { foreignKey: "user_id", as: "drivers" });
 // Route ↔ Stop association (BOTH SIDES REQUIRED)
 Routes.hasMany(stop, { foreignKey: "route_id", as: "stops" }); //
 stop.belongsTo(Routes, { foreignKey: "route_id", as: "route" });
