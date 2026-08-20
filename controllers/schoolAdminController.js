@@ -9698,6 +9698,7 @@ const getAllVehicles = async (req, res) => {
       include: [
         {
           model: User,
+          as: "driver",
           attributes: ["id", "name", "phone"],
         },
       ],
@@ -9724,6 +9725,7 @@ const getVehicleById = async (req, res) => {
       include: [
         {
           model: User,
+          as: "driver",
           attributes: ["id", "name", "phone"],
         },
       ],
@@ -9928,6 +9930,7 @@ const getAllRoutes = async (req, res) => {
       include: [
         {
           model: User,
+          as: "drivers",
           attributes: ["id", "name"],
           through: { attributes: [] },
         },
