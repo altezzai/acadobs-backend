@@ -49,6 +49,7 @@ const Stop = require("../models/tracker/stop");
 const Driver  = require("../models/tracker/driver");
 const Vehicle  = require("../models/tracker/vehicle");
 const Routes = require("../models/tracker/routes");
+const LiveLocation = require("../models/tracker/livelocation");
 const { error } = require("winston");
 const { Console } = require("winston/lib/winston/transports");
 const { deleteFile } = require("../middlewares/storageUploads");
@@ -9624,12 +9625,13 @@ const createDriver = async (req, res) => {
 const getAllDrivers = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const drivers = await Driver.findAll({
+    const drivers = await User.findAll({
       where: {
         trash: false,
         school_id,
+        role: "driver",
       },
-      attributes: ["id", "name", "phone", "email", "photo", "address","user_id"],
+      attributes: ["id", "name", "phone", "email","dp"],
       order: [["createdAt", "DESC"]],
     });
 
@@ -9656,8 +9658,8 @@ const createVehicle = async (req, res) => {
     }
 
     if (driver_id) {
-      const driver = await Driver.findOne({
-        where: { id: driver_id, trash: false, school_id: school_id },
+      const driver = await User.findOne({
+        where: { id: driver_id, trash: false, school_id, role: "driver" },
       });
 
       if (!driver) {
@@ -9695,8 +9697,7 @@ const getAllVehicles = async (req, res) => {
       where: { trash: false, school_id: school_id },
       include: [
         {
-          model: Driver,
-          as: "driver",
+          model: User,
           attributes: ["id", "name", "phone"],
         },
       ],
@@ -9722,8 +9723,7 @@ const getVehicleById = async (req, res) => {
       where: { id, trash: false, school_id: school_id },
       include: [
         {
-          model: Driver,
-          as: "driver",
+          model: User,
           attributes: ["id", "name", "phone"],
         },
       ],
@@ -9751,8 +9751,8 @@ const updateVehicle = async (req, res) => {
     const { type, model, vehicle_number, driver_id } = req.body;
 
     if (driver_id) {
-      const driver = await Driver.findOne({
-        where: { id: driver_id, trash: false, school_id: school_id },
+      const driver = await User.findOne({
+        where: { id: driver_id, trash: false, school_id: school_id, role: "driver" },
       });
 
       if (!driver) {
@@ -9854,8 +9854,8 @@ const createRoute = async (req, res) => {
     }
 
     if (driver_id) {
-      const driver = await Driver.findOne({
-        where: { id: driver_id, trash: false, school_id: school_id },
+      const driver = await User.findOne({
+        where: { id: driver_id, trash: false, school_id: school_id ,role:"driver"},
       });
       if (!driver) {
         return res.status(404).json({ message: "Driver not found" });
@@ -9927,8 +9927,7 @@ const getAllRoutes = async (req, res) => {
       },
       include: [
         {
-          model: Driver,
-          as: "drivers",
+          model: User,
           attributes: ["id", "name"],
           through: { attributes: [] },
         },
@@ -10160,8 +10159,8 @@ const assignDriverToRoutes = async (req, res) => {
       });
     }
 
-    const driver = await Driver.findOne({
-      where: { id: driverId, trash: false, school_id: school_id },
+    const driver = await User.findOne({
+      where: { id: driverId, trash: false, school_id: school_id , role: "driver" },
     });
 
     if (!driver) {
@@ -10200,8 +10199,9 @@ const assignDriverToRoutes = async (req, res) => {
 const getDriversAssignedToRoutes = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const drivers = await Driver.findAll({
-      where: { trash: false, school_id: school_id },
+    const drivers = await User.findAll({
+      where: { trash: false, school_id: school_id , role: "driver" },
+      attributes: ["id", "name", "phone", "email", "dp"],
       include: [
         {
           model: Routes,
@@ -10263,11 +10263,12 @@ const getDriverLocation = async (req, res) => {
   try {
     const { driver_id } = req.params;
     const school_id = req.user.school_id;
-    const driver = await Driver.findOne({
+    const driver = await User.findOne({
       where: {
         id: driver_id,
         trash: false,
         school_id: school_id,
+        role: "driver",
       },
       include: [
         {

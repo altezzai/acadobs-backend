@@ -1,9 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const schoolAdminController = require("../controllers/schoolAdminController");
-const trackerController = require("../controllers/tracker/trackerController");
-const stopController = require("../controllers/tracker/stopController");
-const routeController = require("../controllers/tracker/routeController");
+const trackerController = require("../controllers/trackerController");
 const commonController = require("../controllers/commonController");
 const reportController = require("../controllers/reportController");
 const transferController = require("../controllers/transferController");
@@ -564,12 +562,12 @@ router.put(
 );
 router.delete("/deleteDriverById/:id", transportationPermission, trackerController.deleteDriverById);
 router.post("/stop", schoolAdminController.createStop);
-router.get("/getStopById/:id", transportationPermission, stopController.getStopById);
-router.delete("/deleteStop/:id", transportationPermission, stopController.deleteStop);
+router.get("/getStopById/:id", transportationPermission, trackerController.getStopById);
+router.delete("/deleteStop/:id", transportationPermission, trackerController.deleteStop);
 router.post("/route", upload.none(), schoolAdminController.createRoute);
-router.get("/getRouteById/:id", transportationPermission, routeController.getRouteById);
-router.put("/updateRouteById/:id", transportationPermission, routeController.updateRouteById);
-router.delete("/deleteRoute/:id", transportationPermission, routeController.deleteRoute);
+router.get("/getRouteById/:id", transportationPermission, trackerController.getRouteById);
+router.put("/updateRouteById/:id", transportationPermission, trackerController.updateRouteById);
+router.delete("/deleteRoute/:id", transportationPermission, trackerController.deleteRoute);
 router.get(
   "/getDriverAssignedRoutes/:driverId",
   transportationPermission,
