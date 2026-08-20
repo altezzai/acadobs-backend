@@ -9830,7 +9830,6 @@ const createRoute = async (req, res) => {
       route_no,
       vehicle_id,
       driver_id,
-      type,
       isLock,
       hasDropRoute,
     } = req.body;
@@ -9864,13 +9863,22 @@ const createRoute = async (req, res) => {
       }
     }
 
+
     const pickupRouteName = route_no
       ? `${start}-${stop}-${route_no}`
       : `${start}-${stop}`;
     const dropRouteName = route_no
       ? `${stop}-${start}-${route_no}`
       : `${stop}-${start}`;
-
+    const existingRoute = await Routes.findOne({
+      where: {
+        school_id: school_id,
+        route_name:pickupRouteName,
+      },
+    })
+    if (existingRoute) {
+      return res.status(400).json({ message: "Route already exists" });
+    }
     const pickup_route = await Routes.create({
       school_id: school_id,
       route_name: pickupRouteName,
