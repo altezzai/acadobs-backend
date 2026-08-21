@@ -4,10 +4,11 @@ const Vehicle = require("../models/tracker/vehicle");
 const Routes  = require("../models/tracker/routes");
 const Stop = require("../models/tracker/stop");
 const Student  = require("../models/student");
-const  RouteStopLog  = require("../models/tracker/route_stop_log");
+const RouteStopLog  = require("../models/tracker/route_stop_log");
 const Guardian = require("../models/guardian");
 const LiveLocation = require("../models/tracker/livelocation");
 const User = require("../models/user");
+const StudentsStopStatus = require("../models/tracker/students_stop_status");
 const { Sequelize } = require("sequelize");
 const { Op } = require("sequelize");
 const { deleteFile } = require("../middlewares/storageUploads");
@@ -341,7 +342,7 @@ const createStopForDriver = async (req, res) => {
   }
 };
 
-const getStopsForDriver = async (req, res) => {
+const getStopsForDriverByRouteId = async (req, res) => {
   try {
     const { route_id } = req.params;
     const user_id = req.user.user_id;
@@ -374,38 +375,11 @@ const getStopsForDriver = async (req, res) => {
         message: "You are not assigned to this route",
       });
     }
-
-    const logs = await RouteStopLog.findAll({
-      where: {
-        route_id,
-        driver_id: driver.id,
-      },
-    });
-
-    const stopLogMap = {};
-
-    logs.forEach((log) => {
-      if (!stopLogMap[log.stop_id]) {
-        stopLogMap[log.stop_id] = {
-          arrived: log.arrived,
-          arrived_at: log.arrived_at,
-          students: [],
-        };
-      }
-
-      stopLogMap[log.stop_id].students.push(log.student_id);
-    });
-
     const stops = await Stop.findAll({
       where: { route_id, trash: false },
       order: [["priority", "ASC"]],
       attributes: ["id", "stop_name", "priority", "longitude", "latitude"],
       include: [
-        {
-          model: Routes,
-          as: "route",
-          attributes: ["route_name", "type", "isLock"],
-        },
         {
           model: Student,
           as: "students",
@@ -413,53 +387,20 @@ const getStopsForDriver = async (req, res) => {
             "id",
             "full_name",
             "reg_no",
-            "student_status",
           ],
           include: [
             {
-              model: Guardian,
-              as: "guardian",
-              attributes: ["guardian_name", "guardian_contact"],
+              model: User,
+              attributes: ["name", "phone"],
             },
           ],
         },
       ],
     });
-
-    const result = stops.map((s) => {
-      const logData = stopLogMap[s.id] || {};
-
-      return {
-        id: s.id,
-        stop_name: s.stop_name,
-        priority: s.priority,
-        longitude: s.longitude,
-        latitude: s.latitude,
-
-        route_name: s.route?.route_name || null,
-        route_type: s.route?.type || null,
-        isLock: s.route?.isLock || null,
-
-        arrived: logData.arrived || false,
-        arrived_time: logData.arrived_at || null,
-
-        students: s.students.map((student) => ({
-          id: student.id,
-          full_name: student.full_name,
-          reg_no: student.reg_no,
-          student_status: student.student_status,
-          is_completed:
-            logData.students?.includes(student.id) || false,
-
-          guardian_name: student.guardian?.guardian_name || null,
-          guardian_contact: student.guardian?.guardian_contact || null,
-        })),
-      };
-    });
-
     return res.status(200).json({
       message: "Stops fetched successfully",
-      data: result,
+      route,
+      data: stops,
     });
 
   } catch (error) {
@@ -855,119 +796,6 @@ const updateRouteActive = async (req, res) => {
     });
   }
 };
-
-
-//Update current stop and Mark which students got down at that stop
-const updateStopandStudent = async (req, res) => {
-  try {
-    const { stop_id, student_ids } = req.body;
-    const user_id = req.user.user_id;
-    const school_id = req.user.school_id;
-
-    if (!stop_id || !Array.isArray(student_ids) || student_ids.length === 0) {
-      return res.status(400).json({
-        message: "Stop id and student_ids array are required",
-      });
-    }
-
-    const driver = await User.findOne({
-      where: { id:user_id, trash: false , role: "driver", school_id },
-    });
-
-    if (!driver) {
-      return res.status(403).json({
-        message: "Driver profile not found",
-      });
-    }
-    const activeRoute = await Routes.findOne({
-      where: {
-        activated_by_driver_id: driver.id,
-        active: true,
-        trash: false,
-      },
-    });
-
-    if (!activeRoute) {
-      return res.status(400).json({
-        message: "No active route found",
-      });
-    }
-
-    const stop = await Stop.findOne({
-      where: {
-        id: stop_id,
-        route_id: activeRoute.id,
-        trash: false,
-      },
-    });
-
-    if (!stop) {
-      return res.status(404).json({
-        message: "Stop not found in this route",
-      });
-    }
-
-    // stop.arrived = true;
-    // stop.arrived_time = new Date();
-    // await stop.save();
-
-    const logs = student_ids.map((student_id) => ({
-      route_id: activeRoute.id,
-      stop_id: stop.id,
-      driver_id: driver.id,
-      student_id,
-      arrived: true,
-      arrived_at: new Date(),
-    }));
-    await RouteStopLog.bulkCreate(logs);////
-    let finalStatus;
-
-    if (activeRoute.type === "DROP") {
-      finalStatus = "DROPPED";
-    } else if (activeRoute.type === "PICKUP") {
-      finalStatus = "PICKED";
-    } else {
-      return res.status(400).json({
-        message: `Invalid route type: ${activeRoute.type}`,
-      });
-    }
-
-    await Student.update(
-      { student_status: finalStatus },
-      {
-        where: {
-          id: student_ids,
-        },
-      }
-    );
-    const students = await Student.findAll({
-      where: { id: student_ids },
-      attributes: ["id", "full_name", "reg_no", "student_status"],
-    });
-
-    const result = students.map((r) => ({
-      id: r.id,
-      full_name: r.full_name,
-      reg_no: r.reg_no,
-      student_status: r.student_status,
-      arrived_time: stop.arrived_time || null,
-    }));
-
-    return res.status(200).json({
-      message: `${finalStatus} updated successfully`,
-      route_type: activeRoute.type,
-      data: result,
-    });
-
-  } catch (error) {
-    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error in updating stop and student:", error);
-    console.log("Failed to update stop and student:", error);
-    return res.status(500).json({
-      error: "Internal server error",
-    });
-  }
-};
-
 //driver sets route as inactive 
 const routeInactive = async (req, res) => {
   try {
@@ -1092,6 +920,156 @@ const bulkStopCreation = async (req, res) => {
     res.status(500).json({ error: "Failed to create stop" });
   }
 };
+const updateStopandStudent = async (req, res) => {try {
+  
+  const user_id = req.user.user_id;
+  const school_id = req.user.school_id;
+  const {
+    stop_id,
+    latitude,
+    longitude,
+    student_ids,
+  } = req.body;
+
+  if (
+    !stop_id || !latitude || !longitude ||
+    !Array.isArray(student_ids) ||
+    student_ids.length === 0
+  ) {
+    return res.status(400).json({
+      message: "stop_id, latitude, longitude and student_ids array are required",
+    });
+  }
+
+  const driver = await User.findOne({
+    where: {
+      id: user_id,
+      trash: false,
+      role: "driver",
+      school_id,
+    },
+  });
+
+  if (!driver) {
+    return res.status(403).json({
+      message: "Driver profile not found",
+    });
+  }
+
+  const stop = await Stop.findOne({
+    where: {
+      id: stop_id,
+      trash: false,
+    },
+  });
+
+  if (!stop) {
+    return res.status(404).json({
+      message: "Stop not found",
+    });
+  }
+
+  const activeRoute = await Routes.findOne({
+    where: {
+      id: stop.route_id,
+      activated_by_driver_id: user_id,
+      active: true,
+      trash: false,
+    },
+  });
+
+  if (!activeRoute) {
+    return res.status(400).json({
+      message: "No active route found",
+    });
+  }
+
+  let successStatus;
+  let failedStatus;
+
+  if (activeRoute.type === "DROP") {
+    successStatus = "dropped";
+    failedStatus = "not_dropped";
+  } else if (activeRoute.type === "PICKUP") {
+    successStatus = "picked";
+    failedStatus = "not_picked";
+  } else {
+    return res.status(400).json({
+      message: `Invalid route type: ${activeRoute.type}`,
+    });
+  }
+
+  const stopStudents = await Student.findAll({
+    where: {
+      stop_id: stop_id,
+      trash: false,
+      alumni: false,
+    },
+    attributes: ["id"],
+  });
+
+  if (!stopStudents.length) {
+    return res.status(404).json({
+      message: "No students found for this stop",
+    });
+  }
+  const selectedStudentIds = new Set(
+    student_ids.map((id) => String(id))
+  );
+  const liveLocation = await LiveLocation.create({
+    user_id,
+    latitude,
+    longitude,
+    route_id: activeRoute.id,
+    stop_id,
+  });
+
+  const studentStatuses = stopStudents.map((student) => {
+    const isSelected = selectedStudentIds.has(
+      String(student.id)
+    );
+
+    return {
+      livelocation_id: liveLocation.id,
+      student_id: student.id,
+      status: isSelected
+        ? successStatus
+        : failedStatus,
+    };
+  });
+
+  await StudentsStopStatus.bulkCreate(studentStatuses);
+
+  return res.status(200).json({
+    message: `${stop.stop_name} updated successfully`,
+    route_type: activeRoute.type,
+    data: {
+      liveLocation,
+      students: studentStatuses,
+    },
+  });
+
+} catch (error) {
+  logger.error(
+    "role:",
+    req.user.role,
+    "userId:",
+    req.user.user_id,
+    "Error in updating stop and student:",
+    error
+  );
+
+  console.log(
+    "Failed to update stop and student:",
+    error
+  );
+
+  return res.status(500).json({
+    error: "Internal server error",
+  });
+}
+};
+
 const updateLiveLocation = async (req, res) => {
   try {
     const user_id = req.user.user_id;
@@ -1113,21 +1091,55 @@ const updateLiveLocation = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "Driver not found" });
     }
+    const route = await Routes.findOne({
+      where: {
+        id: route_id,
+        trash: false,
+        driver_id: user_id,
+        active: true,
+      },
+    });
+    if (!route) {
+      return res.status(404).json({
+        message: "Route not found",
+      });
+    }
+    const latestLocation = await LiveLocation.findOne({
+      where: {
+        route_id,
+      },
+      order: [["createdAt", "DESC"]],
+    });
+    if (latestLocation) {
+      const now = Date.now();
+      const createdAt = new Date(latestLocation.createdAt).getTime();
+
+      const differenceInSeconds = (now - createdAt) / 1000;
+
+      if (differenceInSeconds < 20) {
+        const remainingSeconds = Math.ceil(20 - differenceInSeconds);
+
+        return res.status(429).json({
+          success: false,
+          message: `Live location can be updated only once every 20 seconds`,
+          remainingSeconds,
+        });
+      }
+    }
     await LiveLocation.create(
       {
         user_id,
         latitude,
         longitude,
         route_id,
-        stop_id,
       },
     );
     return res.status(200).json({
       message: "Live location updated successfully",
+      success: true,
       latitude,
       longitude,
       route_id,
-      stop_id,
      });
   } catch (error) {
     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error in updating live location:", error);
@@ -1529,7 +1541,7 @@ module.exports = {
   assignStudentsToStop,
 
   getMyStudents,
-  getStopsForDriver,
+  getStopsForDriverByRouteId,
   getStopDetailsForDriver,
   updateRouteActive,
   updateStopandStudent,

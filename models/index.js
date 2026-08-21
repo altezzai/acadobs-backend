@@ -47,6 +47,7 @@ const SpecialClassStudent = require("./special_class_students");
 const Event = require("./event");
 const ParentNote = require("./parent_note");
 const ParentNoteStudent = require("./parent_note_student");
+const StudentsStopStatus = require("./tracker/students_stop_status");
 
 // Relations
 
