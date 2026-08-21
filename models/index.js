@@ -38,7 +38,6 @@ const Vehicle = require("./tracker/vehicle");
 // const route = require("./tracker/routes");
 const stop = require("./tracker/stop");
 const Routes = require("./tracker/routes");
-const StudentRouteAssignment = require("./tracker/student_route_assignment");
 const RouteDrivers = require("./tracker/route_drivers");
 const RouteStopLog = require("./tracker/route_stop_log");
 const LiveLocation = require("./tracker/livelocation");
@@ -250,12 +249,6 @@ Student.belongsTo(Routes, {
 
 // Route ↔ Student (Many-to-Many using junction table)
 Routes.hasMany(Student, { foreignKey: "route_id", as: "students" }); 
-Student.belongsToMany(Routes, {
-  through: StudentRouteAssignment,
-  foreignKey: "student_id",
-  otherKey: "route_id",
-  as: "routes",
-});
 Routes.belongsTo(Vehicle, {
   foreignKey: "vehicle_id",
   as: "vehicle",
@@ -385,7 +378,6 @@ module.exports = {
   Vehicle,
   stop,
   Routes,
-  StudentRouteAssignment,
   RouteDrivers,
   RouteStopLog,
   Session,

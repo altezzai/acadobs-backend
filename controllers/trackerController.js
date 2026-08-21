@@ -4,7 +4,6 @@ const Vehicle = require("../models/tracker/vehicle");
 const Routes  = require("../models/tracker/routes");
 const Stop = require("../models/tracker/stop");
 const Student  = require("../models/student");
-const StudentRouteAssignment = require("../models/tracker/student_route_assignment");
 const  RouteStopLog  = require("../models/tracker/route_stop_log");
 const Guardian = require("../models/guardian");
 const LiveLocation = require("../models/tracker/livelocation");
@@ -240,7 +239,7 @@ const DriverAssignedRoutes = async (req, res) => {
 
     for (const route of driver.routes) {
 
-      const totalStudents = await StudentRouteAssignment.count({
+      const totalStudents = await Student.count({
         where: {
           route_id: route.id,
           trash: false,
@@ -1205,11 +1204,6 @@ const getRouteById = async (req, res) => {
               attributes: ["name", "phone"],
             },
           ],
-          // through: {
-          //   model: StudentRouteAssignment,
-          //   attributes: [],
-          //   where: { trash: false },
-          // },
         },
         {
           model: Stop,

@@ -41,7 +41,6 @@ const HomeworkAssignment = require("../models/homeworkassignment");
 const StaffAttendance = require("../models/staff_attendance");
 const Syllabus = require("../models/syllabus");
 const { School } = require("../models");
-const StudentRouteAssignment = require("../models/tracker/student_route_assignment");
 const RouteStopLog = require("../models/tracker/route_stop_log");
 const StudentTransfer = require("../models/student_transfer");
 const RouteDrivers = require("../models/tracker/route_drivers");
@@ -3007,10 +3006,6 @@ const permanentDeleteStudent = async (req, res) => {
     });
 
     await Message.destroy({
-      where: { student_id: id },
-      transaction,
-    });
-    await StudentRouteAssignment.destroy({
       where: { student_id: id },
       transaction,
     });
@@ -10125,10 +10120,10 @@ const deleteStudentFromRoute = async (req, res) => {
         message: "Route not found",
       });
     }
-    const existingAssignments = await StudentRouteAssignment.findAll({
+    const existingAssignments = await Student.findAll({
       where: {
         route_id: route_id,
-        student_id: student_ids,
+        id: student_ids,
       },
     });
     if (existingAssignments.length === 0) {
@@ -10136,12 +10131,12 @@ const deleteStudentFromRoute = async (req, res) => {
         message: "Students not found in this route",
       });
     }
-    const [affectedRows] = await StudentRouteAssignment.update(
-      { trash: true },
+    const [affectedRows] = await Student.update(
+      { route_id: null },
       {
         where: {
           route_id: route_id,
-          student_id: student_ids,
+          id: student_ids,
         },
       },
     );
