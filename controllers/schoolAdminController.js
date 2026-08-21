@@ -41,13 +41,13 @@ const HomeworkAssignment = require("../models/homeworkassignment");
 const StaffAttendance = require("../models/staff_attendance");
 const Syllabus = require("../models/syllabus");
 const { School } = require("../models");
-const RouteStopLog = require("../models/tracker/route_stop_log");
 const StudentTransfer = require("../models/student_transfer");
 const RouteDrivers = require("../models/tracker/route_drivers");
 const Stop = require("../models/tracker/stop");
 const Driver  = require("../models/tracker/driver");
 const Vehicle  = require("../models/tracker/vehicle");
 const Routes = require("../models/tracker/routes");
+const StudentsStopStatus = require("../models/tracker/students_stop_status");
 const LiveLocation = require("../models/tracker/livelocation");
 const { error } = require("winston");
 const { Console } = require("winston/lib/winston/transports");
@@ -2990,7 +2990,10 @@ const permanentDeleteStudent = async (req, res) => {
       where: { student_id: id },
       transaction,
     });
-
+   await StudentsStopStatus.destroy({
+      where: { student_id: id },
+      transaction,
+   })
     const leaveRequests = await LeaveRequest.findAll({
       where: { student_id: id },
       transaction,
@@ -3006,10 +3009,6 @@ const permanentDeleteStudent = async (req, res) => {
     });
 
     await Message.destroy({
-      where: { student_id: id },
-      transaction,
-    });
-    await RouteStopLog.destroy({
       where: { student_id: id },
       transaction,
     });

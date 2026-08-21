@@ -1,14 +1,12 @@
 const { where } = require("sequelize");
 const Driver = require("../models/tracker/driver");
-const Vehicle = require("../models/tracker/vehicle");
 const Routes  = require("../models/tracker/routes");
 const Stop = require("../models/tracker/stop");
 const Student  = require("../models/student");
-const RouteStopLog  = require("../models/tracker/route_stop_log");
-const Guardian = require("../models/guardian");
 const LiveLocation = require("../models/tracker/livelocation");
 const User = require("../models/user");
 const StudentsStopStatus = require("../models/tracker/students_stop_status");
+const Class = require("../models/class");
 const { Sequelize } = require("sequelize");
 const { Op } = require("sequelize");
 const { deleteFile } = require("../middlewares/storageUploads");
@@ -682,9 +680,8 @@ const getStopDetailsForDriver = async (req, res) => {
           attributes: ["id", "full_name", "reg_no"],
           include: [
             {
-              model: Guardian,
-              as: "guardian",
-              attributes: ["guardian_name"],
+              model: User,
+              attributes: ["name"],
               required: false,
             }
           ]
@@ -715,7 +712,7 @@ const getStopDetailsForDriver = async (req, res) => {
         id: student.id,
         full_name: student.full_name,
         reg_no: student.reg_no,
-        guardian_name: student.guardian?.guardian_name || null,
+        guardian_name: student.User?.name || null,
       })),
     };
 
@@ -1182,6 +1179,69 @@ const getlatestLocationByRouteId = async (req, res) => {
     res.status(500).json({ error: "Failed to get live location" });
   }
 }
+const getTrackedDataWithDateByRouteId = async (req, res) => {
+  try {
+    const { route_id } = req.params;
+    const school_id = req.user.school_id;
+    const date = req.query.date || new Date().toISOString().split("T")[0];
+    const route = await Routes.findOne({
+      where: {
+        id: route_id,
+        school_id: school_id,
+        trash: false,
+      },
+      attributes: ["id", "route_name","type","active"],
+    })
+    if (!route) {
+      return res.status(404).json({ message: "Route not found" });
+    }
+ 
+    const trackedData = await LiveLocation.findAll({
+      where: {
+        route_id,
+        stop_id:{[Op.ne]: null},
+        createdAt: {
+          [Op.gte]: date + " 00:00:00",
+          [Op.lte]: date + " 23:59:59",
+        }
+      },
+      attributes: ["latitude", "longitude", "route_id", "stop_id"],
+      order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: Stop,
+          attributes: ["id", "stop_name","priority","latitude","longitude"],
+        }, 
+        {
+          model: StudentsStopStatus,
+          attributes: ["id", "student_id", "status"],
+          include: [
+            {
+              model: Student,
+              attributes: ["full_name", "id",],
+              include: [
+                {
+                  model: Class,
+                  attributes: ["id", "classname"],
+                },
+              ],
+            },
+          ]
+        },
+      ]}
+    );
+  
+    return res.status(200).json({
+      message: "Route fetched successfully",
+      route,
+      data: trackedData,
+    });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error in getting route details:", error);
+    console.error("Error getting route details:", error);
+    res.status(500).json({ error: "Failed to get route details" });
+  }
+}
 const getRouteById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1551,7 +1611,7 @@ module.exports = {
   
   updateLiveLocation,
   getlatestLocationByRouteId ,
-
+  getTrackedDataWithDateByRouteId,
   getRouteById,
   updateRouteById,
   deleteRoute,
