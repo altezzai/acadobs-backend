@@ -85,6 +85,16 @@ router.get(
   guardianController.getAllDayTimetableByStudentId,
 );
 
+// Exam Timetables
+router.get(
+  "/getexamtimetablebyStudnetId/:student_id",
+  guardianController.getexamtimetablebyStudnetId,
+);
+router.get(
+  "/examtimetableById/:id",
+  guardianController.examtimetableById,
+);
+
 router.get(
   "/getNavigationBarCounts",
   guardianController.getNavigationBarCounts,

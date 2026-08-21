@@ -479,6 +479,18 @@ router.put(
   examPermission,
   schoolAdminController.updateExamPublishStatus,
 );
+
+// Exam Timetables
+router.post("/examTimetables", examPermission, schoolAdminController.createExamTimetable);
+router.put("/examTimetables/:id", examPermission, schoolAdminController.updateExamTimetable);
+router.get("/examTimetables", examPermission, schoolAdminController.getAllExamTimetables);
+router.get("/examTimetables/:id", examPermission, schoolAdminController.getExamTimetableById);
+router.delete("/examTimetables/:id", examPermission, schoolAdminController.deleteExamTimetable);
+router.get("/getTrashedExamTimetables", examPermission, schoolAdminController.getTrashedExamTimetables);
+router.patch("/restoreExamTimetable/:id", examPermission, schoolAdminController.restoreExamTimetable);
+router.patch("/examTimetables/:id/restore", examPermission, schoolAdminController.restoreExamTimetable);
+router.delete("/permanentDeleteExamTimetable/:id", examPermission, schoolAdminController.permanentDeleteExamTimetable);
+
 //REPORTS
 
 router.get("/invoiceReport",reportPermission, reportController.getInvoiceReport);

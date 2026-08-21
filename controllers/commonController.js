@@ -31,7 +31,6 @@ const Notice = require("../models/notice");
 const { deleteFile } = require("../middlewares/storageUploads");
 
 const { Class, Staff } = require("../models");
-const { get } = require("../routes/schoolAdminRoutes");
 const { level } = require("winston");
 
 const getStudentsByClassId = async (req, res) => {

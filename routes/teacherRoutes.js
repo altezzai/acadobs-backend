@@ -52,6 +52,9 @@ router.use((req, res, next) => {
 });
 
 router.get("/getExams", teacherController.getExams);
+// Exam Timetable
+router.get("/getAllExamTimeTablebyStandard", teacherController.getAllExamTimeTablebyStandard);
+router.get("/examtimetableById/:id", teacherController.examtimetableById);
 // Internal Exam
 router.post("/internalmarks", teacherController.createInternalMarkWithMarks);
 router.post("/checkExistingInternal", teacherController.checkExistingInternal);

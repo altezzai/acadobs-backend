@@ -53,6 +53,7 @@ const { error } = require("winston");
 const { Console } = require("winston/lib/winston/transports");
 const { deleteFile } = require("../middlewares/storageUploads");
 const Exam = require("../models/exams");
+const ExamTimetable = require("../models/exam_timetable");
 const SpecialClassStudent = require("../models/special_class_students");
 
 // CREATE
@@ -10754,6 +10755,432 @@ const updateExamPublishStatus = async (req, res) => {
   }
 };
 
+// Exam Timetable CRUD
+const createExamTimetable = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+    const {
+      exam_id,
+      subject_id,
+      title,
+      standard,
+      exam_date,
+      start_time,
+      duration_minutes,
+      max_marks,
+      pass_marks,
+      instructions,
+      status,
+    } = req.body;
+
+    if (!exam_id || !subject_id || !exam_date || !standard || !title) {
+      return res.status(400).json({
+        success: false,
+        error: "exam_id, subject_id, exam_date, and start_time are required",
+      });
+    }
+
+    const exam = await Exam.findOne({
+      where: { id: exam_id, school_id, trash: false },
+    });
+    if (!exam) {
+      return res.status(404).json({ success: false, error: "Exam not found" });
+    }
+
+    const subject = await Subject.findOne({
+      where: { id: subject_id, trash: false },
+    });
+    if (!subject) {
+      return res.status(404).json({ success: false, error: "Subject not found" });
+    }
+    const existExamTimetable = await ExamTimetable.findOne({
+      where: { exam_id, subject_id, standard, exam_date, trash: false },
+    });
+    if (existExamTimetable) {
+      return res.status(400).json({ success: false, error: "Exam timetable already exists" });
+    }
+    const examTimetable = await ExamTimetable.create({
+      school_id,
+      exam_id,
+      subject_id,
+      title: title || null,
+      standard,
+      exam_date,
+      start_time,
+      duration_minutes: duration_minutes || null,
+      max_marks: max_marks !== undefined ? max_marks : null,
+      pass_marks: pass_marks !== undefined ? pass_marks : null,
+      instructions: instructions || null,
+      status: status || "scheduled",
+      recorded_by,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Exam timetable created successfully",
+      data: examTimetable,
+    });
+  } catch (error) {
+    logger.error("school_id:", req.user?.school_id, "Error creating exam timetable:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create exam timetable",
+      error: error.message,
+    });
+  }
+};
+
+const updateExamTimetable = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const {
+      exam_id,
+      subject_id,
+      title,
+      standard,
+      exam_date,
+      start_time,
+      duration_minutes,
+      max_marks,
+      pass_marks,
+      instructions,
+      status,
+    } = req.body;
+
+    const examTimetable = await ExamTimetable.findOne({
+      where: { id, school_id, trash: false },
+    });
+
+    if (!examTimetable) {
+      return res.status(404).json({ success: false, error: "Exam timetable not found" });
+    }
+
+    if (exam_id) {
+      const exam = await Exam.findOne({
+        where: { id: exam_id, school_id, trash: false },
+      });
+      if (!exam) {
+        return res.status(404).json({ success: false, error: "Exam not found" });
+      }
+    }
+
+    if (subject_id) {
+      const subject = await Subject.findOne({
+        where: { id: subject_id, trash: false },
+      });
+      if (!subject) {
+        return res.status(404).json({ success: false, error: "Subject not found" });
+      }
+    }
+    const existExamTimetable = await ExamTimetable.findOne({
+      where: { exam_id: exam_id || examTimetable.exam_id, subject_id: subject_id || examTimetable.subject_id, standard: standard || examTimetable.standard, exam_date: exam_date || examTimetable.exam_date, trash: false, id: { [Op.ne]: id } },
+    });
+    if (existExamTimetable) {
+      return res.status(400).json({ success: false, error: "Exam timetable already exists" });
+    }
+
+    await examTimetable.update({
+      exam_id: exam_id !== undefined ? exam_id : examTimetable.exam_id,
+      subject_id: subject_id !== undefined ? subject_id : examTimetable.subject_id,
+      title: title !== undefined ? title : examTimetable.title,
+      standard: standard !== undefined ? standard : examTimetable.standard,
+      exam_date: exam_date !== undefined ? exam_date : examTimetable.exam_date,
+      start_time: start_time !== undefined ? start_time : examTimetable.start_time,
+      duration_minutes: duration_minutes !== undefined ? duration_minutes : examTimetable.duration_minutes,
+      max_marks: max_marks !== undefined ? max_marks : examTimetable.max_marks,
+      pass_marks: pass_marks !== undefined ? pass_marks : examTimetable.pass_marks,
+      instructions: instructions !== undefined ? instructions : examTimetable.instructions,
+      status: status !== undefined ? status : examTimetable.status,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Exam timetable updated successfully",
+      data: examTimetable,
+    });
+  } catch (error) {
+    logger.error("school_id:", req.user?.school_id, "Error updating exam timetable:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update exam timetable",
+      error: error.message,
+    });
+  }
+};
+
+const getAllExamTimetables = async (req, res) => {
+  try {
+    const school_id = req.user.school_id || "";
+    const exam_id = req.query.exam_id || null;
+    const subject_id = req.query.subject_id || null;
+    const status = req.query.status || null;
+    const start_date = req.query.start_date || null;
+    const end_date = req.query.end_date || null;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    let whereClause = {
+      school_id,
+      trash: false,
+    };
+
+    if (exam_id) whereClause.exam_id = exam_id;
+    if (subject_id) whereClause.subject_id = subject_id;
+    if (status) whereClause.status = status;
+
+    if (start_date && end_date) {
+      whereClause.exam_date = { [Op.between]: [start_date, end_date] };
+    } else if (start_date) {
+      whereClause.exam_date = { [Op.gte]: start_date };
+    } else if (end_date) {
+      whereClause.exam_date = { [Op.lte]: end_date };
+    }
+
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { instructions: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+
+    const { count, rows: timetables } = await ExamTimetable.findAndCountAll({
+      where: whereClause,
+      limit,
+      offset,
+      distinct: true,
+      include: [
+        {
+          model: Exam,
+          attributes: ["id", "exam_name", "education_year", "publish"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name", "class_range", "is_multi_teacher", "priority"],
+        },
+        {
+          model: User,
+          attributes: ["id", "name"],
+        },
+      ],
+      order: [
+        ["id", "DESC"],
+      ],
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    return res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data: timetables,
+    });
+  } catch (error) {
+    logger.error("school_id:", req.user?.school_id, "Error fetching exam timetables:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch exam timetables",
+      error: error.message,
+    });
+  }
+};
+
+const getExamTimetableById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+
+    const examTimetable = await ExamTimetable.findOne({
+      where: { id, school_id, trash: false },
+      include: [
+        {
+          model: Exam,
+          attributes: ["id", "exam_name", "education_year", "publish"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name", "class_range", "is_multi_teacher", "priority"],
+        },
+        {
+          model: User,
+          attributes: ["id", "name"],
+        },
+      ],
+    });
+
+    if (!examTimetable) {
+      return res.status(404).json({ success: false, error: "Exam timetable not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Exam timetable fetched successfully",
+      data: examTimetable,
+    });
+  } catch (error) {
+    logger.error("school_id:", req.user?.school_id, "Error fetching exam timetable by id:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch exam timetable",
+      error: error.message,
+    });
+  }
+};
+
+const deleteExamTimetable = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+
+    const examTimetable = await ExamTimetable.findOne({
+      where: { id, school_id, trash: false },
+    });
+
+    if (!examTimetable) {
+      return res.status(404).json({ success: false, error: "Exam timetable not found" });
+    }
+
+    await examTimetable.update({ trash: true });
+
+    return res.status(200).json({
+      success: true,
+      message: "Exam timetable deleted successfully",
+    });
+  } catch (error) {
+    logger.error("school_id:", req.user?.school_id, "Error deleting exam timetable:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete exam timetable",
+      error: error.message,
+    });
+  }
+};
+
+const getTrashedExamTimetables = async (req, res) => {
+  try {
+    const school_id = req.user.school_id || "";
+    const exam_id = req.query.exam_id || null;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    let whereClause = {
+      school_id,
+      trash: true,
+    };
+
+    if (exam_id) whereClause.exam_id = exam_id;
+
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { instructions: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+
+    const { count, rows: timetables } = await ExamTimetable.findAndCountAll({
+      where: whereClause,
+      limit,
+      offset,
+      distinct: true,
+      include: [
+        {
+          model: Exam,
+          attributes: ["id", "exam_name", "education_year", "publish"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name", "class_range", "priority"],
+        },
+        {
+          model: User,
+          attributes: ["id", "name"],
+        },
+      ],
+      order: [["id", "DESC"]],
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    return res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data: timetables,
+    });
+  } catch (error) {
+    logger.error("school_id:", req.user?.school_id, "Error fetching trashed exam timetables:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch trashed exam timetables",
+      error: error.message,
+    });
+  }
+};
+
+const restoreExamTimetable = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+
+    const examTimetable = await ExamTimetable.findOne({
+      where: { id, school_id, trash: true },
+    });
+
+    if (!examTimetable) {
+      return res.status(404).json({ success: false, error: "Exam timetable not found in trash" });
+    }
+
+    await examTimetable.update({ trash: false });
+
+    return res.status(200).json({
+      success: true,
+      message: "Exam timetable restored successfully",
+    });
+  } catch (error) {
+    logger.error("school_id:", req.user?.school_id, "Error restoring exam timetable:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to restore exam timetable",
+      error: error.message,
+    });
+  }
+};
+
+const permanentDeleteExamTimetable = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+
+    const examTimetable = await ExamTimetable.findOne({
+      where: { id, school_id, trash: true },
+    });
+
+    if (!examTimetable) {
+      return res.status(404).json({ success: false, error: "Exam timetable not found in trash" });
+    }
+
+    await examTimetable.destroy();
+
+    return res.status(200).json({
+      success: true,
+      message: "Exam timetable permanently deleted",
+    });
+  } catch (error) {
+    logger.error("school_id:", req.user?.school_id, "Error permanently deleting exam timetable:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to permanently delete exam timetable",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createClass,
   getAllClasses,
@@ -10986,4 +11413,13 @@ module.exports = {
   getTrashedExams,
   permanentDeleteExam,
   restoreExam,
+
+  createExamTimetable,
+  updateExamTimetable,
+  getAllExamTimetables,
+  getExamTimetableById,
+  deleteExamTimetable,
+  getTrashedExamTimetables,
+  restoreExamTimetable,
+  permanentDeleteExamTimetable,
 };

@@ -1,4 +1,5 @@
 const Exams = require("./exams");
+const ExamTimetable = require("./exam_timetable");
 const Homework = require("./homework");
 const HomeworkAssignment = require("./homeworkassignment");
 const Student = require("./student");
@@ -130,6 +131,13 @@ InternalMark.belongsTo(User,{ foreignKey: "recorded_by" });
 
 Exams.hasMany(InternalMark, { foreignKey: "exam_id" });
 Exams.belongsTo(School, { foreignKey: "school_id" });
+ExamTimetable.belongsTo(School, { foreignKey: "school_id" });
+School.hasMany(ExamTimetable, { foreignKey: "school_id" });
+ExamTimetable.belongsTo(Exams, { foreignKey: "exam_id" });
+Exams.hasMany(ExamTimetable, { foreignKey: "exam_id" });
+ExamTimetable.belongsTo(Subject, { foreignKey: "subject_id" });
+Subject.hasMany(ExamTimetable, { foreignKey: "subject_id" });
+ExamTimetable.belongsTo(User, { foreignKey: "recorded_by" });
 InternalMark.hasMany(Mark, { foreignKey: "internal_id" });
 Mark.belongsTo(InternalMark, { foreignKey: "internal_id" });
 Mark.belongsTo(Student, { foreignKey: "student_id" });
@@ -354,4 +362,5 @@ module.exports = {
   RouteDrivers,
   Session,
   StudentTransfer,
+  ExamTimetable,
 };
