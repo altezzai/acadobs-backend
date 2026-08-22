@@ -615,7 +615,8 @@ router.delete(
 );
 
 router.get("/getSchoolsList", publicController.getSchoolsList);
-
+//teacher controller
+router.get("/getMyPermissions", teacherController.getMyPermissions);
 //common Controller
 router.get("/getAllDriverUsers",  transportationPermission,
  commonController.getAllDriverUsers);
@@ -659,7 +660,8 @@ router.get(
   commonController.getStudentsByClassId,
 );
 router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);
+router.get("/getLeaveTypes", commonController.getLeaveTypes);
+router.get("/getExamTitles",commonController.getExamTitles);
 
-//teacher controller
-router.get("/getMyPermissions", teacherController.getMyPermissions);
+
 module.exports = router;

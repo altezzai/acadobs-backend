@@ -690,6 +690,7 @@ router.get(
 router.get("/getAllDriverUsers", commonController.getAllDriverUsers);
 router.get("/getLeaveTypes", commonController.getLeaveTypes);
 router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);
+router.get("/getExamTitles",commonController.getExamTitles);
 
 
 module.exports = router;

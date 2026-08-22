@@ -315,7 +315,6 @@ router.get(
   "/getStudentAttendanceByDate/:student_id",
   commonController.getStudentAttendanceByDate,
 );
-
 router.get(
   "/getInternalMarkByStudentId/:student_id",
   commonController.getInternalMarkByStudentId,
@@ -353,4 +352,6 @@ router.get(
   commonController.getAchievementById,
 );
 router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);
+router.get("/getExamTitles",commonController.getExamTitles);
+
 module.exports = router;

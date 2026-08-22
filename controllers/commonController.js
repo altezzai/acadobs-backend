@@ -1415,6 +1415,22 @@ const getMyPrfileAndSchoolDetails = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch profile details" });
   }
 }
+const getExamTitles = async (req, res) => {
+  try{
+  const titiles =[
+    "PT",
+    "Term",
+    "Internal",
+    "Model",
+  ]
+  res.status(200).json(titiles)
+  }catch(error){
+    logger.error("userId:", req.user.user_id, "Error fetching profile details:", error);
+    console.error("Error fetching profile details:", error);
+    res.status(500).json({ error: "Failed to fetch profile details" });
+  }
+
+}
 module.exports = {
   getStudentsByClassId,
   getSpecialClassStudentsByClassId,
@@ -1460,4 +1476,6 @@ module.exports = {
 
   getLeaveTypes,
   getMyPrfileAndSchoolDetails,
+
+  getExamTitles,
 };
