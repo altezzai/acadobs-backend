@@ -2043,7 +2043,7 @@ const createAttendance = async (req, res) => {
           const guardian = guardians.find((g) => g.id === student.guardian_id);
 
           if (guardian && guardian.fcm_token) {
-            const absentNames = studentRecords.map((s) => s.name).join(", ");
+            const absentNames = studentRecords.map((s) => s.full_name).join(", ");
             const title = "Student Absence Alert";
             const body = `Your child ${absentNames} was marked absent on ${date} during the ${period} period..`;
             const attendanceMarkedId = markedIdMap[student.id];
