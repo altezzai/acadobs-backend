@@ -1,4 +1,5 @@
 const Exams = require("./exams");
+const ExamTimetable = require("./exam_timetable");
 const Homework = require("./homework");
 const HomeworkAssignment = require("./homeworkassignment");
 const Student = require("./student");
@@ -35,18 +36,18 @@ const AccountDelete = require("./accountdelete");
 const Syllabus = require("./syllabus");
 const Driver = require("./tracker/driver");
 const Vehicle = require("./tracker/vehicle");
-const route = require("./tracker/routes");
+// const route = require("./tracker/routes");
 const stop = require("./tracker/stop");
 const Routes = require("./tracker/routes");
-const StudentRouteAssignment = require("./student_route_assignment");
 const RouteDrivers = require("./tracker/route_drivers");
-const RouteStopLog = require("./tracker/route_stop_log");
+const LiveLocation = require("./tracker/livelocation");
 const Session = require("./session");
 const StudentTransfer = require("./student_transfer");
 const SpecialClassStudent = require("./special_class_students");
 const Event = require("./event");
 const ParentNote = require("./parent_note");
 const ParentNoteStudent = require("./parent_note_student");
+const StudentsStopStatus = require("./tracker/students_stop_status");
 
 // Relations
 
@@ -130,6 +131,13 @@ InternalMark.belongsTo(User,{ foreignKey: "recorded_by" });
 
 Exams.hasMany(InternalMark, { foreignKey: "exam_id" });
 Exams.belongsTo(School, { foreignKey: "school_id" });
+ExamTimetable.belongsTo(School, { foreignKey: "school_id" });
+School.hasMany(ExamTimetable, { foreignKey: "school_id" });
+ExamTimetable.belongsTo(Exams, { foreignKey: "exam_id" });
+Exams.hasMany(ExamTimetable, { foreignKey: "exam_id" });
+ExamTimetable.belongsTo(Subject, { foreignKey: "subject_id" });
+Subject.hasMany(ExamTimetable, { foreignKey: "subject_id" });
+ExamTimetable.belongsTo(User, { foreignKey: "recorded_by" });
 InternalMark.hasMany(Mark, { foreignKey: "internal_id" });
 Mark.belongsTo(InternalMark, { foreignKey: "internal_id" });
 Mark.belongsTo(Student, { foreignKey: "student_id" });
@@ -204,27 +212,29 @@ SpecialClassStudent.belongsTo(Student, { foreignKey: "student_id" });
 Student.hasMany(SpecialClassStudent, { foreignKey: "student_id" });
 Class.hasMany(SpecialClassStudent, { foreignKey: "class_id" });
 
-Driver.hasMany(Vehicle, { foreignKey: "driver_id", as: "vehicles" });
-Vehicle.belongsTo(Driver, { foreignKey: "driver_id", as: "driver" });
+User.hasMany(Vehicle, { foreignKey: "driver_id", as: "vehicles" });
+Vehicle.belongsTo(User, { foreignKey: "driver_id", as: "driver" });
 
 // route.hasMany(stop, { foreignKey: "route_id", as: "stop" });//
 // route.hasMany(Driver, { foreignKey: "route_id", as: "Driver" });
-route.belongsToMany(Driver, {
+Routes.belongsToMany(User, {
   through: RouteDrivers,
   foreignKey: "route_id",
   otherKey: "driver_id",
   as: "drivers",
 });
-Driver.belongsToMany(route, {
-  through: RouteDrivers,
-  foreignKey: "driver_id",
-  otherKey: "route_id",
-  as: "routes",
-});
+// User.belongsToMany(Routes, {
+//   through: RouteDrivers,
+//   foreignKey: "driver_id",
+//   otherKey: "route_id",
+//   as: "routes",
+// });
 
+Driver.belongsTo(User, { foreignKey: "user_id", as: "user" });
+User.hasMany(Driver, { foreignKey: "user_id", as: "drivers" });
 // Route ↔ Stop association (BOTH SIDES REQUIRED)
-route.hasMany(stop, { foreignKey: "route_id", as: "stops" }); //
-stop.belongsTo(route, { foreignKey: "route_id", as: "route" });
+Routes.hasMany(stop, { foreignKey: "route_id", as: "stops" }); //
+stop.belongsTo(Routes, { foreignKey: "route_id", as: "route" });
 stop.belongsTo(User,{ foreignKey: "recorded_by" });
 
 
@@ -238,81 +248,62 @@ Student.belongsTo(stop, {
   foreignKey: "stop_id",
   as: "stop",
 });
-route.hasMany(Student, { foreignKey: "route_id", as: "Student" });
-Student.belongsTo(route, {
+
+// Direct relationship: Student belongs to a primary Route
+Student.belongsTo(Routes, {
   foreignKey: "route_id",
   as: "route",
 });
-// Route ↔ Student (Many-to-Many using junction table)
-route.belongsToMany(Student, {
-  through: StudentRouteAssignment,
-  foreignKey: "route_id",
-  otherKey: "student_id",
-  as: "students",
-});
 
-Student.belongsToMany(route, {
-  through: StudentRouteAssignment,
-  foreignKey: "student_id",
-  otherKey: "route_id",
-  as: "routes",
-});
-route.belongsTo(Vehicle, {
+// Route ↔ Student (Many-to-Many using junction table)
+Routes.hasMany(Student, { foreignKey: "route_id", as: "students" }); 
+Routes.belongsTo(Vehicle, {
   foreignKey: "vehicle_id",
   as: "vehicle",
 });
 
-Vehicle.hasMany(route, {
-  foreignKey: "vehicle_id",
-});
-
+Vehicle.hasMany(Routes, {foreignKey: "vehicle_id"});
+Routes.belongsTo(User, {foreignKey: "driver_id", as: "driver"});
+User.hasMany(Routes, {foreignKey: "driver_id", as: "routes"});
 Routes.belongsTo(School, {
   foreignKey: "school_id",
   as: "school",
 });
-//route stop log assovciations
-RouteStopLog.belongsTo(Routes, {
+LiveLocation.belongsTo(User, {
+  foreignKey: "user_id",
+});
+User.hasMany(LiveLocation, {
+  foreignKey: "user_id",
+})
+LiveLocation.belongsTo(Routes, {
   foreignKey: "route_id",
-  as: "route",
 });
-
-Routes.hasMany(RouteStopLog, {
+Routes.hasMany(LiveLocation, {
   foreignKey: "route_id",
-  as: "routeLogs",
 });
-
-RouteStopLog.belongsTo(stop, {
+LiveLocation.belongsTo(stop, {
   foreignKey: "stop_id",
-  as: "stop",
 });
-
-stop.hasMany(RouteStopLog, {
+stop.hasMany(LiveLocation, {
   foreignKey: "stop_id",
-  as: "stopLogs",
 });
-
-RouteStopLog.belongsTo(Driver, {
-  foreignKey: "driver_id",
-  as: "driver",
+LiveLocation.hasMany(StudentsStopStatus, {
+  foreignKey: "livelocation_id",
 });
-
-Driver.hasMany(RouteStopLog, {
-  foreignKey: "driver_id",
-  as: "driverLogs",
-});
-
-RouteStopLog.belongsTo(Student, {
+StudentsStopStatus.belongsTo(LiveLocation, {
+  foreignKey: "livelocation_id",
+})
+StudentsStopStatus.belongsTo(Student, {
   foreignKey: "student_id",
-  as: "student",
 });
-
-Student.hasMany(RouteStopLog, {
+Student.hasMany(StudentsStopStatus, {
   foreignKey: "student_id",
-  as: "studentLogs",
-});
-// RouteStopLog.belongsTo(stop, { foreignKey: "stop_id", as: "stop" });
-// RouteStopLog.belongsTo(route, { foreignKey: "route_id", as: "route" });
-// RouteStopLog.belongsTo(Driver, { foreignKey: "driver_id", as: "driver" });
+})
+  
+
+
+
+
 
 // School.hasMany(Routes, {
 //   foreignKey: "school_id",
@@ -366,12 +357,10 @@ module.exports = {
   DutyAssignment,
   Driver,
   Vehicle,
-  route,
   stop,
   Routes,
-  StudentRouteAssignment,
   RouteDrivers,
-  RouteStopLog,
   Session,
   StudentTransfer,
+  ExamTimetable,
 };

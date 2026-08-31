@@ -11,6 +11,7 @@ const InternalMark = require("../models/internal_marks");
 const Routes = require("../models/tracker/routes");
 const Stop = require("../models/tracker/stop");
 const Exams = require("../models/exams");
+const ExamTimetable = require("../models/exam_timetable");
 const HomeworkAssignment = require("../models/homeworkassignment");
 const Student = require("../models/student");
 const School = require("../models/school");
@@ -1408,64 +1409,64 @@ const getRoutesForGuardian = async (req, res) => {
   }
 };
 
-const getExamsByStudentId = async (req, res) => {
-  try {
-    const { studentId } = req.params;
-    const guardian_id = req.user.user_id;
+// const getExamsByStudentId = async (req, res) => {
+//   try {
+//     const { studentId } = req.params;
+//     const guardian_id = req.user.user_id;
 
-    const student = await Student.findOne({
-      where: { id: studentId, guardian_id: guardian_id, trash: false },
-    });
+//     const student = await Student.findOne({
+//       where: { id: studentId, guardian_id: guardian_id, trash: false },
+//     });
 
-    if (!student) {
-      return res.status(404).json({ error: "Student not found" });
-    }
+//     if (!student) {
+//       return res.status(404).json({ error: "Student not found" });
+//     }
 
-    const marks = await Mark.findAll({
-      where: { student_id: studentId },
-      attributes: ["internal_id"],
-    });
+//     const marks = await Mark.findAll({
+//       where: { student_id: studentId },
+//       attributes: ["internal_id"],
+//     });
 
-    const internalIds = marks.map((mark) => mark.internal_id);
+//     const internalIds = marks.map((mark) => mark.internal_id);
 
-    if (internalIds.length === 0) {
-      return res.status(200).json({ exams: [] });
-    }
+//     if (internalIds.length === 0) {
+//       return res.status(200).json({ exams: [] });
+//     }
 
-    const internalMarks = await InternalMark.findAll({
-      where: {
-        id: { [Op.in]: internalIds },
-        exam_id: { [Op.ne]: null },
-      },
-      attributes: ["exam_id"],
-      group: ["exam_id"],
-    });
+//     const internalMarks = await InternalMark.findAll({
+//       where: {
+//         id: { [Op.in]: internalIds },
+//         exam_id: { [Op.ne]: null },
+//       },
+//       attributes: ["exam_id"],
+//       group: ["exam_id"],
+//     });
 
-    const examIds = internalMarks.map((im) => im.get("exam_id"));
+//     const examIds = internalMarks.map((im) => im.get("exam_id"));
 
-    if (examIds.length === 0) {
-      return res.status(200).json({ exams: [] });
-    }
+//     if (examIds.length === 0) {
+//       return res.status(200).json({ exams: [] });
+//     }
 
-    const examsList = await Exams.findAll({
-      where: {
-        id: { [Op.in]: examIds },
-        publish: true,
-      },
-      attributes: ["id", "exam_name", "education_year"],
-    });
+//     const examsList = await Exams.findAll({
+//       where: {
+//         id: { [Op.in]: examIds },
+//         publish: true,
+//       },
+//       attributes: ["id", "exam_name", "education_year"],
+//     });
 
-    return res.status(200).json({ exams: examsList });
-  } catch (error) {
-    logger.error(
-      "userId:",
-      req.user ? req.user.user_id : null,
-      "Error getting exams by student id:",
-      error,
-    );
-    return res.status(500).json({ error: error.message });
-  }
-};
+//     return res.status(200).json({ exams: examsList });
+//   } catch (error) {
+//     logger.error(
+//       "userId:",
+//       req.user ? req.user.user_id : null,
+//       "Error getting exams by student id:",
+//       error,
+//     );
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
 
 //get total count of routes
 const getGuardianRouteCount = async (req, res) => {
@@ -1605,68 +1606,68 @@ const getStopsForParent = async (req, res) => {
   }
 };
 
-const getExamMarksByStudentId = async (req, res) => {
-  try {
-    const { studentId, examId } = req.params;
-    const guardian_id = req.user.user_id;
+// const getExamMarksByStudentId = async (req, res) => {
+//   try {
+//     const { studentId, examId } = req.params;
+//     const guardian_id = req.user.user_id;
 
-    const student = await Student.findOne({
-      where: { id: studentId, guardian_id: guardian_id, trash: false },
-    });
+//     const student = await Student.findOne({
+//       where: { id: studentId, guardian_id: guardian_id, trash: false },
+//     });
 
-    if (!student) {
-      return res.status(404).json({ error: "Student not found" });
-    }
+//     if (!student) {
+//       return res.status(404).json({ error: "Student not found" });
+//     }
 
-    const exam = await Exams.findOne({ where: { id: examId } });
+//     const exam = await Exams.findOne({ where: { id: examId } });
 
-    if (!exam) {
-      return res.status(404).json({ error: "Exam not found" });
-    }
+//     if (!exam) {
+//       return res.status(404).json({ error: "Exam not found" });
+//     }
 
-    const internalMarks = await InternalMark.findAll({
-      where: { exam_id: examId, trash: false },
-      include: [
-        {
-          model: Subject,
-          attributes: ["id", "subject_name"],
-        },
-        {
-          model: Mark,
-          where: { student_id: studentId },
-          required: true,
-        },
-      ],
-    });
+//     const internalMarks = await InternalMark.findAll({
+//       where: { exam_id: examId, trash: false },
+//       include: [
+//         {
+//           model: Subject,
+//           attributes: ["id", "subject_name"],
+//         },
+//         {
+//           model: Mark,
+//           where: { student_id: studentId },
+//           required: true,
+//         },
+//       ],
+//     });
 
-    const marksList = internalMarks.map((im) => {
-      const studentMark = im.Marks && im.Marks.length > 0 ? im.Marks[0] : null;
-      return {
-        internal_mark_id: im.id,
-        subject: im.Subject ? im.Subject.subject_name : null,
-        internal_name: im.internal_name,
-        max_marks: im.max_marks,
-        date: im.date,
-        marks_obtained: studentMark ? studentMark.marks_obtained : null,
-        status: studentMark ? studentMark.status : "absent",
-      };
-    });
+//     const marksList = internalMarks.map((im) => {
+//       const studentMark = im.Marks && im.Marks.length > 0 ? im.Marks[0] : null;
+//       return {
+//         internal_mark_id: im.id,
+//         subject: im.Subject ? im.Subject.subject_name : null,
+//         internal_name: im.internal_name,
+//         max_marks: im.max_marks,
+//         date: im.date,
+//         marks_obtained: studentMark ? studentMark.marks_obtained : null,
+//         status: studentMark ? studentMark.status : "absent",
+//       };
+//     });
 
-    const response = {
-      marks: marksList,
-    };
+//     const response = {
+//       marks: marksList,
+//     };
 
-    return res.status(200).json(response);
-  } catch (error) {
-    logger.error(
-      "userId:",
-      req.user ? req.user.user_id : null,
-      "Error getting exam marks by student id:",
-      error,
-    );
-    return res.status(500).json({ error: error.message });
-  }
-};
+//     return res.status(200).json(response);
+//   } catch (error) {
+//     logger.error(
+//       "userId:",
+//       req.user ? req.user.user_id : null,
+//       "Error getting exam marks by student id:",
+//       error,
+//     );
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
 const getParentNotesByStudentId = async (req, res) => {
   try {
     const { student_id } = req.params;
@@ -1796,7 +1797,167 @@ const getParentNoteUnseenCount = async (req, res) => {
     );
     return res.status(500).json({ error: error.message });
   }
-}
+};
+
+const mapStandardToClassRange = (standard) => {
+  if (!standard) return null;
+  const std = standard.toString().trim().toUpperCase();
+  if (["FS", "PS", "MS", "SS", "COMMON", "OTHER"].includes(std)) {
+    return std.toLowerCase() === "common" ? "common" : std.toLowerCase() === "other" ? "other" : std;
+  }
+  const match = std.match(/\d+/);
+  if (match) {
+    const num = parseInt(match[0], 10);
+    if (num >= 1 && num <= 4) return "FS";
+    if (num >= 5 && num <= 7) return "PS";
+    if (num >= 8 && num <= 10) return "MS";
+    if (num >= 11 && num <= 12) return "SS";
+  }
+  if (["LKG", "UKG", "NURSERY", "PRE-KG", "KG"].includes(std)) {
+    return "FS";
+  }
+  return null;
+};
+
+const getexamtimetablebyStudnetId = async (req, res) => {
+  try {
+    const studentId = req.params.student_id || req.params.studentId || req.query.student_id || req.query.studentId;
+    const guardian_id = req.user.user_id;
+    const exam_id = req.query.exam_id || null;
+    const status = req.query.status || null;
+    const start_date = req.query.start_date || null;
+    const end_date = req.query.end_date || null;
+    const page = req.query.page || 1;
+    const limit = req.query.limit || 10;
+    const offset = (page - 1) * limit;
+    if (!studentId) {
+      return res.status(400).json({ success: false, error: "student_id is required" });
+    }
+
+    const student = await Student.findOne({
+      where: { id: studentId, guardian_id, trash: false },
+      include: [
+        {
+          model: Class,
+          attributes: ["id", "classname", "year", "division"],
+        },
+      ],
+    });
+
+    if (!student) {
+      return res.status(404).json({ success: false, error: "Student not found" });
+    }
+
+    let whereClause = {
+      school_id: student.school_id,
+      trash: false,
+      standard: student.Class.year,
+    };
+
+    if (exam_id) whereClause.exam_id = exam_id;
+    if (status) whereClause.status = status;
+
+    if (start_date && end_date) {
+      whereClause.exam_date = { [Op.between]: [start_date, end_date] };
+    } else if (start_date) {
+      whereClause.exam_date = { [Op.gte]: start_date };
+    } else if (end_date) {
+      whereClause.exam_date = { [Op.lte]: end_date };
+    }
+
+    const {rows: timetables, count} = await ExamTimetable.findAndCountAll({
+      where: whereClause,
+      offset,
+      limit,
+      include: [
+        {
+          model: Exams,
+          where: { publish: true },
+          attributes: ["id", "exam_name", "education_year", "publish"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name", "class_range", "is_multi_teacher", "priority"],
+        },
+      ],
+      order: [
+        ["exam_date", "ASC"],
+        ["start_time", "ASC"],
+        ["id", "DESC"],
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    return res.status(200).json({
+      success: true,
+      message: "Exam timetables fetched successfully",
+      totalContent: count,
+      totalPages,
+      currentPage: page,
+      data: timetables,
+    });
+  } catch (error) {
+    logger.error("userId:", req.user?.user_id, "Error fetching student exam timetables:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch student exam timetables",
+      error: error.message,
+    });
+  }
+};
+
+const examtimetableById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const guardian_id = req.user.user_id;
+
+    const students = await Student.findAll({
+      where: { guardian_id, trash: false },
+      attributes: ["school_id"],
+    });
+
+    if (!students || students.length === 0) {
+      return res.status(404).json({ success: false, error: "No students associated with guardian" });
+    }
+
+    const schoolIds = [...new Set(students.map((s) => s.school_id))];
+
+    const examTimetable = await ExamTimetable.findOne({
+      where: {
+        id,
+        school_id: { [Op.in]: schoolIds },
+        trash: false,
+      },
+      include: [
+        {
+          model: Exams,
+          where: { publish: true },
+          attributes: ["id", "exam_name", "education_year", "publish"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name", "class_range", "is_multi_teacher", "priority"],
+        },
+      ],
+    });
+
+    if (!examTimetable) {
+      return res.status(404).json({ success: false, error: "Exam timetable not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Exam timetable fetched successfully",
+      data: examTimetable,
+    });
+  } catch (error) {
+    logger.error("userId:", req.user?.user_id, "Error fetching exam timetable by id:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch exam timetable",
+      error: error.message,
+    });
+  }
+};
 
 module.exports = {
   updateHomeworkAssignment,
@@ -1831,8 +1992,8 @@ module.exports = {
 
   getAchievementById,
   getRoutesForGuardian,
-  getExamsByStudentId,
-  getExamMarksByStudentId,
+  // getExamsByStudentId,
+  // getExamMarksByStudentId,
   getGuardianRouteCount,
   getStopsByRouteId,
   getStopsForParent,
@@ -1840,4 +2001,7 @@ module.exports = {
   getParentNotesByStudentId,
   getParentNotesByIdAndStudentId,
   getParentNoteUnseenCount,
+
+  getexamtimetablebyStudnetId,
+  examtimetableById,
 };

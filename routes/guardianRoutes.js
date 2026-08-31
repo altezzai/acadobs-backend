@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const guardianController = require("../controllers/guardianController");
 const commonController = require("../controllers/commonController");
+const trackerController = require("../controllers/trackerController");
 const transferController = require("../controllers/transferController");
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { body, param } = require("express-validator");
@@ -84,6 +85,13 @@ router.get(
   guardianController.getAllDayTimetableByStudentId,
 );
 
+// Exam Timetables
+router.get(
+  "/getexamtimetablebyStudnetId/:student_id",
+  guardianController.getexamtimetablebyStudnetId,
+);
+router.get("/examtimetableById/:id",guardianController.examtimetableById);
+
 router.get(
   "/getNavigationBarCounts",
   guardianController.getNavigationBarCounts,
@@ -137,12 +145,35 @@ router.put(
   guardianController.updateHomeworkAssignment,
 );
 router.get("/getAchievementById/:id", guardianController.getAchievementById);
-router.get("/getExams/:studentId", guardianController.getExamsByStudentId);
-router.get("/getExamMarks/:studentId/:examId", guardianController.getExamMarksByStudentId);
 
 router.get("/getParentNotesByStudentId/:student_id", guardianController.getParentNotesByStudentId);
 router.get("/getParentNotesByIdAndStudentId/:id/:student_id", guardianController.getParentNotesByIdAndStudentId);
 router.get("/getParentNoteUnseenCount/:student_id", guardianController.getParentNoteUnseenCount);
+
+//tracker
+router.get("/getRoutesForGuardian", guardianController.getRoutesForGuardian);
+router.get("/getGuardianRouteCount", guardianController.getGuardianRouteCount);
+router.get("/stop/:route_id", guardianController.getStopsByRouteId);
+router.get(
+  "/getStopsForParent/:route_id",
+  guardianController.getStopsForParent,
+);
+
+router.get(
+  "/getlatestLocationByRouteId/:route_id",
+  trackerController.getlatestLocationByRouteId,
+);
+//transfer
+router.post(
+  "/studentTransfer",
+  [
+    body("student_id").notEmpty().isInt(),
+    body("to_school_id").notEmpty().isInt(),
+    body("reason").optional().isString().trim().escape(),
+  ],
+  transferController.guardianCreateTransferRequest,
+);
+router.get("/studentTransfer", transferController.guardianGetTransferRequests);
 
 
 //common controller
@@ -217,27 +248,6 @@ router.post(
 );
 
 router.get("/getSchoolDetails", commonController.getSchoolDetails);
-
-//parents see their students route
-router.get("/getRoutesForGuardian", guardianController.getRoutesForGuardian);
-router.get("/getGuardianRouteCount", guardianController.getGuardianRouteCount);
-router.get("/stop/:route_id", guardianController.getStopsByRouteId);
-//parent sees every stop of their student
-router.get(
-  "/getStopsForParent/:route_id",
-  guardianController.getStopsForParent,
-);
-
-// Student Transfer routes
-router.post(
-  "/studentTransfer",
-  [
-    body("student_id").notEmpty().isInt(),
-    body("to_school_id").notEmpty().isInt(),
-    body("reason").optional().isString().trim().escape(),
-  ],
-  transferController.guardianCreateTransferRequest,
-);
-router.get("/studentTransfer", transferController.guardianGetTransferRequests);
+router.get("/getExamTitles",commonController.getExamTitles);
 
 module.exports = router;

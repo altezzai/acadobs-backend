@@ -1,9 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const schoolAdminController = require("../controllers/schoolAdminController");
-const trackerController = require("../controllers/tracker/trackerController");
-const stopController = require("../controllers/tracker/stopController");
-const routeController = require("../controllers/tracker/routeController");
+const trackerController = require("../controllers/trackerController");
 const commonController = require("../controllers/commonController");
 const reportController = require("../controllers/reportController");
 const transferController = require("../controllers/transferController");
@@ -481,6 +479,18 @@ router.put(
   examPermission,
   schoolAdminController.updateExamPublishStatus,
 );
+
+// Exam Timetables
+router.post("/examTimetables", examPermission, schoolAdminController.createExamTimetable);
+router.put("/examTimetables/:id", examPermission, schoolAdminController.updateExamTimetable);
+router.get("/examTimetables", examPermission, schoolAdminController.getAllExamTimetables);
+router.get("/examTimetables/:id", examPermission, schoolAdminController.getExamTimetableById);
+router.delete("/examTimetables/:id", examPermission, schoolAdminController.deleteExamTimetable);
+router.get("/getTrashedExamTimetables", examPermission, schoolAdminController.getTrashedExamTimetables);
+router.patch("/restoreExamTimetable/:id", examPermission, schoolAdminController.restoreExamTimetable);
+router.patch("/examTimetables/:id/restore", examPermission, schoolAdminController.restoreExamTimetable);
+router.delete("/permanentDeleteExamTimetable/:id", examPermission, schoolAdminController.permanentDeleteExamTimetable);
+
 //REPORTS
 
 router.get("/invoiceReport",reportPermission, reportController.getInvoiceReport);
@@ -564,12 +574,12 @@ router.put(
 );
 router.delete("/deleteDriverById/:id", transportationPermission, trackerController.deleteDriverById);
 router.post("/stop", schoolAdminController.createStop);
-router.get("/getStopById/:id", transportationPermission, stopController.getStopById);
-router.delete("/deleteStop/:id", transportationPermission, stopController.deleteStop);
+router.get("/getStopById/:id", transportationPermission, trackerController.getStopById);
+router.delete("/deleteStop/:id", transportationPermission, trackerController.deleteStop);
 router.post("/route", upload.none(), schoolAdminController.createRoute);
-router.get("/getRouteById/:id", transportationPermission, routeController.getRouteById);
-router.put("/updateRouteById/:id", transportationPermission, routeController.updateRouteById);
-router.delete("/deleteRoute/:id", transportationPermission, routeController.deleteRoute);
+router.get("/getRouteById/:id", transportationPermission, trackerController.getRouteById);
+router.put("/updateRouteById/:id", transportationPermission, trackerController.updateRouteById);
+router.delete("/deleteRoute/:id", transportationPermission, trackerController.deleteRoute);
 router.get(
   "/getDriverAssignedRoutes/:driverId",
   transportationPermission,
@@ -605,7 +615,8 @@ router.delete(
 );
 
 router.get("/getSchoolsList", publicController.getSchoolsList);
-
+//teacher controller
+router.get("/getMyPermissions", teacherController.getMyPermissions);
 //common Controller
 router.get("/getAllDriverUsers",  transportationPermission,
  commonController.getAllDriverUsers);
@@ -648,7 +659,9 @@ router.get(
   "/getStudentsByClassId/:class_id",
   commonController.getStudentsByClassId,
 );
+router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);
+router.get("/getLeaveTypes", commonController.getLeaveTypes);
+router.get("/getExamTitles",commonController.getExamTitles);
 
-//teacher controller
-router.get("/getMyPermissions", teacherController.getMyPermissions);
+
 module.exports = router;

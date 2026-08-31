@@ -11,6 +11,7 @@ const Attendance = require("../models/attendance");
 const Achievement = require("../models/achievement");
 const StudentAchievement = require("../models/studentachievement");
 const InternalMark = require("../models/internal_marks");
+const Exams = require("../models/exams");
 const Subject = require("../models/subject");
 const Marks = require("../models/marks");
 const LeaveRequest = require("../models/leaverequest");
@@ -30,7 +31,6 @@ const Notice = require("../models/notice");
 const { deleteFile } = require("../middlewares/storageUploads");
 
 const { Class, Staff } = require("../models");
-const { get } = require("../routes/schoolAdminRoutes");
 const { level } = require("winston");
 
 const getStudentsByClassId = async (req, res) => {
@@ -891,9 +891,21 @@ const getTermExamByStudentId = async (req, res) => {
               model: Subject,
               attributes: ["id", "subject_name"],
             },
+            {
+              model: Exams,
+              required:true,
+              attributes: ["id", "exam_name"],
+              where: { trash: false, publish: true },
+            },
+            {
+              model: User,
+              attributes: ["id", "name"],
+            },
           ],
-        },
+        }, 
       ],
+       order: [["createdAt", "DESC"]],
+
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -1368,6 +1380,57 @@ const getAllDriverUsers = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch driver users" });
   }
 }
+//
+const getLeaveTypes = async (req, res) => {
+  try {
+    const leaveTypes = [
+      "sick", "casual", "emergency", "vacation", "onduty","c-off","other"
+    ]
+    res.status(200).json(leaveTypes);
+  } catch (error) {
+    logger.error("Error fetching leave types:", error);
+    console.error("Error fetching leave types:", error);
+    res.status(500).json({ error: "Failed to fetch leave types" });
+  }
+}
+const getMyPrfileAndSchoolDetails = async (req, res) => {
+  try{
+    const userId = req.user.user_id;
+    const school_id = req.user.school_id;
+    const user = await User.findOne({
+      where: { id: userId },
+      attributes: ["id", "name", "email", "phone", "dp", "role"],
+    });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    const school = await School.findOne({
+      where: { id: school_id },
+      attributes: ["id", "name","logo","bg_image","primary_colour", "secondary_colour"],
+    })
+    res.status(200).json({ user, school });
+  }catch(error){
+    logger.error("userId:", req.user.user_id, "Error fetching profile details:", error);
+    console.error("Error fetching profile details:", error);
+    res.status(500).json({ error: "Failed to fetch profile details" });
+  }
+}
+const getExamTitles = async (req, res) => {
+  try{
+  const titiles =[
+    "PT",
+    "Term",
+    "Internal",
+    "Model",
+  ]
+  res.status(200).json(titiles)
+  }catch(error){
+    logger.error("userId:", req.user.user_id, "Error fetching profile details:", error);
+    console.error("Error fetching profile details:", error);
+    res.status(500).json({ error: "Failed to fetch profile details" });
+  }
+
+}
 module.exports = {
   getStudentsByClassId,
   getSpecialClassStudentsByClassId,
@@ -1410,4 +1473,9 @@ module.exports = {
   accountDeleteRequests,
 
   getAllDriverUsers,
+
+  getLeaveTypes,
+  getMyPrfileAndSchoolDetails,
+
+  getExamTitles,
 };

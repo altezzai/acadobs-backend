@@ -55,9 +55,7 @@ module.exports = {
       },
     });
 
-    /* =======================
-       ROUTE_DRIVERS (JOIN TABLE)
-    ======================= */
+
     await queryInterface.createTable('route_drivers', {
       route_id: {
         type: Sequelize.INTEGER,

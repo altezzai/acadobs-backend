@@ -15,6 +15,7 @@ const staffAllowedRoutes = [
   "/duties",
   "/updateAssignedDuty",
   "/leaveRequest",
+  "/getLeaveTypes",
   "/getLatestNotices",
   "/getLatestEvents",
   "/getLatestNews",
@@ -27,6 +28,7 @@ const staffAllowedRoutes = [
   "/updateProfileDetails",
   "/changePassword",
   "/updateDp",
+  "/getMyPrfileAndSchoolDetails"
 ];
 
 router.use(verifyTeacherOrStaff);
@@ -50,6 +52,9 @@ router.use((req, res, next) => {
 });
 
 router.get("/getExams", teacherController.getExams);
+// Exam Timetable
+router.get("/getAllExamTimeTablebyStandard", teacherController.getAllExamTimeTablebyStandard);
+router.get("/examtimetableById/:id", teacherController.examtimetableById);
 // Internal Exam
 router.post("/internalmarks", teacherController.createInternalMarkWithMarks);
 router.post("/checkExistingInternal", teacherController.checkExistingInternal);
@@ -209,6 +214,8 @@ router.put(
 );
 router.delete("/leaveRequest/:id", teacherController.deleteLeaveRequest);
 router.patch("/leaveRequest/:id", teacherController.restoreLeaveRequest);
+router.get("/getLeaveTypes", commonController.getLeaveTypes);
+
 //student leave request for class teacher
 router.get(
   "/getStudentLeaveRequestsForClassTeacher",
@@ -308,7 +315,6 @@ router.get(
   "/getStudentAttendanceByDate/:student_id",
   commonController.getStudentAttendanceByDate,
 );
-
 router.get(
   "/getInternalMarkByStudentId/:student_id",
   commonController.getInternalMarkByStudentId,
@@ -345,4 +351,7 @@ router.get(
   "/getAchievementById/:id",
   commonController.getAchievementById,
 );
+router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);
+router.get("/getExamTitles",commonController.getExamTitles);
+
 module.exports = router;

@@ -36,6 +36,7 @@ const {
 const { sendPushNotification } = require("../utils/notifcationHandler");
 const { deleteFile } = require("../middlewares/storageUploads");
 const Exam = require("../models/exams");
+const ExamTimetable = require("../models/exam_timetable");
 
 const createInternalMarkWithMarks = async (req, res) => {
   try {
@@ -2042,7 +2043,7 @@ const createAttendance = async (req, res) => {
           const guardian = guardians.find((g) => g.id === student.guardian_id);
 
           if (guardian && guardian.fcm_token) {
-            const absentNames = studentRecords.map((s) => s.name).join(", ");
+            const absentNames = studentRecords.map((s) => s.full_name).join(", ");
             const title = "Student Absence Alert";
             const body = `Your child ${absentNames} was marked absent on ${date} during the ${period} period..`;
             const attendanceMarkedId = markedIdMap[student.id];
@@ -4714,6 +4715,144 @@ const getMyPermissions = async (req, res) => {
   }
 };
 
+const getAllExamTimeTablebyStandard = async (req, res) => {
+  try {
+    const school_id = req.user.school_id || "";
+    const user_id = req.user.user_id;
+    const standardInput = req.query.standard  || null;
+    const exam_id = req.query.exam_id || null;
+    const status = req.query.status || null;
+    const start_date = req.query.start_date || null;
+    const end_date = req.query.end_date || null;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = (page - 1) * limit;
+
+    let whereClause = {
+      school_id,
+      trash: false,
+    };
+    let standard= standardInput;
+    if(!standard){
+      const staff=await Staff.findOne({ where: { user_id } });
+      if(staff){
+        const staffClass= await Class.findOne({ where: { id: staff.class_id } });
+        if(staffClass){
+          standard=staffClass.year;
+        }else{
+          return res.status(404).json({success: false,message: "Staff class not found",});
+       }
+      }else{
+        return res.status(404).json({success: false,message: "Staff not found",});
+      }
+    }
+    if (standard) whereClause.standard= standard;
+    if (exam_id) whereClause.exam_id = exam_id;
+    if (status) whereClause.status = status;
+
+    if (start_date && end_date) {
+      whereClause.exam_date = { [Op.between]: [start_date, end_date] };
+    } else if (start_date) {
+      whereClause.exam_date = { [Op.gte]: start_date };
+    } else if (end_date) {
+      whereClause.exam_date = { [Op.lte]: end_date };
+    }
+
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { instructions: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+
+
+    const { count, rows: timetables } = await ExamTimetable.findAndCountAll({
+      where: whereClause,
+      limit,
+      offset,
+      distinct: true,
+      include: [
+        {
+          model: Exam,
+          attributes: ["id", "exam_name", "education_year", "publish"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name", "class_range", "is_multi_teacher", "priority"],
+        },
+        {
+          model: User,
+          attributes: ["id", "name", "email", "role"],
+        },
+      ],
+      order: [
+        ["exam_date", "ASC"],
+        ["start_time", "ASC"],
+        ["id", "DESC"],
+      ],
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    return res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data: timetables,
+    });
+  } catch (error) {
+    logger.error("userId:", req.user?.user_id, "Error fetching exam timetables by standard:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch exam timetables by standard",
+      error: error.message,
+    });
+  }
+};
+
+const examtimetableById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+
+    const examTimetable = await ExamTimetable.findOne({
+      where: { id, school_id, trash: false },
+      include: [
+        {
+          model: Exam,
+          attributes: ["id", "exam_name", "education_year", "publish"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name", "class_range", "is_multi_teacher", "priority"],
+        },
+        {
+          model: User,
+          attributes: ["id", "name", "email", "role"],
+        },
+      ],
+    });
+
+    if (!examTimetable) {
+      return res.status(404).json({ success: false, error: "Exam timetable not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Exam timetable fetched successfully",
+      data: examTimetable,
+    });
+  } catch (error) {
+    logger.error("userId:", req.user?.user_id, "Error fetching exam timetable by id:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch exam timetable",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createInternalMarkWithMarks,
   checkExistingInternal,
@@ -4817,4 +4956,6 @@ module.exports = {
   getMyClassTodayTimetable,
   getMyClassAllDayTimetable,
 
+  getAllExamTimeTablebyStandard,
+  examtimetableById,
 };
