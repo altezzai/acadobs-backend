@@ -1694,14 +1694,16 @@ const getStopsByRouteId = async (req, res) => {
     let whereClause = {
       route_id: route_id,
       trash: false,
-      school_id
     };
     if (searchQuery) {
       whereClause[Op.or] = [{ stop_name: { [Op.like]: `%${searchQuery}%` } }];
     }
 
     const route = await Routes.findOne({
-      where: whereClause,
+      where: {
+        id: route_id,
+        trash: false,
+        school_id,},
     });
 
     if (!route) {
@@ -1711,10 +1713,7 @@ const getStopsByRouteId = async (req, res) => {
     }
 
     const stops = await Stop.findAll({
-      where: {
-        route_id: route_id,
-        trash: false,
-      },
+      where: whereClause,
       attributes: ["id", "stop_name", "priority", "longitude", "latitude"],
       order: [["priority", "ASC"]],
     });
