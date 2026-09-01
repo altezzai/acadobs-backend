@@ -163,6 +163,10 @@ router.get(
   "/getlatestLocationByRouteId/:route_id",
   trackerController.getlatestLocationByRouteId,
 );
+router.get(
+  "/getTodayTransportationByStudentId/:id",
+  trackerController.getTodayTransportationByStudentId,
+);
 //transfer
 router.post(
   "/studentTransfer",

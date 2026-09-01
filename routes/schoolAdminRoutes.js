@@ -536,23 +536,7 @@ router.get(
 router.get("/internalmarksReport", reportController.getInternalmarksReport);
 
 /////////////////tracker//////////////////////////////////////
-router.post(
-  "/assignDriverToRoutes/:driverId",
-  schoolAdminController.assignDriverToRoutes,
-);
-router.post(
-  "/assign-student-route",
-  upload.none(),
-  schoolAdminController.assignStudentToRoute,
-);
-router.put(
-  "/update-student-route/:route_id",
-  schoolAdminController.updateStudentToRoute,
-);
-router.delete(
-  "/deleteStudentFromRoute/:route_id",
-  schoolAdminController.deleteStudentFromRoute,
-);
+
 router.put(
   "/updateVehicle/:id",
   uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
@@ -606,7 +590,34 @@ router.get(
   "/getDriverAssignedRoutes/:driverId",
   trackerController.getDriverAssignedRoutesAdmin,
 );
-
+router.post(
+  "/assignDriverToRoutes/:driverId",
+  schoolAdminController.assignDriverToRoutes,
+);
+router.post(
+  "/assign-student-route",
+  upload.none(),
+  schoolAdminController.assignStudentToRoute,
+);
+router.put(
+  "/update-student-route/:route_id",
+  schoolAdminController.updateStudentToRoute,
+);
+router.delete(
+  "/deleteStudentFromRoute/:route_id",
+  schoolAdminController.deleteStudentFromRoute,
+);
+router.put("/changeStudentRouteAndStop/:student_id",
+   schoolAdminController.changeStudentRouteAndStop);
+router.get(
+  "/getStopsByRouteId/:route_id",
+  trackerController.getStopsByRouteId,
+);
+router.get("/getTrackedDataWithDateByRouteId/:route_id", 
+  trackerController.getTrackedDataWithDateByRouteId);
+router.get(
+  "/getTodayTransportationByStudentId/:id", 
+  trackerController.getTodayTransportationByStudentId);  
 // Student Transfer routes
 router.post("/studentTransfer", transferController.adminCreateTransferRequest);
 router.get(
@@ -638,6 +649,7 @@ router.get("/getLatestNews", commonController.getLatestNews);
 
 router.get("/getStudentsByClassId/:class_id",commonController.getStudentsByClassId);
 router.get("/getStudentDetailsById/:id", commonController.getStudentDetailsById);
+router.get("/getStudentTransportDetails/:student_id", commonController.getStudentTransportDetails);
 
 router.get(
   "/getHomeworkByStudentId/:student_id",

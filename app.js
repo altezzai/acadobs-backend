@@ -9,7 +9,7 @@ const morgan = require("morgan");
 const globalSanitize = require("./middlewares/xssMiddleware");
 const hpp = require("hpp");
 const app = express();
-require("dotenv").config();
+// require("dotenv").config();
 const PORT = process.env.PORT || 4444;
 const { auth, socketAuth } = require("./middlewares/authMiddleware");
 const limiter = require("./middlewares/rateLimitMiddleware");

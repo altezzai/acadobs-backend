@@ -1995,6 +1995,7 @@ module.exports = {
   // getExamsByStudentId,
   // getExamMarksByStudentId,
   getGuardianRouteCount,
+  
   getStopsByRouteId,
   getStopsForParent,
 

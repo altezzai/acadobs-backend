@@ -261,6 +261,14 @@ Routes.belongsTo(Vehicle, {
   foreignKey: "vehicle_id",
   as: "vehicle",
 });
+Routes.belongsTo(Routes, {
+  foreignKey: "pickId",
+  as: "pickupRoute",
+});
+Routes.hasMany(Routes, {
+  foreignKey: "pickId",
+  as: "dropRoutes",
+});
 
 Vehicle.hasMany(Routes, {foreignKey: "vehicle_id"});
 Routes.belongsTo(User, {foreignKey: "driver_id", as: "driver"});

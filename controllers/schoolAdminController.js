@@ -9942,6 +9942,11 @@ const getAllRoutes = async (req, res) => {
           as: "vehicle",
           attributes: ["vehicle_number"],
         },
+        {
+          model: Routes,
+          as: "pickupRoute",
+          attributes: ["id", "route_name"],
+        },
       ],
 
       order: [["createdAt", "DESC"]],
@@ -9955,6 +9960,8 @@ const getAllRoutes = async (req, res) => {
       id: route.id,
       route_name: route.route_name,
       type: route.type,
+      pickId: route.pickId || null,
+      pickup_route_name: route.pickupRoute?.route_name || null,
       hasDropRoute: dropRouteSet.has(route.id),
       isLock: route.isLock,
       vehicle_number: route.vehicle?.vehicle_number || null,
@@ -9977,7 +9984,7 @@ const getAllRoutes = async (req, res) => {
 const assignStudentToRoute = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const { student_ids, route_id, hasAssignToDropRoute } = req.body;
+    const { student_ids, route_id } = req.body;
 
     if (
       !student_ids ||
@@ -10005,19 +10012,6 @@ const assignStudentToRoute = async (req, res) => {
       return res.status(404).json({ message: "Student not found" });
     }
     await pickupRoute.addStudents(students);
-    if (hasAssignToDropRoute) {
-      const dropRoute = await Routes.findOne({
-        where: { pickId: route_id, trash: false, school_id: school_id },
-      });
-
-      if (!dropRoute) {
-        return res
-          .status(404)
-          .json({ message: "Drop route not found for this pickup route" });
-      }
-
-      await dropRoute.addStudents(students);
-    }
 
     return res.json({
       message: "Students assigned to route successfully",
@@ -10152,6 +10146,55 @@ const deleteStudentFromRoute = async (req, res) => {
     });
   }
 };
+const changeStudentRouteAndStop = async (req, res) => {
+  try {
+    const { student_id } = req.params;
+    const { route_id, stop_id } = req.body;
+    const school_id = req.user.school_id;
+
+    const student = await Student.findOne({
+      where: { id: student_id, trash: false, school_id: school_id },
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found",
+      });
+    }
+
+    const route = await Routes.findOne({
+      where: { id: route_id, trash: false, school_id: school_id },
+    });
+
+    if (!route) {
+      return res.status(404).json({
+        message: "Route not found",
+      });
+    }
+
+    const stop = await Stop.findOne({
+      where: { id: stop_id,route_id,trash: false, },
+    });
+
+    if (!stop) {
+      return res.status(404).json({
+        message: "Stop not found",
+      });
+    }
+
+    await student.update({ route_id: route_id, stop_id: stop_id });
+
+    return res.status(200).json({
+      message: "Student route and stop updated successfully",
+    });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Change Student Route And Stop Error:", error);
+    console.error(error);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};  
 
 const assignDriverToRoutes = async (req, res) => {
   try {
@@ -11398,6 +11441,7 @@ module.exports = {
   getAllDrivers,
   updateStudentToRoute,
   deleteStudentFromRoute,
+  changeStudentRouteAndStop,
   updateVehicle,
   getDriversAssignedToRoutes,
   updateIsLock,

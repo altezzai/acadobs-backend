@@ -757,7 +757,7 @@ const updateRouteActive = async (req, res) => {
     const existingActiveRoute = await Routes.findOne({
       where: {
         active: true,
-        activated_by_driver_id: driver.id,
+        activated_by_driver_id: user_id,
         trash: false,
       },
     });
@@ -812,7 +812,7 @@ const routeInactive = async (req, res) => {
     const inactiveroute = await Routes.findOne({
       where: {
         id: route_id,
-        activated_by_driver_id: driver.id,
+        activated_by_driver_id: user_id,
         active: true,
         trash: false,
       },
@@ -1071,7 +1071,7 @@ const updateLiveLocation = async (req, res) => {
   try {
     const user_id = req.user.user_id;
     const school_id = req.user.school_id;
-    const { latitude, longitude,route_id,stop_id } = req.body;
+    const { latitude, longitude,route_id } = req.body;
 
     if (!latitude || !longitude || !route_id){
       return res.status(400).json({ message: "Fields are missing" });
@@ -1242,6 +1242,103 @@ const getTrackedDataWithDateByRouteId = async (req, res) => {
     res.status(500).json({ error: "Failed to get route details" });
   }
 }
+const getTodayTransportationByStudentId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const today = new Date().toISOString().split("T")[0];
+    const student = await Student.findOne({
+      where: {
+        id,
+        school_id: school_id,
+        trash: false,
+      },
+      attributes: ["id", "full_name", "reg_no", "route_id","stop_id"],
+    });
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+    let route_id = student.route_id
+    let route = await Routes.findOne({
+      where: {
+        id: route_id,
+        school_id: school_id,
+        trash: false,
+      },
+      attributes: ["id", "route_name","type","active"],
+    })
+    if (!route) {
+      return res.status(404).json({ message: "Route not found" });
+    }
+    if (!route.active) {      
+      const dropRoute = await Routes.findOne({
+        where: {
+          pickId: route_id,
+          school_id: school_id,
+          trash: false,
+        },
+        attributes: ["id", "route_name","type","active"],
+      })
+      if (dropRoute.active) {
+        route_id = dropRoute.id
+        route = dropRoute
+      }else {
+        return res.status(404).json({ message: "No active route found for today" });
+      }
+    } 
+    const stops = await Stop.findAll({
+      where: {
+        route_id:student.route_id,
+        trash: false,
+      },
+      attributes: ["id", "stop_name","priority","latitude","longitude"],
+    })
+    if (!stops) {
+      return res.status(404).json({ message: "Stops not found" });
+    }
+ 
+    const trackedData = await LiveLocation.findAll({
+      where: {
+        route_id,
+        stop_id:{[Op.ne]: null},
+        createdAt: {
+          [Op.gte]: today + " 00:00:00",
+          [Op.lte]: today + " 23:59:59",
+        }
+      },
+      attributes: ["latitude", "longitude", "route_id", "stop_id"],
+      order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: Stop,
+          attributes: ["id", "stop_name","priority","latitude","longitude"],
+        }, 
+        {
+          model: StudentsStopStatus,
+          where: {
+            student_id: id
+          },
+          required: false,
+          attributes: ["id", "student_id", "status"],
+        },
+      ]
+    }
+    );
+  
+    return res.status(200).json({
+      message: "Route fetched successfully",
+      student,
+      route,
+      stops,
+      data: trackedData,
+    });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error in getting route details:", error);
+    console.error("Error getting route details:", error);
+    res.status(500).json({ error: "Failed to get route details" });
+  }
+}
+
 const getRouteById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1589,6 +1686,51 @@ const deleteStop = async (req, res) => {
     console.log("error in deleting stop", error);
   }
 };
+const getStopsByRouteId = async (req, res) => {
+  try {
+    const { route_id } = req.params;
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    let whereClause = {
+      route_id: route_id,
+      trash: false,
+      school_id
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [{ stop_name: { [Op.like]: `%${searchQuery}%` } }];
+    }
+
+    const route = await Routes.findOne({
+      where: whereClause,
+    });
+
+    if (!route) {
+      return res.status(404).json({
+        message: "Route not found",
+      });
+    }
+
+    const stops = await Stop.findAll({
+      where: {
+        route_id: route_id,
+        trash: false,
+      },
+      attributes: ["id", "stop_name", "priority", "longitude", "latitude"],
+      order: [["priority", "ASC"]],
+    });
+
+    return res.status(200).json({
+      message: "Stops fetched successfully",
+      data: stops,
+    });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching stops:", error);
+    console.error("Error fetching stops:", error);
+    return res.status(500).json({
+      error: "Failed to fetch stops",
+    });
+  }
+};
 
 module.exports = {
   getDriverById,
@@ -1615,10 +1757,13 @@ module.exports = {
   getRouteById,
   updateRouteById,
   deleteRoute,
+  getStopsByRouteId,
 
   getStopById, 
   updateStopById, 
   deleteStop, 
   updateStopForDriver ,
+
+  getTodayTransportationByStudentId,
 
 };
