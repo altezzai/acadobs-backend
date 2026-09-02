@@ -2,6 +2,7 @@ const { where } = require("sequelize");
 const Driver = require("../models/tracker/driver");
 const Routes  = require("../models/tracker/routes");
 const Stop = require("../models/tracker/stop");
+const StopRoute = require("../models/tracker/stop_route");
 const Student  = require("../models/student");
 const LiveLocation = require("../models/tracker/livelocation");
 const User = require("../models/user");
@@ -273,11 +274,11 @@ const DriverAssignedRoutes = async (req, res) => {
 //create stop for driver
 const createStopForDriver = async (req, res) => {
   try {
-    const { route_id, stop_name, priority, latitude, longitude } = req.body;
+    const { route_id, stop_name, priority, latitude, longitude, both } = req.body;
     const user_id = req.user.user_id;
     const school_id = req.user.school_id;
 
-    if (!route_id || !stop_name) {
+    if (!route_id || !stop_name || !latitude || !longitude) {
       return res.status(400).json({ message: "Fields are missing" });
     }
     const driver = await User.findOne({
@@ -309,31 +310,71 @@ const createStopForDriver = async (req, res) => {
 
     const existingStop = await Stop.findOne({
       where: {
-        route_id,
+        school_id,
         stop_name,
         trash: false,
       },
     });
     if (existingStop) {
       return res.status(400).json({
-        message: "Stop name  already exists for this route",
+        message: "Stop name already exists for this route .Please choose a different name.",
       });
     }
 
-    // Create stop
-    const stop = await Stop.create({
-      route_id,
-      stop_name,
-      priority,
-      latitude,
-      longitude,
-      trash: false,
-    });
+    let pairedRouteId = null;
+    if (both === true && route.type === "DROP") {
+      pairedRouteId = route.pickId;
+    } else if (both === true) {
+      const dropRoute = await Routes.findOne({
+        where: { pickId: route.id, trash: false },
+        attributes: ["id"],
+      });
+      pairedRouteId = dropRoute?.id || null;
+    }
 
-    res.status(201).json({
-      message: "Stop created successfully",
-      stop,
-    });
+    if (both === true && !pairedRouteId) {
+      return res.status(400).json({
+        message: "Both routes must exist to create a stop for both routes",
+      });
+    }
+
+    const routeIds = [route.id];
+    if (both === true && pairedRouteId !== route.id) {
+      routeIds.push(pairedRouteId);
+    }
+
+    const transaction = await Stop.sequelize.transaction();
+    try {
+      const stop = await Stop.create(
+        {
+          school_id,
+          stop_name,
+          latitude,
+          longitude,
+          trash: false,
+        },
+        { transaction },
+      );
+      const stopRoutes = await StopRoute.bulkCreate(
+        routeIds.map((id) => ({
+          route_id: id,
+          stop_id: stop.id,
+          priority: id === route.id ? priority : null,
+        })),
+        { transaction },
+      );
+
+      await transaction.commit();
+
+      return res.status(201).json({
+        message: "Stop created successfully",
+        stop,
+        stopRoutes,
+      });
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
   } catch (error) {
     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error creating stop:", error);
     console.error("Error creating stop:", error);
@@ -360,26 +401,30 @@ const getStopsForDriverByRouteId = async (req, res) => {
     if (!driver) {
       return res.status(404).json({ message: "Driver not found" });
     }
-
     const route = await Routes.findOne({
       where: {
         id: route_id,
         trash: false,
         driver_id: user_id,
       },
-     
     });
-
     if (!route) {
       return res.status(403).json({
         message: "You are not assigned to this route",
       });
     }
+
     const stops = await Stop.findAll({
-      where: { route_id, trash: false },
-      order: [["priority", "ASC"]],
-      attributes: ["id", "stop_name", "priority", "longitude", "latitude"],
+      where: { trash: false },
+      attributes: ["id", "stop_name", "longitude", "latitude"],
       include: [
+        {
+          model: Routes,
+          as: "routes",
+          where: { id: route_id },
+          attributes: [],
+          through: { attributes: ["priority"] },
+        },
         {
           model:LiveLocation,
           required: false,
@@ -391,19 +436,6 @@ const getStopsForDriverByRouteId = async (req, res) => {
           [Op.lte]: today + " 23:59:59",
         }
           },
-          include: [
-           {
-          model: StudentsStopStatus,
-          required: false,
-          attributes: ["id", "student_id", "status"],
-          include: [
-            {
-              model: Student,
-              attributes: ["id", "full_name", "reg_no"],
-            },
-          ],
-        },
-      ]
       },
         {
           model: Student,
@@ -421,6 +453,14 @@ const getStopsForDriverByRouteId = async (req, res) => {
           ],
         },
       ],
+    });
+    stops.sort((firstStop, secondStop) =>
+      (firstStop.routes[0]?.StopRoute?.priority ?? Infinity) -
+      (secondStop.routes[0]?.StopRoute?.priority ?? Infinity)
+    );
+    stops.forEach((stop) => {
+      stop.setDataValue("priority", stop.routes[0]?.StopRoute?.priority ?? null);
+      stop.setDataValue("routes", undefined);
     });
     return res.status(200).json({
       message: "Stops fetched successfully",
@@ -611,12 +651,12 @@ const getMyStudents = async (req, res) => {
 
     // Verify if the route exists and is assigned to the driver
     const route = await Routes.findOne({
-      where: { id: route_id, trash: false },
+      where: { id: route_id, driver_id:user_id,school_id, trash: false },
       include: [
         {
           model: User,
            as: "driver",
-          where: { id:user_id, trash: false, role: "driver" , school_id},
+          where: { trash: false, role: "driver" },
           attributes: ["id", "name", "phone","dp"],
         },
         {
@@ -670,6 +710,7 @@ const getMyStudents = async (req, res) => {
 const getStopDetailsForDriver = async (req, res) => {
   try {
     const { stop_id } = req.params;
+    const { route_id } = req.query;
     const user_id = req.user.user_id;
     const school_id = req.user.school_id;
     if (!stop_id) {
@@ -697,10 +738,41 @@ const getStopDetailsForDriver = async (req, res) => {
       where: {
         id: stop_id,
         trash: false,
-
       },
-      attributes: ["id", "priority", "stop_name", "longitude", "latitude",],
+      attributes: ["id", "stop_name", "longitude", "latitude",],
       include: [
+        {
+          model: Routes,
+          as: "routes",
+          where: route_id ? { id: route_id } : undefined,
+          attributes: ["id"],
+          through: { attributes: ["priority"] },
+        },
+        {
+          model:LiveLocation,
+          required: false,
+          attributes: ["latitude", "longitude", "route_id", "stop_id"],
+          where: {
+            route_id: route_id,
+             createdAt: {
+          [Op.gte]: today + " 00:00:00",
+          [Op.lte]: today + " 23:59:59",
+        }
+          },
+          include: [
+           {
+          model: StudentsStopStatus,
+          required: false,
+          attributes: ["id", "student_id", "status"],
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "reg_no"],
+            },
+          ],
+        },
+      ]
+      },
         {
           model: Student,
           as: "students",
@@ -714,11 +786,6 @@ const getStopDetailsForDriver = async (req, res) => {
           ]
 
         },
-        {
-          model: Routes,
-          as: "route",
-          attributes: ["id"],
-        }
       ]
 
     });
@@ -728,25 +795,14 @@ const getStopDetailsForDriver = async (req, res) => {
       });
     }
 
-    const result = {
-      id: singlestop.id,
-      priority: singlestop.priority,
-      stop_name: singlestop.stop_name,
-      longitude: singlestop.longitude,
-      latitude: singlestop.latitude,
-      route_id: singlestop.route?.id || null,
-      students: singlestop.students.map((student) => ({
-        id: student.id,
-        full_name: student.full_name,
-        reg_no: student.reg_no,
-        guardian_name: student.User?.name || null,
-      })),
-    };
-
+    const selectedRoute = singlestop.routes?.[0];
+    singlestop.setDataValue("priority", selectedRoute?.StopRoute?.priority ?? null);
+    singlestop.setDataValue("route", selectedRoute || null);
+    singlestop.setDataValue("routes", undefined);
 
     return res.status(200).json({
       message: "Stop details fetched successfully",
-      data: result,
+      data: singlestop,
     });
 
   } catch (error) {
@@ -1641,7 +1697,13 @@ const getStopById = async (req, res) => {
         id,
         trash: false,
       },
-      attributes: ["route_id", "stop_name", "longitude", "latitude"],
+      attributes: ["id", "stop_name", "longitude", "latitude"],
+      include: {
+        model: Routes,
+        as: "routes",
+        attributes: ["id"],
+        through: { attributes: ["priority"] },
+      },
     });
 
     if (!studentStop) {
@@ -1649,6 +1711,11 @@ const getStopById = async (req, res) => {
         message: "Stop not found",
       });
     }
+
+    const stopRoute = studentStop.routes?.[0];
+    studentStop.setDataValue("route_id", stopRoute?.id || null);
+    studentStop.setDataValue("priority", stopRoute?.StopRoute?.priority ?? null);
+    studentStop.setDataValue("routes", undefined);
 
     return res.status(200).json({
       message: "Stop fetched successfully",
@@ -1796,10 +1863,7 @@ const getStopsByRouteId = async (req, res) => {
     const { route_id } = req.params;
     const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
-    let whereClause = {
-      route_id: route_id,
-      trash: false,
-    };
+    let whereClause = { trash: false };
     if (searchQuery) {
       whereClause[Op.or] = [{ stop_name: { [Op.like]: `%${searchQuery}%` } }];
     }
@@ -1819,8 +1883,22 @@ const getStopsByRouteId = async (req, res) => {
 
     const stops = await Stop.findAll({
       where: whereClause,
-      attributes: ["id", "stop_name", "priority", "longitude", "latitude"],
-      order: [["priority", "ASC"]],
+      attributes: ["id", "stop_name", "longitude", "latitude"],
+      include: {
+        model: Routes,
+        as: "routes",
+        where: { id: route_id },
+        attributes: [],
+        through: { attributes: ["priority"] },
+      },
+    });
+    stops.sort((firstStop, secondStop) =>
+      (firstStop.routes[0]?.StopRoute?.priority ?? Infinity) -
+      (secondStop.routes[0]?.StopRoute?.priority ?? Infinity)
+    );
+    stops.forEach((stop) => {
+      stop.setDataValue("priority", stop.routes[0]?.StopRoute?.priority ?? null);
+      stop.setDataValue("routes", undefined);
     });
 
     return res.status(200).json({

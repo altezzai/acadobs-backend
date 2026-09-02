@@ -1532,8 +1532,22 @@ const getStopsByRouteId = async (req, res) => {
     }
 
     const stops = await stop.findAll({
-      where: { route_id, school_id, trash: false },
-      order: [["priority", "ASC"]],
+      where: { school_id, trash: false },
+      include: {
+        model: Routes,
+        as: "routes",
+        where: { id: route_id },
+        attributes: [],
+        through: { attributes: ["priority"] },
+      },
+    });
+    stops.sort((firstStop, secondStop) =>
+      (firstStop.routes[0]?.StopRoute?.priority ?? Infinity) -
+      (secondStop.routes[0]?.StopRoute?.priority ?? Infinity)
+    );
+    stops.forEach((stop) => {
+      stop.setDataValue("priority", stop.routes[0]?.StopRoute?.priority ?? null);
+      stop.setDataValue("routes", undefined);
     });
 
     return res.status(200).json({
@@ -1562,21 +1576,21 @@ const getStopsForParent = async (req, res) => {
       return res.status(404).json({ message: "guardian not found" });
     }
     const stops = await stop.findAll({
-      where: { route_id, trash: false },
-      attributes: ["id", "stop_name", "priority", "arrived"],
+      where: { trash: false },
+      attributes: ["id", "stop_name", "arrived"],
       include: [
         {
           model: Routes,
-          as: "route",
+          as: "routes",
+          where: { id: route_id },
           attributes: ["route_name", "type"],
+          through: { attributes: ["priority"] },
           include: [
             {
               model: School,
               as: "school",
               attributes: ["id"],
-              where: {
-                id: school_id,
-              },
+              where: { id: school_id },
             },
           ],
         },
@@ -1584,12 +1598,13 @@ const getStopsForParent = async (req, res) => {
     });
 
     const result = stops.map((s) => {
+      const route = s.routes[0];
       return {
         id: s.id,
         stop_name: s.stop_name,
-        priority: s.priority,
-        route_name: s.route.route_name,
-        route_type: s.route.type,
+        priority: route.StopRoute?.priority ?? null,
+        route_name: route.route_name,
+        route_type: route.type,
         arrived: s.arrived,
       };
     });
