@@ -12,6 +12,7 @@ router.get("/getStopsForDriver/:route_id", trackerController.getStopsForDriverBy
 router.get("/getStopDetailsForDriver/:stop_id", trackerController.getStopDetailsForDriver);
 router.post("/updateRouteActive", trackerController.updateRouteActive);
 router.put("/updateStopandStudent", trackerController.updateStopandStudent);
+router.put("/editStudentsStopStatus/:id", trackerController.editStudentsStopStatus);
 router.post("/routeInactive", trackerController.routeInactive);
 router.put("/updateStopForDriver/:stopId", trackerController.updateStopForDriver);
 router.delete("/deleteStudentsFromStop/:stop_id", trackerController.deleteStudentsFromStop);

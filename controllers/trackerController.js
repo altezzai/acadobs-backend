@@ -6,6 +6,7 @@ const Student  = require("../models/student");
 const LiveLocation = require("../models/tracker/livelocation");
 const User = require("../models/user");
 const StudentsStopStatus = require("../models/tracker/students_stop_status");
+const Vehicle = require("../models/tracker/vehicle");
 const Class = require("../models/class");
 const { Sequelize } = require("sequelize");
 const { Op } = require("sequelize");
@@ -1089,19 +1090,70 @@ const updateStopandStudent = async (req, res) => {try {
 
 } catch (error) {
   logger.error(
-    "role:",
-    req.user.role,
-    "userId:",
-    req.user.user_id,
-    "Error in updating stop and student:",
-    error
+    "role:",req.user.role,
+    "userId:",req.user.user_id,
+    "Error in updating stop and student:",error
   );
-
   console.log(
     "Failed to update stop and student:",
     error
   );
-
+  return res.status(500).json({
+    error: "Internal server error",
+  });
+}
+};
+const editStudentsStopStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const status = req.body.status;
+    const student_id = req.body.student_id;
+    if (!id || !status || !student_id) {
+      return res.status(400).json({
+        message: "id, status, and student_id are required",
+      });
+    }
+    const StudentStatus = await StudentsStopStatus.findOne({
+      where: { id, student_id },
+      include: [
+        {
+          model: LiveLocation,
+          // as: "livelocation",
+          attributes: ["id"],
+          include: [
+            {
+              model: Routes,
+              required: true,
+              where:{school_id},
+              attributes: ["id", "route_name", "type"],
+            },
+          ],
+        },
+      ],
+    });
+  if (!StudentStatus) {
+    return res.status(404).json({
+      message: "Student status not found",
+    });
+  }
+  await StudentStatus.update({
+    status,
+  });
+  return res.status(200).json({
+    message: "Student status updated successfully",
+    data: StudentStatus,
+  });
+}
+catch (error) {
+  logger.error(
+    "role:",req.user.role,
+    "userId:",req.user.user_id,
+    "Error in updating student status:",error
+  );
+  console.log(
+    "Failed to update student status:",error
+  );
   return res.status(500).json({
     error: "Internal server error",
   });
@@ -1307,6 +1359,18 @@ const getTodayTransportationByStudentId = async (req, res) => {
         trash: false,
       },
       attributes: ["id", "route_name","type","active"],
+      include: [
+        {
+        model:Vehicle,
+        as: "vehicle",
+        attributes: ["id", "vehicle_number","type","model"],
+        },
+        {
+          model:User,
+          as: "driver",
+          attributes: ["id", "name"],
+        },
+      ],
     })
     if (!route) {
       return res.status(404).json({ message: "Route not found" });
@@ -1786,12 +1850,14 @@ module.exports = {
   getStopsForDriverByRouteId,
   getStopDetailsForDriver,
   updateRouteActive,
-  updateStopandStudent,
   routeInactive,
   deleteStudentsFromStop,
   bulkStopCreation,
   
+  updateStopandStudent,
+  editStudentsStopStatus,
   updateLiveLocation,
+
   getlatestLocationByRouteId ,
   getTrackedDataWithDateByRouteId,
   getRouteById,
