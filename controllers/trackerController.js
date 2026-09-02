@@ -381,6 +381,7 @@ const getStopsForDriverByRouteId = async (req, res) => {
       include: [
         {
           model:LiveLocation,
+          required: false,
           attributes: ["latitude", "longitude", "route_id", "stop_id"],
           where: {
             route_id: route_id,
