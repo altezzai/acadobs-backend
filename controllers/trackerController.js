@@ -345,6 +345,7 @@ const getStopsForDriverByRouteId = async (req, res) => {
     const { route_id } = req.params;
     const user_id = req.user.user_id;
     const school_id = req.user.school_id;
+    const today= new Date().toISOString().split("T")[0];
 
     const driver = await User.findOne({
       where: {
@@ -378,6 +379,30 @@ const getStopsForDriverByRouteId = async (req, res) => {
       order: [["priority", "ASC"]],
       attributes: ["id", "stop_name", "priority", "longitude", "latitude"],
       include: [
+        {
+          model:LiveLocation,
+          attributes: ["latitude", "longitude", "route_id", "stop_id"],
+          where: {
+            route_id: route_id,
+             createdAt: {
+          [Op.gte]: today + " 00:00:00",
+          [Op.lte]: today + " 23:59:59",
+        }
+          },
+          include: [
+           {
+          model: StudentsStopStatus,
+          required: false,
+          attributes: ["id", "student_id", "status"],
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "reg_no"],
+            },
+          ],
+        },
+      ]
+      },
         {
           model: Student,
           as: "students",
@@ -1013,6 +1038,21 @@ const updateStopandStudent = async (req, res) => {try {
   const selectedStudentIds = new Set(
     student_ids.map((id) => String(id))
   );
+  const existingLiveLocations = await LiveLocation.findOne({
+    where: {
+      route_id: activeRoute.id,
+      stop_id: stop_id,
+      createdAt: {
+        [Op.gte]: new Date(new Date().setHours(0, 0, 0, 0)),
+        [Op.lte]: new Date(new Date().setHours(23, 59, 59, 999)),
+      },
+    },
+  })
+  if (existingLiveLocations) {
+    return res.status(400).json({
+      message: "Live location for this stop has already been recorded today",
+    });
+  }
   const liveLocation = await LiveLocation.create({
     user_id,
     latitude,
