@@ -219,6 +219,7 @@ const DriverAssignedRoutes = async (req, res) => {
               model: Student,
               as: "students",
               where: { trash: false },
+              attributes: ["id", "full_name", "reg_no","image"],
             },
             {
               model: Stop,
@@ -247,10 +248,9 @@ const DriverAssignedRoutes = async (req, res) => {
         },
       });
 
-      const totalStops = await Stop.count({
+      const totalStops = await StopRoute.count({
         where: {
           route_id: route.id,
-          trash: false,
         },
       });
 
@@ -454,14 +454,14 @@ const getStopsForDriverByRouteId = async (req, res) => {
         },
       ],
     });
-    stops.sort((firstStop, secondStop) =>
-      (firstStop.routes[0]?.StopRoute?.priority ?? Infinity) -
-      (secondStop.routes[0]?.StopRoute?.priority ?? Infinity)
-    );
-    stops.forEach((stop) => {
-      stop.setDataValue("priority", stop.routes[0]?.StopRoute?.priority ?? null);
-      stop.setDataValue("routes", undefined);
-    });
+    // stops.sort((firstStop, secondStop) =>
+    //   (firstStop.routes[0]?.StopRoute?.priority ?? Infinity) -
+    //   (secondStop.routes[0]?.StopRoute?.priority ?? Infinity)
+    // );
+    // stops.forEach((stop) => {
+    //   stop.setDataValue("priority", stop.routes[0]?.StopRoute?.priority ?? null);
+    //   stop.setDataValue("routes", undefined);
+    // });
     return res.status(200).json({
       message: "Stops fetched successfully",
       route,
@@ -713,9 +713,10 @@ const getStopDetailsForDriver = async (req, res) => {
     const { route_id } = req.query;
     const user_id = req.user.user_id;
     const school_id = req.user.school_id;
-    if (!stop_id) {
+    const today= new Date().toISOString().split("T")[0];
+    if (!stop_id || !route_id) {
       return res.status(400).json({
-        message: "stop id required"
+        message: "stop id  and route id are required"
       });
     }
 
@@ -1006,9 +1007,11 @@ const updateStopandStudent = async (req, res) => {try {
   const school_id = req.user.school_id;
   const {
     stop_id,
+    route_id,
     latitude,
     longitude,
     student_ids,
+
   } = req.body;
 
   if (
@@ -1051,7 +1054,7 @@ const updateStopandStudent = async (req, res) => {try {
 
   const activeRoute = await Routes.findOne({
     where: {
-      id: stop.route_id,
+      id: route_id,
       activated_by_driver_id: user_id,
       active: true,
       trash: false,
@@ -1098,8 +1101,8 @@ const updateStopandStudent = async (req, res) => {try {
   );
   const existingLiveLocations = await LiveLocation.findOne({
     where: {
-      route_id: activeRoute.id,
-      stop_id: stop_id,
+      route_id,
+      stop_id,
       createdAt: {
         [Op.gte]: new Date(new Date().setHours(0, 0, 0, 0)),
         [Op.lte]: new Date(new Date().setHours(23, 59, 59, 999)),
@@ -1306,7 +1309,13 @@ const getlatestLocationByRouteId = async (req, res) => {
       include: [
         {
           model: Stop,
-          attributes: ["id", "stop_name","priority","latitude","longitude"],
+          attributes: ["id", "stop_name","latitude","longitude"],
+          include: [
+                {
+                  model: StopRoute,
+                  attributes: ["priority"],
+                },
+              ]
         },
         {
           model: Routes,
@@ -1359,7 +1368,13 @@ const getTrackedDataWithDateByRouteId = async (req, res) => {
       include: [
         {
           model: Stop,
-          attributes: ["id", "stop_name","priority","latitude","longitude"],
+          attributes: ["id", "stop_name","latitude","longitude"],
+          include: [
+            {
+              model: StopRoute,
+              attributes: ["priority"],
+            },
+          ]
         }, 
         {
           model: StudentsStopStatus,
@@ -1452,7 +1467,13 @@ const getTodayTransportationByStudentId = async (req, res) => {
         route_id:student.route_id,
         trash: false,
       },
-      attributes: ["id", "stop_name","priority","latitude","longitude"],
+      attributes: ["id", "stop_name","latitude","longitude"],
+      include: [
+            {
+              model: StopRoute,
+              attributes: ["priority"],
+            },
+          ]
     })
     if (!stops) {
       return res.status(404).json({ message: "Stops not found" });
@@ -1472,7 +1493,13 @@ const getTodayTransportationByStudentId = async (req, res) => {
       include: [
         {
           model: Stop,
-          attributes: ["id", "stop_name","priority","latitude","longitude"],
+          attributes: ["id", "stop_name","latitude","longitude"],
+          include: [
+            {
+              model: StopRoute,
+              attributes: ["priority"],
+            },
+          ]
         }, 
         {
           model: StudentsStopStatus,
@@ -1538,7 +1565,13 @@ const getRouteById = async (req, res) => {
         {
           model: Stop,
           as: "stops",
-          attributes: ["id", "stop_name", "priority"]
+          attributes: ["id", "stop_name"],
+          include: [
+            {
+              model: StopRoute,
+              attributes: ["priority"],
+            },
+          ]
         }
       ],
     });

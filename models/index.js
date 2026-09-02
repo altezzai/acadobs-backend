@@ -36,7 +36,7 @@ const AccountDelete = require("./accountdelete");
 const Syllabus = require("./syllabus");
 const Driver = require("./tracker/driver");
 const Vehicle = require("./tracker/vehicle");
-const stop = require("./tracker/stop");
+const Stop = require("./tracker/stop");
 const Routes = require("./tracker/routes");
 const RouteDrivers = require("./tracker/route_drivers");
 const StopRoutes = require("./tracker/stop_route");
@@ -231,28 +231,29 @@ Routes.belongsToMany(User, {
 Driver.belongsTo(User, { foreignKey: "user_id", as: "user" });
 User.hasMany(Driver, { foreignKey: "user_id", as: "drivers" });
 // Route <-> Stop association through the stop_routes junction table.
-Routes.belongsToMany(stop, {
+Routes.belongsToMany(Stop, {
   through: StopRoutes,
   foreignKey: "route_id",
   otherKey: "stop_id",
   as: "stops",
 });
-stop.belongsToMany(Routes, {
+Stop.belongsToMany(Routes, {
   through: StopRoutes,
   foreignKey: "stop_id",
   otherKey: "route_id",
   as: "routes",
 });
-stop.belongsTo(User,{ foreignKey: "recorded_by" });
+Stop.hasMany(StopRoutes, { foreignKey: "stop_id" });
+Stop.belongsTo(User,{ foreignKey: "recorded_by" });
 
 
 // Stop → Student
-stop.hasMany(Student, {
+Stop.hasMany(Student, {
   foreignKey: "stop_id",
   as: "students",
 });
 
-Student.belongsTo(stop, {
+Student.belongsTo(Stop, {
   foreignKey: "stop_id",
   as: "stop",
 });
@@ -297,10 +298,10 @@ LiveLocation.belongsTo(Routes, {
 Routes.hasMany(LiveLocation, {
   foreignKey: "route_id",
 });
-LiveLocation.belongsTo(stop, {
+LiveLocation.belongsTo(Stop, {
   foreignKey: "stop_id",
 });
-stop.hasMany(LiveLocation, {
+Stop.hasMany(LiveLocation, {
   foreignKey: "stop_id",
 });
 LiveLocation.hasMany(StudentsStopStatus, {
@@ -373,7 +374,7 @@ module.exports = {
   DutyAssignment,
   Driver,
   Vehicle,
-  stop,
+  Stop,
   Routes,
   RouteDrivers,
   Session,
