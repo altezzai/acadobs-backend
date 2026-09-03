@@ -9950,7 +9950,7 @@ const getAllRoutes = async (req, res) => {
         },
       ],
 
-      order: [["createdAt", "DESC"]],
+      order: [["createdAt", "DESC"], ["type", "DESC"]],
     });
     const dropRoutes = await Routes.findAll({
       where: { type: "DROP", trash: false, school_id: school_id },
