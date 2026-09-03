@@ -1586,8 +1586,16 @@ const getRouteById = async (req, res) => {
         message: "school not found"
       });
     }
-    const studentroute = await Routes.findOne({
+    let RouteId = id;
+    const route = await Routes.findOne({
       where: { id: id, school_id: school_id, trash: false },
+      attributes: ["id",  "type","pickId","active"],
+    });
+    if (route.type === "DROP" && route.pickId) {
+      RouteId = route.pickId;
+    }
+    const studentroute = await Routes.findOne({
+      where: { id: RouteId, school_id: school_id, trash: false },
       attributes: ["id", "route_name", "vehicle_id", "type","driver_id","active"],
       include: [
         {
