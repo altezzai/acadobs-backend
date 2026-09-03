@@ -576,7 +576,7 @@ const deleteStudentsFromStop = async (req, res) => {
       include: [
         {
           model: Routes,
-          as: "route",
+          as: "routes",
           attributes: ["id", "isLock"],
           where: { driver_id: user_id },
          
@@ -610,10 +610,8 @@ const deleteStudentsFromStop = async (req, res) => {
         message: "Student not found in this stop",
       });
     }
-
-    // ✅ Now this works because it's a model instance
     await student.update({
-      trash: true,
+      stop_id: null,
     });
 
     return res.status(200).json({
