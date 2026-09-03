@@ -453,7 +453,7 @@ const getStopsForDriverByRouteId = async (req, res) => {
             },
             {
               model: Class,
-              attributes: ["class_name"],
+              attributes: ["classname"],
             },
           ],
         },
@@ -506,7 +506,7 @@ const assignStudentsToStop = async (req, res) => {
       include: [
         {
           model: Routes,
-          as: "route",
+          as: "routes",
           attributes: ["driver_id"],
           where: { driver_id: user_id },
           
@@ -668,7 +668,7 @@ const getStudentsWithUnassignedStopsByRouteId = async (req, res) => {
       },
       {
         model: Class,
-        attributes: ["class_name"],
+        attributes: ["classname"],
       }
       ],
     });
@@ -772,7 +772,7 @@ const getStopDetailsForDriver = async (req, res) => {
             },
             {
               model: Class,
-              attributes: ["class_name"],
+              attributes: ["classname"],
               required: false,
             }
 
