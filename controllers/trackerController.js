@@ -419,11 +419,11 @@ const getStopsForDriverByRouteId = async (req, res) => {
       attributes: ["id", "stop_name", "longitude", "latitude"],
       include: [
         {
-          model: Routes,
-          as: "routes",
-          where: { id: route_id },
-          attributes: [],
-          through: { attributes: ["priority"] },
+          model: StopRoute,
+          where: {
+            route_id: route_id,
+          },
+          attributes: ["priority"],
         },
         {
           model:LiveLocation,
@@ -454,14 +454,7 @@ const getStopsForDriverByRouteId = async (req, res) => {
         },
       ],
     });
-    // stops.sort((firstStop, secondStop) =>
-    //   (firstStop.routes[0]?.StopRoute?.priority ?? Infinity) -
-    //   (secondStop.routes[0]?.StopRoute?.priority ?? Infinity)
-    // );
-    // stops.forEach((stop) => {
-    //   stop.setDataValue("priority", stop.routes[0]?.StopRoute?.priority ?? null);
-    //   stop.setDataValue("routes", undefined);
-    // });
+
     return res.status(200).json({
       message: "Stops fetched successfully",
       route,
@@ -746,7 +739,7 @@ const getStopDetailsForDriver = async (req, res) => {
           model: Routes,
           as: "routes",
           where: route_id ? { id: route_id } : undefined,
-          attributes: ["id"],
+          attributes: ["id","route_name","type","active"],
           through: { attributes: ["priority"] },
         },
         {
@@ -925,82 +918,157 @@ const routeInactive = async (req, res) => {
   }
 };
 
-//assign bulk of stops to the route if route isLOck is false
-const bulkStopCreation = async (req, res) => {
+const bulkchangeStopPrioritybyRouteId = async (req, res) => {
   try {
-    const { route_id, stops } = req.body;
-    const user_id = req.user.user_id;
+    const { route_id } = req.params;
+    const { stops } = req.body || {};
     const school_id = req.user.school_id;
 
-    if (!route_id || !stops || !Array.isArray(stops) || stops.length === 0) {
-      return res.status(400).json({ message: "Fields are missing or stops must be a non-empty array" });
+    if (!route_id || !Array.isArray(stops) || stops.length === 0) {
+      return res.status(400).json({
+        message: "route_id and a non-empty stops array are required",
+      });
     }
 
+    const stopIds = stops.map((stop) => stop.stop_id);
+    const hasInvalidPriority = stops.some(
+      (stop) =>
+        !stop.stop_id ||
+        (stop.priority !== null &&
+          (!Number.isInteger(Number(stop.priority)) || Number(stop.priority) < 0)),
+    );
 
-    const driver = await User.findOne({
-      where: {
-        id:user_id,
-        trash: false,
-        role: "driver",
-        school_id
-      },
-    });
-
-
-    if (!driver) {
-      return res.status(404).json({ message: "Driver not found" });
+    if (hasInvalidPriority || new Set(stopIds).size !== stopIds.length) {
+      return res.status(400).json({
+        message: "Each stop must have a unique stop_id and a non-negative integer priority",
+      });
     }
 
     const route = await Routes.findOne({
-      where: {
-        id: route_id,
-        trash: false,
-        driver_id: user_id,
-      },
+      where: { id: route_id, school_id, trash: false },
     });
 
     if (!route) {
-      return res.status(404).json({
-        message: "Route not found",
-      });
+      return res.status(404).json({ message: "Route not found" });
     }
 
-    const existingStops = await Stop.findAll({
-      where: {
-        route_id,
-        trash: false,
-        [Op.or]: stops.map(s => ({ stop_name: s.stop_name, priority: s.priority })),
-      },
+    const stopRoutes = await StopRoute.findAll({
+      where: { route_id, stop_id: stopIds },
     });
-    if (existingStops.length > 0) {
-      const conflictDetails = existingStops.map(s => `"${s.stop_name}" (priority: ${s.priority})`).join(", ");
-      return res.status(400).json({
-        message: `The following stops already exist for this route: ${conflictDetails}`,
+
+    if (stopRoutes.length !== stopIds.length) {
+      return res.status(404).json({
+        message: "One or more stops are not assigned to this route",
       });
     }
 
-    // Create stop
-    const stopsToCreate = stops.map(stop => ({
-      route_id,
-      stop_name: stop.stop_name,
-      priority: stop.priority,
-      latitude: stop.latitude,
-      longitude: stop.longitude,
-      trash: false,
-    }));
+    const transaction = await StopRoute.sequelize.transaction();
+    try {
+      await Promise.all(
+        stops.map((stop) =>
+          StopRoute.update(
+            { priority: stop.priority === null ? null : Number(stop.priority) },
+            { where: { route_id, stop_id: stop.stop_id }, transaction },
+          ),
+        ),
+      );
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
 
-    const createdStops = await Stop.bulkCreate(stopsToCreate, { returning: true });
-
-    res.status(201).json({
-      message: `${createdStops.length} stops created successfully`,
-      stops: createdStops,
+    return res.status(200).json({
+      message: "Stop priorities updated successfully",
+      route_id: Number(route_id),
+      updated_count: stops.length,
     });
   } catch (error) {
-    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error in creating stop:", error);
-    console.error("Error creating stop:", error);
-    res.status(500).json({ error: "Failed to create stop" });
+    logger.error(
+      "role:", req.user.role,
+      "userId:", req.user.user_id,
+      "Error updating stop priorities:", error,
+    );
+    console.error("Error updating stop priorities:", error);
+    return res.status(500).json({ error: "Failed to update stop priorities" });
   }
 };
+
+//assign bulk of stops to the route if route isLOck is false
+// const bulkStopCreation = async (req, res) => {
+//   try {
+//     const { route_id, stops } = req.body;
+//     const user_id = req.user.user_id;
+//     const school_id = req.user.school_id;
+
+//     if (!route_id || !stops || !Array.isArray(stops) || stops.length === 0) {
+//       return res.status(400).json({ message: "Fields are missing or stops must be a non-empty array" });
+//     }
+
+
+//     const driver = await User.findOne({
+//       where: {
+//         id:user_id,
+//         trash: false,
+//         role: "driver",
+//         school_id
+//       },
+//     });
+
+
+//     if (!driver) {
+//       return res.status(404).json({ message: "Driver not found" });
+//     }
+
+//     const route = await Routes.findOne({
+//       where: {
+//         id: route_id,
+//         trash: false,
+//         driver_id: user_id,
+//       },
+//     });
+
+//     if (!route) {
+//       return res.status(404).json({
+//         message: "Route not found",
+//       });
+//     }
+
+//     const existingStops = await Stop.findAll({
+//       where: {
+//         school_id,
+//         trash: false,
+//         [Op.or]: stops.map(s => ({ stop_name: s.stop_name })),
+//       },
+//     });
+//     if (existingStops.length > 0) {
+//       const conflictDetails = existingStops.map(s => `"${s.stop_name}"`).join(", ");
+//       return res.status(400).json({
+//         message: `The following stops already exist for this route: ${conflictDetails}`,
+//       });
+//     }
+
+//     // Create stop
+//     const stopsToCreate = stops.map(stop => ({
+//       route_id,
+//       stop_name: stop.stop_name,
+//       latitude: stop.latitude,
+//       longitude: stop.longitude,
+//       trash: false,
+//     }));
+
+//     const createdStops = await Stop.bulkCreate(stopsToCreate, { returning: true });
+
+//     res.status(201).json({
+//       message: `${createdStops.length} stops created successfully`,
+//       stops: createdStops,
+//     });
+//   } catch (error) {
+//     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error in creating stop:", error);
+//     console.error("Error creating stop:", error);
+//     res.status(500).json({ error: "Failed to create stop" });
+//   }
+// };
 const updateStopandStudent = async (req, res) => {try {
   
   const user_id = req.user.user_id;
@@ -1041,6 +1109,7 @@ const updateStopandStudent = async (req, res) => {try {
 
   const stop = await Stop.findOne({
     where: {
+      school_id,
       id: stop_id,
       trash: false,
     },
@@ -1054,6 +1123,7 @@ const updateStopandStudent = async (req, res) => {try {
 
   const activeRoute = await Routes.findOne({
     where: {
+      school_id,
       id: route_id,
       activated_by_driver_id: user_id,
       active: true,
@@ -1806,7 +1876,7 @@ const updateStopForDriver = async (req, res) => {
     const driverId = req.user.user_id;
     const school_id = req.user.school_id;
 
-    const { stop_name, longitude, latitude, priority } = req.body;
+    const { stop_name, longitude, latitude } = req.body;
     const driverData = await User.findOne({
       where: {
         id: driverId,
@@ -1830,8 +1900,9 @@ const updateStopForDriver = async (req, res) => {
       include: [
         {
           model: Routes,
-          as: "route",
-          attributes: ["id", "isLock"],
+          as: "routes",
+          attributes: ["id", "isLock","route_name"],
+          where: {driver_id: driverId, trash: false, school_id},
         },
       ],
     });
@@ -1851,7 +1922,6 @@ const updateStopForDriver = async (req, res) => {
       stop_name: stop_name ?? stopData.stop_name,
       longitude: longitude ?? stopData.longitude,
       latitude: latitude ?? stopData.latitude,
-      priority: priority ?? stopData.priority,
     });
 
     return res.status(200).json({
@@ -1918,20 +1988,9 @@ const getStopsByRouteId = async (req, res) => {
       where: whereClause,
       attributes: ["id", "stop_name", "longitude", "latitude"],
       include: {
-        model: Routes,
-        as: "routes",
-        where: { id: route_id },
-        attributes: [],
-        through: { attributes: ["priority"] },
+        model:StopRoute,
+        attributes: ["priority"],
       },
-    });
-    stops.sort((firstStop, secondStop) =>
-      (firstStop.routes[0]?.StopRoute?.priority ?? Infinity) -
-      (secondStop.routes[0]?.StopRoute?.priority ?? Infinity)
-    );
-    stops.forEach((stop) => {
-      stop.setDataValue("priority", stop.routes[0]?.StopRoute?.priority ?? null);
-      stop.setDataValue("routes", undefined);
     });
 
     return res.status(200).json({
@@ -1963,7 +2022,8 @@ module.exports = {
   updateRouteActive,
   routeInactive,
   deleteStudentsFromStop,
-  bulkStopCreation,
+  bulkchangeStopPrioritybyRouteId,
+  // bulkStopCreation,
   
   updateStopandStudent,
   editStudentsStopStatus,

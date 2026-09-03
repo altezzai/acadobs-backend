@@ -44,6 +44,7 @@ const { School } = require("../models");
 const StudentTransfer = require("../models/student_transfer");
 const RouteDrivers = require("../models/tracker/route_drivers");
 const Stop = require("../models/tracker/stop");
+const StopRoute = require("../models/tracker/stop_route");
 const Driver  = require("../models/tracker/driver");
 const Vehicle  = require("../models/tracker/vehicle");
 const Routes = require("../models/tracker/routes");
@@ -10173,7 +10174,15 @@ const changeStudentRouteAndStop = async (req, res) => {
     }
 
     const stop = await Stop.findOne({
-      where: { id: stop_id,route_id,trash: false, },
+      where: { id: stop_id,trash: false, },
+      include: [
+        {
+          model: StopRoute,
+          required: true,
+          where: { route_id: route_id},
+          attributes: ["priority"],
+        },
+      ],
     });
 
     if (!stop) {
