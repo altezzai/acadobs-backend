@@ -7,7 +7,7 @@ const { route } = require("./schoolAdminRoutes");
 router.get("/getDriverAssignedRoutes", trackerController.DriverAssignedRoutes);
 router.post("/createStopForDriver", trackerController.createStopForDriver);
 router.post("/assignStudentToStop", trackerController.assignStudentsToStop);
-router.get("/getMyStudents/:route_id", trackerController.getMyStudents);
+router.get("/getStudentsWithUnassignedStopsByRouteId/:route_id", trackerController.getStudentsWithUnassignedStopsByRouteId);
 router.get("/getStopsForDriver/:route_id", trackerController.getStopsForDriverByRouteId);
 router.get("/getStopDetailsForDriver/:stop_id", trackerController.getStopDetailsForDriver);
 router.post("/updateRouteActive", trackerController.updateRouteActive);

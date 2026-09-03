@@ -629,8 +629,8 @@ const deleteStudentsFromStop = async (req, res) => {
   }
 };
 
-//driver sees students under a routes assigned to them
-const getMyStudents = async (req, res) => {
+
+const getStudentsWithUnassignedStopsByRouteId = async (req, res) => {
   try {
     const { route_id } = req.params;
     const user_id = req.user.user_id;
@@ -642,22 +642,8 @@ const getMyStudents = async (req, res) => {
       });
     }
 
-    // Verify if the route exists and is assigned to the driver
     const route = await Routes.findOne({
       where: { id: route_id, driver_id:user_id,school_id, trash: false },
-      include: [
-        {
-          model: User,
-           as: "driver",
-          where: { trash: false, role: "driver" },
-          attributes: ["id", "name", "phone","dp"],
-        },
-        {
-          model: Student,
-          as: "students",
-          where: { trash: false,school_id },
-        }
-      ],
     });
 
     if (!route) {
@@ -665,20 +651,16 @@ const getMyStudents = async (req, res) => {
         message: "Route not found or not assigned to you",
       });
     }
-    if (!route.students || route.students.length === 0) {
-      return res.status(404).json({
-        message: "Students not found in this route",
-      });
-    }
 
-
-    const students = route.students.map((s) => ({
-      id: s.id,
-      full_name: s.full_name,
-      reg_no: s.reg_no,
-      guardian_name: s.guardian?.guardian_name || null,
-      guardian_contact: s.guardian?.guardian_contact || null,
-    }));
+    const students = await Student.findAll({
+      where: {
+        stop_id: null,
+        route_id: route_id,
+        trash: false,
+        school_id,
+      },
+      attributes: ["id", "full_name","roll_number", "reg_no", "image"],
+    });
 
     if (!students || students.length === 0) {
       return res.status(404).json({
@@ -688,7 +670,9 @@ const getMyStudents = async (req, res) => {
 
     return res.status(200).json({
       message: "Students fetched successfully",
+      count: students.length,
       data: students,
+
     });
   } catch (error) {
     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching students:", error);
@@ -698,8 +682,6 @@ const getMyStudents = async (req, res) => {
     });
   }
 };
-
-//get each stop details for driver 
 const getStopDetailsForDriver = async (req, res) => {
   try {
     const { stop_id } = req.params;
@@ -2016,14 +1998,13 @@ module.exports = {
   createStopForDriver,
   assignStudentsToStop,
 
-  getMyStudents,
+  getStudentsWithUnassignedStopsByRouteId,
   getStopsForDriverByRouteId,
   getStopDetailsForDriver,
   updateRouteActive,
   routeInactive,
   deleteStudentsFromStop,
   bulkchangeStopPrioritybyRouteId,
-  // bulkStopCreation,
   
   updateStopandStudent,
   editStudentsStopStatus,
