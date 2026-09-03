@@ -218,6 +218,7 @@ const DriverAssignedRoutes = async (req, res) => {
             {
               model: Student,
               as: "students",
+              required: false,
               where: { trash: false },
               attributes: ["id", "full_name", "reg_no","image"],
             },
@@ -554,10 +555,9 @@ const assignStudentsToStop = async (req, res) => {
 };
 
 //driver deletes the students from the stop
-const deleteStudentsFromStop = async (req, res) => {
+const deleteStudentFromStop = async (req, res) => {
   try {
-    const stop_id = req.params.stop_id;
-    const { student_id } = req.body;
+    const {stop_id, student_id } = req.params;
     const user_id = req.user.user_id;
     const school_id = req.user.school_id;
 
@@ -2001,7 +2001,7 @@ module.exports = {
   getStopDetailsForDriver,
   updateRouteActive,
   routeInactive,
-  deleteStudentsFromStop,
+  deleteStudentFromStop,
   bulkchangeStopPrioritybyRouteId,
   
   updateStopandStudent,

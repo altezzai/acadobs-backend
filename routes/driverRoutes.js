@@ -15,7 +15,7 @@ router.put("/updateStopandStudent", trackerController.updateStopandStudent);
 router.put("/editStudentsStopStatus/:id", trackerController.editStudentsStopStatus);
 router.post("/routeInactive", trackerController.routeInactive);
 router.put("/updateStopForDriver/:stopId", trackerController.updateStopForDriver);
-router.delete("/deleteStudentsFromStop/:stop_id", trackerController.deleteStudentsFromStop);
+router.delete("/deleteStudentFromStop/:stop_id/:student_id", trackerController.deleteStudentFromStop);
 // router.post("/bulkStopCreation", trackerController.bulkStopCreation);
 router.put("/bulkchangeStopPrioritybyRouteId/:route_id", trackerController.bulkchangeStopPrioritybyRouteId);
 router.post("/updateLiveLocation", trackerController.updateLiveLocation);
