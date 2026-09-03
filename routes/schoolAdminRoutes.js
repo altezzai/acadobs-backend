@@ -618,6 +618,8 @@ router.get("/getTrackedDataWithDateByRouteId/:route_id",
 router.get(
   "/getTodayTransportationByStudentId/:id", 
   trackerController.getTodayTransportationByStudentId);  
+router.get("/getStudentsWithUnassignedRouteByClassId/:class_id", 
+  trackerController.getStudentsWithUnassignedRouteByClassId);
 // Student Transfer routes
 router.post("/studentTransfer", transferController.adminCreateTransferRequest);
 router.get(
