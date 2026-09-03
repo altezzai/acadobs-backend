@@ -451,6 +451,10 @@ const getStopsForDriverByRouteId = async (req, res) => {
               model: User,
               attributes: ["name", "phone"],
             },
+            {
+              model: Class,
+              attributes: ["class_name"],
+            },
           ],
         },
       ],
@@ -498,7 +502,7 @@ const assignStudentsToStop = async (req, res) => {
 
 
     const stop = await Stop.findOne({
-      where: { id: stop_id, trash: false },
+      where: { id: stop_id, trash: false, school_id },
       include: [
         {
           model: Routes,
@@ -533,8 +537,7 @@ const assignStudentsToStop = async (req, res) => {
 
     await Student.update(
       {
-        stop_id: stop_id,
-        route_id: stop.route_id,
+        stop_id,
       },
       {
         where: { id: student_ids },
@@ -658,6 +661,16 @@ const getStudentsWithUnassignedStopsByRouteId = async (req, res) => {
         school_id,
       },
       attributes: ["id", "full_name","roll_number", "reg_no", "image"],
+      include: [
+        {
+          model: User,
+          attributes: ["name", "phone"],
+      },
+      {
+        model: Class,
+        attributes: ["class_name"],
+      }
+      ],
     });
 
     if (!students || students.length === 0) {
@@ -754,9 +767,15 @@ const getStopDetailsForDriver = async (req, res) => {
           include: [
             {
               model: User,
-              attributes: ["name"],
+              attributes: ["name", "phone"],
+              required: false,
+            },
+            {
+              model: Class,
+              attributes: ["class_name"],
               required: false,
             }
+
           ]
 
         },
