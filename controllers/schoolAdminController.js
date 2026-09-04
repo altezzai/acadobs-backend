@@ -11232,6 +11232,185 @@ const permanentDeleteExamTimetable = async (req, res) => {
     });
   }
 };
+const getOwnDatasForSchool = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+
+    const school = await School.findOne({
+      where: { id: school_id },
+    attributes:[
+      "id",
+      "name",
+      "email",
+      "phone",
+      "address",
+      "logo",
+      "period_count",
+      "attendance_count",
+      "education_year_start",
+      "location",
+      "pass_percent",
+      "primary_colour",
+      "secondary_colour",
+      "bg_image",
+      "status",
+      "upi_id",
+      "upi_name",
+      "payment_enabled",
+      "slug",
+      "short_name",
+      "tagline",
+      "about",
+      "description",
+      "website",
+      "whatsapp",
+      "alternate_phone",
+      "pincode",
+      "district",
+      "state",
+      "google_map_url",
+      "facebook_url",
+      "instagram_url",
+      "youtube_url",
+      "admission_enabled",
+      "seo_title",
+      "seo_description"],
+    include:[
+      {
+        model:Syllabus,
+        attributes:["id","name"], 
+      }
+    ]
+
+  });
+
+    if (!school) {
+      return res.status(404).json({ success: false, error: "School not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "School datas fetched successfully",
+      data: school,
+    });
+  } catch (error) {
+    logger.error("school_id:", req.user?.school_id, "Error fetching school datas:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch school datas",
+      error: error.message,
+    });
+  }
+};
+const updateOwnDatasForSchool = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const {
+      name,
+      address,
+      period_count,
+      attendance_count,
+      location,
+      pass_percent,
+      primary_colour,
+      secondary_colour,
+      upi_id,
+      upi_name,
+      payment_enabled,
+      slug,
+      short_name,
+      tagline,
+      about,
+      description,
+      website,
+      whatsapp,
+      alternate_phone,
+      pincode,
+      district,
+      state,
+      google_map_url,
+      facebook_url,
+      instagram_url,
+      youtube_url,
+      admission_enabled,
+      seo_title,
+      seo_description,
+    } = req.body;
+    const school = await School.findOne({
+      where: { id: school_id },
+    });
+
+    if (!school) {
+      return res.status(404).json({ success: false, error: "School not found" });
+    }
+     const transaction = await schoolSequelize.transaction();
+
+    const logoUrl = req.uploadedFiles?.logo?.[0]?.url || null;
+    const bgImageUrl = req.uploadedFiles?.image?.[0]?.url || null;
+    await school.update({
+      address,
+      logo:logoUrl ?logoUrl:school.logo,
+      period_count,
+      attendance_count,
+      location,
+      pass_percent,
+      primary_colour,
+      secondary_colour,
+      bg_image:bgImageUrl ?bgImageUrl:school.bg_image,
+      upi_id,
+      upi_name,
+      payment_enabled,
+      slug,
+      short_name,
+      tagline,
+      about,
+      description,
+      website,
+      whatsapp,
+      alternate_phone,
+      pincode,
+      district,
+      state,
+      google_map_url,
+      facebook_url,
+      instagram_url,
+      youtube_url,
+      admission_enabled,
+      seo_title,
+      seo_description,
+    }, { transaction });
+    await User.update({
+      dp:logoUrl,
+      name:name,
+    }, {
+      where: {
+        role:"admin",
+        school_id:school_id
+      },  
+      transaction
+    });
+    await transaction.commit();
+    if(logoUrl && school.logo){
+      await deleteFile(school.logo);
+    }
+    if(bgImageUrl && school.bg_image){
+      await deleteFile(school.bg_image);
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: "School datas updated successfully",
+      data: school,
+    });
+  } catch (error) {
+    logger.error("school_id:", req.user?.school_id, "Error updating school datas:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update school datas",
+      error: error.message,
+    });
+  }
+};
 
 module.exports = {
   createClass,
@@ -11475,4 +11654,8 @@ module.exports = {
   getTrashedExamTimetables,
   restoreExamTimetable,
   permanentDeleteExamTimetable,
+
+  
+  getOwnDatasForSchool,
+  updateOwnDatasForSchool,
 };

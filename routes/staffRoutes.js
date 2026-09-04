@@ -662,6 +662,7 @@ router.get(
 router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);
 router.get("/getLeaveTypes", commonController.getLeaveTypes);
 router.get("/getExamTitles",commonController.getExamTitles);
+router.put("/changePassword", commonController.changePassword);
 
 
 module.exports = router;
