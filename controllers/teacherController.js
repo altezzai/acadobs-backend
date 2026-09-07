@@ -1286,7 +1286,7 @@ const getAllHomework = async (req, res) => {
       include: [
         {
           model: HomeworkAssignment,
-          attributes: ["id", "remarks", "points", "solved_file"],
+          attributes: ["id", "remarks", "points", "solved_file", "is_seen"],
 
           include: [
             {
@@ -1430,7 +1430,7 @@ const getHomeworkById = async (req, res) => {
         {
           model: HomeworkAssignment,
           required: !isRecordedByUser,
-          attributes: ["id", "remarks", "points", "solved_file"],
+          attributes: ["id", "remarks", "points", "solved_file", "is_seen"],
           include: [
             {
               model: Student,
@@ -1512,7 +1512,7 @@ const updateHomework = async (req, res) => {
 const updateHomeworkAssignment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { remarks, points } = req.body;
+    const { remarks, points, is_seen } = req.body;
 
     const assignment = await HomeworkAssignment.findByPk(id);
     if (!assignment) return res.status(404).json({ error: "Not found" });
@@ -1525,11 +1525,16 @@ const updateHomeworkAssignment = async (req, res) => {
       fileName = newFileUrl;
     }
 
-    await assignment.update({
+    const updateData = {
       remarks,
       points,
       solved_file: fileName ? fileName : assignment.solved_file,
-    });
+    };
+    if (is_seen !== undefined) {
+      updateData.is_seen = is_seen;
+    }
+
+    await assignment.update(updateData);
     res.status(200).json({ message: "Updated successfully", assignment });
   } catch (error) {
     logger.error(
@@ -1711,11 +1716,15 @@ const bulkUpdateHomeworkAssignments = async (req, res) => {
     }
 
     const updatePromises = assignments.map(async (item) => {
+      const updateData = {
+        remarks: item.remarks,
+        points: item.points,
+      };
+      if (item.is_seen !== undefined) {
+        updateData.is_seen = item.is_seen;
+      }
       return HomeworkAssignment.update(
-        {
-          remarks: item.remarks,
-          points: item.points,
-        },
+        updateData,
         {
           where: {
             homework_id,
@@ -3586,7 +3595,7 @@ const getAllParentNotesByTeacher = async (req, res) => {
       include: [
         {
           model: ParentNoteStudent,
-          attributes: ["id", "student_id", "status"],
+          attributes: ["id", "student_id", "is_seen"],
           where: { trash: false },
           required: false,
           include: [
@@ -3629,7 +3638,7 @@ const getParentNoteById = async (req, res) => {
       include: [
         {
           model: ParentNoteStudent,
-          attributes: ["id", "student_id", "status"],
+          attributes: ["id", "student_id", "is_seen"],
           where: { trash: false },
           required: false,
           include: [
@@ -3802,7 +3811,7 @@ const getTrashedParentNotes = async (req, res) => {
       include: [
         {
           model: ParentNoteStudent,
-          attributes: ["id", "student_id", "status"],
+          attributes: ["id", "student_id", "is_seen"],
           where: { trash: false },
           required: false,
           include: [
