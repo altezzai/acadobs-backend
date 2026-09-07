@@ -11303,6 +11303,7 @@ const getOwnDatasForSchool = async (req, res) => {
   }
 };
 const updateOwnDatasForSchool = async (req, res) => {
+  let transaction;
   try {
     const school_id = req.user.school_id;
     const {
@@ -11343,20 +11344,42 @@ const updateOwnDatasForSchool = async (req, res) => {
     if (!school) {
       return res.status(404).json({ success: false, error: "School not found" });
     }
-     const transaction = await schoolSequelize.transaction();
 
-    const logoUrl = req.uploadedFiles?.logo?.[0]?.url || null;
-    const bgImageUrl = req.uploadedFiles?.image?.[0]?.url || null;
+    const newLogoUrl = req.uploadedFiles?.logo?.[0]?.url || null;
+    const newBgImageUrl = req.uploadedFiles?.image?.[0]?.url || null;
+
+    const oldLogo = school.logo;
+    const oldBgImage = school.bg_image;
+
+    let finalLogo = oldLogo;
+    let finalBgImage = oldBgImage;
+
+    if (newLogoUrl) {
+      if (oldLogo) {
+        await deleteFile(oldLogo);
+      }
+      finalLogo = newLogoUrl;
+    }
+
+    if (newBgImageUrl) {
+      if (oldBgImage) {
+        await deleteFile(oldBgImage);
+      }
+      finalBgImage = newBgImageUrl;
+    }
+
+    transaction = await schoolSequelize.transaction();
+
     await school.update({
       address,
-      logo:logoUrl ?logoUrl:school.logo,
+      logo: finalLogo,
       period_count,
       attendance_count,
       location,
       pass_percent,
       primary_colour,
       secondary_colour,
-      bg_image:bgImageUrl ?bgImageUrl:school.bg_image,
+      bg_image: finalBgImage,
       upi_id,
       upi_name,
       payment_enabled,
@@ -11379,23 +11402,19 @@ const updateOwnDatasForSchool = async (req, res) => {
       seo_title,
       seo_description,
     }, { transaction });
+
     await User.update({
-      dp:logoUrl,
-      name:name,
+      dp: finalLogo,
+      name: name,
     }, {
       where: {
-        role:"admin",
-        school_id:school_id
+        role: "admin",
+        school_id: school_id
       },  
       transaction
     });
+
     await transaction.commit();
-    if(logoUrl && school.logo){
-      await deleteFile(school.logo);
-    }
-    if(bgImageUrl && school.bg_image){
-      await deleteFile(school.bg_image);
-    }
     
     return res.status(200).json({
       success: true,
@@ -11403,6 +11422,7 @@ const updateOwnDatasForSchool = async (req, res) => {
       data: school,
     });
   } catch (error) {
+    if (transaction) await transaction.rollback();
     logger.error("school_id:", req.user?.school_id, "Error updating school datas:", error);
     return res.status(500).json({
       success: false,
