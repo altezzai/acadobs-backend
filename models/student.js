@@ -25,6 +25,9 @@ const Student = schoolSequelize.define(
     alumni: { type: DataTypes.BOOLEAN, defaultValue: false },
     second_language: { type: DataTypes.STRING },
     trash: { type: DataTypes.BOOLEAN, defaultValue: false },
+    stop_id: { type: DataTypes.INTEGER, allowNull: true },
+    route_id: { type: DataTypes.INTEGER, allowNull: true },
+    student_status:{ type: DataTypes.STRING },
     createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     student_status: {

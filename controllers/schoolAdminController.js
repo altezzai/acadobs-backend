@@ -44,6 +44,7 @@ const { School } = require("../models");
 const StudentTransfer = require("../models/student_transfer");
 const RouteDrivers = require("../models/tracker/route_drivers");
 const Stop = require("../models/tracker/stop");
+const StopRoute = require("../models/tracker/stop_route");
 const Driver  = require("../models/tracker/driver");
 const Vehicle  = require("../models/tracker/vehicle");
 const Routes = require("../models/tracker/routes");
@@ -9942,9 +9943,14 @@ const getAllRoutes = async (req, res) => {
           as: "vehicle",
           attributes: ["vehicle_number"],
         },
+        {
+          model: Routes,
+          as: "pickupRoute",
+          attributes: ["id", "route_name"],
+        },
       ],
 
-      order: [["createdAt", "DESC"]],
+      order: [["createdAt", "DESC"], ["type", "DESC"]],
     });
     const dropRoutes = await Routes.findAll({
       where: { type: "DROP", trash: false, school_id: school_id },
@@ -9955,6 +9961,8 @@ const getAllRoutes = async (req, res) => {
       id: route.id,
       route_name: route.route_name,
       type: route.type,
+      pickId: route.pickId || null,
+      pickup_route_name: route.pickupRoute?.route_name || null,
       hasDropRoute: dropRouteSet.has(route.id),
       isLock: route.isLock,
       vehicle_number: route.vehicle?.vehicle_number || null,
@@ -9977,7 +9985,7 @@ const getAllRoutes = async (req, res) => {
 const assignStudentToRoute = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const { student_ids, route_id, hasAssignToDropRoute } = req.body;
+    const { student_ids, route_id } = req.body;
 
     if (
       !student_ids ||
@@ -10005,19 +10013,6 @@ const assignStudentToRoute = async (req, res) => {
       return res.status(404).json({ message: "Student not found" });
     }
     await pickupRoute.addStudents(students);
-    if (hasAssignToDropRoute) {
-      const dropRoute = await Routes.findOne({
-        where: { pickId: route_id, trash: false, school_id: school_id },
-      });
-
-      if (!dropRoute) {
-        return res
-          .status(404)
-          .json({ message: "Drop route not found for this pickup route" });
-      }
-
-      await dropRoute.addStudents(students);
-    }
 
     return res.json({
       message: "Students assigned to route successfully",
@@ -10152,6 +10147,63 @@ const deleteStudentFromRoute = async (req, res) => {
     });
   }
 };
+const changeStudentRouteAndStop = async (req, res) => {
+  try {
+    const { student_id } = req.params;
+    const { route_id, stop_id } = req.body;
+    const school_id = req.user.school_id;
+
+    const student = await Student.findOne({
+      where: { id: student_id, trash: false, school_id: school_id },
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found",
+      });
+    }
+
+    const route = await Routes.findOne({
+      where: { id: route_id, trash: false, school_id: school_id },
+    });
+
+    if (!route) {
+      return res.status(404).json({
+        message: "Route not found",
+      });
+    }
+
+    const stop = await Stop.findOne({
+      where: { id: stop_id,trash: false, },
+      include: [
+        {
+          model: StopRoute,
+          required: true,
+          where: { route_id: route_id},
+          attributes: ["priority"],
+        },
+      ],
+    });
+
+    if (!stop) {
+      return res.status(404).json({
+        message: "Stop not found",
+      });
+    }
+
+    await student.update({ route_id: route_id, stop_id: stop_id });
+
+    return res.status(200).json({
+      message: "Student route and stop updated successfully",
+    });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Change Student Route And Stop Error:", error);
+    console.error(error);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};  
 
 const assignDriverToRoutes = async (req, res) => {
   try {
@@ -11180,6 +11232,205 @@ const permanentDeleteExamTimetable = async (req, res) => {
     });
   }
 };
+const getOwnDatasForSchool = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+
+    const school = await School.findOne({
+      where: { id: school_id },
+    attributes:[
+      "id",
+      "name",
+      "email",
+      "phone",
+      "address",
+      "logo",
+      "period_count",
+      "attendance_count",
+      "education_year_start",
+      "location",
+      "pass_percent",
+      "primary_colour",
+      "secondary_colour",
+      "bg_image",
+      "status",
+      "upi_id",
+      "upi_name",
+      "payment_enabled",
+      "slug",
+      "short_name",
+      "tagline",
+      "about",
+      "description",
+      "website",
+      "whatsapp",
+      "alternate_phone",
+      "pincode",
+      "district",
+      "state",
+      "google_map_url",
+      "facebook_url",
+      "instagram_url",
+      "youtube_url",
+      "admission_enabled",
+      "seo_title",
+      "seo_description"],
+    include:[
+      {
+        model:Syllabus,
+        attributes:["id","name"], 
+      }
+    ]
+
+  });
+
+    if (!school) {
+      return res.status(404).json({ success: false, error: "School not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "School datas fetched successfully",
+      data: school,
+    });
+  } catch (error) {
+    logger.error("school_id:", req.user?.school_id, "Error fetching school datas:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch school datas",
+      error: error.message,
+    });
+  }
+};
+const updateOwnDatasForSchool = async (req, res) => {
+  let transaction;
+  try {
+    const school_id = req.user.school_id;
+    const {
+      name,
+      address,
+      period_count,
+      attendance_count,
+      location,
+      pass_percent,
+      primary_colour,
+      secondary_colour,
+      upi_id,
+      upi_name,
+      payment_enabled,
+      slug,
+      short_name,
+      tagline,
+      about,
+      description,
+      website,
+      whatsapp,
+      alternate_phone,
+      pincode,
+      district,
+      state,
+      google_map_url,
+      facebook_url,
+      instagram_url,
+      youtube_url,
+      admission_enabled,
+      seo_title,
+      seo_description,
+    } = req.body;
+    const school = await School.findOne({
+      where: { id: school_id },
+    });
+
+    if (!school) {
+      return res.status(404).json({ success: false, error: "School not found" });
+    }
+
+    const newLogoUrl = req.uploadedFiles?.logo?.[0]?.url || null;
+    const newBgImageUrl = req.uploadedFiles?.image?.[0]?.url || null;
+
+    const oldLogo = school.logo;
+    const oldBgImage = school.bg_image;
+
+    let finalLogo = oldLogo;
+    let finalBgImage = oldBgImage;
+
+    if (newLogoUrl) {
+      if (oldLogo) {
+        await deleteFile(oldLogo);
+      }
+      finalLogo = newLogoUrl;
+    }
+
+    if (newBgImageUrl) {
+      if (oldBgImage) {
+        await deleteFile(oldBgImage);
+      }
+      finalBgImage = newBgImageUrl;
+    }
+
+    transaction = await schoolSequelize.transaction();
+
+    await school.update({
+      address,
+      logo: finalLogo,
+      period_count,
+      attendance_count,
+      location,
+      pass_percent,
+      primary_colour,
+      secondary_colour,
+      bg_image: finalBgImage,
+      upi_id,
+      upi_name,
+      payment_enabled,
+      slug,
+      short_name,
+      tagline,
+      about,
+      description,
+      website,
+      whatsapp,
+      alternate_phone,
+      pincode,
+      district,
+      state,
+      google_map_url,
+      facebook_url,
+      instagram_url,
+      youtube_url,
+      admission_enabled,
+      seo_title,
+      seo_description,
+    }, { transaction });
+
+    await User.update({
+      dp: finalLogo,
+      name: name,
+    }, {
+      where: {
+        role: "admin",
+        school_id: school_id
+      },  
+      transaction
+    });
+
+    await transaction.commit();
+    
+    return res.status(200).json({
+      success: true,
+      message: "School datas updated successfully",
+      data: school,
+    });
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    logger.error("school_id:", req.user?.school_id, "Error updating school datas:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update school datas",
+      error: error.message,
+    });
+  }
+};
 
 module.exports = {
   createClass,
@@ -11398,6 +11649,7 @@ module.exports = {
   getAllDrivers,
   updateStudentToRoute,
   deleteStudentFromRoute,
+  changeStudentRouteAndStop,
   updateVehicle,
   getDriversAssignedToRoutes,
   updateIsLock,
@@ -11422,4 +11674,8 @@ module.exports = {
   getTrashedExamTimetables,
   restoreExamTimetable,
   permanentDeleteExamTimetable,
+
+  
+  getOwnDatasForSchool,
+  updateOwnDatasForSchool,
 };

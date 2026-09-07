@@ -62,6 +62,7 @@ router.put(
   guardianController.updateLeaveRequest,
 );
 router.delete("/leaveRequest/:id", guardianController.deleteLeaveRequest);
+router.get("/getLeaveTypes", commonController.getLeaveTypes);
 
 router.get("/getSchoolsByUser", guardianController.getSchoolsByUser);
 router.get("/getSchoolById/:id", guardianController.getSchoolById);
@@ -162,6 +163,10 @@ router.get(
 router.get(
   "/getlatestLocationByRouteId/:route_id",
   trackerController.getlatestLocationByRouteId,
+);
+router.get(
+  "/getTodayTransportationByStudentId/:id",
+  trackerController.getTodayTransportationByStudentId,
 );
 //transfer
 router.post(

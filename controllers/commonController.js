@@ -28,10 +28,16 @@ const Invoice = require("../models/invoice");
 const Guardian = require("../models/guardian");
 const Driver = require("../models/tracker/driver");
 const Notice = require("../models/notice");
+const Stop = require("../models/tracker/stop");
+const Vehicle = require("../models/tracker/vehicle");
+const Routes = require("../models/tracker/routes");
+const Staff = require("../models/staff");
+const { error } = require("winston");
+const { Console } = require("winston/lib/winston/transports");
 const { deleteFile } = require("../middlewares/storageUploads");
-
-const { Class, Staff } = require("../models");
+const { Class } = require("../models");
 const { level } = require("winston");
+const { VERSION } = require("sequelize/lib/query-types");
 
 const getStudentsByClassId = async (req, res) => {
   try {
@@ -298,6 +304,58 @@ const getStudentDetailsById = async (req, res) => {
     console.error("Error getting student:", error);
     logger.error("userId:", req.user.user_id, "Error getting student:", error);
     res.status(500).json({ error: "Failed to get student" });
+  }
+};
+const getStudentTransportDetails = async (req, res) => {
+  try {
+    const id= req.params.student_id;
+    const school_id = req.user.school_id || "";
+    if (!school_id) {
+      return res.status(404).json({ error: "School not found" });
+    }
+    const student = await Student.findOne({
+      where: { id, school_id, trash: false },
+      attributes: [
+        "id",
+        "full_name",
+        "reg_no",
+        "roll_number",
+      ],
+      include: [
+        {
+          model:Stop,
+          as: "stop",
+          attributes: ["id", "stop_name"],
+        },
+        {
+          model:Routes,
+           as: "route",
+          attributes: ["id", "route_name"],
+          include: [
+            {
+              model:User,
+              as: "driver",
+              attributes: ["id", "name", "phone", "dp"]
+            },
+            {
+              model:Vehicle,
+              as: "vehicle",
+              attributes: ["id", "vehicle_number", "type", "model", "photo"]
+            },
+          ]
+        }
+      ],
+    });
+    if (!student) return res.status(404).json({ error: "Student not found" });
+ 
+  res.status(200).json({
+    message: "Student transport details fetched successfully",
+    student,
+});
+  } catch (error) {
+    console.error("Error getting student transport details:", error);
+    logger.error("userId:", req.user.user_id, "Error getting student transport details:", error);
+    res.status(500).json({ error: "Failed to get student transport details" });
   }
 };
 const getGuarduianIdbyStudentId = async (student_id) => {
@@ -1436,6 +1494,7 @@ module.exports = {
   getSpecialClassStudentsByClassId,
   getschoolIdByStudentId,
   getStudentDetailsById,
+  getStudentTransportDetails,
   getGuarduianIdbyStudentId,
 
   getClassesByYear,

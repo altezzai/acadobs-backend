@@ -9,7 +9,10 @@ const publicController = require("../controllers/publicController");
 
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
-
+const schoolUploads = [
+  { name: "image", maxCount: 1 },
+  { name: "logo", maxCount: 1 },
+];
 // Class routes
 router.post("/classes", schoolAdminController.createClass); 
 router.get("/classes", schoolAdminController.getAllClasses); 
@@ -521,8 +524,11 @@ router.get("/examTimetables/:id", schoolAdminController.getExamTimetableById);
 router.delete("/examTimetables/:id", schoolAdminController.deleteExamTimetable);
 router.get("/getTrashedExamTimetables", schoolAdminController.getTrashedExamTimetables);
 router.patch("/restoreExamTimetable/:id", schoolAdminController.restoreExamTimetable);
-router.patch("/examTimetables/:id/restore", schoolAdminController.restoreExamTimetable);
 router.delete("/permanentDeleteExamTimetable/:id", schoolAdminController.permanentDeleteExamTimetable);
+//OWN School data management routes
+router.get("/getOwnDatasForSchool", schoolAdminController.getOwnDatasForSchool);
+router.put("/updateOwnDatasForSchool",uploadWithErrorHandler(upload.fields(schoolUploads)),
+  storageUploadMiddleware("schools"),schoolAdminController.updateOwnDatasForSchool);
 
 //REPORTS
 router.get("/invoiceReport", reportController.getInvoiceReport);
@@ -536,23 +542,7 @@ router.get(
 router.get("/internalmarksReport", reportController.getInternalmarksReport);
 
 /////////////////tracker//////////////////////////////////////
-router.post(
-  "/assignDriverToRoutes/:driverId",
-  schoolAdminController.assignDriverToRoutes,
-);
-router.post(
-  "/assign-student-route",
-  upload.none(),
-  schoolAdminController.assignStudentToRoute,
-);
-router.put(
-  "/update-student-route/:route_id",
-  schoolAdminController.updateStudentToRoute,
-);
-router.delete(
-  "/deleteStudentFromRoute/:route_id",
-  schoolAdminController.deleteStudentFromRoute,
-);
+
 router.put(
   "/updateVehicle/:id",
   uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
@@ -606,7 +596,36 @@ router.get(
   "/getDriverAssignedRoutes/:driverId",
   trackerController.getDriverAssignedRoutesAdmin,
 );
-
+router.post(
+  "/assignDriverToRoutes/:driverId",
+  schoolAdminController.assignDriverToRoutes,
+);
+router.post(
+  "/assign-student-route",
+  upload.none(),
+  schoolAdminController.assignStudentToRoute,
+);
+router.put(
+  "/update-student-route/:route_id",
+  schoolAdminController.updateStudentToRoute,
+);
+router.delete(
+  "/deleteStudentFromRoute/:route_id",
+  schoolAdminController.deleteStudentFromRoute,
+);
+router.put("/changeStudentRouteAndStop/:student_id",
+   schoolAdminController.changeStudentRouteAndStop);
+router.get(
+  "/getStopsByRouteId/:route_id",
+  trackerController.getStopsByRouteId,
+);
+router.get("/getTrackedDataWithDateByRouteId/:route_id", 
+  trackerController.getTrackedDataWithDateByRouteId);
+router.get(
+  "/getTodayTransportationByStudentId/:id", 
+  trackerController.getTodayTransportationByStudentId);  
+router.get("/getStudentsWithUnassignedRouteByClassId/:class_id", 
+  trackerController.getStudentsWithUnassignedRouteByClassId);
 // Student Transfer routes
 router.post("/studentTransfer", transferController.adminCreateTransferRequest);
 router.get(
@@ -638,6 +657,7 @@ router.get("/getLatestNews", commonController.getLatestNews);
 
 router.get("/getStudentsByClassId/:class_id",commonController.getStudentsByClassId);
 router.get("/getStudentDetailsById/:id", commonController.getStudentDetailsById);
+router.get("/getStudentTransportDetails/:student_id", commonController.getStudentTransportDetails);
 
 router.get(
   "/getHomeworkByStudentId/:student_id",
@@ -691,6 +711,7 @@ router.get("/getAllDriverUsers", commonController.getAllDriverUsers);
 router.get("/getLeaveTypes", commonController.getLeaveTypes);
 router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);
 router.get("/getExamTitles",commonController.getExamTitles);
+router.put("/changePassword", commonController.changePassword);
 
 
 module.exports = router;

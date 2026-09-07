@@ -10,19 +10,12 @@ const Stop = schoolSequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
-
-    route_id: {
+    school_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      defaultValue: null,
     },
-
     stop_name: {
       type: DataTypes.STRING,
-      allowNull: true,
-    },
-
-    priority: {
-      type: DataTypes.INTEGER,
       allowNull: true,
     },
 
@@ -67,14 +60,8 @@ const Stop = schoolSequelize.define(
   },
 );
 
-//Associations
+// Associations
 Stop.associate = (models) => {
-  Stop.belongsTo(models.Route, {
-    foreignKey: "route_id",
-    as: "route",
-    onDelete: "CASCADE",
-  });
-
   Stop.hasMany(models.Student, {
     foreignKey: "stop_id",
     as: "students",
