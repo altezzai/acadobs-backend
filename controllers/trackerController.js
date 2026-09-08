@@ -389,7 +389,6 @@ const getStopsForDriverByRouteId = async (req, res) => {
     const user_id = req.user.user_id;
     const school_id = req.user.school_id;
     const today= new Date().toISOString().split("T")[0];
-
     const driver = await User.findOne({
       where: {
         id:user_id,
@@ -458,11 +457,13 @@ const getStopsForDriverByRouteId = async (req, res) => {
           ],
         },
       ],
+      order: [[StopRoute, "priority", "ASC"]],
     });
 
     return res.status(200).json({
       message: "Stops fetched successfully",
       route,
+      count: stops.length,
       data: stops,
     });
 
