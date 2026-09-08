@@ -8,6 +8,8 @@ router.get("/getDriverAssignedRoutes", trackerController.DriverAssignedRoutes);
 router.post("/createStopForDriver", trackerController.createStopForDriver);
 router.post("/assignStudentToStop", trackerController.assignStudentsToStop);
 router.get("/getStudentsWithUnassignedStopsByRouteId/:route_id", trackerController.getStudentsWithUnassignedStopsByRouteId);
+router.get("/getUnAssignedStopsInPairRouteByRouteId/:route_id", trackerController.getUnAssignedStopsInPairRouteByRouteId);
+router.post("/assignedStopIdsFromPairRoute/:route_id", trackerController.assignedStopIdsFromPairRoute);
 router.get("/getStopsForDriver/:route_id", trackerController.getStopsForDriverByRouteId);
 router.get("/getStopDetailsForDriver/:stop_id", trackerController.getStopDetailsForDriver);
 router.post("/updateRouteActive", trackerController.updateRouteActive);
