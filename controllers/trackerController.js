@@ -691,7 +691,6 @@ const getStudentsWithUnassignedStopsByRouteId = async (req, res) => {
         error: "Route id is required",
       });
     }
-
     const route = await Routes.findOne({
       where: { id: route_id, driver_id:user_id,school_id, trash: false },
     });
@@ -701,19 +700,36 @@ const getStudentsWithUnassignedStopsByRouteId = async (req, res) => {
         message: "Route not found or not assigned to you",
       });
     }
-
+    let routeId = []
+    routeId.push(route_id)
+    if(route.type === "PICKUP"){
+      const dropRoute = await Routes.findOne({
+        where: {pickId: route_id, driver_id:user_id,school_id, trash: false },
+      });
+      if(dropRoute){
+        routeId.push(dropRoute.id)
+      }
+    }
+    else{
+      const pickupRoute = await Routes.findOne({
+        where: {id: route.pickId, driver_id:user_id,school_id, trash: false },
+      });
+      if(pickupRoute){
+        routeId.push(pickupRoute.id)
+      }
+    }
     const students = await Student.findAll({
       where: {
         stop_id: null,
-        route_id: route_id,
+        route_id: routeId,
         trash: false,
         school_id,
       },
       attributes: ["id", "full_name","roll_number", "reg_no", "image"],
       include: [
-        {
-          model: User,
-          attributes: ["name", "phone"],
+      {
+        model: User,
+        attributes: ["name", "phone"],
       },
       {
         model: Class,

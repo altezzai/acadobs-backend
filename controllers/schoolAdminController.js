@@ -9746,7 +9746,7 @@ const getAllVehicles = async (req, res) => {
       totalcontent: count,
       totalPages,
       currentPage: page,
-      data: vehicles,
+      vehicles,
     });
   } catch (error) {
     logger.error("schoolId:", req.user.school_id, "Error fetching vehicles:", error);
