@@ -6265,9 +6265,7 @@ const getAllTeacherLeaveRequests = async (req, res) => {
       school_id: school_id,
       role: "teacher",
     };
-    if (searchQuery) {
-      whereClause[Op.or] = [{ reason: { [Op.like]: `%${searchQuery}%` } }];
-    }
+
     if (date) {
       whereClause[Op.or] = [
         { from_date: { [Op.like]: `%${date}%` } },
@@ -6282,6 +6280,7 @@ const getAllTeacherLeaveRequests = async (req, res) => {
       include: [
         {
           model: User,
+          where: searchQuery ? { name: { [Op.like]: `%${searchQuery}%` } } : {},
           attributes: ["id", "name", "email", "phone", "dp"],
         },
       ],
