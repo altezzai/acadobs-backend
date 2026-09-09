@@ -6212,9 +6212,7 @@ const getAllStaffLeaveRequests = async (req, res) => {
       school_id: school_id,
       role: "staff",
     };
-    if (searchQuery) {
-      whereClause[Op.or] = [{ reason: { [Op.like]: `%${searchQuery}%` } }];
-    }
+   
     if (date) {
       whereClause[Op.or] = [
         { from_date: { [Op.like]: `%${date}%` } },
@@ -6229,6 +6227,7 @@ const getAllStaffLeaveRequests = async (req, res) => {
       include: [
         {
           model: User,
+          where:searchQuery ? { name: { [Op.like]: `%${searchQuery}%` } } : {},
           attributes: ["id", "name", "email", "phone", "dp"],
         },
       ],
@@ -6265,9 +6264,7 @@ const getAllTeacherLeaveRequests = async (req, res) => {
       school_id: school_id,
       role: "teacher",
     };
-    if (searchQuery) {
-      whereClause[Op.or] = [{ reason: { [Op.like]: `%${searchQuery}%` } }];
-    }
+
     if (date) {
       whereClause[Op.or] = [
         { from_date: { [Op.like]: `%${date}%` } },
@@ -6282,6 +6279,7 @@ const getAllTeacherLeaveRequests = async (req, res) => {
       include: [
         {
           model: User,
+          where: searchQuery ? { name: { [Op.like]: `%${searchQuery}%` } } : {},
           attributes: ["id", "name", "email", "phone", "dp"],
         },
       ],
@@ -6320,14 +6318,19 @@ const getAllStudentLeaveRequests = async (req, res) => {
       school_id: school_id,
       role: "student",
     };
-    if (searchQuery) {
-      whereClause[Op.or] = [{ reason: { [Op.like]: `%${searchQuery}%` } }];
-    }
+    
     if (date) {
       whereClause[Op.or] = [
         { from_date: { [Op.like]: `%${date}%` } },
         { to_date: { [Op.like]: `%${date}%` } },
       ];
+    }
+    const whereStudent = {};
+    if(searchQuery){
+     whereStudent[Op.or] = [{ full_name: { [Op.like]: `%${searchQuery}%` } }, { reg_no: { [Op.like]: `%${searchQuery}%` } }];
+    }
+    if(class_id){
+     whereStudent.class_id = class_id;
     }
     const { count, rows: leaveRequests } = await LeaveRequest.findAndCountAll({
       offset,
@@ -6348,7 +6351,7 @@ const getAllStudentLeaveRequests = async (req, res) => {
         {
           model: Student,
           attributes: ["id", "full_name", "reg_no", "image"],
-          where: class_id ? { class_id } : {},
+          where: whereStudent,
           include: [
             {
               model: Class,

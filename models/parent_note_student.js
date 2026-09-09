@@ -18,10 +18,9 @@ const ParentNoteStudent = schoolSequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    status: {
+    is_seen: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false
-      
+      defaultValue: false,
     },
     trash: {
       type: DataTypes.BOOLEAN,

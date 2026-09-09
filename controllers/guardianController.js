@@ -1279,9 +1279,11 @@ const updateHomeworkAssignment = async (req, res) => {
       fileName = newFileUrl;
     }
  
-    await assignment.update({
+    const updateData = {
       solved_file: fileName,
-    });
+    };
+
+    await assignment.update(updateData);
     res.status(200).json({ message: "Updated successfully", assignment });
   } catch (error) {
     logger.error(
@@ -1293,7 +1295,76 @@ const updateHomeworkAssignment = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getHomeworkByIdAndStudentId = async (req, res) => {
+  try {
+    const { id, student_id } = req.params;
+    const userId = req.user.user_id;
+    const school_id = req.user.school_id;
+    if(!id || !student_id) return res.status(400).json({ error: "Missing required parameters" });
+    const student = await Student.findOne({
+      where: { id: student_id, guardian_id: userId },
+    });
+    if(!student) return res.status(404).json({ error: "Student not found" });
+    const homework = await Homework.findOne({
+      where: { id, school_id },
+      attributes: ["id", "title", "description", "due_date","file","type"],
+      include: [
+        {
+          model: HomeworkAssignment,
+          required: true,
+          where: { student_id : student_id },
+          attributes: ["id", "remarks", "points", "solved_file", "is_seen"],
+          include: [
+            {
+              model: Student,
+              attributes: ["id", "full_name", "reg_no", "roll_number"],
+            },
+          ],
+        },
+        {model: Class,attributes: ["id", "classname"], },
+        {model: Subject,attributes: ["id", "subject_name"],},
+        {model: User, attributes: ["id", "name"] },
 
+      ],
+  });
+    if (!homework) return res.status(404).json({ error: "homework not found" });
+    await HomeworkAssignment.update(
+      { is_seen: true },
+      { where: { homework_id: id, student_id } }
+    );
+    res.status(200).json(homework);
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error getting homework by id:",
+      error,
+    );
+    res.status(500).json({ error: error.message });
+  }
+};
+const getUnseenHomeworkCountByStudentId = async (req, res) => {
+  try {
+    const { student_id } = req.params;
+    const userId = req.user.user_id;
+    const student = await Student.findOne({
+      where: { id: student_id, guardian_id: userId },
+    });
+    if(!student) return res.status(404).json({ error: "Student not found" });
+    const unseenHomeworkCount = await HomeworkAssignment.count({
+      where: { student_id: student_id, is_seen: false },
+    });
+    res.status(200).json({ unseenHomeworkCount });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error getting unseen homework count:",
+      error,
+    );
+    res.status(500).json({ error: error.message });
+  }
+};
 const getAchievementById = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -1636,7 +1707,7 @@ const getParentNotesByStudentId = async (req, res) => {
       include: [
         {
           model: ParentNoteStudent,
-          attributes: ["id", "student_id", "status"],
+          attributes: ["id", "student_id", "is_seen"],
           where: { student_id, trash: false },
           required: true,
         },
@@ -1678,7 +1749,7 @@ const getParentNotesByIdAndStudentId = async (req, res) => {
       include: [
         {
           model: ParentNoteStudent,
-          attributes: ["id", "student_id", "status"],
+          attributes: ["id", "student_id", "is_seen"],
           where: { student_id, trash: false },
           required: false,
           include: [
@@ -1694,7 +1765,7 @@ const getParentNotesByIdAndStudentId = async (req, res) => {
       return res.status(404).json({ error: "Note not found" });
     }
     await ParentNoteStudent.update(
-      { status: true },
+      { is_seen: true },
       { where: { parentnote_id: id, student_id } }
     )
     return res.status(200).json(note);
@@ -1720,7 +1791,7 @@ const getParentNoteUnseenCount = async (req, res) => {
       return res.status(404).json({ error: "Student not found" });
     }
   const unseednCount = await ParentNoteStudent.count({
-    where: { student_id, status: false },
+    where: { student_id, is_seen: false },
   });
   return res.status(200).json({ unseenCount: unseednCount });
   } catch (error) {
@@ -1895,7 +1966,7 @@ const examtimetableById = async (req, res) => {
 };
 
 module.exports = {
-  updateHomeworkAssignment,
+  
 
   getSchoolIdByStudentId,
 
@@ -1924,6 +1995,10 @@ module.exports = {
   updateProfileDetails,
   changeIdentifiersAndName,
   getProfileDetails,
+
+  updateHomeworkAssignment,
+  getHomeworkByIdAndStudentId,
+  getUnseenHomeworkCountByStudentId,
 
   getAchievementById,
   getRoutesForGuardian,

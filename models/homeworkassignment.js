@@ -12,6 +12,7 @@ const HomeworkAssignment = schoolSequelize.define(
     remarks: DataTypes.STRING,
     points: { type: DataTypes.INTEGER, defaultValue: 0 },
     solved_file: DataTypes.STRING,
+    is_seen: { type: DataTypes.BOOLEAN, defaultValue: false },
   },
   {
     tableName: "homework_assignments",
