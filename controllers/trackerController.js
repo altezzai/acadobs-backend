@@ -237,10 +237,18 @@ const DriverAssignedRoutes = async (req, res) => {
     }
 
     for (const route of driver.routes) {
+    let RouteId = route.id;
+    const route1 = await Routes.findOne({
+      where: { id: route.id, school_id, trash: false },
+      attributes: ["id",  "type","pickId","active"],
+    });
+    if (route1.type === "DROP" && route1.pickId) {
+      RouteId = route1.pickId;
+    }
 
       const totalStudents = await Student.count({
         where: {
-          route_id: route.id,
+          route_id: RouteId,
           trash: false,
         },
       });
@@ -1045,8 +1053,16 @@ const getStudentsByRouteId = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+     let RouteId = route_id;
+    const route = await Routes.findOne({
+      where: { id: route_id, school_id: school_id, trash: false },
+      attributes: ["id",  "type","pickId","active"],
+    });
+    if (route.type === "DROP" && route.pickId) {
+      RouteId = route.pickId;
+    }
     const whereClause={
-      route_id,
+      route_id:RouteId,
       trash: false,
       school_id,
     };
@@ -2053,45 +2069,87 @@ const updateStopForDriver = async (req, res) => {
   }
 };
 
-const deleteStopById= async (req, res) => {
-  const transaction = await schoolSequelize.transaction();
+const deleteStopById = async (req, res) => {
+  let transaction;
   try {
     const { id } = req.params;
     const user_id = req.user.user_id;
     const school_id = req.user.school_id;
+
+    transaction = await schoolSequelize.transaction();
     const stop = await Stop.findOne({
       where: {
         id,
         trash: false,
         school_id,
-        recorded_by:user_id
+        recorded_by: user_id,
       },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
     });
+
     if (!stop) {
-      return res.status(404).json({ message: "Stop not found" });
+      await transaction.rollback();
+
+      return res.status(404).json({
+        message: "Stop not found",
+      });
     }
-    stop.trash = true;
-    await stop.save({transaction});
-    
-      await Student.update({
-        stop_id: null,
-      }, {
-        where: {
-        stop_id: stop.id,
-        school_id,
+
+    await stop.update(
+      {
+        trash: true,
       },
-      transaction
+      {
+        transaction,
+      }
+    );
+
+    await Student.update(
+      {
+        stop_id: null,
+      },
+      {
+        where: {
+          stop_id: stop.id,
+          school_id,
+        },
+        transaction,
+      }
+    );
+    await transaction.commit();
+
+    return res.status(200).json({
+      message: "Stop deleted successfully",
+      stop,
     });
-  
-  await transaction.commit();
-    return res.status(200).json({ message: "Stop deleted successfully", stop });
   } catch (error) {
-    await transaction.rollback();
-    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error deleting stop:", error);
+   
+    if (transaction) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        console.error("Transaction rollback failed:", rollbackError);
+      }
+    }
+
+    logger.error(
+      "role:",
+      req.user.role,
+      "userId:",
+      req.user.user_id,
+      "Error deleting stop:",
+      error
+    );
+
     console.error("Error deleting stop:", error);
-    res.status(500).json({ error: "Failed to delete stop" });
+
+    return res.status(500).json({
+      error: "Failed to delete stop",
+      message: error.message,
+    });
   }
-}
+};
 const getStopsByRouteId = async (req, res) => {
   try {
     const { route_id } = req.params;
