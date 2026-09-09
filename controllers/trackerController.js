@@ -219,12 +219,6 @@ const DriverAssignedRoutes = async (req, res) => {
           
           include: [
             {
-              model:Student,
-              attributes: ["id"],
-              where: { trash: false, school_id: school_id ,alumni:false},
-              required: false,
-            },
-            {
               model: Stop,
               as: "stops",
               attributes: [],
