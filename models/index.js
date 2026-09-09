@@ -244,6 +244,8 @@ Stop.belongsToMany(Routes, {
   as: "routes",
 });
 Stop.hasMany(StopRoutes, { foreignKey: "stop_id" });
+StopRoutes.belongsTo(Stop, { foreignKey: "stop_id" });
+StopRoutes.belongsTo(Routes, { foreignKey: "route_id" });
 Stop.belongsTo(User,{ foreignKey: "recorded_by" });
 
 

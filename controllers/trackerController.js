@@ -257,6 +257,12 @@ const DriverAssignedRoutes = async (req, res) => {
         where: {
           route_id: route.id,
         },
+        include:[{
+          model: Stop,
+          // as: "stop",
+          required: true,
+          where: { trash: false },
+        }]
       });
 
       route.dataValues.total_students = totalStudents;
