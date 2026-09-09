@@ -13,6 +13,8 @@ const { Sequelize } = require("sequelize");
 const { Op } = require("sequelize");
 const { deleteFile } = require("../middlewares/storageUploads");
 const logger = require("../utils/logger");
+const { schoolSequelize } = require("../config/connection");
+
 // getDriverById
 const getDriverById = async (req, res) => {
   try {
@@ -353,6 +355,7 @@ const createStopForDriver = async (req, res) => {
           latitude,
           longitude,
           trash: false,
+          recorded_by: user_id,
         },
         { transaction },
       );
@@ -382,7 +385,6 @@ const createStopForDriver = async (req, res) => {
     res.status(500).json({ error: "Failed to create stop" });
   }
 };
-
 const getStopsForDriverByRouteId = async (req, res) => {
   try {
     const { route_id } = req.params;
@@ -1953,10 +1955,22 @@ const updateStopForDriver = async (req, res) => {
         message: "Stop not found",
       });
     }
-
     if (stopData.route?.isLock === true) {
       return res.status(403).json({
         message: "This route is locked. You cannot edit stops.",
+      });
+    }
+    const exisitingStop = await Stop.findOne({
+      where: {
+        id:{[Op.ne]:stopId},
+        trash: false,
+        school_id,
+        stop_name:stop_name,
+      },
+    });
+    if (exisitingStop) {
+      return res.status(404).json({
+        message: "Stop name is already taken . Please update the stop name .",
       });
     }
     await stopData.update({
@@ -1979,29 +1993,45 @@ const updateStopForDriver = async (req, res) => {
   }
 };
 
-//deleteStop
-const deleteStop = async (req, res) => {
+const deleteStopById= async (req, res) => {
+  const transaction = await schoolSequelize.transaction();
   try {
     const { id } = req.params;
-    const studentStop = await Stop.findOne({
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const stop = await Stop.findOne({
       where: {
         id,
         trash: false,
+        school_id,
+        recorded_by:user_id
       },
     });
-
-    if (!studentStop) {
-      return res.status(404).json({
-        message: "Stop not found",
-      });
+    if (!stop) {
+      return res.status(404).json({ message: "Stop not found" });
     }
-    await studentStop.update({ trash: true });
-    res.status(200).json({ message: "Stop deleted successfully" });
+    stop.trash = true;
+    await stop.save({transaction});
+    
+      await Student.update({
+        stop_id: null,
+      }, {
+        where: {
+        stop_id: stop.id,
+        school_id,
+      },
+      transaction
+    });
+  
+  await transaction.commit();
+    return res.status(200).json({ message: "Stop deleted successfully", stop });
   } catch (error) {
+    await transaction.rollback();
     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error deleting stop:", error);
-    console.log("error in deleting stop", error);
+    console.error("Error deleting stop:", error);
+    res.status(500).json({ error: "Failed to delete stop" });
   }
-};
+}
 const getStopsByRouteId = async (req, res) => {
   try {
     const { route_id } = req.params;
@@ -2243,7 +2273,7 @@ module.exports = {
 
   getStopById, 
   updateStopById, 
-  deleteStop, 
+  deleteStopById, 
   updateStopForDriver ,
 
   getTodayTransportationByStudentId,
