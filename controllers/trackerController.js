@@ -216,13 +216,13 @@ const DriverAssignedRoutes = async (req, res) => {
             "isLock",
             "pickId"
           ],
+          
           include: [
             {
-              model: Student,
-              as: "students",
+              model:Student,
+              attributes: ["id"],
+              where: { trash: false, school_id: school_id ,alumni:false},
               required: false,
-              where: { trash: false },
-              attributes: ["id", "full_name", "reg_no","image"],
             },
             {
               model: Stop,
@@ -1043,7 +1043,57 @@ const routeInactive = async (req, res) => {
     });
   }
 };
+const getStudentsByRouteId = async (req, res) => {
+  try {
+    const { route_id } = req.params;
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause={
+      route_id,
+      trash: false,
+      school_id,
+    };
+    if(searchQuery){
+      whereClause.full_name = { [Op.like]: `%${searchQuery}%` };
+    }
+    const {count, rows: students} = await Student.findAndCountAll({
+      where: whereClause,
+      attributes: ["id", "full_name", "reg_no","roll_number","gender"],
+      include:[
+        {
+          model: User,
+          attributes: ["name", "phone"],
+          required: false,
+        },
+        {
+          model: Class,
+          attributes: ["classname"],
+          required: false,
+        }
+      ],
+      limit: limit,
+      offset: offset,
+    });
 
+     const totalPages = Math.ceil(count / limit);
+    return res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      students,
+    });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching students:", error);
+    console.log("Error fetching students: ", error);
+    return res.status(500).json({
+      error: "Failed to fetch students",
+    });
+  }
+};
 const bulkchangeStopPrioritybyRouteId = async (req, res) => {
   try {
     const { route_id } = req.params;
@@ -2271,6 +2321,7 @@ module.exports = {
   getStopDetailsForDriver,
   updateRouteActive,
   routeInactive,
+  getStudentsByRouteId,
   deleteStudentFromStop,
   bulkchangeStopPrioritybyRouteId,
   

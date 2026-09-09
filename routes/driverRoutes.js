@@ -5,14 +5,16 @@ const { route } = require("./schoolAdminRoutes");
 
 
 router.get("/getDriverAssignedRoutes", trackerController.DriverAssignedRoutes);
-router.post("/createStopForDriver", trackerController.createStopForDriver);
-router.post("/assignStudentToStop", trackerController.assignStudentsToStop);
-router.get("/getStudentsWithUnassignedStopsByRouteId/:route_id", trackerController.getStudentsWithUnassignedStopsByRouteId);
 router.get("/getUnAssignedStopsInPairRouteByRouteId/:route_id", trackerController.getUnAssignedStopsInPairRouteByRouteId);
+router.get("/getStudentsWithUnassignedStopsByRouteId/:route_id", trackerController.getStudentsWithUnassignedStopsByRouteId);
 router.post("/assignedStopIdsFromPairRoute/:route_id", trackerController.assignedStopIdsFromPairRoute);
+router.post("/updateRouteActive", trackerController.updateRouteActive);
+router.get("/getStudentsByRouteId/:route_id", trackerController.getStudentsByRouteId);
+
+router.post("/assignStudentToStop", trackerController.assignStudentsToStop);
+router.post("/createStopForDriver", trackerController.createStopForDriver);
 router.get("/getStopsForDriver/:route_id", trackerController.getStopsForDriverByRouteId);
 router.get("/getStopDetailsForDriver/:stop_id", trackerController.getStopDetailsForDriver);
-router.post("/updateRouteActive", trackerController.updateRouteActive);
 router.put("/updateStopandStudent", trackerController.updateStopandStudent);
 router.put("/editStudentsStopStatus/:id", trackerController.editStudentsStopStatus);
 router.post("/routeInactive", trackerController.routeInactive);
