@@ -1819,12 +1819,10 @@ const updateRouteById = async (req, res) => {
     await pickupRoute.update({
       route_name: pickupRouteName ?? pickupRoute.route_name,
       vehicle_id: vehicle_id ?? pickupRoute.vehicle_id,
-      // type: pickupRoute.type,
+      driver_id: driver_id ?? pickupRoute.driver_id,
       isLock: isLock ?? pickupRoute.isLock,
     });
-    if (driver_id) {
-      await pickupRoute.setDrivers(Array.isArray(driver_id) ? driver_id : [driver_id]);
-    }
+
 
     const dropRoute = await Routes.findOne({
       where: { pickId: pickupRoute.id, school_id: school_id, trash: false }
@@ -1834,16 +1832,14 @@ const updateRouteById = async (req, res) => {
       await dropRoute.update({
         route_name: dropRouteName,
         vehicle_id: vehicle_id ?? dropRoute.vehicle_id,
-        type: "DROP",
+        driver_id: driver_id ?? dropRoute.driver_id,
         isLock: isLock ?? dropRoute.isLock,
       });
-      if (driver_id) {
-        await dropRoute.setDrivers(Array.isArray(driver_id) ? driver_id : [driver_id]);
-      }
+    
     }
-    //creates drop route if not exists
+    let newDropRoute = null;
     if (hasDropRoute && !dropRoute) {
-      const newDropRoute = await Routes.create({
+      newDropRoute = await Routes.create({
         school_id: school_id,
         route_name: dropRouteName,
         vehicle_id: vehicle_id ?? pickupRoute.vehicle_id,
@@ -1851,12 +1847,6 @@ const updateRouteById = async (req, res) => {
         pickId: pickupRoute.id,
         isLock: isLock ?? pickupRoute.isLock,
       });
-
-      if (driver_id) {
-        await newDropRoute.setDrivers(
-          Array.isArray(driver_id) ? driver_id : [driver_id]
-        );
-      }
     }
 
     return res.status(200).json({

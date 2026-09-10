@@ -42,7 +42,6 @@ const StaffAttendance = require("../models/staff_attendance");
 const Syllabus = require("../models/syllabus");
 const { School } = require("../models");
 const StudentTransfer = require("../models/student_transfer");
-const RouteDrivers = require("../models/tracker/route_drivers");
 const Stop = require("../models/tracker/stop");
 const StopRoute = require("../models/tracker/stop_route");
 const Driver  = require("../models/tracker/driver");
@@ -9902,7 +9901,6 @@ const createRoute = async (req, res) => {
       }
     }
 
-
     const pickupRouteName = route_no
       ? `${start}-${stop}-${route_no}`
       : `${start}-${stop}`;
@@ -9928,12 +9926,6 @@ const createRoute = async (req, res) => {
       pickId: null,
       trash: false,
     });
-    if (driver_id) {
-      await RouteDrivers.create({
-        route_id: pickup_route.id,
-        driver_id: driver_id,
-      });
-    }
 
     let drop_route = null;
     if (hasDropRoute) {
@@ -9947,12 +9939,6 @@ const createRoute = async (req, res) => {
         pickId: pickup_route.id,
         trash: false,
       });
-      if (driver_id) {
-        await RouteDrivers.create({
-          route_id: drop_route.id,
-          driver_id: driver_id,
-        });
-      }
     }
     res.status(201).json({
       message: "Route created successfully",
@@ -9989,9 +9975,8 @@ const getAllRoutes = async (req, res) => {
       include: [
         {
           model: User,
-          as: "drivers",
+          as: "driver",
           attributes: ["id", "name"],
-          through: { attributes: [] },
         },
         {
           model: Vehicle,
@@ -10022,9 +10007,7 @@ const getAllRoutes = async (req, res) => {
       hasDropRoute: dropRouteSet.has(route.id),
       isLock: route.isLock,
       vehicle_number: route.vehicle?.vehicle_number || null,
-      drivers: route.drivers.map((d) => {
-        return { id: d.id, name: d.name };
-      }),
+      driver: route.driver || null,
     }));
 
    const totalPages = Math.ceil(count / limit);
@@ -10033,11 +10016,10 @@ const getAllRoutes = async (req, res) => {
       totalcontent: count,
       totalPages,
       currentPage: page,
-
       routes: cleanRoutes,
     });
   } catch (error) {
-    logger.error("schoolId:", req.user.school_id, "Error fetching vehicle:", error);
+    logger.error("schoolId:", req.user.school_id, "Error fetching getAllRoutes:", error);
     console.error("Error fetching routes:", error);
     res.status(500).json({ error: "Failed to fetch routes" });
   }

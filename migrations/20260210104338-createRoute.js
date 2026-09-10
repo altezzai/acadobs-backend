@@ -55,32 +55,9 @@ module.exports = {
       },
     });
 
-
-    await queryInterface.createTable('route_drivers', {
-      route_id: {
-        type: Sequelize.INTEGER,
-        primaryKey: true,
-        references: {
-          model: 'route',
-          key: 'id',
-        },
-        onDelete: 'CASCADE',
-      },
-      driver_id: {
-        type: Sequelize.INTEGER,
-        primaryKey: true,
-        references: {
-          model: 'driver',
-          key: 'id',
-        },
-        onDelete: 'CASCADE',
-      },
-    });
-
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('route_drivers');
     await queryInterface.dropTable('route');
 
   }
