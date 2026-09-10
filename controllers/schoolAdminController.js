@@ -9943,7 +9943,7 @@ const createRoute = async (req, res) => {
         vehicle_id: vehicle_id ?? null,
         driver_id: driver_id ?? null,
         type: "DROP",
-        isLock: isLock ?? true,
+        isLock: isLock ?? false,
         pickId: pickup_route.id,
         trash: false,
       });

@@ -19,12 +19,11 @@ router.put("/updateStopandStudent", trackerController.updateStopandStudent);
 router.put("/editStudentsStopStatus/:id", trackerController.editStudentsStopStatus);
 router.post("/routeInactive", trackerController.routeInactive);
 router.put("/updateStopForDriver/:stopId", trackerController.updateStopForDriver);
+router.put("/bulkchangeStopPrioritybyRouteId/:route_id", trackerController.bulkchangeStopPrioritybyRouteId);
 router.delete("/deleteStopById/:id", trackerController.deleteStopById);
 router.delete("/deleteStudentFromStop/:stop_id/:student_id", trackerController.deleteStudentFromStop);
-// router.post("/bulkStopCreation", trackerController.bulkStopCreation);
-router.put("/bulkchangeStopPrioritybyRouteId/:route_id", trackerController.bulkchangeStopPrioritybyRouteId);
+
 router.post("/updateLiveLocation", trackerController.updateLiveLocation);
 router.get("/getTrackedDataWithDateByRouteId/:route_id", trackerController.getTrackedDataWithDateByRouteId);
 
-// router.post("/createRouteForDriver", trackerController.createRouteForDriver);
 module.exports = router;

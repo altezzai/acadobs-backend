@@ -195,52 +195,37 @@ const DriverAssignedRoutes = async (req, res) => {
   try {
     const user_id = req.user.user_id;
     const school_id = req.user.school_id;
-    const driver = await User.findOne({
-      where: {
-        id:user_id,
-        trash: false,
-        school_id: school_id,
+    const routes= await Routes.findAll({
+      where:{
+        driver_id:user_id,
+        school_id:school_id,
+        trash:false,
       },
-      attributes: ["name", "phone"],
+      attributes: [
+        "id",
+        "route_name",
+        "vehicle_id",
+        "type",
+        "active",
+        "activated_at",
+        "isLock",
+        "pickId"
+      ],
       include: [
         {
-          model: Routes,
-          as: "routes",
-          attributes: [
-            "id",
-            "route_name",
-            "vehicle_id",
-            "type",
-            "active",
-            "activated_at",
-            "isLock",
-            "pickId"
-          ],
-          
-          include: [
-            {
-              model: Stop,
-              as: "stops",
-              attributes: [],
-              where: { trash: false },
-              required: false,
-            },
-          ],
+          model: Stop,
+          as: "stops",
+          attributes: [],
+          where: { trash: false },
+          required: false,
         },
       ],
-    });
-
-    if (!driver) {
-      return res.status(404).json({
-        message: "Driver profile not found",
-      });
-    }
-
-    for (const route of driver.routes) {
+    })
+    for (const route of routes) {
     let RouteId = route.id;
     const route1 = await Routes.findOne({
       where: { id: route.id, school_id, trash: false },
-      attributes: ["id",  "type","pickId","active"],
+      attributes: ["id",  "type","pickId","active"  ],
     });
     if (route1.type === "DROP" && route1.pickId) {
       RouteId = route1.pickId;
@@ -259,7 +244,6 @@ const DriverAssignedRoutes = async (req, res) => {
         },
         include:[{
           model: Stop,
-          // as: "stop",
           required: true,
           where: { trash: false },
         }]
@@ -270,7 +254,7 @@ const DriverAssignedRoutes = async (req, res) => {
     }
     return res.status(200).json({
       message: "Assigned routes fetched successfully",
-      data: driver.routes,
+      data: routes,
     });
   } catch (error) {
     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching driver routes:", error);
