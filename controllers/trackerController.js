@@ -1196,13 +1196,11 @@ const updateStopandStudent = async (req, res) => {try {
     latitude,
     longitude,
     student_ids,
-
   } = req.body;
 
   if (
     !stop_id || !latitude || !longitude ||
-    !Array.isArray(student_ids) ||
-    student_ids.length === 0
+    !Array.isArray(student_ids) 
   ) {
     return res.status(400).json({
       message: "stop_id, latitude, longitude and student_ids array are required",
