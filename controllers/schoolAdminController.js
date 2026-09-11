@@ -9633,7 +9633,7 @@ const getAllDrivers = async (req, res) => {
     let whereClause = {
       trash: false,
       school_id: school_id,
-      
+      role:"driver",
     };
     if (searchQuery) {
       whereClause.name = {
