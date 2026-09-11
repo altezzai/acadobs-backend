@@ -1436,42 +1436,30 @@ const getRoutesForGuardian = async (req, res) => {
           model: Routes,
           as: "routes",
           attributes: ["id", "route_name", "type", "active"],
-          through: { attributes: [] },
           required: true,
           where: {
             active: true,
             trash: false,
           },
-          include: [
-            {
-              model: School,
-              as: "school",
-              attributes: ["id"],
-              where: {
-                id: school_id,
-              },
-            },
-          ],
         },
       ],
     });
-
-    const result = students.map((student) => {
-      return {
-        id: student.id,
-        full_name: student.full_name,
-        reg_no: student.reg_no,
-        routes: student.routes.map((route) => ({
-          id: route.id,
-          route_name: route.route_name,
-          type: route.type,
-        })),
-      };
-    });
+    // const result = students.map((student) => {
+    //   return {
+    //     id: student.id,
+    //     full_name: student.full_name,
+    //     reg_no: student.reg_no,
+    //     // routes: student.routes.map((route) => ({
+    //     //   id: route.id,
+    //     //   route_name: route.route_name,
+    //     //   type: route.type,
+    //     // })),
+    //   };
+    // });
 
     return res.status(200).json({
       message: "Routes fetched successfully",
-      data: result,
+      data: students,
     });
   } catch (error) {
     console.error("Guardian route fetch error:", error);

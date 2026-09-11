@@ -626,6 +626,8 @@ router.get(
   trackerController.getTodayTransportationByStudentId);  
 router.get("/getStudentsWithUnassignedRouteByClassId/:class_id", 
   trackerController.getStudentsWithUnassignedRouteByClassId);
+router.get("/getStudentsWithRouteId", 
+  trackerController.getStudentsWithRouteId);
 // Student Transfer routes
 router.post("/studentTransfer", transferController.adminCreateTransferRequest);
 router.get(

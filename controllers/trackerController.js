@@ -812,6 +812,71 @@ const getStudentsWithUnassignedRouteByClassId = async (req, res) => {
     });
   }
 };
+const getStudentsWithRouteId = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const class_id = req.query.class_id;
+    const route_id = req.query.route_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+        route_id: { [Op.ne]: null },
+        alumni: false,
+        trash: false,
+        school_id,
+      }
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { reg_no: { [Op.like]: `%${searchQuery}%` } },
+        { full_name: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    if(class_id){
+      whereClause.class_id = class_id;
+    }
+    if(route_id){
+      whereClause.route_id = route_id;
+    }
+    const { count, rows: students } = await Student.findAndCountAll({
+      where: whereClause,
+      distinct: true,
+      limit,
+      offset,
+      attributes: ["id", "full_name", "roll_number", "reg_no", "image"],
+      include: [
+        {
+          model: User,
+          attributes: ["name", "phone"],
+      },
+      {
+        model: Class,
+        attributes: ["classname"],
+      },
+      {
+        model: Routes,
+        as: "routes",
+        attributes: ["id","active","route_name","type",],
+        
+      }
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      students,
+    })
+} catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching students:", error);
+    console.error("Error fetching students:", error);
+    return res.status(500).json({
+      error: "Failed to fetch students",
+    });
+  }
+}
 const getStopDetailsForDriver = async (req, res) => {
   try {
     const { stop_id } = req.params;
@@ -1695,7 +1760,6 @@ const getTodayTransportationByStudentId = async (req, res) => {
     res.status(500).json({ error: "Failed to get route details" });
   }
 }
-
 const getRouteById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -2346,6 +2410,7 @@ module.exports = {
 
   getStudentsWithUnassignedStopsByRouteId,
   getStudentsWithUnassignedRouteByClassId,
+  getStudentsWithRouteId,
 
   getStopsForDriverByRouteId,
   getStopDetailsForDriver,
