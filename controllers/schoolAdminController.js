@@ -9633,7 +9633,7 @@ const getAllDrivers = async (req, res) => {
     let whereClause = {
       trash: false,
       school_id: school_id,
-      
+      role:"driver",
     };
     if (searchQuery) {
       whereClause.name = {
@@ -10007,7 +10007,7 @@ const getAllRoutes = async (req, res) => {
       hasDropRoute: dropRouteSet.has(route.id),
       isLock: route.isLock,
       vehicle_number: route.vehicle?.vehicle_number || null,
-      driver: route.driver || null,
+      driver: route.driver.name,
     }));
 
    const totalPages = Math.ceil(count / limit);
