@@ -13,6 +13,8 @@ const { Sequelize } = require("sequelize");
 const { Op } = require("sequelize");
 const { deleteFile } = require("../middlewares/storageUploads");
 const logger = require("../utils/logger");
+const { schoolSequelize } = require("../config/connection");
+
 // getDriverById
 const getDriverById = async (req, res) => {
   try {
@@ -193,58 +195,45 @@ const DriverAssignedRoutes = async (req, res) => {
   try {
     const user_id = req.user.user_id;
     const school_id = req.user.school_id;
-    const driver = await User.findOne({
-      where: {
-        id:user_id,
-        trash: false,
-        school_id: school_id,
+    const routes= await Routes.findAll({
+      where:{
+        driver_id:user_id,
+        school_id:school_id,
+        trash:false,
       },
-      attributes: ["name", "phone"],
+      attributes: [
+        "id",
+        "route_name",
+        "vehicle_id",
+        "type",
+        "active",
+        "activated_at",
+        "isLock",
+        "pickId"
+      ],
       include: [
         {
-          model: Routes,
-          as: "routes",
-          attributes: [
-            "id",
-            "route_name",
-            "vehicle_id",
-            "type",
-            "active",
-            "activated_at",
-            "isLock",
-            "pickId"
-          ],
-          include: [
-            {
-              model: Student,
-              as: "students",
-              required: false,
-              where: { trash: false },
-              attributes: ["id", "full_name", "reg_no","image"],
-            },
-            {
-              model: Stop,
-              as: "stops",
-              attributes: [],
-              where: { trash: false },
-              required: false,
-            },
-          ],
+          model: Stop,
+          as: "stops",
+          attributes: [],
+          where: { trash: false },
+          required: false,
         },
       ],
+    })
+    for (const route of routes) {
+    let RouteId = route.id;
+    const route1 = await Routes.findOne({
+      where: { id: route.id, school_id, trash: false },
+      attributes: ["id",  "type","pickId","active"  ],
     });
-
-    if (!driver) {
-      return res.status(404).json({
-        message: "Driver profile not found",
-      });
+    if (route1.type === "DROP" && route1.pickId) {
+      RouteId = route1.pickId;
     }
-
-    for (const route of driver.routes) {
 
       const totalStudents = await Student.count({
         where: {
-          route_id: route.id,
+          route_id: RouteId,
           trash: false,
         },
       });
@@ -253,6 +242,11 @@ const DriverAssignedRoutes = async (req, res) => {
         where: {
           route_id: route.id,
         },
+        include:[{
+          model: Stop,
+          required: true,
+          where: { trash: false },
+        }]
       });
 
       route.dataValues.total_students = totalStudents;
@@ -260,7 +254,7 @@ const DriverAssignedRoutes = async (req, res) => {
     }
     return res.status(200).json({
       message: "Assigned routes fetched successfully",
-      data: driver.routes,
+      data: routes,
     });
   } catch (error) {
     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching driver routes:", error);
@@ -353,6 +347,7 @@ const createStopForDriver = async (req, res) => {
           latitude,
           longitude,
           trash: false,
+          recorded_by: user_id,
         },
         { transaction },
       );
@@ -382,7 +377,6 @@ const createStopForDriver = async (req, res) => {
     res.status(500).json({ error: "Failed to create stop" });
   }
 };
-
 const getStopsForDriverByRouteId = async (req, res) => {
   try {
     const { route_id } = req.params;
@@ -428,7 +422,7 @@ const getStopsForDriverByRouteId = async (req, res) => {
         {
           model:LiveLocation,
           required: false,
-          attributes: ["latitude", "longitude", "route_id", "stop_id"],
+          attributes: ["latitude", "longitude", "route_id", "stop_id","createdAt"],
           where: {
             route_id: route_id,
              createdAt: {
@@ -689,7 +683,6 @@ const getStudentsWithUnassignedStopsByRouteId = async (req, res) => {
         error: "Route id is required",
       });
     }
-
     const route = await Routes.findOne({
       where: { id: route_id, driver_id:user_id,school_id, trash: false },
     });
@@ -699,19 +692,36 @@ const getStudentsWithUnassignedStopsByRouteId = async (req, res) => {
         message: "Route not found or not assigned to you",
       });
     }
-
+    let routeId = []
+    routeId.push(route_id)
+    if(route.type === "PICKUP"){
+      const dropRoute = await Routes.findOne({
+        where: {pickId: route_id, driver_id:user_id,school_id, trash: false },
+      });
+      if(dropRoute){
+        routeId.push(dropRoute.id)
+      }
+    }
+    else{
+      const pickupRoute = await Routes.findOne({
+        where: {id: route.pickId, driver_id:user_id,school_id, trash: false },
+      });
+      if(pickupRoute){
+        routeId.push(pickupRoute.id)
+      }
+    }
     const students = await Student.findAll({
       where: {
         stop_id: null,
-        route_id: route_id,
+        route_id: routeId,
         trash: false,
         school_id,
       },
       attributes: ["id", "full_name","roll_number", "reg_no", "image"],
       include: [
-        {
-          model: User,
-          attributes: ["name", "phone"],
+      {
+        model: User,
+        attributes: ["name", "phone"],
       },
       {
         model: Class,
@@ -1025,7 +1035,65 @@ const routeInactive = async (req, res) => {
     });
   }
 };
+const getStudentsByRouteId = async (req, res) => {
+  try {
+    const { route_id } = req.params;
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+     let RouteId = route_id;
+    const route = await Routes.findOne({
+      where: { id: route_id, school_id: school_id, trash: false },
+      attributes: ["id",  "type","pickId","active"],
+    });
+    if (route.type === "DROP" && route.pickId) {
+      RouteId = route.pickId;
+    }
+    const whereClause={
+      route_id:RouteId,
+      trash: false,
+      school_id,
+    };
+    if(searchQuery){
+      whereClause.full_name = { [Op.like]: `%${searchQuery}%` };
+    }
+    const {count, rows: students} = await Student.findAndCountAll({
+      where: whereClause,
+      attributes: ["id", "full_name", "reg_no","roll_number","gender"],
+      include:[
+        {
+          model: User,
+          attributes: ["name", "phone"],
+          required: false,
+        },
+        {
+          model: Class,
+          attributes: ["classname"],
+          required: false,
+        }
+      ],
+      limit: limit,
+      offset: offset,
+    });
 
+     const totalPages = Math.ceil(count / limit);
+    return res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      students,
+    });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching students:", error);
+    console.log("Error fetching students: ", error);
+    return res.status(500).json({
+      error: "Failed to fetch students",
+    });
+  }
+};
 const bulkchangeStopPrioritybyRouteId = async (req, res) => {
   try {
     const { route_id } = req.params;
@@ -1112,13 +1180,11 @@ const updateStopandStudent = async (req, res) => {try {
     latitude,
     longitude,
     student_ids,
-
   } = req.body;
 
   if (
     !stop_id || !latitude || !longitude ||
-    !Array.isArray(student_ids) ||
-    student_ids.length === 0
+    !Array.isArray(student_ids) 
   ) {
     return res.status(400).json({
       message: "stop_id, latitude, longitude and student_ids array are required",
@@ -1753,12 +1819,10 @@ const updateRouteById = async (req, res) => {
     await pickupRoute.update({
       route_name: pickupRouteName ?? pickupRoute.route_name,
       vehicle_id: vehicle_id ?? pickupRoute.vehicle_id,
-      // type: pickupRoute.type,
+      driver_id: driver_id ?? pickupRoute.driver_id,
       isLock: isLock ?? pickupRoute.isLock,
     });
-    if (driver_id) {
-      await pickupRoute.setDrivers(Array.isArray(driver_id) ? driver_id : [driver_id]);
-    }
+
 
     const dropRoute = await Routes.findOne({
       where: { pickId: pickupRoute.id, school_id: school_id, trash: false }
@@ -1768,16 +1832,14 @@ const updateRouteById = async (req, res) => {
       await dropRoute.update({
         route_name: dropRouteName,
         vehicle_id: vehicle_id ?? dropRoute.vehicle_id,
-        type: "DROP",
+        driver_id: driver_id ?? dropRoute.driver_id,
         isLock: isLock ?? dropRoute.isLock,
       });
-      if (driver_id) {
-        await dropRoute.setDrivers(Array.isArray(driver_id) ? driver_id : [driver_id]);
-      }
+    
     }
-    //creates drop route if not exists
+    let newDropRoute = null;
     if (hasDropRoute && !dropRoute) {
-      const newDropRoute = await Routes.create({
+      newDropRoute = await Routes.create({
         school_id: school_id,
         route_name: dropRouteName,
         vehicle_id: vehicle_id ?? pickupRoute.vehicle_id,
@@ -1785,12 +1847,6 @@ const updateRouteById = async (req, res) => {
         pickId: pickupRoute.id,
         isLock: isLock ?? pickupRoute.isLock,
       });
-
-      if (driver_id) {
-        await newDropRoute.setDrivers(
-          Array.isArray(driver_id) ? driver_id : [driver_id]
-        );
-      }
     }
 
     return res.status(200).json({
@@ -1953,10 +2009,22 @@ const updateStopForDriver = async (req, res) => {
         message: "Stop not found",
       });
     }
-
     if (stopData.route?.isLock === true) {
       return res.status(403).json({
         message: "This route is locked. You cannot edit stops.",
+      });
+    }
+    const exisitingStop = await Stop.findOne({
+      where: {
+        id:{[Op.ne]:stopId},
+        trash: false,
+        school_id,
+        stop_name:stop_name,
+      },
+    });
+    if (exisitingStop) {
+      return res.status(404).json({
+        message: "Stop name is already taken . Please update the stop name .",
       });
     }
     await stopData.update({
@@ -1979,27 +2047,85 @@ const updateStopForDriver = async (req, res) => {
   }
 };
 
-//deleteStop
-const deleteStop = async (req, res) => {
+const deleteStopById = async (req, res) => {
+  let transaction;
   try {
     const { id } = req.params;
-    const studentStop = await Stop.findOne({
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+
+    transaction = await schoolSequelize.transaction();
+    const stop = await Stop.findOne({
       where: {
         id,
         trash: false,
+        school_id,
+        recorded_by: user_id,
       },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
     });
 
-    if (!studentStop) {
+    if (!stop) {
+      await transaction.rollback();
+
       return res.status(404).json({
         message: "Stop not found",
       });
     }
-    await studentStop.update({ trash: true });
-    res.status(200).json({ message: "Stop deleted successfully" });
+
+    await stop.update(
+      {
+        trash: true,
+      },
+      {
+        transaction,
+      }
+    );
+
+    await Student.update(
+      {
+        stop_id: null,
+      },
+      {
+        where: {
+          stop_id: stop.id,
+          school_id,
+        },
+        transaction,
+      }
+    );
+    await transaction.commit();
+
+    return res.status(200).json({
+      message: "Stop deleted successfully",
+      stop,
+    });
   } catch (error) {
-    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error deleting stop:", error);
-    console.log("error in deleting stop", error);
+   
+    if (transaction) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        console.error("Transaction rollback failed:", rollbackError);
+      }
+    }
+
+    logger.error(
+      "role:",
+      req.user.role,
+      "userId:",
+      req.user.user_id,
+      "Error deleting stop:",
+      error
+    );
+
+    console.error("Error deleting stop:", error);
+
+    return res.status(500).json({
+      error: "Failed to delete stop",
+      message: error.message,
+    });
   }
 };
 const getStopsByRouteId = async (req, res) => {
@@ -2225,6 +2351,7 @@ module.exports = {
   getStopDetailsForDriver,
   updateRouteActive,
   routeInactive,
+  getStudentsByRouteId,
   deleteStudentFromStop,
   bulkchangeStopPrioritybyRouteId,
   
@@ -2243,7 +2370,7 @@ module.exports = {
 
   getStopById, 
   updateStopById, 
-  deleteStop, 
+  deleteStopById, 
   updateStopForDriver ,
 
   getTodayTransportationByStudentId,

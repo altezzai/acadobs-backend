@@ -36,11 +36,6 @@ const Stop = schoolSequelize.define(
         return value !== null ? parseFloat(value) : null;
       },
     },
-
-    trash: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
     arrived: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
@@ -53,6 +48,11 @@ const Stop = schoolSequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    
+        trash: {
+          type: DataTypes.BOOLEAN,
+          defaultValue: false,
+        },
   },
   {
     tableName: "stop",

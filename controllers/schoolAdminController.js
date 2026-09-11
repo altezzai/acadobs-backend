@@ -42,7 +42,6 @@ const StaffAttendance = require("../models/staff_attendance");
 const Syllabus = require("../models/syllabus");
 const { School } = require("../models");
 const StudentTransfer = require("../models/student_transfer");
-const RouteDrivers = require("../models/tracker/route_drivers");
 const Stop = require("../models/tracker/stop");
 const StopRoute = require("../models/tracker/stop_route");
 const Driver  = require("../models/tracker/driver");
@@ -9505,6 +9504,8 @@ const deleteStaffAttendance = async (req, res) => {
 //create stop✅
 const createStop = async (req, res) => {
   try {
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
     const { route_id, stop_name, priority, latitude, longitude } = req.body;
 
     if (!route_id || !stop_name) {
@@ -9536,8 +9537,9 @@ const createStop = async (req, res) => {
       priority,
       latitude,
       longitude,
+      school_id,
       trash: false,
-      recorded_by: req.user.user_id,
+      recorded_by: user_id,
     });
 
     res.status(201).json({
@@ -9624,18 +9626,34 @@ const createDriver = async (req, res) => {
 const getAllDrivers = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const drivers = await User.findAll({
-      where: {
-        trash: false,
-        school_id,
-        role: "driver",
-      },
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    let whereClause = {
+      trash: false,
+      school_id: school_id,
+      
+    };
+    if (searchQuery) {
+      whereClause.name = {
+        [Op.like]: `%${searchQuery}%`,
+      };
+    }
+    const {count ,rows:drivers} = await User.findAndCountAll({
+      where:whereClause,
+      limit,
+      offset,
       attributes: ["id", "name", "phone", "email","dp"],
       order: [["createdAt", "DESC"]],
     });
 
+    const totalPages = Math.ceil(count / limit);
     return res.status(200).json({
       message: "Fetched successfully",
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
       data: drivers,
     });
   } catch (error) {
@@ -9692,8 +9710,25 @@ const createVehicle = async (req, res) => {
 const getAllVehicles = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const vehicles = await Vehicle.findAll({
-      where: { trash: false, school_id: school_id },
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    let whereClause = {
+      trash: false,
+      school_id: school_id,
+      
+    };
+    if (searchQuery) {
+      whereClause.vehicle_number = {
+        [Op.like]: `%${searchQuery}%`,
+      };
+    }
+    const {count ,rows:vehicles} = await Vehicle.findAndCountAll({
+      where:whereClause,
+      limit,
+      offset,
+      attributes: ["id", "vehicle_number", "type", "model","photo"],
       include: [
         {
           model: User,
@@ -9704,8 +9739,12 @@ const getAllVehicles = async (req, res) => {
       order: [["createdAt", "DESC"]],
     });
 
-    res.status(200).json({
-      message: "Vehicles fetched successfully",
+    const totalPages = Math.ceil(count / limit);
+    return res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
       vehicles,
     });
   } catch (error) {
@@ -9862,7 +9901,6 @@ const createRoute = async (req, res) => {
       }
     }
 
-
     const pickupRouteName = route_no
       ? `${start}-${stop}-${route_no}`
       : `${start}-${stop}`;
@@ -9888,12 +9926,6 @@ const createRoute = async (req, res) => {
       pickId: null,
       trash: false,
     });
-    if (driver_id) {
-      await RouteDrivers.create({
-        route_id: pickup_route.id,
-        driver_id: driver_id,
-      });
-    }
 
     let drop_route = null;
     if (hasDropRoute) {
@@ -9903,16 +9935,10 @@ const createRoute = async (req, res) => {
         vehicle_id: vehicle_id ?? null,
         driver_id: driver_id ?? null,
         type: "DROP",
-        isLock: isLock ?? true,
+        isLock: isLock ?? false,
         pickId: pickup_route.id,
         trash: false,
       });
-      if (driver_id) {
-        await RouteDrivers.create({
-          route_id: drop_route.id,
-          driver_id: driver_id,
-        });
-      }
     }
     res.status(201).json({
       message: "Route created successfully",
@@ -9929,17 +9955,28 @@ const createRoute = async (req, res) => {
 const getAllRoutes = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const routes = await Routes.findAll({
-      where: {
-        trash: false,
-        school_id: school_id,
-      },
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    let whereClause = {
+      trash: false,
+      school_id: school_id,
+    };
+    if (searchQuery) {
+      whereClause.route_name = {
+        [Op.like]: `%${searchQuery}%`,
+      };
+    }
+    const {count ,rows:routes} = await Routes.findAndCountAll({
+      where:whereClause,
+      limit,
+      offset,
       include: [
         {
           model: User,
-          as: "drivers",
+          as: "driver",
           attributes: ["id", "name"],
-          through: { attributes: [] },
         },
         {
           model: Vehicle,
@@ -9965,21 +10002,24 @@ const getAllRoutes = async (req, res) => {
       route_name: route.route_name,
       type: route.type,
       pickId: route.pickId || null,
+      active: route.active,
       pickup_route_name: route.pickupRoute?.route_name || null,
       hasDropRoute: dropRouteSet.has(route.id),
       isLock: route.isLock,
       vehicle_number: route.vehicle?.vehicle_number || null,
-      drivers: route.drivers.map((d) => {
-        return { id: d.id, name: d.name };
-      }),
+      driver: route.driver || null,
     }));
 
-    res.status(200).json({
-      message: "Routes fetched successfully",
+   const totalPages = Math.ceil(count / limit);
+    return res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
       routes: cleanRoutes,
     });
   } catch (error) {
-    logger.error("schoolId:", req.user.school_id, "Error fetching vehicle:", error);
+    logger.error("schoolId:", req.user.school_id, "Error fetching getAllRoutes:", error);
     console.error("Error fetching routes:", error);
     res.status(500).json({ error: "Failed to fetch routes" });
   }

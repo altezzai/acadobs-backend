@@ -38,7 +38,6 @@ const Driver = require("./tracker/driver");
 const Vehicle = require("./tracker/vehicle");
 const Stop = require("./tracker/stop");
 const Routes = require("./tracker/routes");
-const RouteDrivers = require("./tracker/route_drivers");
 const StopRoutes = require("./tracker/stop_route");
 const LiveLocation = require("./tracker/livelocation");
 const Session = require("./session");
@@ -215,19 +214,6 @@ Class.hasMany(SpecialClassStudent, { foreignKey: "class_id" });
 User.hasMany(Vehicle, { foreignKey: "driver_id", as: "vehicles" });
 Vehicle.belongsTo(User, { foreignKey: "driver_id", as: "driver" });
 
-Routes.belongsToMany(User, {
-  through: RouteDrivers,
-  foreignKey: "route_id",
-  otherKey: "driver_id",
-  as: "drivers",
-});
-// User.belongsToMany(Routes, {
-//   through: RouteDrivers,
-//   foreignKey: "driver_id",
-//   otherKey: "route_id",
-//   as: "routes",
-// });
-
 Driver.belongsTo(User, { foreignKey: "user_id", as: "user" });
 User.hasMany(Driver, { foreignKey: "user_id", as: "drivers" });
 // Route <-> Stop association through the stop_routes junction table.
@@ -244,6 +230,8 @@ Stop.belongsToMany(Routes, {
   as: "routes",
 });
 Stop.hasMany(StopRoutes, { foreignKey: "stop_id" });
+StopRoutes.belongsTo(Stop, { foreignKey: "stop_id" });
+StopRoutes.belongsTo(Routes, { foreignKey: "route_id" });
 Stop.belongsTo(User,{ foreignKey: "recorded_by" });
 
 
@@ -376,7 +364,6 @@ module.exports = {
   Vehicle,
   Stop,
   Routes,
-  RouteDrivers,
   Session,
   StudentTransfer,
   ExamTimetable,
