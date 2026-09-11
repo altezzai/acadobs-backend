@@ -2197,11 +2197,7 @@ const getStopsByRouteId = async (req, res) => {
     const { route_id } = req.params;
     const school_id = req.user.school_id;
     const searchQuery = req.query.q || "";
-    let whereClause = { trash: false };
-    if (searchQuery) {
-      whereClause[Op.or] = [{ stop_name: { [Op.like]: `%${searchQuery}%` } }];
-    }
-
+  
     const route = await Routes.findOne({
       where: {
         id: route_id,
@@ -2213,6 +2209,14 @@ const getStopsByRouteId = async (req, res) => {
       return res.status(404).json({
         message: "Route not found",
       });
+    }
+    let whereClause = { 
+      trash: false ,
+      route_id,
+      school_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [{ stop_name: { [Op.like]: `%${searchQuery}%` } }];
     }
 
     const stops = await Stop.findAll({
