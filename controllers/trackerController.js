@@ -2212,7 +2212,6 @@ const getStopsByRouteId = async (req, res) => {
     }
     let whereClause = { 
       trash: false ,
-      route_id,
       school_id,
     };
     if (searchQuery) {
@@ -2224,6 +2223,9 @@ const getStopsByRouteId = async (req, res) => {
       attributes: ["id", "stop_name", "longitude", "latitude"],
       include: {
         model:StopRoute,
+        where:{
+          route_id,
+        },
         attributes: ["priority"],
       },
     });
