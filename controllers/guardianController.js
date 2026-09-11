@@ -11,6 +11,7 @@ const InternalMark = require("../models/internal_marks");
 const Routes = require("../models/tracker/routes");
 const Stop = require("../models/tracker/stop");
 const StopRoute = require("../models/tracker/stop_route");
+const Vehicle = require("../models/tracker/vehicle");
 const Exams = require("../models/exams");
 const ExamTimetable = require("../models/exam_timetable");
 const HomeworkAssignment = require("../models/homeworkassignment");
@@ -1435,27 +1436,26 @@ const getRoutesForGuardian = async (req, res) => {
         {
           model: Routes,
           as: "routes",
-          attributes: ["id", "route_name", "type", "active"],
+          attributes: ["id", "route_name",],
           required: true,
           where: {
-            active: true,
             trash: false,
           },
+          include:[
+            {
+              model:Vehicle,
+              as: "vehicle",
+              attributes: ["id", "vehicle_number","type","photo"],
+            },
+             {
+              model:User,
+              as: "driver",
+              attributes: ["id", "name"],
+            },
+          ]
         },
       ],
     });
-    // const result = students.map((student) => {
-    //   return {
-    //     id: student.id,
-    //     full_name: student.full_name,
-    //     reg_no: student.reg_no,
-    //     // routes: student.routes.map((route) => ({
-    //     //   id: route.id,
-    //     //   route_name: route.route_name,
-    //     //   type: route.type,
-    //     // })),
-    //   };
-    // });
 
     return res.status(200).json({
       message: "Routes fetched successfully",
@@ -1469,66 +1469,6 @@ const getRoutesForGuardian = async (req, res) => {
   }
 };
 
-// const getExamsByStudentId = async (req, res) => {
-//   try {
-//     const { studentId } = req.params;
-//     const guardian_id = req.user.user_id;
-
-//     const student = await Student.findOne({
-//       where: { id: studentId, guardian_id: guardian_id, trash: false },
-//     });
-
-//     if (!student) {
-//       return res.status(404).json({ error: "Student not found" });
-//     }
-
-//     const marks = await Mark.findAll({
-//       where: { student_id: studentId },
-//       attributes: ["internal_id"],
-//     });
-
-//     const internalIds = marks.map((mark) => mark.internal_id);
-
-//     if (internalIds.length === 0) {
-//       return res.status(200).json({ exams: [] });
-//     }
-
-//     const internalMarks = await InternalMark.findAll({
-//       where: {
-//         id: { [Op.in]: internalIds },
-//         exam_id: { [Op.ne]: null },
-//       },
-//       attributes: ["exam_id"],
-//       group: ["exam_id"],
-//     });
-
-//     const examIds = internalMarks.map((im) => im.get("exam_id"));
-
-//     if (examIds.length === 0) {
-//       return res.status(200).json({ exams: [] });
-//     }
-
-//     const examsList = await Exams.findAll({
-//       where: {
-//         id: { [Op.in]: examIds },
-//         publish: true,
-//       },
-//       attributes: ["id", "exam_name", "education_year"],
-//     });
-
-//     return res.status(200).json({ exams: examsList });
-//   } catch (error) {
-//     logger.error(
-//       "userId:",
-//       req.user ? req.user.user_id : null,
-//       "Error getting exams by student id:",
-//       error,
-//     );
-//     return res.status(500).json({ error: error.message });
-//   }
-// };
-
-//get total count of routes
 const getGuardianRouteCount = async (req, res) => {
   try {
     const guardianId = req.user.user_id;
