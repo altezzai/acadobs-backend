@@ -1796,6 +1796,7 @@ const getHomeworkByTeacher = async (req, res) => {
         "description",
         "due_date",
         "class_id",
+        "type",
         "createdAt",
       ],
       include: [

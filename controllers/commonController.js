@@ -329,7 +329,7 @@ const getStudentTransportDetails = async (req, res) => {
         },
         {
           model:Routes,
-           as: "route",
+           as: "routes",
           attributes: ["id", "route_name"],
           include: [
             {
@@ -410,6 +410,7 @@ const getHomeworkByStudentId = async (req, res) => {
         "description",
         "due_date",
         "class_id",
+        "type",
         "createdAt",
       ],
       include: [
