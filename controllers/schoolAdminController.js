@@ -4518,21 +4518,47 @@ const createPayment = async (req, res) => {
     ) {
       return res.status(400).json({ error: "All fields are required" });
     }
-    //check if transaction_id already unique or null is
-    const existingTransaction_id = await Payment.findOne({
-      where: { transaction_id },
-    });
-    if (
-      existingTransaction_id &&
-      existingTransaction_id.transaction_id !== ""
-    ) {
-      return res.status(400).json({ error: "Transaction ID already exists" });
+    const parsedStudentId =
+      student_id !== undefined &&
+      student_id !== null &&
+      student_id !== "" &&
+      student_id !== "null" &&
+      student_id !== "undefined"
+        ? Number(student_id)
+        : null;
+
+    const parsedInvoiceStudentId =
+      invoice_student_id !== undefined &&
+      invoice_student_id !== null &&
+      invoice_student_id !== "" &&
+      invoice_student_id !== "null" &&
+      invoice_student_id !== "undefined"
+        ? Number(invoice_student_id)
+        : null;
+
+    const parsedTransactionId =
+      transaction_id && typeof transaction_id === "string" && transaction_id.trim() !== ""
+        ? transaction_id.trim()
+        : null;
+
+    // check if transaction_id already exists for this school
+    if (parsedTransactionId) {
+      const existingTransaction_id = await Payment.findOne({
+        where: { transaction_id: parsedTransactionId, school_id },
+      });
+      if (
+        existingTransaction_id &&
+        existingTransaction_id.transaction_id !== ""
+      ) {
+        return res.status(400).json({ error: "Transaction ID already exists" });
+      }
     }
+
     const existingPayment = await Payment.findOne({
       where: {
-        invoice_student_id,
+        invoice_student_id: parsedInvoiceStudentId,
         school_id,
-        student_id,
+        student_id: parsedStudentId,
         payment_date,
         payment_category,
       },
@@ -4542,38 +4568,40 @@ const createPayment = async (req, res) => {
         .status(400)
         .json({ error: "Payment with the same details already exists" });
     }
-    let transcation_status=payment_status;
-   if(payment_category === "donation" && !payment_status ){
+    let transcation_status = payment_status;
+    if (payment_category === "donation" && !payment_status) {
       transcation_status = "completed";
     }
+
     const payment = await Payment.create({
       school_id,
-      student_id,
-      invoice_student_id,
+      student_id: parsedStudentId,
+      invoice_student_id: parsedInvoiceStudentId,
       amount,
       payment_date,
       payment_category,
-      transaction_id,
+      transaction_id: parsedTransactionId,
       payment_method,
-      payment_status:transcation_status,
+      payment_status: transcation_status || "pending",
       recorded_by: userId,
       updated_by: userId,
     });
     let invoice_status = "";
 
  
-    if (payment_status === "completed" && invoice_student_id) {
+    if (transcation_status === "completed" && parsedInvoiceStudentId) {
       const invoiceStudent = await InvoiceStudent.findOne({
-        where: { id: invoice_student_id },
+        where: { id: parsedInvoiceStudentId },
         include: [{ model: Invoice, attributes: ["id", "amount"] }],
       });
-      //the same invoice_student_id used payemnt amount also get and check
+      //the same invoice_student_id used payment amount also get and check
       let totalPaid = 0;
-      if (invoice_student_id) {
+      if (parsedInvoiceStudentId) {
         totalPaid = await Payment.sum("amount", {
           where: {
-            invoice_student_id: invoice_student_id,
+            invoice_student_id: parsedInvoiceStudentId,
             payment_status: "completed",
+            trash: false,
           },
         });
       }
