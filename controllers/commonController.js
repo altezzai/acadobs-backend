@@ -329,7 +329,7 @@ const getStudentTransportDetails = async (req, res) => {
         },
         {
           model:Routes,
-           as: "route",
+           as: "routes",
           attributes: ["id", "route_name"],
           include: [
             {
@@ -410,6 +410,7 @@ const getHomeworkByStudentId = async (req, res) => {
         "description",
         "due_date",
         "class_id",
+        "type",
         "createdAt",
       ],
       include: [
@@ -1199,7 +1200,7 @@ const getLatestEvents = async (req, res) => {
     const limit = parseInt(req.query.limit) || 3;
     const offset = (page - 1) * limit;
     const { count, rows: events } = await Event.findAndCountAll({
-      where: { school_id: school_id },
+      where: { school_id: school_id,trash:false },
       order: [["createdAt", "DESC"]],
       limit: limit,
       offset,
@@ -1264,6 +1265,7 @@ const getLatestNotices = async (req, res) => {
     const { count, rows: notices } = await Notice.findAndCountAll({
       where: {
         school_id: school_id,
+        trash:false,
         [Op.or]: [{ type: "all" }, { type: "staffs" }],
       },
       order: [["createdAt", "DESC"]],

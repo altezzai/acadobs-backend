@@ -48,11 +48,10 @@ const Stop = schoolSequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-    
-        trash: {
-          type: DataTypes.BOOLEAN,
-          defaultValue: false,
-        },
+    trash: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
   },
   {
     tableName: "stop",
