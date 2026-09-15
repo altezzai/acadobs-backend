@@ -9961,10 +9961,13 @@ const createRoute = async (req, res) => {
 const getAllRoutes = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const searchQuery = req.query.q || "";
+    const type = req.query.type || "";
+    const driver_id = req.query.driver_id || null;
+    const vehicle_id = req.query.vehicle_id || null;
     let whereClause = {
       trash: false,
       school_id: school_id,
@@ -9973,6 +9976,15 @@ const getAllRoutes = async (req, res) => {
       whereClause.route_name = {
         [Op.like]: `%${searchQuery}%`,
       };
+    }
+    if(type){
+      whereClause.type = type;
+    }
+    if(driver_id){
+      whereClause.driver_id = driver_id;
+    }
+    if(vehicle_id){
+      whereClause.vehicle_id = vehicle_id;
     }
     const {count ,rows:routes} = await Routes.findAndCountAll({
       where:whereClause,
