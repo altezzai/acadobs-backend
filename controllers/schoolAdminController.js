@@ -10248,7 +10248,7 @@ const changeStudentRouteAndStop = async (req, res) => {
     }
     let pickRoute=route_id;
     let dropRoute=null;
-    if(drop==="true" && one_way==="true"){
+    if(drop===true && one_way===true){
       pickRoute=null;
       const drop = await Routes.findOne({
         where: { id: route_id, type: "DROP", trash: false, school_id: school_id },
@@ -10260,7 +10260,7 @@ const changeStudentRouteAndStop = async (req, res) => {
       }
       dropRoute=drop.id;
 
-    }else if(one_way==="true"){
+    } else if(one_way===true){
     dropRoute=null;
     const pick = await Routes.findOne({
         where: { id: route_id, type: "PICKUP", trash: false, school_id: school_id },
