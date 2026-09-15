@@ -733,5 +733,7 @@ router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolD
 router.get("/getExamTitles",commonController.getExamTitles);
 router.put("/changePassword", commonController.changePassword);
 
+router.get("/getTermTypeForTransportationInvoice",commonController.getTermTypeForTransportationInvoice);
+router.get("/getClassRangeForSubject",commonController.getClassRangeForSubject);
 
 module.exports = router;

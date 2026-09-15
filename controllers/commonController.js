@@ -1458,19 +1458,6 @@ const getAllDriverUsers = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch driver users" });
   }
 }
-//
-const getLeaveTypes = async (req, res) => {
-  try {
-    const leaveTypes = [
-      "sick", "casual", "emergency", "vacation", "onduty","c-off","other"
-    ]
-    res.status(200).json(leaveTypes);
-  } catch (error) {
-    logger.error("Error fetching leave types:", error);
-    console.error("Error fetching leave types:", error);
-    res.status(500).json({ error: "Failed to fetch leave types" });
-  }
-}
 const getMyPrfileAndSchoolDetails = async (req, res) => {
   try{
     const userId = req.user.user_id;
@@ -1508,6 +1495,69 @@ const getExamTitles = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch profile details" });
   }
 
+}
+const getLeaveTypes = async (req, res) => {
+  try {
+    const leaveTypes = [
+      "sick", "casual", "emergency", "vacation", "onduty","c-off","other"
+    ]
+    res.status(200).json(leaveTypes);
+  } catch (error) {
+    logger.error("Error fetching leave types:", error);
+    console.error("Error fetching leave types:", error);
+    res.status(500).json({ error: "Failed to fetch leave types" });
+  }
+}
+const getTermTypeForTransportationInvoice = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+  
+    let termTypeForTransportationInvoice = [
+      "Term1", "Term2", "Term3"
+    ]
+    res.status(200).json(termTypeForTransportationInvoice);
+  } catch (error) {
+    logger.error("Error fetching term type for transportation invoice:", error);
+    console.error("Error fetching term type for transportation invoice:", error);
+    res.status(500).json({ error: "Failed to fetch term type for transportation invoice" });
+  }
+}
+const getClassRangeForSubject = async (req, res) => {
+  try{
+    const school_id = req.user.school_id;
+    //set an array value and label
+  let range = [
+    {
+      label:"FS",
+      key:"FS"
+    },
+    {
+      label:"PS",
+      key:"PS"
+    },
+    {
+      label:"MS",
+      key:"MS"
+    },
+    {
+      label:"SS",
+      key:"SS"
+    },
+    {
+      label:"common",
+      key:"common"
+    },
+    {
+      label:"other",
+      key:"other"
+    }
+  ]
+    res.status(200).json({range});
+  }catch(error){
+    logger.error("Error fetching class range for subject:", error);
+    console.error("Error fetching class range for subject:", error);
+    res.status(500).json({ error: "Failed to fetch class range for subject" });
+  }
 }
 module.exports = {
   getStudentsByClassId,
@@ -1553,8 +1603,10 @@ module.exports = {
 
   getAllDriverUsers,
 
-  getLeaveTypes,
   getMyPrfileAndSchoolDetails,
 
+  getLeaveTypes,
   getExamTitles,
+  getTermTypeForTransportationInvoice,
+  getClassRangeForSubject,
 };
