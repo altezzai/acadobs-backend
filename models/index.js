@@ -47,6 +47,7 @@ const Event = require("./event");
 const ParentNote = require("./parent_note");
 const ParentNoteStudent = require("./parent_note_student");
 const StudentsStopStatus = require("./tracker/students_stop_status");
+const TransportInvoice = require("./transport_invoice");
 
 // Relations
 
@@ -152,6 +153,13 @@ Invoice.hasMany(InvoiceStudent, { foreignKey: "invoice_id" });
 Invoice.belongsTo(User,{ foreignKey: "recorded_by" });
 InvoiceStudent.belongsTo(Invoice, { foreignKey: "invoice_id" });
 InvoiceStudent.belongsTo(Student, { foreignKey: "student_id" });
+
+TransportInvoice.belongsTo(School, { foreignKey: "school_id" });
+School.hasMany(TransportInvoice, { foreignKey: "school_id" });
+TransportInvoice.belongsTo(Student, { foreignKey: "student_id" });
+Student.hasMany(TransportInvoice, { foreignKey: "student_id" });
+TransportInvoice.belongsTo(Stop, { foreignKey: "stop_id" });
+Stop.hasMany(TransportInvoice, { foreignKey: "stop_id" });
 
 LeaveRequest.belongsTo(School, { foreignKey: "school_id" });
 LeaveRequest.belongsTo(User, { foreignKey: "user_id" });
@@ -372,4 +380,7 @@ module.exports = {
   Session,
   StudentTransfer,
   ExamTimetable,
+  Invoice,
+  InvoiceStudent,
+  TransportInvoice,
 };

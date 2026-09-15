@@ -821,8 +821,9 @@ const getStudentsWithRouteId = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 100;
     const offset = (page - 1) * limit;
+    // set route_id or pick_route_id is required
     const whereClause = {
-        route_id: { [Op.ne]: null },
+        route_id: { [Op.ne]: null } || { pick_route_id: { [Op.ne]: null } },
         alumni: false,
         trash: false,
         school_id,
@@ -859,7 +860,14 @@ const getStudentsWithRouteId = async (req, res) => {
         as: "routes",
         attributes: ["id","active","route_name","type",],
         
+      },
+       {
+        model: Routes,
+        as: "dropRoute",
+        attributes: ["id","active","route_name","type",],
+        
       }
+
       ],
     });
     const totalPages = Math.ceil(count / limit);

@@ -619,6 +619,7 @@ router.get(
   "/getStopsByRouteId/:route_id",
   trackerController.getStopsByRouteId,
 );
+
 router.get("/getTrackedDataWithDateByRouteId/:route_id", 
   trackerController.getTrackedDataWithDateByRouteId);
 router.get(
@@ -628,6 +629,23 @@ router.get("/getStudentsWithUnassignedRouteByClassId/:class_id",
   trackerController.getStudentsWithUnassignedRouteByClassId);
 router.get("/getStudentsWithRouteId", 
   trackerController.getStudentsWithRouteId);
+
+  //transportation invoice
+  
+router.post(
+"/generateTransportationInvoice",
+schoolAdminController.bulkCreateTransportationInvoice,
+);
+router.get("/getAllTransportationInvoices",
+schoolAdminController.getAllTransportationInvoices);
+router.delete("/deleteTransportationInvoice/:id",
+schoolAdminController.deleteTransportationInvoice);
+router.patch("/restoreTransportationInvoice/:id",
+schoolAdminController.restoreTransportationInvoice);
+router.get("/getTrashedTransportationInvoices",
+schoolAdminController.getTrashedTransportationInvoices);
+router.delete("/permanentDeleteTransportationInvoice/:id",
+schoolAdminController.permanentDeleteTransportationInvoice);
 // Student Transfer routes
 router.post("/studentTransfer", transferController.adminCreateTransferRequest);
 router.get(

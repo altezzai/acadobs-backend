@@ -34,6 +34,7 @@ const Attendance = require("../models/attendance");
 const AttendanceMarked = require("../models/attendancemarked");
 const Invoice = require("../models/invoice");
 const InvoiceStudent = require("../models/invoice_students");
+const TransportInvoice = require("../models/transport_invoice");
 const InternalMark = require("../models/internal_marks");
 const Marks = require("../models/marks");
 const Homework = require("../models/homework");
@@ -10407,6 +10408,7 @@ const bulkUpdateStopCharges = async (req, res) => {
   }
 };
 
+
 const assignDriverToRoutes = async (req, res) => {
   try {
     const { driverId } = req.params;
@@ -10608,7 +10610,384 @@ const getDriverLocation = async (req, res) => {
     });
   }
 };
+const bulkCreateTransportationInvoice = async (req, res) => {
+  try {
+    const { term, student_ids, offer_percentage, due_date } = req.body || {};
+    const school_id = req.user.school_id;
 
+    if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
+      return res.status(400).json({
+        message: "student_ids must be a non-empty array",
+      });
+    }
+
+    let offer = 0;
+    if (
+      offer_percentage !== undefined &&
+      offer_percentage !== null &&
+      offer_percentage !== ""
+    ) {
+      offer = parseFloat(offer_percentage);
+      if (isNaN(offer) || offer < 0 || offer > 100) {
+        return res.status(400).json({
+          message: "offer_percentage must be a valid number between 0 and 100",
+        });
+      }
+    }
+
+    const students = await Student.findAll({
+      where: {
+        id: student_ids,
+        school_id,
+        trash: false,
+      },
+      include: [
+        {
+          model: Stop,
+          as: "stop",
+          attributes: ["id", "stop_name", "charge"],
+          required: false,
+        },
+      ],
+    });
+
+    if (!students || students.length === 0) {
+      return res.status(404).json({
+        message: "No students found for the provided student_ids",
+      });
+    }
+    const existingInvoice=await TransportInvoice.findOne({
+      where:{
+        school_id,
+        student_id:student_ids,
+        term,
+        due_date
+        }
+    })
+    if(existingInvoice)  
+      return res.status(400).json({
+        message: "Invoice already exists for the provided student_ids and term",
+      });
+    const invoicesToCreate = students.map((student) => {
+      const baseCharge =
+        student.stop && student.stop.charge !== null && student.stop.charge !== undefined
+          ? parseFloat(student.stop.charge)
+          : 0;
+
+      let finalAmount = baseCharge;
+      if (offer > 0) {
+        const discount = (baseCharge * offer) / 100;
+        finalAmount = Math.max(0, baseCharge - discount);
+      }
+      finalAmount = parseFloat(finalAmount.toFixed(2));
+
+      return {
+        school_id,
+        student_id: student.id,
+        stop_id: student.stop_id || (student.stop ? student.stop.id : null) || null,
+        amount: finalAmount,
+        term: term || null,
+        due_date: due_date || null,
+        status: "pending",
+        trash: false,
+      };
+    });
+
+    const createdInvoices = await TransportInvoice.bulkCreate(invoicesToCreate);
+
+    return res.status(201).json({
+      message: "Transportation invoices generated successfully",
+      total_generated: createdInvoices.length,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "Generate Transportation Invoice Error:",
+      error
+    );
+    console.error("Generate Transportation Invoice Error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+const getAllTransportationInvoices =async(req,res) =>{
+  try {
+    const school_id = req.user.school_id || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10; 
+    const offset = page && limit ? (page - 1) * limit : 0;
+    const searchQuery = req.query.q || "";
+    const stop_id = req.query.stop_id || "";
+    const term = req.query.term || "";
+    const due_date = req.query.due_date || "";
+    const student_id = req.query.student_id || "";
+    const status = req.query.status || "";
+    let whereClause = {
+      school_id,
+      trash: false,
+  };
+  if(stop_id){
+    whereClause.stop_id = stop_id;
+  }
+  if(term){
+    whereClause.term = term;
+  }
+  if(due_date){
+    whereClause.due_date = due_date;
+  }
+  if(status){
+    whereClause.status = status;
+  }
+  if(student_id){
+    whereClause.student_id = student_id;
+  }
+  if(searchQuery){
+    whereClause[Op.or] = [
+      { term: { [Op.like]: `%${searchQuery}%` } },
+      { due_date: { [Op.like]: `%${searchQuery}%` } },
+      { status: { [Op.like]: `%${searchQuery}%` } },
+    ];
+  }
+  const { count, rows: transportInvoices } = await TransportInvoice.findAndCountAll({
+    offset,
+    limit,
+    distinct: true,
+    where: whereClause,
+    include: [
+      {
+        model: Student,
+        attributes: ["id", "full_name", "roll_number"],
+      },
+      {
+        model: Stop,
+        attributes: ["id", "stop_name", "charge"],
+      },
+    ],
+    order: [["id", "DESC"]],
+  });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data: transportInvoices,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "Get All Transportation Invoice Error:",
+      error
+    );
+    console.error("Get All Transportation Invoice Error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
+const deleteTransportationInvoice =async(req,res) =>{
+  try {
+    const school_id = req.user.school_id || "";
+    const id = req.params.id || "";
+    if(!id){
+      return res.status(400).json({
+        message: "Invoice ID is required",
+      });
+    }
+    const transportInvoice = await TransportInvoice.findOne({
+      where: {
+        id,
+        school_id,
+        trash: false,
+      },
+    });
+    if(!transportInvoice){
+      return res.status(404).json({
+        message: "Invoice not found",
+      });
+    }
+    await transportInvoice.update({
+      trash: true,
+    });
+    return res.status(200).json({
+      message: "Transportation invoice deleted successfully",
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "Delete Transportation Invoice Error:",
+      error
+    );
+    console.error("Delete Transportation Invoice Error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
+const permanentDeleteTransportationInvoice =async(req,res) =>{
+  try {
+    const school_id = req.user.school_id || "";
+    const id = req.params.id || "";
+    if(!id){
+      return res.status(400).json({
+        message: "Invoice ID is required",
+      });
+    }
+    const transportInvoice = await TransportInvoice.findOne({
+      where: {
+        id,
+        school_id,
+        trash: true,
+      },
+    });
+    if(!transportInvoice){
+      return res.status(404).json({
+        message: "Invoice not found",
+      });
+    }
+    await transportInvoice.destroy();
+    return res.status(200).json({
+      message: "Transportation invoice permanently deleted successfully",
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "Permanent Delete Transportation Invoice Error:",
+      error
+    );
+    console.error("Permanent Delete Transportation Invoice Error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
+const restoreTransportationInvoice =async(req,res) =>{
+  try {
+    const school_id = req.user.school_id || "";
+    const id = req.params.id || "";
+    if(!id){
+      return res.status(400).json({
+        message: "Invoice ID is required",
+      });
+    }
+    const transportInvoice = await TransportInvoice.findOne({
+      where: {
+        id,
+        school_id,
+        trash: true,
+      },
+    });
+    if(!transportInvoice){
+      return res.status(404).json({
+        message: "Invoice not found",
+      });
+    }
+    await transportInvoice.update({
+      trash: false,
+    });
+    return res.status(200).json({
+      message: "Transportation invoice restored successfully",
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "Restore Transportation Invoice Error:",
+      error
+    );
+    console.error("Restore Transportation Invoice Error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
+const getTrashedTransportationInvoices =async(req,res) =>{
+  try {
+     const school_id = req.user.school_id || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10; 
+    const offset = page && limit ? (page - 1) * limit : 0;
+    const searchQuery = req.query.q || "";
+    const stop_id = req.query.stop_id || "";
+    const term = req.query.term || "";
+    const due_date = req.query.due_date || "";
+    const student_id = req.query.student_id || "";
+    const status = req.query.status || "";
+    let whereClause = {
+      school_id,
+      trash: true,
+  };
+  if(stop_id){
+    whereClause.stop_id = stop_id;
+  }
+  if(term){
+    whereClause.term = term;
+  }
+  if(due_date){
+    whereClause.due_date = due_date;
+  }
+  if(status){
+    whereClause.status = status;
+  }
+  if(student_id){
+    whereClause.student_id = student_id;
+  }
+  if(searchQuery){
+    whereClause[Op.or] = [
+      { term: { [Op.like]: `%${searchQuery}%` } },
+      { due_date: { [Op.like]: `%${searchQuery}%` } },
+      { status: { [Op.like]: `%${searchQuery}%` } },
+    ];
+  }
+  const { count, rows: transportInvoices } = await TransportInvoice.findAndCountAll({
+    offset,
+    limit,
+    distinct: true,
+    where: whereClause,
+      include: [
+      {
+        model: Student,
+        attributes: ["id", "full_name", "roll_number"],
+      },
+      {
+        model: Stop,
+        attributes: ["id", "stop_name", "charge"],
+      },
+    ],
+    order: [["id", "DESC"]],
+    });
+     const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data: transportInvoices,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "Get Trashed Transportation Invoice Error:",
+      error
+    );
+    console.error("Get Trashed Transportation Invoice Error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
 const getExams = async (req, res) => {
     try {
       const school_id = req.user.school_id || "";
@@ -11838,6 +12217,7 @@ module.exports = {
   bulkCreateStaffAttendance,
   deleteStaffAttendance,
 
+
   createRoute,
   createVehicle,
   createDriver,
@@ -11858,7 +12238,14 @@ module.exports = {
   getDriversAssignedToRoutes,
   updateIsLock,
   getDriverLocation,
-  
+
+  bulkCreateTransportationInvoice,
+  getAllTransportationInvoices,
+  deleteTransportationInvoice,
+  restoreTransportationInvoice,
+  getTrashedTransportationInvoices,
+  permanentDeleteTransportationInvoice,
+
   getExams,
   getExamMarksByExamId,
   getMarksByInternalId,
