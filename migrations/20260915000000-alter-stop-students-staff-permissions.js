@@ -10,7 +10,6 @@ module.exports = {
       allowNull: true,
     });
 
-    // 2. Modify students table: remove student_status, add one_way and drop_route_id
     await queryInterface.removeColumn("students", "student_status");
 
     await queryInterface.addColumn("students", "one_way", {
@@ -29,12 +28,6 @@ module.exports = {
       onDelete: "SET NULL",
     });
 
-    // 3. Add transport_invoice and payment_managment to staff_permissions table
-    await queryInterface.addColumn("staff_permissions", "transport_invoice", {
-      type: Sequelize.BOOLEAN,
-      defaultValue: false,
-    });
-
     await queryInterface.addColumn("staff_permissions", "payment_managment", {
       type: Sequelize.BOOLEAN,
       defaultValue: false,
@@ -44,8 +37,6 @@ module.exports = {
   async down(queryInterface, Sequelize) {
     // Revert staff_permissions changes
     await queryInterface.removeColumn("staff_permissions", "payment_managment");
-    await queryInterface.removeColumn("staff_permissions", "transport_invoice");
-
     // Revert students changes
     await queryInterface.removeColumn("students", "drop_route_id");
     await queryInterface.removeColumn("students", "one_way");

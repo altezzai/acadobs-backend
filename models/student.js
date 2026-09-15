@@ -29,7 +29,7 @@ const Student = schoolSequelize.define(
     route_id: { type: DataTypes.INTEGER, allowNull: true },
     drop_route_id: { type: DataTypes.INTEGER, allowNull: true },
     one_way: { type: DataTypes.BOOLEAN, defaultValue: false },
-  
+
     createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   },

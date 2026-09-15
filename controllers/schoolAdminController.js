@@ -1460,7 +1460,6 @@ const updateStaffPermission = async (req, res) => {
       exam,
       transportation,
       aiAnalytics,
-      transport_invoice,
       payment_managment,
     } = req.body;
     const permission = await StaffPermission.findOne({
@@ -1504,7 +1503,6 @@ const updateStaffPermission = async (req, res) => {
       staffs_duties,
       staffs_attendance,
       aiAnalytics,
-      transport_invoice,
       payment_managment,
     });
     res.json({ success: true, data: permission });
