@@ -10208,8 +10208,13 @@ const deleteStudentFromRoute = async (req, res) => {
 const changeStudentRouteAndStop = async (req, res) => {
   try {
     const { student_id } = req.params;
-    const { route_id, stop_id } = req.body;
+    const { route_id, stop_id ,one_way,drop} = req.body;
     const school_id = req.user.school_id;
+    if(!route_id || !stop_id ){
+      return res.status(400).json({
+        message: "All the fields are required",
+      });
+    }
 
     const student = await Student.findOne({
       where: { id: student_id, trash: false, school_id: school_id },
@@ -10220,7 +10225,6 @@ const changeStudentRouteAndStop = async (req, res) => {
         message: "Student not found",
       });
     }
-
     const route = await Routes.findOne({
       where: { id: route_id, trash: false, school_id: school_id },
     });
@@ -10230,9 +10234,55 @@ const changeStudentRouteAndStop = async (req, res) => {
         message: "Route not found",
       });
     }
+    let pickRoute=route_id;
+    let dropRoute=null;
+    if(drop==="true" && one_way==="true"){
+      pickRoute=null;
+      const drop = await Routes.findOne({
+        where: { id: route_id, type: "DROP", trash: false, school_id: school_id },
+      });
+      if (!drop) {
+        return res.status(404).json({
+          message: "Drop route not found",
+        });
+      }
+      dropRoute=drop.id;
+
+    }else if(one_way==="true"){
+    dropRoute=null;
+    const pick = await Routes.findOne({
+        where: { id: route_id, type: "PICKUP", trash: false, school_id: school_id },
+      });
+        if (!pick) {
+        return res.status(404).json({
+          message: "Pickup route not found",
+        });
+      }
+      pickRoute=pick.id;
+    }
+    else{
+      const pick = await Routes.findOne({
+        where: { id: route_id, type: "PICKUP", trash: false, school_id: school_id },
+      });
+        if (!pick) {
+        return res.status(404).json({
+          message: "Pickup route not found",
+        });
+      }
+      pickRoute=pick.id;
+      const drop = await Routes.findOne({
+        where: { pickId: route_id, type: "DROP", trash: false, school_id: school_id },
+      });
+      if (!drop) {
+        return res.status(404).json({
+          message: "Drop route not found",
+        });
+      }
+      dropRoute=drop.id;
+    }
 
     const stop = await Stop.findOne({
-      where: { id: stop_id,trash: false, },
+      where: { id: stop_id,trash: false},
       include: [
         {
           model: StopRoute,
@@ -10249,7 +10299,12 @@ const changeStudentRouteAndStop = async (req, res) => {
       });
     }
 
-    await student.update({ route_id: route_id, stop_id: stop_id });
+    await student.update({
+      route_id: pickRoute,
+      one_way: one_way,
+      drop_route_id: dropRoute,
+      stop_id: stop_id
+    });
 
     return res.status(200).json({
       message: "Student route and stop updated successfully",
