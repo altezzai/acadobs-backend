@@ -246,14 +246,19 @@ Student.belongsTo(Stop, {
   as: "stop",
 });
 
-// Direct relationship: Student belongs to a primary Route
 Student.belongsTo(Routes, {
   foreignKey: "route_id",
   as: "routes",
 });
 
-// Route ↔ Student (Many-to-Many using junction table)
+Student.belongsTo(Routes, {
+  foreignKey: "drop_route_id",
+  as: "dropRoute",
+});
+
+// Route ↔ Student
 Routes.hasMany(Student, { foreignKey: "route_id", as: "students" }); 
+Routes.hasMany(Student, { foreignKey: "drop_route_id", as: "dropStudents" }); 
 Routes.belongsTo(Vehicle, {
   foreignKey: "vehicle_id",
   as: "vehicle",

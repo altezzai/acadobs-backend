@@ -27,13 +27,11 @@ const Student = schoolSequelize.define(
     trash: { type: DataTypes.BOOLEAN, defaultValue: false },
     stop_id: { type: DataTypes.INTEGER, allowNull: true },
     route_id: { type: DataTypes.INTEGER, allowNull: true },
-    student_status:{ type: DataTypes.STRING },
+    drop_route_id: { type: DataTypes.INTEGER, allowNull: true },
+    one_way: { type: DataTypes.BOOLEAN, defaultValue: false },
+  
     createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
-    student_status: {
-      type: DataTypes.ENUM("PICKED", "DROPPED", "ABSENT"),
-      defaultValue: null,
-    },
   },
   {
     tableName: "students",

@@ -1460,6 +1460,8 @@ const updateStaffPermission = async (req, res) => {
       exam,
       transportation,
       aiAnalytics,
+      transport_invoice,
+      payment_managment,
     } = req.body;
     const permission = await StaffPermission.findOne({
       where: { user_id },
@@ -1501,32 +1503,9 @@ const updateStaffPermission = async (req, res) => {
       staffs_leaveReuest,
       staffs_duties,
       staffs_attendance,
-      aiAnalytics,attendance,
-      timetable,
-      marks,
-      students,
-      homeworks,
-      parent_notes,
-      achievements,
-      student_leave_request,
-      teachers,
-      teachers_leaveReuest,
-      teachers_duties,
-      teachers_attendance,
-      staffs,
-      staffs_leaveReuest,
-      staffs_duties,
-      staffs_attendance,
-      chats,
-      reports,
-      payments,
-      alumni,
-      events,
-      news,
-      notice,
-      exam,
-      transportation,
       aiAnalytics,
+      transport_invoice,
+      payment_managment,
     });
     res.json({ success: true, data: permission });
   } catch (error) {
@@ -9967,6 +9946,7 @@ const createRoute = async (req, res) => {
         pickId: pickup_route.id,
         trash: false,
       });
+
     }
     res.status(201).json({
       message: "Route created successfully",
@@ -10056,7 +10036,7 @@ const getAllRoutes = async (req, res) => {
 const assignStudentToRoute = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const { student_ids, route_id } = req.body;
+    const { student_ids, route_id ,both} = req.body;
 
     if (
       !student_ids ||
@@ -10084,7 +10064,16 @@ const assignStudentToRoute = async (req, res) => {
       return res.status(404).json({ message: "Student not found" });
     }
     await pickupRoute.addStudents(students);
-
+    if(both==='true' && !pickupRoute.pickId){
+    const dropRoute = await Routes.findOne({
+      where: { pickId: route_id, trash: false, school_id: school_id },
+    });
+    if(dropRoute){
+      await Student.update({drop_route_id:dropRoute.id},{
+        where:{id:student_ids}
+      })
+    }
+    }
     return res.json({
       message: "Students assigned to route successfully",
       assignedCount: students.length,
@@ -10097,69 +10086,69 @@ const assignStudentToRoute = async (req, res) => {
   }
 };
 
-const updateStudentToRoute = async (req, res) => {
-  try {
-    const school_id = req.user.school_id;
-    const { route_id } = req.params;
-    const { student_ids } = req.body;
+// const updateStudentToRoute = async (req, res) => {
+//   try {
+//     const school_id = req.user.school_id;
+//     const { route_id } = req.params;
+//     const { student_ids } = req.body;
 
-    if (
-      !student_ids ||
-      !Array.isArray(student_ids) ||
-      student_ids.length === 0
-    ) {
-      return res.status(400).json({
-        message: "student_ids array is required",
-      });
-    }
+//     if (
+//       !student_ids ||
+//       !Array.isArray(student_ids) ||
+//       student_ids.length === 0
+//     ) {
+//       return res.status(400).json({
+//         message: "student_ids array is required",
+//       });
+//     }
 
-    const route = await Routes.findOne({
-      where: { id: route_id, trash: false, school_id: school_id },
-    });
+//     const route = await Routes.findOne({
+//       where: { id: route_id, trash: false, school_id: school_id },
+//     });
 
-    if (!route) {
-      return res.status(404).json({
-        message: "Route not found",
-      });
-    }
+//     if (!route) {
+//       return res.status(404).json({
+//         message: "Route not found",
+//       });
+//     }
 
-    const students = await Student.findAll({
-      where: {
-        id: student_ids,
-        trash: false,
-        school_id: school_id,
-      },
-    });
+//     const students = await Student.findAll({
+//       where: {
+//         id: student_ids,
+//         trash: false,
+//         school_id: school_id,
+//       },
+//     });
 
-    if (students.length === 0) {
-      return res.status(404).json({
-        message: "No valid students found",
-      });
-    }
+//     if (students.length === 0) {
+//       return res.status(404).json({
+//         message: "No valid students found",
+//       });
+//     }
 
-    await Student.update(
-      { route_id: route_id },
-      {
-        where: {
-          id: student_ids,
-          trash: false,
-          school_id: school_id,
-        },
-      },
-    );
+//     await Student.update(
+//       { route_id: route_id },
+//       {
+//         where: {
+//           id: student_ids,
+//           trash: false,
+//           school_id: school_id,
+//         },
+//       },
+//     );
 
-    return res.status(200).json({
-      message: "Students updated to route successfully",
-      updated_count: students.length,
-    });
-  } catch (error) {
-    logger.error("schoolId:", req.user.school_id, "Update Student To Route Error:", error);
-    console.error("Update Student To Route Error:", error);
-    return res.status(500).json({
-      error: "Failed to update student",
-    });
-  }
-};
+//     return res.status(200).json({
+//       message: "Students updated to route successfully",
+//       updated_count: students.length,
+//     });
+//   } catch (error) {
+//     logger.error("schoolId:", req.user.school_id, "Update Student To Route Error:", error);
+//     console.error("Update Student To Route Error:", error);
+//     return res.status(500).json({
+//       error: "Failed to update student",
+//     });
+//   }
+// };
 
 const deleteStudentFromRoute = async (req, res) => {
   try {
@@ -10275,6 +10264,83 @@ const changeStudentRouteAndStop = async (req, res) => {
     });
   }
 };  
+const bulkUpdateStopCharges = async (req, res) => {
+  try {
+    const { stops } = req.body || {};
+    const school_id = req.user.school_id;
+
+    if (!Array.isArray(stops) || stops.length === 0) {
+      return res.status(400).json({
+        message: "Stops array is required",
+      });
+    }
+
+    for (const stop of stops) {
+      if (!stop.id) {
+        return res.status(400).json({
+          message: "Each stop must have an id",
+        });
+      }
+
+      if (
+        stop.charge === undefined ||
+        stop.charge === null ||
+        stop.charge === ""
+      ) {
+        return res.status(400).json({
+          message: `Charge is required for stop ID ${stop.id}`,
+        });
+      }
+    }
+
+    const stopIds = stops.map((stop) => stop.id);
+    const stopsData = await Stop.findAll({
+      where: {
+        id: stopIds,
+        trash: false,
+        school_id: school_id,
+      },
+    });
+
+    if (!stopsData || stopsData.length === 0) {
+      return res.status(404).json({
+        message: "No stops found",
+      });
+    }
+    await Promise.all(
+      stopsData.map(async (stop) => {
+        const requestedStop = stops.find(
+          (item) => Number(item.id) === Number(stop.id)
+        );
+
+        if (requestedStop) {
+          await stop.update({
+            charge: requestedStop.charge,
+          });
+        }
+      })
+    );
+
+    return res.status(200).json({
+      message: "Stops charges updated successfully",
+      updated_count: stopsData.length,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Bulk Update Stops Charges Error:",
+      error
+    );
+
+    console.error("Bulk Update Stops Charges Error:", error);
+
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
 
 const assignDriverToRoutes = async (req, res) => {
   try {
@@ -11716,11 +11782,13 @@ module.exports = {
   getVehicleById,
   deleteVehicle,
   getAllRoutes,
+
   assignDriverToRoutes,
   getAllDrivers,
-  updateStudentToRoute,
+  // updateStudentToRoute,
   deleteStudentFromRoute,
   changeStudentRouteAndStop,
+  bulkUpdateStopCharges,
   updateVehicle,
   getDriversAssignedToRoutes,
   updateIsLock,

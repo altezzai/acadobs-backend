@@ -605,16 +605,20 @@ router.post(
   upload.none(),
   schoolAdminController.assignStudentToRoute,
 );
-router.put(
-  "/update-student-route/:route_id",
-  schoolAdminController.updateStudentToRoute,
-);
+// router.put(
+//   "/update-student-route/:route_id",
+//   schoolAdminController.updateStudentToRoute,
+// );
 router.delete(
   "/deleteStudentFromRoute/:route_id",
   schoolAdminController.deleteStudentFromRoute,
 );
 router.put("/changeStudentRouteAndStop/:student_id",
    schoolAdminController.changeStudentRouteAndStop);
+router.put(
+  "/bulkUpdateStopCharges",
+  schoolAdminController.bulkUpdateStopCharges,
+);
 router.get(
   "/getStopsByRouteId/:route_id",
   trackerController.getStopsByRouteId,

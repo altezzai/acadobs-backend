@@ -2220,7 +2220,7 @@ const getStopsByRouteId = async (req, res) => {
 
     const stops = await Stop.findAll({
       where: whereClause,
-      attributes: ["id", "stop_name", "longitude", "latitude"],
+      attributes: ["id", "stop_name", "longitude", "latitude","charge"],
       include: {
         model:StopRoute,
         where:{
@@ -2228,6 +2228,7 @@ const getStopsByRouteId = async (req, res) => {
         },
         attributes: ["priority"],
       },
+      order: [[StopRoute, "priority", "ASC"]],
     });
 
     return res.status(200).json({
