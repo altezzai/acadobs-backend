@@ -122,10 +122,6 @@ const StaffPermission = schoolSequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
-    transport_invoice: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
     payment_managment: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
