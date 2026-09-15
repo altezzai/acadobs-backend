@@ -213,6 +213,8 @@ router.delete(
   paymentPermission,
   schoolAdminController.permanentDeletePayment,
 );
+router.patch("/paymentVerification/:id", schoolAdminController.paymentVerification);
+
 //invoice
 router.post("/invoices",paymentPermission, schoolAdminController.createInvoice);
 router.post(
