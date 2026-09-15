@@ -320,6 +320,7 @@ const getStudentTransportDetails = async (req, res) => {
         "full_name",
         "reg_no",
         "roll_number",
+        "one_way",
       ],
       include: [
         {
@@ -330,6 +331,23 @@ const getStudentTransportDetails = async (req, res) => {
         {
           model:Routes,
            as: "routes",
+          attributes: ["id", "route_name"],
+          include: [
+            {
+              model:User,
+              as: "driver",
+              attributes: ["id", "name", "phone", "dp"]
+            },
+            {
+              model:Vehicle,
+              as: "vehicle",
+              attributes: ["id", "vehicle_number", "type", "model", "photo"]
+            },
+          ]
+        },
+        {
+          model:Routes,
+           as: "dropRoute",
           attributes: ["id", "route_name"],
           include: [
             {

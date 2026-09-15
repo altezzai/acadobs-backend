@@ -605,10 +605,6 @@ router.post(
   upload.none(),
   schoolAdminController.assignStudentToRoute,
 );
-// router.put(
-//   "/update-student-route/:route_id",
-//   schoolAdminController.updateStudentToRoute,
-// );
 router.delete(
   "/deleteStudentFromRoute/:route_id",
   schoolAdminController.deleteStudentFromRoute,
