@@ -673,7 +673,7 @@ router.get(
   "/getStudentsByClassId/:class_id",
   commonController.getStudentsByClassId,
 );
-router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);
+router.get("/getMyProfileAndSchoolDetails",commonController.getMyProfileAndSchoolDetails);
 router.get("/getLeaveTypes", commonController.getLeaveTypes);
 router.get("/getExamTitles",commonController.getExamTitles);
 router.put("/changePassword", commonController.changePassword);

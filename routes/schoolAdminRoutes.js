@@ -730,7 +730,7 @@ router.get("/getStudents", commonController.getStudents);
 
 router.get("/getAllDriverUsers", commonController.getAllDriverUsers);
 router.get("/getLeaveTypes", commonController.getLeaveTypes);
-router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);
+router.get("/getMyProfileAndSchoolDetails",commonController.getMyProfileAndSchoolDetails);
 router.get("/getExamTitles",commonController.getExamTitles);
 router.put("/changePassword", commonController.changePassword);
 

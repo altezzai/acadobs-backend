@@ -35,7 +35,7 @@ router.put(
   [],
   commonController.updateDp,
 );
-router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);
+router.get("/getMyProfileAndSchoolDetails",commonController.getMyProfileAndSchoolDetails);
 
 
 module.exports = router;

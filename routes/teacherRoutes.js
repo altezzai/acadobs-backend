@@ -357,7 +357,7 @@ router.get(
   "/getAchievementById/:id",
   commonController.getAchievementById,
 );
-router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);
+router.get("/getMyProfileAndSchoolDetails",commonController.getMyProfileAndSchoolDetails);
 router.get("/getExamTitles",commonController.getExamTitles);
 
 module.exports = router;

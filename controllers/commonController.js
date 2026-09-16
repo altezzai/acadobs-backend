@@ -1513,7 +1513,7 @@ const getAllDriverUsers = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch driver users" });
   }
 }
-const getMyPrfileAndSchoolDetails = async (req, res) => {
+const getMyProfileAndSchoolDetails = async (req, res) => {
   try{
     const userId = req.user.user_id;
     const school_id = req.user.school_id;
@@ -1659,7 +1659,7 @@ module.exports = {
 
   getAllDriverUsers,
 
-  getMyPrfileAndSchoolDetails,
+  getMyProfileAndSchoolDetails,
 
   getLeaveTypes,
   getExamTitles,
