@@ -835,13 +835,6 @@ const getStudentsWithUnassignedRouteByClassId = async (req, res) => {
       }
       ],
     });
-
-    if (!students || students.length === 0) {
-      return res.status(404).json({
-        message: "Students not found",
-      });
-    }
-
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
@@ -2015,6 +2008,7 @@ const getStopByIdAndRouteId = async (req, res) => {
         model: Student,
         as: "students",
         attributes: ["id","full_name","reg_no","roll_number","image"],
+        required:false,
         where:{
           trash:false,
           alumni:false,
