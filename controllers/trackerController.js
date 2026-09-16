@@ -96,16 +96,18 @@ const updateDriverById = async (req, res) => {
     await user.update({
       name,
       dp: finalPhoto,
+      phone,
+      email,
     });
-    const driver = await Driver.findOne({
-      where: {
-        user_id: id,
-        school_id: school_id,
-        trash: false,
-      },
-    });
+    // const driver = await Driver.findOne({
+    //   where: {
+    //     user_id: id,
+    //     school_id: school_id,
+    //     trash: false,
+    //   },
+    // });
 
-    await driver.update({ phone, email, address });
+    // await driver.update({ phone, email, address });
 
     return res.status(200).json({
       message: "Driver updated successfully",
@@ -119,6 +121,39 @@ const updateDriverById = async (req, res) => {
     });
   }
 };
+const updateOwnProfileForDriver = async (req,res) => {
+  try{
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const { name, phone, email } = req.body;
+    const user = await User.findOne({
+      where: {
+        id: user_id,
+        trash: false,
+        school_id: school_id,
+        role: "driver",
+      },
+    });
+    if (!user) {
+      return res.status(404).json({
+        error: "Driver not found",
+      });
+    }
+    await user.update({
+      name,
+      phone,
+      email,
+    });
+
+    return res.status(200).json({
+      message: "Driver updated successfully",
+      data: {name:user.name,phone:user.phone,email:user.email},
+    });
+
+  }catch (error){
+    
+  }
+} 
 
 //deleteDriverById
 const deleteDriverById = async (req, res) => {
@@ -2439,6 +2474,7 @@ const assignedStopIdsFromPairRoute = async (req, res) => {
 module.exports = {
   getDriverById,
   updateDriverById,
+  updateOwnProfileForDriver,
   deleteDriverById,
   getDriverAssignedRoutesAdmin,
   DriverAssignedRoutes,

@@ -45,7 +45,7 @@ const { School } = require("../models");
 const StudentTransfer = require("../models/student_transfer");
 const Stop = require("../models/tracker/stop");
 const StopRoute = require("../models/tracker/stop_route");
-const Driver  = require("../models/tracker/driver");
+// const Driver  = require("../models/tracker/driver");
 const Vehicle  = require("../models/tracker/vehicle");
 const Routes = require("../models/tracker/routes");
 const StudentsStopStatus = require("../models/tracker/students_stop_status");
@@ -9591,7 +9591,7 @@ const createDriver = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(phone, 10);
 
-    const user = await User.create(
+    const driver = await User.create(
       {
         name,
         email,
@@ -9604,19 +9604,19 @@ const createDriver = async (req, res) => {
       { transaction },
     );
 
-    const driver = await Driver.create(
-      {
-        school_id,
-        user_id: user.id,
-        name,
-        phone,
-        email,
-        address,
-        photo: photoPath,
-        trash: false,
-      },
-      { transaction },
-    );
+    // const driver = await Driver.create(
+    //   {
+    //     school_id,
+    //     user_id: user.id,
+    //     name,
+    //     phone,
+    //     email,
+    //     address,
+    //     photo: photoPath,
+    //     trash: false,
+    //   },
+    //   { transaction },
+    // );
 
     await transaction.commit();
 

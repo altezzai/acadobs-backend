@@ -27,7 +27,7 @@ router.delete("/deleteStudentFromStop/:stop_id/:student_id", trackerController.d
 
 router.post("/updateLiveLocation", trackerController.updateLiveLocation);
 router.get("/getTrackedDataWithDateByRouteId/:route_id", trackerController.getTrackedDataWithDateByRouteId);
-
+router.put("/updateOwnProfileForDriver", trackerController.updateOwnProfileForDriver);
 router.put(
   "/updateDp",
   uploadWithErrorHandler(upload.single("dp")),
@@ -35,5 +35,7 @@ router.put(
   [],
   commonController.updateDp,
 );
+router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);
+
 
 module.exports = router;
