@@ -827,6 +827,7 @@ const getStudentsWithRouteId = async (req, res) => {
     const school_id = req.user.school_id;
     const class_id = req.query.class_id;
     const route_id = req.query.route_id;
+    const year = req.query.year;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 100;
@@ -863,6 +864,7 @@ const getStudentsWithRouteId = async (req, res) => {
       },
       {
         model: Class,
+        where: year ? {year} : {},
         attributes: ["classname"],
       },
       {
@@ -966,6 +968,15 @@ const getStopDetailsForDriver = async (req, res) => {
           model: Student,
           as: "students",
           attributes: ["id", "full_name", "reg_no"],
+          required:false,
+          where :{
+            trash:false,
+            alumni:false,
+            [Op.or]: [
+              { route_id: route_id },
+              { drop_route_id: route_id },
+            ],
+          },
           include: [
             {
               model: User,
