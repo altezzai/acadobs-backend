@@ -10554,6 +10554,7 @@ const bulkCreateTransportationInvoice = async (req, res) => {
   try {
     const { term, student_ids, offer_percentage, due_date } = req.body || {};
     const school_id = req.user.school_id;
+    const oneWayPaymentPercentage = 75;
 
     if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
       return res.status(400).json({
@@ -10561,13 +10562,13 @@ const bulkCreateTransportationInvoice = async (req, res) => {
       });
     }
 
-    let offer = 0;
+    let offer = offer_percentage || 0 ;
     if (
-      offer_percentage !== undefined &&
-      offer_percentage !== null &&
-      offer_percentage !== ""
+      offer !== undefined &&
+      offer !== null &&
+      offer !== ""
     ) {
-      offer = parseFloat(offer_percentage);
+      offer = parseFloat(offer);
       if (isNaN(offer) || offer < 0 || offer > 100) {
         return res.status(400).json({
           message: "offer_percentage must be a valid number between 0 and 100",
@@ -10608,32 +10609,52 @@ const bulkCreateTransportationInvoice = async (req, res) => {
       return res.status(400).json({
         message: "Invoice already exists for the provided student_ids and term",
       });
-    const invoicesToCreate = students.map((student) => {
+     const invoicesToCreate = students.map((student) => {
       const baseCharge =
-        student.stop && student.stop.charge !== null && student.stop.charge !== undefined
+        student.stop &&
+        student.stop.charge !== null &&
+        student.stop.charge !== undefined
           ? parseFloat(student.stop.charge)
           : 0;
 
-      let finalAmount = baseCharge;
-      if (offer > 0) {
-        const discount = (baseCharge * offer) / 100;
-        finalAmount = Math.max(0, baseCharge - discount);
+      let amountAfterOneWay = baseCharge;
+
+      if (student.one_way === true) {
+        amountAfterOneWay = baseCharge * (oneWayPaymentPercentage / 100);
       }
+      let finalAmount = amountAfterOneWay;
+      if (offer > 0) {
+        const discount = (amountAfterOneWay * offer) / 100;
+
+        finalAmount = Math.max(
+          0,
+          amountAfterOneWay - discount
+        );
+      }
+
       finalAmount = parseFloat(finalAmount.toFixed(2));
 
       return {
         school_id,
         student_id: student.id,
-        stop_id: student.stop_id || (student.stop ? student.stop.id : null) || null,
+
+        stop_id:
+          student.stop_id ||
+          (student.stop ? student.stop.id : null) ||
+          null,
+
         amount: finalAmount,
+
         term: term || null,
         due_date: due_date || null,
+
         status: "pending",
         trash: false,
       };
     });
 
-    const createdInvoices = await TransportInvoice.bulkCreate(invoicesToCreate);
+    const createdInvoices =
+      await TransportInvoice.bulkCreate(invoicesToCreate);
 
     return res.status(201).json({
       message: "Transportation invoices generated successfully",
