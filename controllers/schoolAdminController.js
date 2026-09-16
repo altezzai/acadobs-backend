@@ -10165,7 +10165,7 @@ const changeStudentRouteAndStop = async (req, res) => {
     const school_id = req.user.school_id;
     if(!route_id ){
       return res.status(400).json({
-        message: "All the fields are required",
+        message: "route_id is required",
       });
     }
 

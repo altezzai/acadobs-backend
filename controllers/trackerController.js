@@ -466,6 +466,7 @@ const getStopsForDriverByRouteId = async (req, res) => {
               drop_route_id: route_id,
             },
           },
+          required:false,
           include: [
             {
               model: User,
