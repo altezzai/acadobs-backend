@@ -321,17 +321,6 @@ Student.hasMany(StudentsStopStatus, {
   foreignKey: "student_id",
 })
   
-
-
-
-
-
-// School.hasMany(Routes, {
-//   foreignKey: "school_id",
-//   as: "Routes",
-// });
-
-// StudentTransfer associations
 StudentTransfer.belongsTo(Student, { foreignKey: "student_id" });
 StudentTransfer.belongsTo(School, {
   foreignKey: "from_school_id",

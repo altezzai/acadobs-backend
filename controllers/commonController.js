@@ -32,6 +32,10 @@ const Stop = require("../models/tracker/stop");
 const Vehicle = require("../models/tracker/vehicle");
 const Routes = require("../models/tracker/routes");
 const Staff = require("../models/staff");
+const StudentCompetencyAssessment = require("../models/assesment/student_competency_assessment");
+const Competency = require("../models/assesment/competency");
+const CompetencyIndicator = require("../models/assesment/competency_indicator");
+const Exam = require("../models/exams");
 const { error } = require("winston");
 const { Console } = require("winston/lib/winston/transports");
 const { deleteFile } = require("../middlewares/storageUploads");
@@ -1535,6 +1539,87 @@ const getMyProfileAndSchoolDetails = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch profile details" });
   }
 }
+const getCompetencyAssesmentByStudentId= async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const student_id = req.params.student_id ;
+    const exam_id = req.query.exam_id||null;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = (page - 1) * limit;
+    let whereClause = {
+      school_id,
+      student_id,
+    };
+    if (exam_id) {
+      whereClause.exam_id = exam_id;
+    }
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const {count,rows:assessments}  = await StudentCompetencyAssessment.findAndCountAll({
+      where:whereClause,
+      limit,
+      offset,
+      distinct:true,
+      order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: Competency,
+          attributes: ["id", "title", "description", "display_order", "status"],
+        },
+        {
+          model: CompetencyIndicator,
+          attributes: [
+            "id",
+            "competency_id",
+            "title",
+            "display_order",
+            "status",
+          ],
+        },
+        {
+          model: Student,
+          attributes: [
+            "id",
+            "full_name",
+            "roll_number",
+          ],
+        },
+        {
+          model: Exam,
+          attributes: ["id", "exam_name", "education_year"],
+        },
+      ],
+      order: [
+        [Competency, "display_order", "ASC"],
+        [CompetencyIndicator, "display_order", "ASC"],
+        ["id", "ASC"],
+      ],
+    });
+
+
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data: assessments,
+    });
+  } catch (error) {
+    logger.error("school_id:", req.user?.school_id, "Error fetching all students:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch all students",
+      error: error.message,
+    });
+  }
+  }
+
 const getExamTitles = async (req, res) => {
   try{
   const titiles =[
@@ -1660,7 +1745,7 @@ module.exports = {
   getAllDriverUsers,
 
   getMyProfileAndSchoolDetails,
-
+  getCompetencyAssesmentByStudentId,
   getLeaveTypes,
   getExamTitles,
   getTermTypeForTransportationInvoice,

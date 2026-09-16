@@ -645,6 +645,10 @@ router.get("/getTrashedTransportationInvoices",
 schoolAdminController.getTrashedTransportationInvoices);
 router.delete("/permanentDeleteTransportationInvoice/:id",
 schoolAdminController.permanentDeleteTransportationInvoice);
+
+// CompetencyAssesment
+router.get("/getCompetencyAssesmentByStudentId/:student_id",
+commonController.getCompetencyAssesmentByStudentId);
 // Student Transfer routes
 router.post("/studentTransfer", transferController.adminCreateTransferRequest);
 router.get(
