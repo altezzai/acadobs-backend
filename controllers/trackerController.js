@@ -1779,22 +1779,9 @@ const getTodayTransportationByStudentId = async (req, res) => {
 }
 const getRouteById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const RouteId = req.params.id;
     const school_id = req.user.school_id;
-    if (!school_id) {
-      return res.status(404).json({
-        message: "school not found"
-      });
-    }
-    let RouteId = id;
-    const route = await Routes.findOne({
-      where: { id: id, school_id: school_id, trash: false },
-      attributes: ["id",  "type","pickId","active"],
-    });
-    if (route.type === "DROP" && route.pickId) {
-      RouteId = route.pickId;
-    }
-    const studentroute = await Routes.findOne({
+    const routeData = await Routes.findOne({
       where: { id: RouteId, school_id: school_id, trash: false },
       attributes: ["id", "route_name", "vehicle_id", "type","driver_id","active"],
       include: [
@@ -1802,23 +1789,6 @@ const getRouteById = async (req, res) => {
           model: User,
           attributes: ["name"],
           as:"driver",
-        },
-        {
-          model: Student,
-          as: "students",
-          attributes: [
-            "id",
-            "class_id",
-            "reg_no",
-            "full_name",
-            "address",
-          ],
-          include: [
-            {
-              model: User,
-              attributes: ["name", "phone"],
-            },
-          ],
         },
         {
           model: Stop,
@@ -1833,39 +1803,44 @@ const getRouteById = async (req, res) => {
         }
       ],
     });
-    if (!studentroute) {
-      return res.status(404).json({ message: "No route found" });
+    if (!routeData) {
+      return res.status(404).json({ message: "No students found" });
     }
-    const result = {
-      id: studentroute.id,
-      route_name: studentroute.route_name,
-      vehicle_id: studentroute.vehicle_id,
-      type: studentroute.type,
-
-      driver: studentroute.driver.name,
-      stops: studentroute.stops?.map(stop => ({
-        id: stop.id,
-        stop_name: stop.stop_name,
-        priority: stop.priority
-      })) || [],
-      students: studentroute.students?.map(student => ({
-        id: student.id,
-        class_id: student.class_id,
-        reg_no: student.reg_no,
-        full_name: student.full_name,
-        address: student.address,
-        guardian: student.User
-          ? {
-            id: student.User.id,
-            guardian_name: student.User.name,
-            guardian_contact: student.User.phone,
+    let students = [];
+    if (routeData.type === "PICKUP") {
+      students= await Student.findAll({
+        where: {route_id: RouteId, school_id: school_id, trash: false },
+        attributes: ["id", "full_name", "reg_no","roll_number"],
+        include: [
+          {
+            model: User,
+            attributes: ["id", "name","phone"],
+          },
+          {
+            model:Class,
+            attributes: ["id", "classname"],
           }
-          : null
-      })) ?? []
-    };
+        ],
+      });
+    } else if (routeData.type === "DROP") {
+      students = await Student.findAll({
+        where: {drop_route_id: RouteId, school_id: school_id, trash: false },
+         attributes: ["id", "full_name", "reg_no","roll_number"],
+        include: [
+          {
+            model: User,
+            attributes: ["id", "name","phone"],
+          },
+          {
+            model:Class,
+            attributes: ["id", "classname"],
+          }
+        ],
+      });
+    }
     return res
       .status(200)
-      .json({ message: "Route fetched successfully", data: result });
+      .json({ message: "Route fetched successfully", data: routeData ,students});
   } catch (error) {
     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching route:", error);
     console.log("Error has occured: ", error);

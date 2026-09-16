@@ -268,8 +268,8 @@ Student.belongsTo(Routes, {
 });
 
 // Route ↔ Student
-Routes.hasMany(Student, { foreignKey: "route_id", as: "students" }); 
 Routes.hasMany(Student, { foreignKey: "drop_route_id", as: "dropStudents" }); 
+Routes.hasMany(Student, { foreignKey: "route_id", as: "students" }); 
 Routes.belongsTo(Vehicle, {
   foreignKey: "vehicle_id",
   as: "vehicle",

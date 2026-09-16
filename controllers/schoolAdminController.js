@@ -10050,7 +10050,8 @@ const getAllRoutes = async (req, res) => {
 const assignStudentToRoute = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const { student_ids, route_id ,both} = req.body;
+    const { student_ids, route_id } = req.body;
+    const both = req.body.both|| true;
     if (
       !student_ids ||
       !Array.isArray(student_ids) ||
@@ -10062,11 +10063,11 @@ const assignStudentToRoute = async (req, res) => {
     }
 
     const pickupRoute = await Routes.findOne({
-      where: { id: route_id, trash: false, school_id: school_id },
+      where: { id: route_id,type:"PICKUP", trash: false, school_id: school_id },
     });
 
     if (!pickupRoute) {
-      return res.status(404).json({ message: "Route not found" });
+      return res.status(404).json({ message: "Pickup route not found" });
     }
 
     const students = await Student.findAll({
@@ -10077,7 +10078,7 @@ const assignStudentToRoute = async (req, res) => {
       return res.status(404).json({ message: "Student not found" });
     }
     await pickupRoute.addStudents(students);
-    if(both==='true' && !pickupRoute.pickId){
+    if(both===true && !pickupRoute.pickId){
     const dropRoute = await Routes.findOne({
       where: { pickId: route_id, trash: false, school_id: school_id },
     });

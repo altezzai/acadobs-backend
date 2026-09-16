@@ -602,7 +602,6 @@ router.post(
 );
 router.post(
   "/assign-student-route",
-  upload.none(),
   schoolAdminController.assignStudentToRoute,
 );
 router.delete(
