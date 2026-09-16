@@ -727,6 +727,8 @@ router.get(
   "/getStudentsByClassId/:class_id",
   commonController.getStudentsByClassId,
 );
+router.get("/getStudents", commonController.getStudents);
+
 router.get("/getAllDriverUsers", commonController.getAllDriverUsers);
 router.get("/getLeaveTypes", commonController.getLeaveTypes);
 router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);

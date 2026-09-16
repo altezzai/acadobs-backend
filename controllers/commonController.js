@@ -158,6 +158,61 @@ const getSpecialClassStudentsByClassId = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getStudents=async(req,res)=>{
+  try {
+    const school_id = req.user.school_id || "";
+    const searchQuery = req.query.q || "";
+    const class_id = req.query.class_id || "";
+    const year = req.query.year || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = (page - 1) * limit;
+    let whereClause = {
+      school_id,
+      trash: false,
+    };
+    if (searchQuery) {
+      whereClause.full_name = { [Op.like]: `%${searchQuery}%` };
+    }
+    if (class_id) {
+      whereClause.class_id = class_id;
+    }
+ 
+    const {count,rows: students,} = await Student.findAndCountAll({
+      where:whereClause,
+      attributes: ["id", "full_name", "roll_number", "class_id", "image"],
+      include: [
+        {
+          model: Class,
+          attributes: ["id", "year", "division", "classname"],
+          where: year ? { year: year } : true,
+        },
+        {
+          model: User,
+          attributes: ["id", "name", "phone"],
+        },
+
+      ],
+      order: [["createdAt", "DESC"]],
+      limit: limit,
+      offset: offset,
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      students,
+    });
+
+  } catch (error) {
+    console.error("Error fetching students:", error);
+    logger.error("schoolId:", req.user.school_id, "Error in getstudents:", error);
+    res.status(500).json({ error: error.message });
+    
+  }
+}
 const getschoolIdByStudentId = async (student_id) => {
   try {
     const student = await Student.findByPk(student_id);
@@ -1528,19 +1583,19 @@ const getClassRangeForSubject = async (req, res) => {
     //set an array value and label
   let range = [
     {
-      label:"FS",
-      key:"FS"
+    label: "LKG-2 (FS)",
+    key:"FS"
     },
     {
-      label:"PS",
+      label:"3-5 (PS)",
       key:"PS"
     },
     {
-      label:"MS",
+      label:"6-8 (MS)",
       key:"MS"
     },
     {
-      label:"SS",
+      label:"9-12 (SS)",
       key:"SS"
     },
     {
@@ -1562,6 +1617,7 @@ const getClassRangeForSubject = async (req, res) => {
 module.exports = {
   getStudentsByClassId,
   getSpecialClassStudentsByClassId,
+  getStudents,
   getschoolIdByStudentId,
   getStudentDetailsById,
   getStudentTransportDetails,
