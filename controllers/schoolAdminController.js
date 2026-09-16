@@ -10706,11 +10706,7 @@ const getAllTransportationInvoices =async(req,res) =>{
     whereClause.student_id = student_id;
   }
   if(searchQuery){
-    whereClause[Op.or] = [
-      { term: { [Op.like]: `%${searchQuery}%` } },
-      { due_date: { [Op.like]: `%${searchQuery}%` } },
-      { status: { [Op.like]: `%${searchQuery}%` } },
-    ];
+   
   }
   const { count, rows: transportInvoices } = await TransportInvoice.findAndCountAll({
     offset,
@@ -10721,6 +10717,9 @@ const getAllTransportationInvoices =async(req,res) =>{
       {
         model: Student,
         attributes: ["id", "full_name", "roll_number"],
+        where: searchQuery ? {
+          full_name: { [Op.like]: `%${searchQuery}%` },
+        }: {},
       },
       {
         model: Stop,
