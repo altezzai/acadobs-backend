@@ -28,8 +28,11 @@ const StaffAttendance = require("../models/staff_attendance");
 const StaffSubject = require("../models/staffsubject");
 const StaffPermission = require("../models/staff_permissions");
 const SpecialClassStudent = require("../models/special_class_students");
-
-const { Homework, HomeworkAssignment } = require("../models");
+const Homework = require("../models/homework");
+const HomeworkAssignment = require("../models/homeworkassignment");  
+const StudentCompetencyAssessment = require("../models/assesment/student_competency_assessment");
+const Competency = require("../models/assesment/competency");
+const CompetencyIndicator = require("../models/assesment/competency_indicator");
 const {
   getStaffsForFilter,
 } = require("./commonController");
@@ -176,6 +179,7 @@ const getExams = async (req, res) => {
       where: {
         school_id,
         publish: false,
+        trash:false,
       },
       attributes: ["id", "exam_name", "education_year"],
       order: [["createdAt", "DESC"]],
@@ -4862,6 +4866,386 @@ const examtimetableById = async (req, res) => {
     });
   }
 };
+const getCompetencyAndIndicators = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const competency = await Competency.findAll({
+      attributes: ["id", "title","description","display_order","status"],
+      include: [
+        {
+          model: CompetencyIndicator,
+          attributes: ["id", "title", "status","display_order"],
+        },
+      ],
+      order: [
+        ["display_order", "ASC"],
+        [CompetencyIndicator, "display_order", "ASC"],
+      ],
+    });
+   
+    return res.status(200).json({
+      success: true,
+      message: "Competency and indicators fetched successfully",
+      data:competency,
+    });
+  } catch (error) {
+    logger.error("userId:", req.user?.user_id, "Error fetching competency and indicators:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch competency and indicators",
+      error: error.message,
+    });
+  }
+};
+const createStudentCompetencyAssessment = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+
+    if (!school_id) {
+      return res.status(400).json({ error: "school_id is required" });
+    }
+
+    const {
+      student_id,
+      exam_id,
+      competency_id,
+      indicator_id,
+      rating,
+      remarks,
+      assessments,
+    } = req.body || {};
+
+    let assessmentList = [];
+
+    if (Array.isArray(req.body)) {
+      assessmentList = req.body;
+    } else if (Array.isArray(assessments) && assessments.length > 0) {
+      assessmentList = assessments.map((item) => ({
+        student_id: item.student_id || student_id,
+        exam_id: item.exam_id || exam_id,
+        competency_id: item.competency_id || competency_id,
+        indicator_id: item.indicator_id,
+        rating: item.rating,
+        remarks: item.remarks !== undefined ? item.remarks : null,
+      }));
+    } else if (
+      student_id &&
+      exam_id &&
+      competency_id &&
+      indicator_id &&
+      rating !== undefined
+    ) {
+      assessmentList = [
+        {
+          student_id,
+          exam_id,
+          competency_id,
+          indicator_id,
+          rating,
+          remarks: remarks !== undefined ? remarks : null,
+        },
+      ];
+    } else {
+      return res.status(400).json({
+        error:
+          "Invalid payload. Required fields: student_id, exam_id, competency_id, indicator_id, and rating (or an array of assessments).",
+      });
+    }
+
+    if (assessmentList.length === 0) {
+      return res.status(400).json({ error: "No assessment data provided." });
+    }
+
+    for (const item of assessmentList) {
+      if (
+        !item.student_id ||
+        !item.exam_id ||
+        !item.competency_id ||
+        !item.indicator_id ||
+        item.rating === undefined ||
+        item.rating === null ||
+        String(item.rating).trim() === ""
+      ) {
+        return res.status(400).json({
+          error:
+            "Missing required fields in one or more assessment items (student_id, exam_id, competency_id, indicator_id, rating).",
+        });
+      }
+    }
+
+    const recordsToSave = assessmentList.map((item) => ({
+      school_id,
+      recorded_by,
+      student_id: item.student_id,
+      exam_id: item.exam_id,
+      competency_id: item.competency_id,
+      indicator_id: item.indicator_id,
+      rating: String(item.rating).trim(),
+      remarks: item.remarks !== undefined ? item.remarks : null,
+    }));
+
+    const result = await StudentCompetencyAssessment.bulkCreate(recordsToSave, {
+      updateOnDuplicate: [
+        "rating",
+        "remarks",
+        "competency_id",
+        "recorded_by",
+        "updatedAt",
+      ],
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Student competency assessment saved successfully",
+      data: result,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "userId:",
+      req.user?.user_id,
+      "Error creating student competency assessment:",
+      error
+    );
+    console.error("Error creating student competency assessment:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to save student competency assessment",
+      details: error.message,
+    });
+  }
+};
+
+const getCompetencyAssessmentbyStudentIdandExamId = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const student_id = req.params.student_id || req.query.student_id;
+    const exam_id = req.params.exam_id || req.query.exam_id;
+
+    if (!student_id || !exam_id) {
+      return res.status(400).json({
+        success: false,
+        error: "student_id and exam_id are required",
+      });
+    }
+
+    const assessments = await StudentCompetencyAssessment.findAll({
+      where: {
+        school_id,
+        student_id,
+        exam_id,
+      },
+      include: [
+        {
+          model: Competency,
+          attributes: ["id", "title", "description", "display_order", "status"],
+        },
+        {
+          model: CompetencyIndicator,
+          attributes: [
+            "id",
+            "competency_id",
+            "title",
+            "display_order",
+            "status",
+          ],
+        },
+        {
+          model: Student,
+          attributes: [
+            "id",
+            "full_name",
+            "roll_number",
+          ],
+        },
+        {
+          model: Exam,
+          attributes: ["id", "exam_name", "education_year"],
+        },
+      ],
+      order: [
+        [Competency, "display_order", "ASC"],
+        [CompetencyIndicator, "display_order", "ASC"],
+        ["id", "ASC"],
+      ],
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Competency assessments fetched successfully",
+      data: assessments,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "userId:",
+      req.user?.user_id,
+      "Error fetching competency assessment by student and exam:",
+      error
+    );
+    console.error(
+      "Error fetching competency assessment by student and exam:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch competency assessments",
+      details: error.message,
+    });
+  }
+};
+
+const bulkUpdateCompetencyAssessmentbyStudentIdandExamId = async (
+  req,
+  res
+) => {
+  try {
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+
+    if (!school_id) {
+      return res.status(400).json({ error: "school_id is required" });
+    }
+
+    const student_id = req.body.student_id;
+    const exam_id = req.body.exam_id;
+
+    const rawAssessments = Array.isArray(req.body)
+      ? req.body
+      : req.body.assessments;
+
+    if (
+      !rawAssessments ||
+      !Array.isArray(rawAssessments) ||
+      rawAssessments.length === 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: "assessments array is required and cannot be empty",
+      });
+    }
+
+    const recordsToSave = [];
+    for (const item of rawAssessments) {
+      const sId = item.student_id || student_id;
+      const eId = item.exam_id || exam_id;
+      const cId = item.competency_id;
+      const iId = item.indicator_id;
+      const rating = item.rating;
+
+      if (
+        !sId ||
+        !eId ||
+        !cId ||
+        !iId ||
+        rating === undefined ||
+        rating === null ||
+        String(rating).trim() === ""
+      ) {
+        return res.status(400).json({
+          success: false,
+          error:
+            "Each assessment must contain student_id, exam_id, competency_id, indicator_id, and rating",
+        });
+      }
+
+      recordsToSave.push({
+        school_id,
+        recorded_by,
+        student_id: Number(sId),
+        exam_id: Number(eId),
+        competency_id: Number(cId),
+        indicator_id: Number(iId),
+        rating: String(rating).trim(),
+        remarks: item.remarks !== undefined ? item.remarks : null,
+      });
+    }
+
+    const result = await StudentCompetencyAssessment.bulkCreate(recordsToSave, {
+      updateOnDuplicate: [
+        "rating",
+        "remarks",
+        "competency_id",
+        "recorded_by",
+        "updatedAt",
+      ],
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Competency assessments updated successfully",
+      data: result,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "userId:",
+      req.user?.user_id,
+      "Error bulk updating competency assessment:",
+      error
+    );
+    console.error("Error bulk updating competency assessment:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to update competency assessments",
+      details: error.message,
+    });
+  }
+};
+
+const deleteCompetencyAssessment = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const student_id =
+      req.params.student_id || req.query.student_id || req.body?.student_id;
+    const exam_id =
+      req.params.exam_id || req.query.exam_id || req.body?.exam_id;
+
+      const assessments = await StudentCompetencyAssessment.findAll({
+        where: {
+          school_id,
+          student_id,
+          exam_id,
+        },
+      });
+
+      if (!assessments) {
+        return res.status(404).json({
+          success: false,
+          error: "Competency assessment not found",
+        });
+      }
+
+       for (const assessment of assessments) {
+         await assessment.destroy();
+       }
+
+      return res.status(200).json({
+        success: true,
+        deletedCount: assessments.length,
+        message: "Competency assessment deleted successfully",
+      });
+    } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "userId:",
+      req.user?.user_id,
+      "Error deleting competency assessment:",
+      error
+    );
+    console.error("Error deleting competency assessment:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to delete competency assessment",
+      details: error.message,
+    });
+  }
+};
 
 module.exports = {
   createInternalMarkWithMarks,
@@ -4968,4 +5352,11 @@ module.exports = {
 
   getAllExamTimeTablebyStandard,
   examtimetableById,
+  
+  getCompetencyAndIndicators,
+  createStudentCompetencyAssessment,
+  getCompetencyAssessmentbyStudentIdandExamId,
+  bulkUpdateCompetencyAssessmentbyStudentIdandExamId,
+  deleteCompetencyAssessment,
+
 };

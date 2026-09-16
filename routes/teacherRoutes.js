@@ -280,6 +280,12 @@ router.get("/getStaffSubjects", teacherController.getStaffSubjects);
 
 router.get("/getMyPermissions", teacherController.getMyPermissions);
 
+router.get("/getCompetencyAndIndicators", teacherController.getCompetencyAndIndicators);
+router.post("/createStudentCompetencyAssessment", teacherController.createStudentCompetencyAssessment);
+router.get("/getCompetencyAssessmentbyStudentIdandExamId/:student_id/:exam_id", teacherController.getCompetencyAssessmentbyStudentIdandExamId);
+router.put("/bulkUpdateCompetencyAssessmentbyStudentIdandExamId", teacherController.bulkUpdateCompetencyAssessmentbyStudentIdandExamId);
+router.delete("/deleteCompetencyAssessment/:student_id/:exam_id", teacherController.deleteCompetencyAssessment);
+
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
 router.get("/getLatestNews", commonController.getLatestNews);
