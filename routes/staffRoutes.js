@@ -572,7 +572,7 @@ router.put(
 );
 router.delete("/deleteDriverById/:id", transportationPermission, trackerController.deleteDriverById);
 router.post("/stop", schoolAdminController.createStop);
-router.get("/getStopById/:id", transportationPermission, trackerController.getStopById);
+router.get("/getStopByIdAndRouteId/:id/:route_id", trackerController.getStopByIdAndRouteId);
 router.delete("/deleteStopById/:id", transportationPermission, trackerController.deleteStopById);
 router.post("/route", upload.none(), schoolAdminController.createRoute);
 router.get("/getRouteById/:id", transportationPermission, trackerController.getRouteById);

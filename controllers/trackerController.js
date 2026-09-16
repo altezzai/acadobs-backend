@@ -461,6 +461,7 @@ const getStopsForDriverByRouteId = async (req, res) => {
           ],
           where:{
             trash:false,
+            alumni:false,
             [Op.or]: {
               route_id: route_id,
               drop_route_id: route_id,
@@ -1956,22 +1957,49 @@ const deleteRoute = async (req, res) => {
     });
   }
 };
-const getStopById = async (req, res) => {
+const getStopByIdAndRouteId = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id,route_id } = req.params;
+    const school_id = req.user.school_id;
 
     const studentStop = await Stop.findOne({
       where: {
         id,
         trash: false,
+        school_id,
       },
       attributes: ["id", "stop_name", "longitude", "latitude"],
-      include: {
+      include: [{
         model: Routes,
         as: "routes",
-        attributes: ["id"],
-        through: { attributes: ["priority"] },
+        attributes: ["id","type","route_name"],
+        through: { attributes: ["priority"] ,
+        where:{route_id:route_id}},
       },
+      {
+        model: Student,
+        as: "students",
+        attributes: ["id","full_name","reg_no","roll_number","image"],
+        where:{
+          trash:false,
+          alumni:false,
+          [Op.or]: {
+              route_id: route_id,
+              drop_route_id: route_id,
+            },
+        },
+        include: [
+          {
+            model: Class,
+            attributes: ["id","classname"],
+          },
+          {
+            model: User,
+            attributes: ["id","name","phone"],
+          }
+        ]
+      }
+      ]
     });
 
     if (!studentStop) {
@@ -1983,7 +2011,6 @@ const getStopById = async (req, res) => {
     const stopRoute = studentStop.routes?.[0];
     studentStop.setDataValue("route_id", stopRoute?.id || null);
     studentStop.setDataValue("priority", stopRoute?.StopRoute?.priority ?? null);
-    studentStop.setDataValue("routes", undefined);
 
     return res.status(200).json({
       message: "Stop fetched successfully",
@@ -2444,7 +2471,7 @@ module.exports = {
   getUnAssignedStopsInPairRouteByRouteId,
   assignedStopIdsFromPairRoute,
 
-  getStopById, 
+  getStopByIdAndRouteId, 
   updateStopById, 
   deleteStopById, 
   updateStopForDriver ,

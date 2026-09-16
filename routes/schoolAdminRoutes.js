@@ -584,9 +584,9 @@ router.put(
   storageUploadMiddleware("drivers"),
   trackerController.updateDriverById,
 );
+router.get("/getStopByIdAndRouteId/:id/:route_id", trackerController.getStopByIdAndRouteId);
 router.delete("/deleteDriverById/:id", trackerController.deleteDriverById);
 router.post("/stop", schoolAdminController.createStop);
-router.get("/getStopById/:id", trackerController.getStopById);
 router.delete("/deleteStopById/:id", trackerController.deleteStopById);
 router.post("/route", upload.none(), schoolAdminController.createRoute);
 router.get("/getRouteById/:id", trackerController.getRouteById);
