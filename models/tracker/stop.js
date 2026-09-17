@@ -48,6 +48,10 @@ const Stop = schoolSequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    charge: {
+      type: DataTypes.DECIMAL(10, 2),
+      defaultValue: 0.00,
+    },
     trash: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

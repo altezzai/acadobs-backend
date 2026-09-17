@@ -3,6 +3,7 @@ const router = express.Router();
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const superAdminController = require("../controllers/superAdminController");
 const schoolAdminController = require("../controllers/schoolAdminController");
+const commonController = require("../controllers/commonController");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
 const schoolUploads = [
   { name: "image", maxCount: 1 },
@@ -86,4 +87,5 @@ router.delete(
 router.get("/dashboardCounts", superAdminController.dashboardCounts);
 router.get("/recentActivities", superAdminController.recentActivities);
 
+router.get("/getClassRangeForSubject",commonController.getClassRangeForSubject);
 module.exports = router;

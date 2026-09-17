@@ -584,9 +584,9 @@ router.put(
   storageUploadMiddleware("drivers"),
   trackerController.updateDriverById,
 );
+router.get("/getStopByIdAndRouteId/:id/:route_id", trackerController.getStopByIdAndRouteId);
 router.delete("/deleteDriverById/:id", trackerController.deleteDriverById);
 router.post("/stop", schoolAdminController.createStop);
-router.get("/getStopById/:id", trackerController.getStopById);
 router.delete("/deleteStopById/:id", trackerController.deleteStopById);
 router.post("/route", upload.none(), schoolAdminController.createRoute);
 router.get("/getRouteById/:id", trackerController.getRouteById);
@@ -602,12 +602,7 @@ router.post(
 );
 router.post(
   "/assign-student-route",
-  upload.none(),
   schoolAdminController.assignStudentToRoute,
-);
-router.put(
-  "/update-student-route/:route_id",
-  schoolAdminController.updateStudentToRoute,
 );
 router.delete(
   "/deleteStudentFromRoute/:route_id",
@@ -615,10 +610,15 @@ router.delete(
 );
 router.put("/changeStudentRouteAndStop/:student_id",
    schoolAdminController.changeStudentRouteAndStop);
+router.put(
+  "/bulkUpdateStopCharges",
+  schoolAdminController.bulkUpdateStopCharges,
+);
 router.get(
   "/getStopsByRouteId/:route_id",
   trackerController.getStopsByRouteId,
 );
+
 router.get("/getTrackedDataWithDateByRouteId/:route_id", 
   trackerController.getTrackedDataWithDateByRouteId);
 router.get(
@@ -628,6 +628,27 @@ router.get("/getStudentsWithUnassignedRouteByClassId/:class_id",
   trackerController.getStudentsWithUnassignedRouteByClassId);
 router.get("/getStudentsWithRouteId", 
   trackerController.getStudentsWithRouteId);
+
+  //transportation invoice
+  
+router.post(
+"/generateTransportationInvoice",
+schoolAdminController.bulkCreateTransportationInvoice,
+);
+router.get("/getAllTransportationInvoices",
+schoolAdminController.getAllTransportationInvoices);
+router.delete("/deleteTransportationInvoice/:id",
+schoolAdminController.deleteTransportationInvoice);
+router.patch("/restoreTransportationInvoice/:id",
+schoolAdminController.restoreTransportationInvoice);
+router.get("/getTrashedTransportationInvoices",
+schoolAdminController.getTrashedTransportationInvoices);
+router.delete("/permanentDeleteTransportationInvoice/:id",
+schoolAdminController.permanentDeleteTransportationInvoice);
+
+// CompetencyAssesment
+router.get("/getCompetencyAssesmentByStudentId/:student_id",
+commonController.getCompetencyAssesmentByStudentId);
 // Student Transfer routes
 router.post("/studentTransfer", transferController.adminCreateTransferRequest);
 router.get(
@@ -709,11 +730,15 @@ router.get(
   "/getStudentsByClassId/:class_id",
   commonController.getStudentsByClassId,
 );
+router.get("/getStudents", commonController.getStudents);
+
 router.get("/getAllDriverUsers", commonController.getAllDriverUsers);
 router.get("/getLeaveTypes", commonController.getLeaveTypes);
-router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);
+router.get("/getMyProfileAndSchoolDetails",commonController.getMyProfileAndSchoolDetails);
 router.get("/getExamTitles",commonController.getExamTitles);
 router.put("/changePassword", commonController.changePassword);
 
+router.get("/getTermTypeForTransportationInvoice",commonController.getTermTypeForTransportationInvoice);
+router.get("/getClassRangeForSubject",commonController.getClassRangeForSubject);
 
 module.exports = router;

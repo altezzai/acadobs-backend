@@ -260,6 +260,7 @@ const getAttendanceReport = async (req, res) => {
     const school_id = req.user.school_id;
     const date = req.query.date || "";
     const class_id = req.query.class_id || "";
+    const year = req.query.year || null;
     const teacher_id = req.query.teacher_id || "";
     const start_date = req.query.start_date || "";
     const end_date = req.query.end_date || "";
@@ -296,8 +297,7 @@ const getAttendanceReport = async (req, res) => {
         [Op.lte]: new Date(endDate),
       };
     }
-    const totalCount = await Attendance.count({ where: whereClause });
-    const attendance = await Attendance.findAll({
+    const {count,rows:attendance} = await Attendance.findAndCountAll({
       offset,
       limit,
       distinct: true,
@@ -310,7 +310,10 @@ const getAttendanceReport = async (req, res) => {
             { model: Student, attributes: ["id", "full_name", "image"] },
           ],
         },
-        { model: Class, attributes: ["id", "classname"] },
+        { model: Class, attributes: ["id", "classname"], 
+          where:year ? 
+            { year: year } : null
+        },
         { model: Subject, attributes: ["id", "subject_name"] },
         { model: User, attributes: ["id", "name"] },
       ],
@@ -348,10 +351,10 @@ const getAttendanceReport = async (req, res) => {
       };
     });
 
-    const totalPages = Math.ceil(totalCount / limit);
+    const totalPages = Math.ceil(count / limit);
 
     res.status(200).json({
-      totalCount,
+      totalCount:count,
       totalPages: download === "true" ? null : totalPages,
       currentPage: download === "true" ? null : page,
       reports: formattedData,

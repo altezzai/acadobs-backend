@@ -213,6 +213,8 @@ router.delete(
   paymentPermission,
   schoolAdminController.permanentDeletePayment,
 );
+router.patch("/paymentVerification/:id", schoolAdminController.paymentVerification);
+
 //invoice
 router.post("/invoices",paymentPermission, schoolAdminController.createInvoice);
 router.post(
@@ -519,10 +521,6 @@ router.post(
   upload.none(),
   schoolAdminController.assignStudentToRoute,
 );
-router.put(
-  "/update-student-route/:route_id",transportationPermission,
-  schoolAdminController.updateStudentToRoute,
-);
 router.delete(
   "/deleteStudentFromRoute/:route_id",
   transportationPermission,
@@ -574,7 +572,7 @@ router.put(
 );
 router.delete("/deleteDriverById/:id", transportationPermission, trackerController.deleteDriverById);
 router.post("/stop", schoolAdminController.createStop);
-router.get("/getStopById/:id", transportationPermission, trackerController.getStopById);
+router.get("/getStopByIdAndRouteId/:id/:route_id", trackerController.getStopByIdAndRouteId);
 router.delete("/deleteStopById/:id", transportationPermission, trackerController.deleteStopById);
 router.post("/route", upload.none(), schoolAdminController.createRoute);
 router.get("/getRouteById/:id", transportationPermission, trackerController.getRouteById);
@@ -585,6 +583,22 @@ router.get(
   transportationPermission,
   trackerController.getDriverAssignedRoutesAdmin,
 );
+  //transportation invoice
+  
+router.post(
+"/generateTransportationInvoice",
+schoolAdminController.bulkCreateTransportationInvoice,
+);
+router.get("/getAllTransportationInvoices",
+schoolAdminController.getAllTransportationInvoices);
+router.delete("/deleteTransportationInvoice/:id",
+schoolAdminController.deleteTransportationInvoice);
+router.patch("/restoreTransportationInvoice/:id",
+schoolAdminController.restoreTransportationInvoice);
+router.get("/getTrashedTransportationInvoices",
+schoolAdminController.getTrashedTransportationInvoices);
+router.delete("/permanentDeleteTransportationInvoice/:id",
+schoolAdminController.permanentDeleteTransportationInvoice);
 
 // Student Transfer routes
 router.post("/studentTransfer", transportationPermission,transferController.adminCreateTransferRequest);
@@ -659,7 +673,7 @@ router.get(
   "/getStudentsByClassId/:class_id",
   commonController.getStudentsByClassId,
 );
-router.get("/getMyPrfileAndSchoolDetails",commonController.getMyPrfileAndSchoolDetails);
+router.get("/getMyProfileAndSchoolDetails",commonController.getMyProfileAndSchoolDetails);
 router.get("/getLeaveTypes", commonController.getLeaveTypes);
 router.get("/getExamTitles",commonController.getExamTitles);
 router.put("/changePassword", commonController.changePassword);

@@ -47,6 +47,10 @@ const Event = require("./event");
 const ParentNote = require("./parent_note");
 const ParentNoteStudent = require("./parent_note_student");
 const StudentsStopStatus = require("./tracker/students_stop_status");
+const TransportInvoice = require("./transport_invoice");
+const Competency = require("./assesment/competency");
+const CompetencyIndicator = require("./assesment/competency_indicator");
+const StudentCompetencyAssessment = require("./assesment/student_competency_assessment");
 
 // Relations
 
@@ -153,6 +157,13 @@ Invoice.belongsTo(User,{ foreignKey: "recorded_by" });
 InvoiceStudent.belongsTo(Invoice, { foreignKey: "invoice_id" });
 InvoiceStudent.belongsTo(Student, { foreignKey: "student_id" });
 
+TransportInvoice.belongsTo(School, { foreignKey: "school_id" });
+School.hasMany(TransportInvoice, { foreignKey: "school_id" });
+TransportInvoice.belongsTo(Student, { foreignKey: "student_id" });
+Student.hasMany(TransportInvoice, { foreignKey: "student_id" });
+TransportInvoice.belongsTo(Stop, { foreignKey: "stop_id" });
+Stop.hasMany(TransportInvoice, { foreignKey: "stop_id" });
+
 LeaveRequest.belongsTo(School, { foreignKey: "school_id" });
 LeaveRequest.belongsTo(User, { foreignKey: "user_id" });
 // LeaveRequest.belongsTo(User, { foreignKey: "approved_by" });
@@ -246,13 +257,18 @@ Student.belongsTo(Stop, {
   as: "stop",
 });
 
-// Direct relationship: Student belongs to a primary Route
 Student.belongsTo(Routes, {
   foreignKey: "route_id",
   as: "routes",
 });
 
-// Route ↔ Student (Many-to-Many using junction table)
+Student.belongsTo(Routes, {
+  foreignKey: "drop_route_id",
+  as: "dropRoute",
+});
+
+// Route ↔ Student
+Routes.hasMany(Student, { foreignKey: "drop_route_id", as: "dropStudents" }); 
 Routes.hasMany(Student, { foreignKey: "route_id", as: "students" }); 
 Routes.belongsTo(Vehicle, {
   foreignKey: "vehicle_id",
@@ -305,17 +321,6 @@ Student.hasMany(StudentsStopStatus, {
   foreignKey: "student_id",
 })
   
-
-
-
-
-
-// School.hasMany(Routes, {
-//   foreignKey: "school_id",
-//   as: "Routes",
-// });
-
-// StudentTransfer associations
 StudentTransfer.belongsTo(Student, { foreignKey: "student_id" });
 StudentTransfer.belongsTo(School, {
   foreignKey: "from_school_id",
@@ -328,6 +333,55 @@ StudentTransfer.belongsTo(School, {
 StudentTransfer.belongsTo(User, { foreignKey: "user_id", as: "Requester" });
 StudentTransfer.belongsTo(User, { foreignKey: "reviewed_by", as: "Reviewer" });
 Student.hasMany(StudentTransfer, { foreignKey: "student_id" });
+
+// Competency & Assessment associations
+Competency.hasMany(CompetencyIndicator, {
+  foreignKey: "competency_id",
+  onDelete: "CASCADE",
+});
+CompetencyIndicator.belongsTo(Competency, {
+  foreignKey: "competency_id",
+});
+
+Competency.hasMany(StudentCompetencyAssessment, {
+  foreignKey: "competency_id",
+});
+StudentCompetencyAssessment.belongsTo(Competency, {
+  foreignKey: "competency_id",
+});
+
+CompetencyIndicator.hasMany(StudentCompetencyAssessment, {
+  foreignKey: "indicator_id",
+});
+StudentCompetencyAssessment.belongsTo(CompetencyIndicator, {
+  foreignKey: "indicator_id",
+});
+
+StudentCompetencyAssessment.belongsTo(School, {
+  foreignKey: "school_id",
+});
+School.hasMany(StudentCompetencyAssessment, {
+  foreignKey: "school_id",
+});
+
+StudentCompetencyAssessment.belongsTo(Student, {
+  foreignKey: "student_id",
+});
+Student.hasMany(StudentCompetencyAssessment, {
+  foreignKey: "student_id",
+});
+
+StudentCompetencyAssessment.belongsTo(Exams, {
+  foreignKey: "exam_id",
+});
+Exams.hasMany(StudentCompetencyAssessment, {
+  foreignKey: "exam_id",
+});
+
+StudentCompetencyAssessment.belongsTo(User, {
+  foreignKey: "recorded_by",
+  as: "Recorder",
+});
 
 module.exports = {
   Exams,
@@ -367,4 +421,10 @@ module.exports = {
   Session,
   StudentTransfer,
   ExamTimetable,
+  Invoice,
+  InvoiceStudent,
+  TransportInvoice,
+  Competency,
+  CompetencyIndicator,
+  StudentCompetencyAssessment,
 };

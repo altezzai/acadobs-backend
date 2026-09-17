@@ -96,16 +96,18 @@ const updateDriverById = async (req, res) => {
     await user.update({
       name,
       dp: finalPhoto,
+      phone,
+      email,
     });
-    const driver = await Driver.findOne({
-      where: {
-        user_id: id,
-        school_id: school_id,
-        trash: false,
-      },
-    });
+    // const driver = await Driver.findOne({
+    //   where: {
+    //     user_id: id,
+    //     school_id: school_id,
+    //     trash: false,
+    //   },
+    // });
 
-    await driver.update({ phone, email, address });
+    // await driver.update({ phone, email, address });
 
     return res.status(200).json({
       message: "Driver updated successfully",
@@ -119,6 +121,39 @@ const updateDriverById = async (req, res) => {
     });
   }
 };
+const updateOwnProfileForDriver = async (req,res) => {
+  try{
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const { name, phone, email } = req.body;
+    const user = await User.findOne({
+      where: {
+        id: user_id,
+        trash: false,
+        school_id: school_id,
+        role: "driver",
+      },
+    });
+    if (!user) {
+      return res.status(404).json({
+        error: "Driver not found",
+      });
+    }
+    await user.update({
+      name,
+      phone,
+      email,
+    });
+
+    return res.status(200).json({
+      message: "Driver updated successfully",
+      data: {name:user.name,phone:user.phone,email:user.email},
+    });
+
+  }catch (error){
+    
+  }
+} 
 
 //deleteDriverById
 const deleteDriverById = async (req, res) => {
@@ -230,25 +265,45 @@ const DriverAssignedRoutes = async (req, res) => {
     if (route1.type === "DROP" && route1.pickId) {
       RouteId = route1.pickId;
     }
-
-      const totalStudents = await Student.count({
+      let StopUnAssignedStudents;
+      let totalStudents;
+      if (route1.type === "PICKUP" ) {
+        totalStudents = await Student.count({
         where: {
           route_id: RouteId,
           trash: false,
         },
       });
-
+        StopUnAssignedStudents = await Student.count({
+          where: {
+            route_id: RouteId,
+            trash: false,
+            stop_id:null,
+          }
+        });
+      } else if(route1.type === "DROP" ){
+        StopUnAssignedStudents = await Student.count({
+          where: {
+            drop_route_id: route1.id,
+            trash: false,
+            stop_id:null,
+          },
+         
+        });
+        totalStudents = await Student.count({
+        where: {
+          drop_route_id: route1.id,
+          trash: false,
+        },
+      });
+      }    
       const totalStops = await StopRoute.count({
         where: {
           route_id: route.id,
         },
-        include:[{
-          model: Stop,
-          required: true,
-          where: { trash: false },
-        }]
       });
-
+      
+      route.dataValues.StopUnAssignedStudents = StopUnAssignedStudents;
       route.dataValues.total_students = totalStudents;
       route.dataValues.total_stops = totalStops;
     }
@@ -431,7 +486,7 @@ const getStopsForDriverByRouteId = async (req, res) => {
         }
           },
       },
-        {
+      {
           model: Student,
           as: "students",
           attributes: [
@@ -439,6 +494,15 @@ const getStopsForDriverByRouteId = async (req, res) => {
             "full_name",
             "reg_no",
           ],
+          where:{
+            trash:false,
+            alumni:false,
+            [Op.or]: {
+              route_id: route_id,
+              drop_route_id: route_id,
+            },
+          },
+          required:false,
           include: [
             {
               model: User,
@@ -674,73 +738,55 @@ const deleteStudentFromStop = async (req, res) => {
 
 const getStudentsWithUnassignedStopsByRouteId = async (req, res) => {
   try {
-    const { route_id } = req.params;
-    const user_id = req.user.user_id;
+     const { route_id } = req.params;
     const school_id = req.user.school_id;
-
-    if (!route_id) {
-      return res.status(404).json({
-        error: "Route id is required",
-      });
-    }
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
     const route = await Routes.findOne({
-      where: { id: route_id, driver_id:user_id,school_id, trash: false },
+      where: { id: route_id, school_id: school_id, trash: false },
+      attributes: ["id",  "type","pickId","active"],
     });
-
-    if (!route) {
-      return res.status(404).json({
-        message: "Route not found or not assigned to you",
-      });
+    let whereClause={
+      trash: false,
+      school_id,
+      stop_id:null,
+    };
+    if (route.type === "DROP" ) {
+      whereClause.drop_route_id = route_id;
+    } else {
+      whereClause.route_id = route_id;
     }
-    let routeId = []
-    routeId.push(route_id)
-    if(route.type === "PICKUP"){
-      const dropRoute = await Routes.findOne({
-        where: {pickId: route_id, driver_id:user_id,school_id, trash: false },
-      });
-      if(dropRoute){
-        routeId.push(dropRoute.id)
-      }
+    if(searchQuery){
+      whereClause.full_name = { [Op.like]: `%${searchQuery}%` };
     }
-    else{
-      const pickupRoute = await Routes.findOne({
-        where: {id: route.pickId, driver_id:user_id,school_id, trash: false },
-      });
-      if(pickupRoute){
-        routeId.push(pickupRoute.id)
-      }
-    }
-    const students = await Student.findAll({
-      where: {
-        stop_id: null,
-        route_id: routeId,
-        trash: false,
-        school_id,
-      },
-      attributes: ["id", "full_name","roll_number", "reg_no", "image"],
-      include: [
-      {
-        model: User,
-        attributes: ["name", "phone"],
-      },
-      {
-        model: Class,
-        attributes: ["classname"],
-      }
+    const {count, rows: students} = await Student.findAndCountAll({
+      where: whereClause,
+      attributes: ["id", "full_name", "reg_no","roll_number","gender"],
+      include:[
+        {
+          model: User,
+          attributes: ["name", "phone"],
+          required: false,
+        },
+        {
+          model: Class,
+          attributes: ["classname"],
+          required: false,
+        }
       ],
+      limit: limit,
+      offset: offset,
     });
 
-    if (!students || students.length === 0) {
-      return res.status(404).json({
-        message: "Students not found in this route",
-      });
-    }
-
+    const totalPages = Math.ceil(count / limit);
     return res.status(200).json({
-      message: "Students fetched successfully",
-      count: students.length,
-      data: students,
-
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data:students,
     });
   } catch (error) {
     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching students:", error);
@@ -789,13 +835,6 @@ const getStudentsWithUnassignedRouteByClassId = async (req, res) => {
       }
       ],
     });
-
-    if (!students || students.length === 0) {
-      return res.status(404).json({
-        message: "Students not found",
-      });
-    }
-
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       totalcontent: count,
@@ -817,12 +856,14 @@ const getStudentsWithRouteId = async (req, res) => {
     const school_id = req.user.school_id;
     const class_id = req.query.class_id;
     const route_id = req.query.route_id;
+    const year = req.query.year;
     const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 100;
     const offset = (page - 1) * limit;
+    // set route_id or pick_route_id is required
     const whereClause = {
-        route_id: { [Op.ne]: null },
+        route_id: { [Op.ne]: null } || { pick_route_id: { [Op.ne]: null } },
         alumni: false,
         trash: false,
         school_id,
@@ -852,6 +893,7 @@ const getStudentsWithRouteId = async (req, res) => {
       },
       {
         model: Class,
+        where: year ? {year} : {},
         attributes: ["classname"],
       },
       {
@@ -859,7 +901,14 @@ const getStudentsWithRouteId = async (req, res) => {
         as: "routes",
         attributes: ["id","active","route_name","type",],
         
+      },
+       {
+        model: Routes,
+        as: "dropRoute",
+        attributes: ["id","active","route_name","type",],
+        
       }
+
       ],
     });
     const totalPages = Math.ceil(count / limit);
@@ -948,6 +997,15 @@ const getStopDetailsForDriver = async (req, res) => {
           model: Student,
           as: "students",
           attributes: ["id", "full_name", "reg_no"],
+          required:false,
+          where :{
+            trash:false,
+            alumni:false,
+            [Op.or]: [
+              { route_id: route_id },
+              { drop_route_id: route_id },
+            ],
+          },
           include: [
             {
               model: User,
@@ -1108,19 +1166,19 @@ const getStudentsByRouteId = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-     let RouteId = route_id;
     const route = await Routes.findOne({
       where: { id: route_id, school_id: school_id, trash: false },
       attributes: ["id",  "type","pickId","active"],
     });
-    if (route.type === "DROP" && route.pickId) {
-      RouteId = route.pickId;
-    }
-    const whereClause={
-      route_id:RouteId,
+    let whereClause={
       trash: false,
       school_id,
     };
+    if (route.type === "DROP" ) {
+      whereClause.drop_route_id = route_id;
+    } else {
+      whereClause.route_id = route_id;
+    }
     if(searchQuery){
       whereClause.full_name = { [Op.like]: `%${searchQuery}%` };
     }
@@ -1762,22 +1820,9 @@ const getTodayTransportationByStudentId = async (req, res) => {
 }
 const getRouteById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const RouteId = req.params.id;
     const school_id = req.user.school_id;
-    if (!school_id) {
-      return res.status(404).json({
-        message: "school not found"
-      });
-    }
-    let RouteId = id;
-    const route = await Routes.findOne({
-      where: { id: id, school_id: school_id, trash: false },
-      attributes: ["id",  "type","pickId","active"],
-    });
-    if (route.type === "DROP" && route.pickId) {
-      RouteId = route.pickId;
-    }
-    const studentroute = await Routes.findOne({
+    const routeData = await Routes.findOne({
       where: { id: RouteId, school_id: school_id, trash: false },
       attributes: ["id", "route_name", "vehicle_id", "type","driver_id","active"],
       include: [
@@ -1785,23 +1830,6 @@ const getRouteById = async (req, res) => {
           model: User,
           attributes: ["name"],
           as:"driver",
-        },
-        {
-          model: Student,
-          as: "students",
-          attributes: [
-            "id",
-            "class_id",
-            "reg_no",
-            "full_name",
-            "address",
-          ],
-          include: [
-            {
-              model: User,
-              attributes: ["name", "phone"],
-            },
-          ],
         },
         {
           model: Stop,
@@ -1816,39 +1844,44 @@ const getRouteById = async (req, res) => {
         }
       ],
     });
-    if (!studentroute) {
-      return res.status(404).json({ message: "No route found" });
+    if (!routeData) {
+      return res.status(404).json({ message: "No students found" });
     }
-    const result = {
-      id: studentroute.id,
-      route_name: studentroute.route_name,
-      vehicle_id: studentroute.vehicle_id,
-      type: studentroute.type,
-
-      driver: studentroute.driver.name,
-      stops: studentroute.stops?.map(stop => ({
-        id: stop.id,
-        stop_name: stop.stop_name,
-        priority: stop.priority
-      })) || [],
-      students: studentroute.students?.map(student => ({
-        id: student.id,
-        class_id: student.class_id,
-        reg_no: student.reg_no,
-        full_name: student.full_name,
-        address: student.address,
-        guardian: student.User
-          ? {
-            id: student.User.id,
-            guardian_name: student.User.name,
-            guardian_contact: student.User.phone,
+    let students = [];
+    if (routeData.type === "PICKUP") {
+      students= await Student.findAll({
+        where: {route_id: RouteId, school_id: school_id, trash: false },
+        attributes: ["id", "full_name", "reg_no","roll_number"],
+        include: [
+          {
+            model: User,
+            attributes: ["id", "name","phone"],
+          },
+          {
+            model:Class,
+            attributes: ["id", "classname"],
           }
-          : null
-      })) ?? []
-    };
+        ],
+      });
+    } else if (routeData.type === "DROP") {
+      students = await Student.findAll({
+        where: {drop_route_id: RouteId, school_id: school_id, trash: false },
+         attributes: ["id", "full_name", "reg_no","roll_number"],
+        include: [
+          {
+            model: User,
+            attributes: ["id", "name","phone"],
+          },
+          {
+            model:Class,
+            attributes: ["id", "classname"],
+          }
+        ],
+      });
+    }
     return res
       .status(200)
-      .json({ message: "Route fetched successfully", data: result });
+      .json({ message: "Route fetched successfully", data: routeData ,students});
   } catch (error) {
     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching route:", error);
     console.log("Error has occured: ", error);
@@ -1952,22 +1985,50 @@ const deleteRoute = async (req, res) => {
     });
   }
 };
-const getStopById = async (req, res) => {
+const getStopByIdAndRouteId = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id,route_id } = req.params;
+    const school_id = req.user.school_id;
 
     const studentStop = await Stop.findOne({
       where: {
         id,
         trash: false,
+        school_id,
       },
       attributes: ["id", "stop_name", "longitude", "latitude"],
-      include: {
+      include: [{
         model: Routes,
         as: "routes",
-        attributes: ["id"],
-        through: { attributes: ["priority"] },
+        attributes: ["id","type","route_name"],
+        through: { attributes: ["priority"] ,
+        where:{route_id:route_id}},
       },
+      {
+        model: Student,
+        as: "students",
+        attributes: ["id","full_name","reg_no","roll_number","image"],
+        required:false,
+        where:{
+          trash:false,
+          alumni:false,
+          [Op.or]: {
+              route_id: route_id,
+              drop_route_id: route_id,
+            },
+        },
+        include: [
+          {
+            model: Class,
+            attributes: ["id","classname"],
+          },
+          {
+            model: User,
+            attributes: ["id","name","phone"],
+          }
+        ]
+      }
+      ]
     });
 
     if (!studentStop) {
@@ -1979,7 +2040,6 @@ const getStopById = async (req, res) => {
     const stopRoute = studentStop.routes?.[0];
     studentStop.setDataValue("route_id", stopRoute?.id || null);
     studentStop.setDataValue("priority", stopRoute?.StopRoute?.priority ?? null);
-    studentStop.setDataValue("routes", undefined);
 
     return res.status(200).json({
       message: "Stop fetched successfully",
@@ -2220,7 +2280,7 @@ const getStopsByRouteId = async (req, res) => {
 
     const stops = await Stop.findAll({
       where: whereClause,
-      attributes: ["id", "stop_name", "longitude", "latitude"],
+      attributes: ["id", "stop_name", "longitude", "latitude","charge"],
       include: {
         model:StopRoute,
         where:{
@@ -2228,6 +2288,7 @@ const getStopsByRouteId = async (req, res) => {
         },
         attributes: ["priority"],
       },
+      order: [[StopRoute, "priority", "ASC"]],
     });
 
     return res.status(200).json({
@@ -2407,6 +2468,7 @@ const assignedStopIdsFromPairRoute = async (req, res) => {
 module.exports = {
   getDriverById,
   updateDriverById,
+  updateOwnProfileForDriver,
   deleteDriverById,
   getDriverAssignedRoutesAdmin,
   DriverAssignedRoutes,
@@ -2439,7 +2501,7 @@ module.exports = {
   getUnAssignedStopsInPairRouteByRouteId,
   assignedStopIdsFromPairRoute,
 
-  getStopById, 
+  getStopByIdAndRouteId, 
   updateStopById, 
   deleteStopById, 
   updateStopForDriver ,

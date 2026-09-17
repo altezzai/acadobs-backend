@@ -122,6 +122,10 @@ const StaffPermission = schoolSequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    payment_managment: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     createdAt: {
       type: DataTypes.DATE,
       allowNull: false,

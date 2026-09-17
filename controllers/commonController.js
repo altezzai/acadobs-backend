@@ -26,12 +26,16 @@ const SpecialClassStudent = require("../models/special_class_students");
 const InvoiceStudent = require("../models/invoice_students");
 const Invoice = require("../models/invoice");
 const Guardian = require("../models/guardian");
-const Driver = require("../models/tracker/driver");
+// const Driver = require("../models/tracker/driver");
 const Notice = require("../models/notice");
 const Stop = require("../models/tracker/stop");
 const Vehicle = require("../models/tracker/vehicle");
 const Routes = require("../models/tracker/routes");
 const Staff = require("../models/staff");
+const StudentCompetencyAssessment = require("../models/assesment/student_competency_assessment");
+const Competency = require("../models/assesment/competency");
+const CompetencyIndicator = require("../models/assesment/competency_indicator");
+const Exam = require("../models/exams");
 const { error } = require("winston");
 const { Console } = require("winston/lib/winston/transports");
 const { deleteFile } = require("../middlewares/storageUploads");
@@ -158,6 +162,61 @@ const getSpecialClassStudentsByClassId = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getStudents=async(req,res)=>{
+  try {
+    const school_id = req.user.school_id || "";
+    const searchQuery = req.query.q || "";
+    const class_id = req.query.class_id || "";
+    const year = req.query.year || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = (page - 1) * limit;
+    let whereClause = {
+      school_id,
+      trash: false,
+    };
+    if (searchQuery) {
+      whereClause.full_name = { [Op.like]: `%${searchQuery}%` };
+    }
+    if (class_id) {
+      whereClause.class_id = class_id;
+    }
+ 
+    const {count,rows: students,} = await Student.findAndCountAll({
+      where:whereClause,
+      attributes: ["id", "full_name", "roll_number", "class_id", "image"],
+      include: [
+        {
+          model: Class,
+          attributes: ["id", "year", "division", "classname"],
+          where: year ? { year: year } : true,
+        },
+        {
+          model: User,
+          attributes: ["id", "name", "phone"],
+        },
+
+      ],
+      order: [["createdAt", "DESC"]],
+      limit: limit,
+      offset: offset,
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      students,
+    });
+
+  } catch (error) {
+    console.error("Error fetching students:", error);
+    logger.error("schoolId:", req.user.school_id, "Error in getstudents:", error);
+    res.status(500).json({ error: error.message });
+    
+  }
+}
 const getschoolIdByStudentId = async (student_id) => {
   try {
     const student = await Student.findByPk(student_id);
@@ -320,6 +379,7 @@ const getStudentTransportDetails = async (req, res) => {
         "full_name",
         "reg_no",
         "roll_number",
+        "one_way",
       ],
       include: [
         {
@@ -330,6 +390,23 @@ const getStudentTransportDetails = async (req, res) => {
         {
           model:Routes,
            as: "routes",
+          attributes: ["id", "route_name"],
+          include: [
+            {
+              model:User,
+              as: "driver",
+              attributes: ["id", "name", "phone", "dp"]
+            },
+            {
+              model:Vehicle,
+              as: "vehicle",
+              attributes: ["id", "vehicle_number", "type", "model", "photo"]
+            },
+          ]
+        },
+        {
+          model:Routes,
+           as: "dropRoute",
           attributes: ["id", "route_name"],
           include: [
             {
@@ -1312,7 +1389,7 @@ const getSchoolDetails = async (req, res) => {
       include: [
         {
           model: Syllabus,
-          attributes: ["name"],
+          attributes: ["id","name"],
         },
       ],
     });
@@ -1324,7 +1401,7 @@ const getSchoolDetails = async (req, res) => {
       attributes: [],
       where: { user_id: req.user.user_id }, include: {
         model: Class,
-        attributes: ["id", "classname"],
+        attributes: ["id", "classname","year"],
       }
     });
 
@@ -1440,20 +1517,7 @@ const getAllDriverUsers = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch driver users" });
   }
 }
-//
-const getLeaveTypes = async (req, res) => {
-  try {
-    const leaveTypes = [
-      "sick", "casual", "emergency", "vacation", "onduty","c-off","other"
-    ]
-    res.status(200).json(leaveTypes);
-  } catch (error) {
-    logger.error("Error fetching leave types:", error);
-    console.error("Error fetching leave types:", error);
-    res.status(500).json({ error: "Failed to fetch leave types" });
-  }
-}
-const getMyPrfileAndSchoolDetails = async (req, res) => {
+const getMyProfileAndSchoolDetails = async (req, res) => {
   try{
     const userId = req.user.user_id;
     const school_id = req.user.school_id;
@@ -1475,6 +1539,87 @@ const getMyPrfileAndSchoolDetails = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch profile details" });
   }
 }
+const getCompetencyAssesmentByStudentId= async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const student_id = req.params.student_id ;
+    const exam_id = req.query.exam_id||null;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = (page - 1) * limit;
+    let whereClause = {
+      school_id,
+      student_id,
+    };
+    if (exam_id) {
+      whereClause.exam_id = exam_id;
+    }
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { description: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const {count,rows:assessments}  = await StudentCompetencyAssessment.findAndCountAll({
+      where:whereClause,
+      limit,
+      offset,
+      distinct:true,
+      order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: Competency,
+          attributes: ["id", "title", "description", "display_order", "status"],
+        },
+        {
+          model: CompetencyIndicator,
+          attributes: [
+            "id",
+            "competency_id",
+            "title",
+            "display_order",
+            "status",
+          ],
+        },
+        {
+          model: Student,
+          attributes: [
+            "id",
+            "full_name",
+            "roll_number",
+          ],
+        },
+        {
+          model: Exam,
+          attributes: ["id", "exam_name", "education_year"],
+        },
+      ],
+      order: [
+        [Competency, "display_order", "ASC"],
+        [CompetencyIndicator, "display_order", "ASC"],
+        ["id", "ASC"],
+      ],
+    });
+
+
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data: assessments,
+    });
+  } catch (error) {
+    logger.error("school_id:", req.user?.school_id, "Error fetching all students:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch all students",
+      error: error.message,
+    });
+  }
+  }
+
 const getExamTitles = async (req, res) => {
   try{
   const titiles =[
@@ -1491,9 +1636,73 @@ const getExamTitles = async (req, res) => {
   }
 
 }
+const getLeaveTypes = async (req, res) => {
+  try {
+    const leaveTypes = [
+      "sick", "casual", "emergency", "vacation", "onduty","c-off","other"
+    ]
+    res.status(200).json(leaveTypes);
+  } catch (error) {
+    logger.error("Error fetching leave types:", error);
+    console.error("Error fetching leave types:", error);
+    res.status(500).json({ error: "Failed to fetch leave types" });
+  }
+}
+const getTermTypeForTransportationInvoice = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+  
+    let termTypeForTransportationInvoice = [
+      "Term1", "Term2", "Term3"
+    ]
+    res.status(200).json(termTypeForTransportationInvoice);
+  } catch (error) {
+    logger.error("Error fetching term type for transportation invoice:", error);
+    console.error("Error fetching term type for transportation invoice:", error);
+    res.status(500).json({ error: "Failed to fetch term type for transportation invoice" });
+  }
+}
+const getClassRangeForSubject = async (req, res) => {
+  try{
+    const school_id = req.user.school_id;
+    //set an array value and label
+  let range = [
+    {
+    label: "LKG-2 (FS)",
+    key:"FS"
+    },
+    {
+      label:"3-5 (PS)",
+      key:"PS"
+    },
+    {
+      label:"6-8 (MS)",
+      key:"MS"
+    },
+    {
+      label:"9-12 (SS)",
+      key:"SS"
+    },
+    {
+      label:"common",
+      key:"common"
+    },
+    {
+      label:"other",
+      key:"other"
+    }
+  ]
+    res.status(200).json({range});
+  }catch(error){
+    logger.error("Error fetching class range for subject:", error);
+    console.error("Error fetching class range for subject:", error);
+    res.status(500).json({ error: "Failed to fetch class range for subject" });
+  }
+}
 module.exports = {
   getStudentsByClassId,
   getSpecialClassStudentsByClassId,
+  getStudents,
   getschoolIdByStudentId,
   getStudentDetailsById,
   getStudentTransportDetails,
@@ -1535,8 +1744,10 @@ module.exports = {
 
   getAllDriverUsers,
 
+  getMyProfileAndSchoolDetails,
+  getCompetencyAssesmentByStudentId,
   getLeaveTypes,
-  getMyPrfileAndSchoolDetails,
-
   getExamTitles,
+  getTermTypeForTransportationInvoice,
+  getClassRangeForSubject,
 };

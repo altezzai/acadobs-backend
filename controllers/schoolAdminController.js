@@ -34,6 +34,7 @@ const Attendance = require("../models/attendance");
 const AttendanceMarked = require("../models/attendancemarked");
 const Invoice = require("../models/invoice");
 const InvoiceStudent = require("../models/invoice_students");
+const TransportInvoice = require("../models/transport_invoice");
 const InternalMark = require("../models/internal_marks");
 const Marks = require("../models/marks");
 const Homework = require("../models/homework");
@@ -44,11 +45,14 @@ const { School } = require("../models");
 const StudentTransfer = require("../models/student_transfer");
 const Stop = require("../models/tracker/stop");
 const StopRoute = require("../models/tracker/stop_route");
-const Driver  = require("../models/tracker/driver");
+// const Driver  = require("../models/tracker/driver");
 const Vehicle  = require("../models/tracker/vehicle");
 const Routes = require("../models/tracker/routes");
 const StudentsStopStatus = require("../models/tracker/students_stop_status");
 const LiveLocation = require("../models/tracker/livelocation");
+const StudentCompetencyAssessment = require("../models/assesment/student_competency_assessment");
+const Competency = require("../models/assesment/competency");
+const CompetencyIndicator = require("../models/assesment/competency_indicator");
 const { error } = require("winston");
 const { Console } = require("winston/lib/winston/transports");
 const { deleteFile } = require("../middlewares/storageUploads");
@@ -1460,6 +1464,7 @@ const updateStaffPermission = async (req, res) => {
       exam,
       transportation,
       aiAnalytics,
+      payment_managment,
     } = req.body;
     const permission = await StaffPermission.findOne({
       where: { user_id },
@@ -1501,32 +1506,8 @@ const updateStaffPermission = async (req, res) => {
       staffs_leaveReuest,
       staffs_duties,
       staffs_attendance,
-      aiAnalytics,attendance,
-      timetable,
-      marks,
-      students,
-      homeworks,
-      parent_notes,
-      achievements,
-      student_leave_request,
-      teachers,
-      teachers_leaveReuest,
-      teachers_duties,
-      teachers_attendance,
-      staffs,
-      staffs_leaveReuest,
-      staffs_duties,
-      staffs_attendance,
-      chats,
-      reports,
-      payments,
-      alumni,
-      events,
-      news,
-      notice,
-      exam,
-      transportation,
       aiAnalytics,
+      payment_managment,
     });
     res.json({ success: true, data: permission });
   } catch (error) {
@@ -9610,7 +9591,7 @@ const createDriver = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(phone, 10);
 
-    const user = await User.create(
+    const driver = await User.create(
       {
         name,
         email,
@@ -9623,19 +9604,19 @@ const createDriver = async (req, res) => {
       { transaction },
     );
 
-    const driver = await Driver.create(
-      {
-        school_id,
-        user_id: user.id,
-        name,
-        phone,
-        email,
-        address,
-        photo: photoPath,
-        trash: false,
-      },
-      { transaction },
-    );
+    // const driver = await Driver.create(
+    //   {
+    //     school_id,
+    //     user_id: user.id,
+    //     name,
+    //     phone,
+    //     email,
+    //     address,
+    //     photo: photoPath,
+    //     trash: false,
+    //   },
+    //   { transaction },
+    // );
 
     await transaction.commit();
 
@@ -9967,6 +9948,7 @@ const createRoute = async (req, res) => {
         pickId: pickup_route.id,
         trash: false,
       });
+
     }
     res.status(201).json({
       message: "Route created successfully",
@@ -9983,10 +9965,13 @@ const createRoute = async (req, res) => {
 const getAllRoutes = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const searchQuery = req.query.q || "";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const searchQuery = req.query.q || "";
+    const type = req.query.type || "";
+    const driver_id = req.query.driver_id || null;
+    const vehicle_id = req.query.vehicle_id || null;
     let whereClause = {
       trash: false,
       school_id: school_id,
@@ -9995,6 +9980,15 @@ const getAllRoutes = async (req, res) => {
       whereClause.route_name = {
         [Op.like]: `%${searchQuery}%`,
       };
+    }
+    if(type){
+      whereClause.type = type;
+    }
+    if(driver_id){
+      whereClause.driver_id = driver_id;
+    }
+    if(vehicle_id){
+      whereClause.vehicle_id = vehicle_id;
     }
     const {count ,rows:routes} = await Routes.findAndCountAll({
       where:whereClause,
@@ -10057,7 +10051,7 @@ const assignStudentToRoute = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const { student_ids, route_id } = req.body;
-
+    const both = req.body.both|| true;
     if (
       !student_ids ||
       !Array.isArray(student_ids) ||
@@ -10069,11 +10063,11 @@ const assignStudentToRoute = async (req, res) => {
     }
 
     const pickupRoute = await Routes.findOne({
-      where: { id: route_id, trash: false, school_id: school_id },
+      where: { id: route_id,type:"PICKUP", trash: false, school_id: school_id },
     });
 
     if (!pickupRoute) {
-      return res.status(404).json({ message: "Route not found" });
+      return res.status(404).json({ message: "Pickup route not found" });
     }
 
     const students = await Student.findAll({
@@ -10084,7 +10078,16 @@ const assignStudentToRoute = async (req, res) => {
       return res.status(404).json({ message: "Student not found" });
     }
     await pickupRoute.addStudents(students);
-
+    if(both===true && !pickupRoute.pickId){
+    const dropRoute = await Routes.findOne({
+      where: { pickId: route_id, trash: false, school_id: school_id },
+    });
+    if(dropRoute){
+      await Student.update({drop_route_id:dropRoute.id},{
+        where:{id:student_ids}
+      })
+    }
+    }
     return res.json({
       message: "Students assigned to route successfully",
       assignedCount: students.length,
@@ -10097,69 +10100,6 @@ const assignStudentToRoute = async (req, res) => {
   }
 };
 
-const updateStudentToRoute = async (req, res) => {
-  try {
-    const school_id = req.user.school_id;
-    const { route_id } = req.params;
-    const { student_ids } = req.body;
-
-    if (
-      !student_ids ||
-      !Array.isArray(student_ids) ||
-      student_ids.length === 0
-    ) {
-      return res.status(400).json({
-        message: "student_ids array is required",
-      });
-    }
-
-    const route = await Routes.findOne({
-      where: { id: route_id, trash: false, school_id: school_id },
-    });
-
-    if (!route) {
-      return res.status(404).json({
-        message: "Route not found",
-      });
-    }
-
-    const students = await Student.findAll({
-      where: {
-        id: student_ids,
-        trash: false,
-        school_id: school_id,
-      },
-    });
-
-    if (students.length === 0) {
-      return res.status(404).json({
-        message: "No valid students found",
-      });
-    }
-
-    await Student.update(
-      { route_id: route_id },
-      {
-        where: {
-          id: student_ids,
-          trash: false,
-          school_id: school_id,
-        },
-      },
-    );
-
-    return res.status(200).json({
-      message: "Students updated to route successfully",
-      updated_count: students.length,
-    });
-  } catch (error) {
-    logger.error("schoolId:", req.user.school_id, "Update Student To Route Error:", error);
-    console.error("Update Student To Route Error:", error);
-    return res.status(500).json({
-      error: "Failed to update student",
-    });
-  }
-};
 
 const deleteStudentFromRoute = async (req, res) => {
   try {
@@ -10221,8 +10161,13 @@ const deleteStudentFromRoute = async (req, res) => {
 const changeStudentRouteAndStop = async (req, res) => {
   try {
     const { student_id } = req.params;
-    const { route_id, stop_id } = req.body;
+    const { route_id, stop_id ,one_way,drop} = req.body;
     const school_id = req.user.school_id;
+    if(!route_id ){
+      return res.status(400).json({
+        message: "route_id is required",
+      });
+    }
 
     const student = await Student.findOne({
       where: { id: student_id, trash: false, school_id: school_id },
@@ -10233,7 +10178,6 @@ const changeStudentRouteAndStop = async (req, res) => {
         message: "Student not found",
       });
     }
-
     const route = await Routes.findOne({
       where: { id: route_id, trash: false, school_id: school_id },
     });
@@ -10243,9 +10187,55 @@ const changeStudentRouteAndStop = async (req, res) => {
         message: "Route not found",
       });
     }
+    let pickRoute=route_id;
+    let dropRoute=null;
+    if(drop===true && one_way===true){
+      pickRoute=null;
+      const drop = await Routes.findOne({
+        where: { id: route_id, type: "DROP", trash: false, school_id: school_id },
+      });
+      if (!drop) {
+        return res.status(404).json({
+          message: "Drop route not found",
+        });
+      }
+      dropRoute=drop.id;
 
+    } else if(one_way===true){
+    dropRoute=null;
+    const pick = await Routes.findOne({
+        where: { id: route_id, type: "PICKUP", trash: false, school_id: school_id },
+      });
+        if (!pick) {
+        return res.status(404).json({
+          message: "Pickup route not found",
+        });
+      }
+      pickRoute=pick.id;
+    }
+    else{
+      const pick = await Routes.findOne({
+        where: { id: route_id, type: "PICKUP", trash: false, school_id: school_id },
+      });
+        if (!pick) {
+        return res.status(404).json({
+          message: "Pickup route not found",
+        });
+      }
+      pickRoute=pick.id;
+      const drop = await Routes.findOne({
+        where: { pickId: route_id, type: "DROP", trash: false, school_id: school_id },
+      });
+      if (!drop) {
+        return res.status(404).json({
+          message: "Drop route not found",
+        });
+      }
+      dropRoute=drop.id;
+    }
+if(stop_id){  
     const stop = await Stop.findOne({
-      where: { id: stop_id,trash: false, },
+      where: { id: stop_id,trash: false},
       include: [
         {
           model: StopRoute,
@@ -10261,8 +10251,13 @@ const changeStudentRouteAndStop = async (req, res) => {
         message: "Stop not found",
       });
     }
-
-    await student.update({ route_id: route_id, stop_id: stop_id });
+  }
+    await student.update({
+      route_id: pickRoute,
+      one_way: one_way || false,
+      drop_route_id: dropRoute,
+      stop_id: stop_id || null,
+    });
 
     return res.status(200).json({
       message: "Student route and stop updated successfully",
@@ -10275,6 +10270,84 @@ const changeStudentRouteAndStop = async (req, res) => {
     });
   }
 };  
+const bulkUpdateStopCharges = async (req, res) => {
+  try {
+    const { stops } = req.body || {};
+    const school_id = req.user.school_id;
+
+    if (!Array.isArray(stops) || stops.length === 0) {
+      return res.status(400).json({
+        message: "Stops array is required",
+      });
+    }
+
+    for (const stop of stops) {
+      if (!stop.id) {
+        return res.status(400).json({
+          message: "Each stop must have an id",
+        });
+      }
+
+      if (
+        stop.charge === undefined ||
+        stop.charge === null ||
+        stop.charge === ""
+      ) {
+        return res.status(400).json({
+          message: `Charge is required for stop ID ${stop.id}`,
+        });
+      }
+    }
+
+    const stopIds = stops.map((stop) => stop.id);
+    const stopsData = await Stop.findAll({
+      where: {
+        id: stopIds,
+        trash: false,
+        school_id: school_id,
+      },
+    });
+
+    if (!stopsData || stopsData.length === 0) {
+      return res.status(404).json({
+        message: "No stops found",
+      });
+    }
+    await Promise.all(
+      stopsData.map(async (stop) => {
+        const requestedStop = stops.find(
+          (item) => Number(item.id) === Number(stop.id)
+        );
+
+        if (requestedStop) {
+          await stop.update({
+            charge: requestedStop.charge,
+          });
+        }
+      })
+    );
+
+    return res.status(200).json({
+      message: "Stops charges updated successfully",
+      updated_count: stopsData.length,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Bulk Update Stops Charges Error:",
+      error
+    );
+
+    console.error("Bulk Update Stops Charges Error:", error);
+
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 
 const assignDriverToRoutes = async (req, res) => {
   try {
@@ -10477,7 +10550,404 @@ const getDriverLocation = async (req, res) => {
     });
   }
 };
+const bulkCreateTransportationInvoice = async (req, res) => {
+  try {
+    const { term, student_ids, offer_percentage, due_date } = req.body || {};
+    const school_id = req.user.school_id;
+    const oneWayPaymentPercentage = 75;
 
+    if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
+      return res.status(400).json({
+        message: "student_ids must be a non-empty array",
+      });
+    }
+
+    let offer = offer_percentage || 0 ;
+    if (
+      offer !== undefined &&
+      offer !== null &&
+      offer !== ""
+    ) {
+      offer = parseFloat(offer);
+      if (isNaN(offer) || offer < 0 || offer > 100) {
+        return res.status(400).json({
+          message: "offer_percentage must be a valid number between 0 and 100",
+        });
+      }
+    }
+
+    const students = await Student.findAll({
+      where: {
+        id: student_ids,
+        school_id,
+        trash: false,
+      },
+      include: [
+        {
+          model: Stop,
+          as: "stop",
+          attributes: ["id", "stop_name", "charge"],
+          required: false,
+        },
+      ],
+    });
+
+    if (!students || students.length === 0) {
+      return res.status(404).json({
+        message: "No students found for the provided student_ids",
+      });
+    }
+    const existingInvoice=await TransportInvoice.findOne({
+      where:{
+        school_id,
+        student_id:student_ids,
+        term,
+        due_date
+        }
+    })
+    if(existingInvoice)  
+      return res.status(400).json({
+        message: "Invoice already exists for the provided student_ids and term",
+      });
+     const invoicesToCreate = students.map((student) => {
+      const baseCharge =
+        student.stop &&
+        student.stop.charge !== null &&
+        student.stop.charge !== undefined
+          ? parseFloat(student.stop.charge)
+          : 0;
+
+      let amountAfterOneWay = baseCharge;
+
+      if (student.one_way === true) {
+        amountAfterOneWay = baseCharge * (oneWayPaymentPercentage / 100);
+      }
+      let finalAmount = amountAfterOneWay;
+      if (offer > 0) {
+        const discount = (amountAfterOneWay * offer) / 100;
+
+        finalAmount = Math.max(
+          0,
+          amountAfterOneWay - discount
+        );
+      }
+
+      finalAmount = parseFloat(finalAmount.toFixed(2));
+
+      return {
+        school_id,
+        student_id: student.id,
+
+        stop_id:
+          student.stop_id ||
+          (student.stop ? student.stop.id : null) ||
+          null,
+
+        amount: finalAmount,
+
+        term: term || null,
+        due_date: due_date || null,
+
+        status: "pending",
+        trash: false,
+      };
+    });
+
+    const createdInvoices =
+      await TransportInvoice.bulkCreate(invoicesToCreate);
+
+    return res.status(201).json({
+      message: "Transportation invoices generated successfully",
+      total_generated: createdInvoices.length,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "Generate Transportation Invoice Error:",
+      error
+    );
+    console.error("Generate Transportation Invoice Error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+const getAllTransportationInvoices =async(req,res) =>{
+  try {
+    const school_id = req.user.school_id || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10; 
+    const offset = page && limit ? (page - 1) * limit : 0;
+    const searchQuery = req.query.q || "";
+    const stop_id = req.query.stop_id || "";
+    const term = req.query.term || "";
+    const due_date = req.query.due_date || "";
+    const student_id = req.query.student_id || "";
+    const status = req.query.status || "";
+    let whereClause = {
+      school_id,
+      trash: false,
+  };
+  if(stop_id){
+    whereClause.stop_id = stop_id;
+  }
+  if(term){
+    whereClause.term = term;
+  }
+  if(due_date){
+    whereClause.due_date = due_date;
+  }
+  if(status){
+    whereClause.status = status;
+  }
+  if(student_id){
+    whereClause.student_id = student_id;
+  }
+  if(searchQuery){
+   
+  }
+  const { count, rows: transportInvoices } = await TransportInvoice.findAndCountAll({
+    offset,
+    limit,
+    distinct: true,
+    where: whereClause,
+    include: [
+      {
+        model: Student,
+        attributes: ["id", "full_name", "roll_number"],
+        where: searchQuery ? {
+          full_name: { [Op.like]: `%${searchQuery}%` },
+        }: {},
+      },
+      {
+        model: Stop,
+        attributes: ["id", "stop_name", "charge"],
+      },
+    ],
+    order: [["id", "DESC"]],
+  });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data: transportInvoices,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "Get All Transportation Invoice Error:",
+      error
+    );
+    console.error("Get All Transportation Invoice Error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
+const deleteTransportationInvoice =async(req,res) =>{
+  try {
+    const school_id = req.user.school_id || "";
+    const id = req.params.id || "";
+    if(!id){
+      return res.status(400).json({
+        message: "Invoice ID is required",
+      });
+    }
+    const transportInvoice = await TransportInvoice.findOne({
+      where: {
+        id,
+        school_id,
+        trash: false,
+      },
+    });
+    if(!transportInvoice){
+      return res.status(404).json({
+        message: "Invoice not found",
+      });
+    }
+    await transportInvoice.update({
+      trash: true,
+    });
+    return res.status(200).json({
+      message: "Transportation invoice deleted successfully",
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "Delete Transportation Invoice Error:",
+      error
+    );
+    console.error("Delete Transportation Invoice Error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
+const permanentDeleteTransportationInvoice =async(req,res) =>{
+  try {
+    const school_id = req.user.school_id || "";
+    const id = req.params.id || "";
+    if(!id){
+      return res.status(400).json({
+        message: "Invoice ID is required",
+      });
+    }
+    const transportInvoice = await TransportInvoice.findOne({
+      where: {
+        id,
+        school_id,
+        trash: true,
+      },
+    });
+    if(!transportInvoice){
+      return res.status(404).json({
+        message: "Invoice not found",
+      });
+    }
+    await transportInvoice.destroy();
+    return res.status(200).json({
+      message: "Transportation invoice permanently deleted successfully",
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "Permanent Delete Transportation Invoice Error:",
+      error
+    );
+    console.error("Permanent Delete Transportation Invoice Error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
+const restoreTransportationInvoice =async(req,res) =>{
+  try {
+    const school_id = req.user.school_id || "";
+    const id = req.params.id || "";
+    if(!id){
+      return res.status(400).json({
+        message: "Invoice ID is required",
+      });
+    }
+    const transportInvoice = await TransportInvoice.findOne({
+      where: {
+        id,
+        school_id,
+        trash: true,
+      },
+    });
+    if(!transportInvoice){
+      return res.status(404).json({
+        message: "Invoice not found",
+      });
+    }
+    await transportInvoice.update({
+      trash: false,
+    });
+    return res.status(200).json({
+      message: "Transportation invoice restored successfully",
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "Restore Transportation Invoice Error:",
+      error
+    );
+    console.error("Restore Transportation Invoice Error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
+const getTrashedTransportationInvoices =async(req,res) =>{
+  try {
+     const school_id = req.user.school_id || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10; 
+    const offset = page && limit ? (page - 1) * limit : 0;
+    const searchQuery = req.query.q || "";
+    const stop_id = req.query.stop_id || "";
+    const term = req.query.term || "";
+    const due_date = req.query.due_date || "";
+    const student_id = req.query.student_id || "";
+    const status = req.query.status || "";
+    let whereClause = {
+      school_id,
+      trash: true,
+  };
+  if(stop_id){
+    whereClause.stop_id = stop_id;
+  }
+  if(term){
+    whereClause.term = term;
+  }
+  if(due_date){
+    whereClause.due_date = due_date;
+  }
+  if(status){
+    whereClause.status = status;
+  }
+  if(student_id){
+    whereClause.student_id = student_id;
+  }
+  if(searchQuery){
+    whereClause[Op.or] = [
+      { term: { [Op.like]: `%${searchQuery}%` } },
+      { due_date: { [Op.like]: `%${searchQuery}%` } },
+      { status: { [Op.like]: `%${searchQuery}%` } },
+    ];
+  }
+  const { count, rows: transportInvoices } = await TransportInvoice.findAndCountAll({
+    offset,
+    limit,
+    distinct: true,
+    where: whereClause,
+      include: [
+      {
+        model: Student,
+        attributes: ["id", "full_name", "roll_number"],
+      },
+      {
+        model: Stop,
+        attributes: ["id", "stop_name", "charge"],
+      },
+    ],
+    order: [["id", "DESC"]],
+    });
+     const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data: transportInvoices,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "Get Trashed Transportation Invoice Error:",
+      error
+    );
+    console.error("Get Trashed Transportation Invoice Error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
 const getExams = async (req, res) => {
     try {
       const school_id = req.user.school_id || "";
@@ -11707,6 +12177,7 @@ module.exports = {
   bulkCreateStaffAttendance,
   deleteStaffAttendance,
 
+
   createRoute,
   createVehicle,
   createDriver,
@@ -11716,16 +12187,25 @@ module.exports = {
   getVehicleById,
   deleteVehicle,
   getAllRoutes,
+
   assignDriverToRoutes,
   getAllDrivers,
-  updateStudentToRoute,
+  // updateStudentToRoute,
   deleteStudentFromRoute,
   changeStudentRouteAndStop,
+  bulkUpdateStopCharges,
   updateVehicle,
   getDriversAssignedToRoutes,
   updateIsLock,
   getDriverLocation,
-  
+
+  bulkCreateTransportationInvoice,
+  getAllTransportationInvoices,
+  deleteTransportationInvoice,
+  restoreTransportationInvoice,
+  getTrashedTransportationInvoices,
+  permanentDeleteTransportationInvoice,
+
   getExams,
   getExamMarksByExamId,
   getMarksByInternalId,
