@@ -34,6 +34,7 @@ const Payment = schoolSequelize.define(
     },
     transaction_id: { type: DataTypes.STRING },
     invoice_student_id: { type: DataTypes.INTEGER, allowNull: true },
+    transport_invoice_id: { type: DataTypes.INTEGER, allowNull: true, defaultValue: null },
     payment_method: {
       type: DataTypes.ENUM(
         "cash",

@@ -25,8 +25,8 @@ const NewsImage = require("../models/newsimage");
 const SpecialClassStudent = require("../models/special_class_students");
 const InvoiceStudent = require("../models/invoice_students");
 const Invoice = require("../models/invoice");
+const TransportInvoice = require("../models/transport_invoice");
 const Guardian = require("../models/guardian");
-// const Driver = require("../models/tracker/driver");
 const Notice = require("../models/notice");
 const Stop = require("../models/tracker/stop");
 const Vehicle = require("../models/tracker/vehicle");
@@ -1264,7 +1264,52 @@ const getPaymentByStudnetId = async (req, res) => {
     console.error("Fetch Error:", error);
     res.status(500).json({ error: "Failed to fetch payments" });
    }
-  };    
+  };  
+  const getTransportInvoiceByStudentId  = async (req, res) => {
+   try{
+    const student_id = req.params.id;
+    const school_id = req.user.school_id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const searchQuery = req.query.q || "";
+    let whereClause = {
+      school_id: school_id,
+      trash: false
+    };
+    if(searchQuery){
+      whereClause.term ={[Op.like]:`%${searchQuery}%`};
+    }
+    const { count, rows: transportInvoices } = await TransportInvoice.findAndCountAll({
+      where: { student_id: student_id },
+      include: [
+        {
+          model: Stop,     
+          attributes: ["id", "stop_name"],
+        },
+      ],
+      offset,
+      limit,
+    });
+    
+   const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data:transportInvoices,
+    });
+   }catch(error){
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching payments:",
+      error
+    );
+    console.error("Fetch Error:", error);
+    res.status(500).json({ error: "Failed to fetch payments" });
+   }
+  };  
 
 const getLatestEvents = async (req, res) => {
   try {
@@ -1730,6 +1775,7 @@ module.exports = {
   getPaymentByStudnetId,
   getPaymentById,
   getInvoiceByStudentId,
+  getTransportInvoiceByStudentId,
 
   getLatestEvents,
   getLatestNews,

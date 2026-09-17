@@ -4458,7 +4458,6 @@ const permanentDeleteEvent = async (req, res) => {
       where: { id: req.params.id, school_id },
     });
     if (!event) return res.status(404).json({ error: "Event not found" });
-    const uploadPath = "uploads/event_files/";
     if (event.file) {
       await deleteFile(event.file);
     }
@@ -4477,8 +4476,9 @@ const permanentDeleteEvent = async (req, res) => {
 };
 const createPayment = async (req, res) => {
   try {
-    const school_id = req.user.school_id; 
-    const userId=req.user.user_id;
+    const school_id = req.user.school_id;
+    const userId = req.user.user_id;
+
     const {
       student_id,
       invoice_student_id,
@@ -4488,6 +4488,7 @@ const createPayment = async (req, res) => {
       transaction_id,
       payment_method,
       payment_status,
+      transport_invoice_id,
     } = req.body;
 
     if (
@@ -4499,111 +4500,174 @@ const createPayment = async (req, res) => {
     ) {
       return res.status(400).json({ error: "All fields are required" });
     }
-    const parsedStudentId =
-      student_id !== undefined &&
-      student_id !== null &&
-      student_id !== "" &&
-      student_id !== "null" &&
-      student_id !== "undefined"
-        ? Number(student_id)
+
+    const toInt = (value) =>
+      value && !["null", "undefined"].includes(String(value))
+        ? Number(value)
         : null;
 
-    const parsedInvoiceStudentId =
-      invoice_student_id !== undefined &&
-      invoice_student_id !== null &&
-      invoice_student_id !== "" &&
-      invoice_student_id !== "null" &&
-      invoice_student_id !== "undefined"
-        ? Number(invoice_student_id)
-        : null;
-
-    const parsedTransactionId =
-      transaction_id && typeof transaction_id === "string" && transaction_id.trim() !== ""
+    const studentId = toInt(student_id);
+    const invoiceStudentId = toInt(invoice_student_id);
+    const transportInvoiceId = toInt(transport_invoice_id);
+    const transactionId =
+      typeof transaction_id === "string" && transaction_id.trim()
         ? transaction_id.trim()
         : null;
 
-    // check if transaction_id already exists for this school
-    if (parsedTransactionId) {
-      const existingTransaction_id = await Payment.findOne({
-        where: { transaction_id: parsedTransactionId, school_id },
-      });
-      if (
-        existingTransaction_id &&
-        existingTransaction_id.transaction_id !== ""
-      ) {
-        return res.status(400).json({ error: "Transaction ID already exists" });
-      }
-    }
-
-    const existingPayment = await Payment.findOne({
-      where: {
-        invoice_student_id: parsedInvoiceStudentId,
-        school_id,
-        student_id: parsedStudentId,
-        payment_date,
-        payment_category,
-      },
-    });
-    if (existingPayment) {
-      return res
-        .status(400)
-        .json({ error: "Payment with the same details already exists" });
-    }
-    let transcation_status = payment_status;
-    if (payment_category === "donation" && !payment_status) {
-      transcation_status = "completed";
-    }
-
-    const payment = await Payment.create({
-      school_id,
-      student_id: parsedStudentId,
-      invoice_student_id: parsedInvoiceStudentId,
-      amount,
-      payment_date,
-      payment_category,
-      transaction_id: parsedTransactionId,
-      payment_method,
-      payment_status: transcation_status || "pending",
-      recorded_by: userId,
-      updated_by: userId,
-    });
-    let invoice_status = "";
-
- 
-    if (transcation_status === "completed" && parsedInvoiceStudentId) {
-      const invoiceStudent = await InvoiceStudent.findOne({
-        where: { id: parsedInvoiceStudentId },
-        include: [{ model: Invoice, attributes: ["id", "amount"] }],
-      });
-      //the same invoice_student_id used payment amount also get and check
-      let totalPaid = 0;
-      if (parsedInvoiceStudentId) {
-        totalPaid = await Payment.sum("amount", {
-          where: {
-            invoice_student_id: parsedInvoiceStudentId,
-            payment_status: "completed",
-            trash: false,
-          },
+    const result = await schoolSequelize.transaction(async (transaction) => {
+      if (transactionId) {
+        const exists = await Payment.findOne({
+          where: { transaction_id: transactionId, school_id },
+          transaction,
+          lock: transaction.LOCK.UPDATE,
         });
-      }
-      const invoiceAmount = invoiceStudent?.Invoice?.amount || 0;
 
-      if (invoiceStudent && totalPaid >= invoiceAmount) {
-        await invoiceStudent.update({ status: "paid" });
-        invoice_status = "paid";
-      } else {
-        await invoiceStudent.update({ status: "partially_paid" });
-        invoice_status = "partially_paid";
+        if (exists) {
+          throw new Error("Transaction ID already exists");
+        }
       }
-    }
-    res.status(201).json({
+
+      const existingPayment = transportInvoiceId
+        ? await TransportInvoice.findOne({
+            where: {
+              id: transportInvoiceId,
+              school_id,
+              status: "paid",
+            },
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+          })
+        : await Payment.findOne({
+            where: {
+              invoice_student_id: invoiceStudentId,
+              school_id,
+              student_id: studentId,
+              payment_date,
+              payment_category,
+            },
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+          });
+
+      if (existingPayment) {
+        throw new Error("Payment with the same details already exists");
+      }
+
+      const status =
+        payment_category === "donation" && !payment_status
+          ? "completed"
+          : payment_status || "pending";
+
+      const payment = await Payment.create(
+        {
+          school_id,
+          student_id: studentId,
+          invoice_student_id: invoiceStudentId,
+          amount,
+          payment_date,
+          payment_category,
+          transaction_id: transactionId,
+          payment_method,
+          payment_status: status,
+          recorded_by: userId,
+          updated_by: userId,
+          transport_invoice_id: transportInvoiceId,
+        },
+        { transaction }
+      );
+
+      let invoice_status = "";
+
+      if (status === "completed" && invoiceStudentId) {
+        const invoiceStudent = await InvoiceStudent.findOne({
+          where: { id: invoiceStudentId },
+          include: [{ model: Invoice, attributes: ["id", "amount"] }],
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        if (!invoiceStudent) {
+          throw new Error("Invoice student not found");
+        }
+
+        const totalPaid =
+          (await Payment.sum("amount", {
+            where: {
+              invoice_student_id: invoiceStudentId,
+              payment_status: "completed",
+              trash: false,
+            },
+            transaction,
+          })) || 0;
+
+        const invoiceAmount = Number(invoiceStudent.Invoice?.amount || 0);
+        const invoiceStatus =
+          Number(totalPaid) >= invoiceAmount ? "paid" : "partially_paid";
+
+        await invoiceStudent.update(
+          { status: invoiceStatus },
+          { transaction }
+        );
+
+        invoice_status = invoiceStatus;
+      }
+      if (transportInvoiceId) {
+        const transportInvoice = await TransportInvoice.findOne({
+          where: {
+            id: transportInvoiceId,
+            school_id,
+            student_id: studentId,
+          },
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        if (!transportInvoice) {
+          throw new Error("Transport invoice not found");
+        }
+
+        const totalPaid =
+          (await Payment.sum("amount", {
+            where: {
+              transport_invoice_id: transportInvoiceId,
+              payment_status: "completed",
+              trash: false,
+            },
+            transaction,
+          })) || 0;
+
+        const invoiceStatus =
+          Number(totalPaid) >= Number(transportInvoice.amount)
+            ? "paid"
+            : "partially_paid";
+
+        await transportInvoice.update(
+          { status: invoiceStatus },
+          { transaction }
+        );
+
+        invoice_status = `transport invoice - ${invoiceStatus}`;
+      }
+
+      return { payment, invoice_status };
+    });
+
+    return res.status(201).json({
       message: "Payment created",
-      payment,
-      "invoice status": invoice_status,
+      payment: result.payment,
+      "invoice status": result.invoice_status,
     });
   } catch (error) {
-    logger.error("schoolId:", req.user.school_id, "createPayment :", error);
-    res.status(500).json({ error: error.message });
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "createPayment:",
+      error
+    );
+
+    return res.status(500).json({
+      error: error.message,
+    });
   }
 };
 
@@ -4850,17 +4914,161 @@ const paymentVerification = async (req, res) => {
     const school_id = req.user.school_id;
     const userId = req.user.user_id;
     const id = req.params.id;
-    const status = req.body.status;
+    const { status } = req.body;
+
     if (!["completed", "failed"].includes(status)) {
+      return res.status(400).json({ error: "Invalid payment status" });
+    }
+
+    const result = await schoolSequelize.transaction(async (transaction) => {
+      const payment = await Payment.findOne({
+        where: { id, school_id, trash: false },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      if (!payment) throw new Error("Payment not found");
+
+      await payment.update(
+        {
+          payment_status: status,
+          updated_by: userId,
+        },
+        { transaction }
+      );
+
+      let invoice_status = "";
+
+      if (status !== "completed") {
+        return { payment, invoice_status };
+      }
+
+      if (payment.invoice_student_id) {
+        const invoiceStudent = await InvoiceStudent.findOne({
+          where: { id: payment.invoice_student_id },
+          include: [{ model: Invoice, attributes: ["id", "amount"] }],
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        if (!invoiceStudent) throw new Error("Invoice student not found");
+
+        const totalPaid =
+          (await Payment.sum("amount", {
+            where: {
+              invoice_student_id: payment.invoice_student_id,
+              payment_status: "completed",
+              trash: false,
+            },
+            transaction,
+          })) || 0;
+
+        const invoiceStatus =
+          Number(totalPaid) >= Number(invoiceStudent.Invoice?.amount || 0)
+            ? "paid"
+            : "partially_paid";
+
+        await invoiceStudent.update(
+          { status: invoiceStatus },
+          { transaction }
+        );
+
+        invoice_status = invoiceStatus;
+      }
+
+      if (payment.transport_invoice_id) {
+        const transportInvoice = await TransportInvoice.findOne({
+          where: {
+            id: payment.transport_invoice_id,
+            school_id,
+            student_id: payment.student_id,
+          },
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        if (!transportInvoice) {
+          throw new Error("Transport invoice not found");
+        }
+
+        const totalPaid =
+          (await Payment.sum("amount", {
+            where: {
+              transport_invoice_id: payment.transport_invoice_id,
+              payment_status: "completed",
+              trash: false,
+            },
+            transaction,
+          })) || 0;
+
+        const invoiceStatus =
+          Number(totalPaid) >= Number(transportInvoice.amount || 0)
+            ? "paid"
+            : "partially_paid";
+
+        await transportInvoice.update(
+          { status: invoiceStatus },
+          { transaction }
+        );
+
+        invoice_status = `transport invoice - ${invoiceStatus}`;
+      }
+
+      return { payment, invoice_status };
+    });
+
+    return res.status(200).json({
+      message: "Payment verification successful",
+      payment: result.payment,
+      invoice_status: result.invoice_status,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "paymentVerification:",
+      error
+    );
+
+    const notFound = [
+      "Payment not found",
+      "Invoice student not found",
+      "Transport invoice not found",
+    ];
+
+    return res.status(notFound.includes(error.message) ? 404 : 500).json({
+      error: error.message,
+    });
+  }
+};
+
+const updatePayment = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const userId = req.user.user_id;
+    const Id = req.params.id;
+
+    const {
+      student_id,
+      amount,
+      payment_date,
+      payment_category,
+      transaction_id,
+      payment_status,
+      payment_method,
+    } = req.body;
+
+    if (!amount || !payment_date || !payment_category || !student_id) {
       return res.status(400).json({
-        error: "Invalid payment status",
+        error:
+          "student_id, amount, payment_date, payment_category are required",
       });
     }
 
     const result = await schoolSequelize.transaction(async (transaction) => {
       const payment = await Payment.findOne({
         where: {
-          id,
+          id: Id,
           school_id,
           trash: false,
         },
@@ -4869,20 +5077,58 @@ const paymentVerification = async (req, res) => {
       });
 
       if (!payment) {
-        throw new Error("Payment not found");
+        const error = new Error("Payment not found");
+        error.statusCode = 404;
+        throw error;
       }
 
-      payment.payment_status = status;
-      payment.updated_by = userId;
+      if (transaction_id && transaction_id.trim() !== "") {
+        const existingTransaction = await Payment.findOne({
+          where: {
+            transaction_id: transaction_id.trim(),
+            school_id,
+            id: {
+              [Op.ne]: Id,
+            },
+          },
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
 
-      await payment.save({
+        if (existingTransaction) {
+          const error = new Error("Transaction ID already exists");
+          error.statusCode = 400;
+          throw error;
+        }
+      }
+
+      const existingPayment = await Payment.findOne({
+        where: {
+          school_id,
+          student_id,
+          amount,
+          payment_date,
+          payment_category,
+          id: {
+            [Op.ne]: Id,
+          },
+        },
         transaction,
+        lock: transaction.LOCK.UPDATE,
       });
 
-      let invoice_status = "";
+      if (existingPayment) {
+        const error = new Error(
+          "Payment with the same details already exists"
+        );
+        error.statusCode = 400;
+        throw error;
+      }
 
+      let invoice_status = "";
       if (
-        status === "completed" &&
+        payment.payment_status !== "completed" &&
+        payment_status === "completed" &&
         payment.invoice_student_id
       ) {
         const invoiceStudent = await InvoiceStudent.findOne({
@@ -4899,183 +5145,137 @@ const paymentVerification = async (req, res) => {
           lock: transaction.LOCK.UPDATE,
         });
 
-        if (!invoiceStudent) {
-          throw new Error("Invoice student not found");
-        }
+        if (invoiceStudent) {
+          const totalPaid =
+            (await Payment.sum("amount", {
+              where: {
+                invoice_student_id: payment.invoice_student_id,
+                payment_status: "completed",
+                id: {
+                  [Op.ne]: Id,
+                },
+              },
+              transaction,
+            })) || 0;
 
-        const totalPaid =
-          (await Payment.sum("amount", {
+          const paid = Number(totalPaid) + Number(amount);
+          const invoiceAmount = Number(
+            invoiceStudent.Invoice?.amount || 0
+          );
+
+          if (paid >= invoiceAmount) {
+            await invoiceStudent.update(
+              {
+                status: "paid",
+              },
+              {
+                transaction,
+              }
+            );
+
+            invoice_status = "paid";
+          } else {
+            await invoiceStudent.update(
+              {
+                status: "partially_paid",
+              },
+              {
+                transaction,
+              }
+            );
+
+            invoice_status = "partially_paid";
+          }
+        }
+      }
+      else if (
+        payment.payment_status !== "completed" &&
+        payment_status === "completed" &&
+        payment.transport_invoice_id 
+      ) {
+        const transportInvoice= await TransportInvoice.findOne({
+            where:{
+              id:payment.transport_invoice_id,
+            },
+            transaction,
+            lock:transaction.LOCK.UPDATE,
+          });
+          if(!transportInvoice){
+            throw new Error("Transport invoice not found");
+          }
+          const paidamount= await Payment.sum("amount", {
             where: {
-              invoice_student_id: payment.invoice_student_id,
+              transport_invoice_id: payment.transport_invoice_id,
               payment_status: "completed",
+              id: {[Op.ne]: Id},
               trash: false,
             },
             transaction,
-          })) || 0;
-
-        const invoiceAmount =
-          Number(invoiceStudent?.Invoice?.amount) || 0;
-
-        const paidAmount = Number(totalPaid);
-
-        if (paidAmount >= invoiceAmount) {
-          await invoiceStudent.update(
-            {
-              status: "paid",
-            },
-            {
-              transaction,
-            }
-          );
-
-          invoice_status = "paid";
-        } else {
-          await invoiceStudent.update(
-            {
-              status: "partially_paid",
-            },
-            {
-              transaction,
-            }
-          );
-
-          invoice_status = "partially_paid";
-        }
+          });
+          const totalPaid = Number(paidamount || 0) + Number(amount);
+          const invoiceAmount = Number(transportInvoice.amount || 0);
+          if(totalPaid>=invoiceAmount){
+            await TransportInvoice.update({status: "paid"},
+              {
+                where: {
+                  id:payment.transport_invoice_id,
+                  student_id: payment.student_id,
+                },
+                transaction,
+        });
+        invoice_status="transport invoice -paid"
+       }else{
+          await TransportInvoice.update({status: "partially_paid"},
+        {
+          where: {
+            id:payment.transport_invoice_id,
+            student_id: payment.student_id,
+          },
+          transaction,
+        });
+        invoice_status="transport invoice -partially paid"
+       }
       }
-      return {
-        payment,
+      await payment.update(
+        {
+          student_id,
+          amount,
+          payment_date,
+          payment_category,
+          transaction_id:
+            transaction_id && transaction_id.trim() !== ""
+              ? transaction_id.trim()
+              : null,
+          payment_status,
+          payment_method,
+          updated_by: userId,
+        },
+        {
+          transaction,
+        }
+      );
+    return {
         invoice_status,
+        payment,
       };
     });
 
     return res.status(200).json({
-      message: "Payment verification successful",
-      payment: result.payment,
+      message: "Payment updated",
       invoice_status: result.invoice_status,
+      payment: result.payment,
     });
-
   } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
-      "paymentVerification:",
+      "updatePayment:",
       error
     );
 
-    if (error.message === "Payment not found") {
-      return res.status(404).json({
-        error: error.message,
-      });
-    }
-
-    if (error.message === "Invoice student not found") {
-      return res.status(404).json({
-        error: error.message,
-      });
-    }
-
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       error: error.message,
     });
-  }
-};
-
-const updatePayment = async (req, res) => {
-  try {
-    const school_id = req.user.school_id;
-    const userId=req.user.user_id;
-    const {
-      student_id,
-      amount,
-      payment_date,
-      payment_category,
-      transaction_id,
-      payment_status,
-      payment_method,
-    } = req.body;
-    if (!amount || !payment_date || !payment_category || !student_id) {
-      return res.status(400).json({
-        error: "student_id,amount,payment_date,payment_category are required",
-      });
-    }
-    const Id = req.params.id;
-    const payment = await Payment.findOne({
-      where: { id: Id, school_id },
-    });
-    if (!payment || payment.trash)
-      return res.status(404).json({ error: "Payment not found" });
-    const existingTransaction_id = await Payment.findOne({
-      where: { transaction_id, id: { [Op.ne]: req.params.id } },
-    });
-    if (
-      existingTransaction_id &&
-      existingTransaction_id.transaction_id !== ""
-    ) {
-      return res.status(400).json({ error: "Transaction ID already exists" });
-    }
-
-    const existingPayment = await Payment.findOne({
-      where: {
-        school_id,
-        student_id,
-        amount,
-        payment_date,
-        payment_category,
-
-        id: { [Op.ne]: Id },
-      },
-    });
-    if (existingPayment) {
-      return res
-        .status(400)
-        .json({ error: "Payment with the same details already exists" });
-    }
-
-    let invoice_status = "";
-    if (
-      payment.payment_status !== "completed" &&
-      payment_status === "completed" &&
-      payment.invoice_student_id
-    ) {
-      const invoiceStudent = await InvoiceStudent.findOne({
-        where: { id: payment.invoice_student_id },
-        include: [{ model: Invoice, attributes: ["id", "amount"] }],
-      });
-      let totalPaid = 0;
-      if (payment.invoice_student_id) {
-        totalPaid = await Payment.sum("amount", {
-          where: {
-            invoice_student_id: payment.invoice_student_id,
-            payment_status: "completed",
-          },
-        });
-      }
-      const paid = amount + totalPaid;
-      const invoiceAmount = invoiceStudent?.Invoice?.amount || 0;
-
-      if (invoiceStudent && paid >= invoiceAmount) {
-        await invoiceStudent.update({ status: "paid" });
-        invoice_status = "paid";
-      } else {
-        await invoiceStudent.update({ status: "partially_paid" });
-        invoice_status = "partially_paid";
-      }
-    }
-
-    await payment.update({
-      student_id,
-      amount,
-      payment_date,
-      payment_category,
-      transaction_id,
-      payment_status,
-      payment_method,
-      updated_by:userId,
-    });
-    res.status(200).json({ message: "Payment updated", payment });
-  } catch (error) {
-    logger.error("schoolId:", req.user.school_id, "updatePayment :", error);
-    res.status(500).json({ error: error.message });
   }
 };
 

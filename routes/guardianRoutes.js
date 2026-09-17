@@ -34,6 +34,12 @@ router.put(
   storageUploadMiddleware("payment_attachments"),
   guardianController.updatePayment,
 )
+router.post(
+  "/createTransportInvoicePayment",
+  uploadWithErrorHandler(upload.single("payment_attachment")),
+  storageUploadMiddleware("payment_attachments"),
+  guardianController.createTransportInvoicePayment,
+);
 const leaveRequestValidation = [
   body("student_id").notEmpty().trim().escape(),
   body("from_date").notEmpty().trim().escape(),
@@ -242,6 +248,7 @@ router.put(
 );
 
 router.get("/getPaymentById/:id", commonController.getPaymentById);
+router.get("/getTransportInvoiceByStudentId/:id", commonController.getTransportInvoiceByStudentId);
 router.get(
   "/getAchievementsBySchool",
   commonController.getAchievementsBySchool,

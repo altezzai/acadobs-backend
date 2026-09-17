@@ -150,6 +150,8 @@ Payment.belongsTo(Student, { foreignKey: "student_id" });
 Payment.belongsTo(User, { as: "recorded", foreignKey: "recorded_by" });
 Payment.belongsTo(User,{as: "updated", foreignKey: "updated_by" });
 Payment.belongsTo(InvoiceStudent, { foreignKey: "invoice_student_id" });
+Payment.belongsTo(TransportInvoice, { foreignKey: "transport_invoice_id" });
+TransportInvoice.hasMany(Payment, { foreignKey: "transport_invoice_id" });
 
 Invoice.belongsTo(School, { foreignKey: "school_id" });
 Invoice.hasMany(InvoiceStudent, { foreignKey: "invoice_id" });

@@ -1103,10 +1103,6 @@ const getMissingStudentsListfromClassId = async (req, res) => {
     const rawStudentIds = req.body.studentIds || [];
 
 
-    // if (!rawStudentIds || rawStudentIds.length === 0) {
-    //   return res.status(400).json({ error: "studentIds is required" });
-    // }
-
     if (!classId) {
       return res.status(400).json({ error: "classid is required" });
     }

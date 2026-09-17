@@ -19,6 +19,7 @@ const Student = require("../models/student");
 const School = require("../models/school");
 const User = require("../models/user");
 const Payment = require("../models/payment");
+const TransportInvoice = require("../models/transport_invoice");
 const LeaveRequest = require("../models/leaverequest");
 const Notice = require("../models/notice");
 const NoticeClass = require("../models/noticeclass");
@@ -251,7 +252,6 @@ const getInvoiceByStudentId = async (req, res) => {
 const createPayment = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-
     const {
       student_id,
       invoice_student_id,
@@ -277,7 +277,6 @@ const createPayment = async (req, res) => {
 
     const payment = await schoolSequelize.transaction(async (transaction) => {
 
-      // Check transaction ID
       if (transaction_id) {
         const existingTransaction = await Payment.findOne({
           where: {
@@ -291,7 +290,6 @@ const createPayment = async (req, res) => {
         }
       }
 
-      // Check duplicate payment
       const existingPayment = await Payment.findOne({
         where: {
           school_id,
@@ -312,7 +310,6 @@ const createPayment = async (req, res) => {
       const payment_attachmentUrl =
         req.uploadedFiles?.payment_attachment?.url || null;
 
-      // Create payment
       const payment = await Payment.create(
         {
           school_id,
@@ -332,7 +329,6 @@ const createPayment = async (req, res) => {
         }
       );
 
-      // Update invoice
       await InvoiceStudent.update(
         {
           status: "waiting_for_approval",
@@ -451,6 +447,133 @@ const updatePayment = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 }
+const createTransportInvoicePayment = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const {
+      student_id,
+      amount,
+      payment_date,
+      transaction_id,
+      payment_method,
+      transport_invoice_id,
+    } = req.body;
+
+    if (
+      !student_id ||
+      !school_id ||
+      amount == null ||
+      !transport_invoice_id ||
+      !payment_date ||
+      !payment_method
+    ) {
+      return res.status(400).json({
+        error: "Required fields are missing",
+      });
+    }
+
+    const payment = await schoolSequelize.transaction(async (transaction) => {
+
+      if (transaction_id) {
+        const existingTransaction = await Payment.findOne({
+          where: {
+            transaction_id,
+          },
+          transaction,
+        });
+
+        if (existingTransaction) {
+          throw new Error("Transaction ID already exists");
+        }
+      }
+
+      const existingPayment = await Payment.findOne({
+        where: {
+          school_id,
+          student_id,
+          amount,
+          payment_date,
+          payment_category:"transport",
+        },
+        transaction,
+      });
+
+      if (existingPayment) {
+        throw new Error(
+          "Payment with the same details already exists"
+        );
+      }
+
+      const payment_attachmentUrl =
+        req.uploadedFiles?.payment_attachment?.url || null;
+
+      const payment = await Payment.create(
+        {
+          school_id,
+          student_id,
+          amount,
+          payment_date,
+          payment_category:"transport",
+          transaction_id: transaction_id || null,
+          payment_method,
+          payment_status: "pending",
+          recorded_by: req.user.user_id,
+          payment_attachment: payment_attachmentUrl,
+          transport_invoice_id ,
+        },
+        {
+          transaction,
+        }
+      );
+
+      await TransportInvoice.update(
+        {
+          status: "waiting_for_approval",
+        },
+        {
+          where: {
+            id: transport_invoice_id,
+          },
+          transaction,
+        }
+      );
+
+      return payment;
+    });
+
+    return res.status(201).json({
+      message: "Payment created",
+      payment,
+    });
+
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "createPayment:",
+      error
+    );
+
+    if (error.message === "Transaction ID already exists") {
+      return res.status(400).json({
+        error: error.message,
+      });
+    }
+
+    if (
+      error.message ===
+      "Payment with the same details already exists"
+    ) {
+      return res.status(400).json({
+        error: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      error: error.message,
+    });
+  }
+};
 const createLeaveRequest = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -1903,6 +2026,7 @@ module.exports = {
   getInvoiceByStudentId,
   createPayment,
   updatePayment,
+  createTransportInvoicePayment,
 
   createLeaveRequest,
   getAllLeaveRequests,
