@@ -70,7 +70,7 @@ router.get("/myMultiTeacherSubjectInternalMarks", teacherController.getMultiTeac
 router.get("/getClassWaiseTermMarksPdf", reportController.getClassWaiseTermMarksPdf);
 router.get("/getprograsReportByStudentId/:student_id", reportController.getprograsReportByStudentId);
 router.get("/getMissingStudentsFromClassByInternalMarkId/:id", teacherController.getMissingStudentsFromClassByInternalMarkId);
-router.get("/getMissingStudentsListfromClassId/:id", teacherController.getMissingStudentsListfromClassId);
+router.post("/getMissingStudentsListfromClassId/:class_id", teacherController.getMissingStudentsListfromClassId);
 
 router.get(
   "/getInternalMarkByRecordedBy",

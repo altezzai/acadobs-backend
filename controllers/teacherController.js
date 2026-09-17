@@ -1102,9 +1102,10 @@ const getMissingStudentsListfromClassId = async (req, res) => {
     const classId = req.params.class_id;
     const rawStudentIds = req.body.studentIds || [];
 
-    if (!school_id) {
-      return res.status(400).json({ error: "School context is missing" });
-    }
+
+    // if (!rawStudentIds || rawStudentIds.length === 0) {
+    //   return res.status(400).json({ error: "studentIds is required" });
+    // }
 
     if (!classId) {
       return res.status(400).json({ error: "classid is required" });
