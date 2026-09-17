@@ -278,6 +278,7 @@ router.post(
 );
 router.get("/invoices", schoolAdminController.getAllInvoices);
 router.get("/invoices/:id", schoolAdminController.getInvoiceById);
+router.get("/getPendingAmountByInvoiceStudentId/:id", schoolAdminController.getPendingAmountByInvoiceStudentId);
 router.put("/invoices/:id", schoolAdminController.updateInvoice);
 router.delete("/invoices/:id", schoolAdminController.deleteInvoice);
 router.patch("/invoices/:id", schoolAdminController.restoreInvoice);
@@ -637,6 +638,8 @@ schoolAdminController.bulkCreateTransportationInvoice,
 );
 router.get("/getAllTransportationInvoices",
 schoolAdminController.getAllTransportationInvoices);
+router.get("/getPendingAmountByTransportInvoiceId/:id",
+schoolAdminController.getPendingAmountByTransportInvoiceId);
 router.delete("/deleteTransportationInvoice/:id",
 schoolAdminController.deleteTransportationInvoice);
 router.patch("/restoreTransportationInvoice/:id",

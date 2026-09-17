@@ -5871,6 +5871,43 @@ const updateInvoice = async (req, res) => {
     logger.error("schoolId:", req.user.school_id, "updateInvoice :", error);
     res.status(500).json({ error: error.message });
   }
+};  
+const getPendingAmountByInvoiceStudentId = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const invoice_student_id = req.params.id;
+    const invoiceStudent = await InvoiceStudent.findOne({
+      where: {
+        id: invoice_student_id,
+      },
+      include:[
+        {
+          model:Invoice,
+          attributes:["id", "amount"],
+          where:{
+            school_id:school_id,
+            trash:false
+          }
+        }
+      ]
+    });
+    let pendingAmount =0;
+    if(!invoiceStudent) return res.status(404).json({ error: "Invoice student not found" });
+    const totalAmountPaid = await Payment.sum("amount", {
+      where: {
+        invoice_student_id: invoiceStudent.id,
+        payment_status: "completed",
+      },
+    });
+    pendingAmount = invoiceStudent.Invoice.amount - totalAmountPaid;
+    res.status(200).json({
+       pendingAmount ,
+       totalAmountPaid,
+      invoiceStudent});
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getPendingAmountByStudentId :", error);
+    res.status(500).json({ error: error.message });
+  }
 };
 const deleteInvoice = async (req, res) => {
   try {
@@ -10950,6 +10987,54 @@ const getAllTransportationInvoices =async(req,res) =>{
     });
   }
 }
+const getPendingAmountByTransportInvoiceId=async(req,res) =>{
+  try {
+    const school_id = req.user.school_id || "";
+    const transport_invoice_id = req.params.id || "";
+    if(!transport_invoice_id){
+      return res.status(400).json({
+        message: "Transport invoice ID is required",
+      });
+    }
+    const transportInvoice = await TransportInvoice.findOne({
+      where: {
+        id: transport_invoice_id,
+        school_id,
+        trash: false,
+      },
+    });
+    if(!transportInvoice){
+      return res.status(404).json({
+        message: "Transport invoice not found",
+      });
+    }
+    let pendingAmount =0;
+    const totalAmountPaid = await Payment.sum("amount", {
+      where: {
+        transport_invoice_id,
+        payment_status: "completed",
+      },
+    });
+    pendingAmount = transportInvoice.amount - totalAmountPaid;
+    return res.status(200).json({
+      pending_amount: pendingAmount,
+      totalAmountPaid,
+      transportInvoice,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "Get Pending Amount By Transport Invoice ID Error:",
+      error
+    );
+    console.error("Get Pending Amount By Transport Invoice ID Error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+} 
 const deleteTransportationInvoice =async(req,res) =>{
   try {
     const school_id = req.user.school_id || "";
@@ -12289,6 +12374,7 @@ module.exports = {
   getAllInvoices,
   getInvoiceById,
   updateInvoice,
+  getPendingAmountByInvoiceStudentId,
   deleteInvoice,
   restoreInvoice,
   permanentDeleteInvoiceStudent,
@@ -12401,6 +12487,7 @@ module.exports = {
 
   bulkCreateTransportationInvoice,
   getAllTransportationInvoices,
+  getPendingAmountByTransportInvoiceId,
   deleteTransportationInvoice,
   restoreTransportationInvoice,
   getTrashedTransportationInvoices,
