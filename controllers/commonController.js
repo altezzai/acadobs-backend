@@ -1389,7 +1389,7 @@ const getSchoolDetails = async (req, res) => {
       include: [
         {
           model: Syllabus,
-          attributes: ["name"],
+          attributes: ["id","name"],
         },
       ],
     });
@@ -1401,7 +1401,7 @@ const getSchoolDetails = async (req, res) => {
       attributes: [],
       where: { user_id: req.user.user_id }, include: {
         model: Class,
-        attributes: ["id", "classname"],
+        attributes: ["id", "classname","year"],
       }
     });
 
