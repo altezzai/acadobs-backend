@@ -36,6 +36,8 @@ router.put(
   commonController.updateDp,
 );
 router.get("/getMyProfileAndSchoolDetails",commonController.getMyProfileAndSchoolDetails);
+router.get("/getTransportInvoiceByStudentId/:id",commonController.getTransportInvoiceByStudentId);
+router.get("/getStudentDetailsById/:id", commonController.getStudentDetailsById);
 
 
 module.exports = router;
