@@ -11083,12 +11083,6 @@ const getUnpaidTransportInvoiceByStudentId=async(req,res) =>{
         },
       ],
     });
-    if(!transportInvoice){
-      return res.status(404).json({
-        message: "Transport invoice not found",
-      });
-    }
-    
     return res.status(200).json({
       transportInvoice,
     });
