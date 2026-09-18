@@ -1986,6 +1986,27 @@ const updateGuardianUserPassword = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const checkGuardianAlreadyExist= async (req, res) => {
+  try {
+    const phone = req.params.phone;
+    const user= await User.findOne({
+      where: {phone, trash: false ,role:"guardian"},
+      attributes: ["id", "name", "phone"],
+    });
+    if (!user) {
+      return res.status(404).json({ error: "Guardian not found" });
+    }
+    res.status(200).json({ user });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error checking guardian:",
+      error,
+    );
+    res.status(500).json({ error: error.message });
+  }
+};
 // Create Student
 const createStudent = async (req, res) => {
   try {
@@ -5880,6 +5901,7 @@ const getPendingAmountByInvoiceStudentId = async (req, res) => {
       where: {
         id: invoice_student_id,
       },
+      attributes:["id","status"],
       include:[
         {
           model:Invoice,
@@ -11002,6 +11024,7 @@ const getPendingAmountByTransportInvoiceId=async(req,res) =>{
         school_id,
         trash: false,
       },
+      attributes: ["id", "amount","due_date","term"],
     });
     if(!transportInvoice){
       return res.status(404).json({
@@ -12308,6 +12331,7 @@ module.exports = {
   updateGuardian,
   createGuardianService,
   deleteGuardian,
+  checkGuardianAlreadyExist,
 
   getGuardianBySchoolId,
   updateGuardianUserPassword,

@@ -130,7 +130,7 @@ router.put(
   "/updateGuardianUserPassword/:user_id",
   schoolAdminController.updateGuardianUserPassword,
 );
-
+router.get("/checkGuardianAlreadyExist/:phone", schoolAdminController.checkGuardianAlreadyExist);
 // Student routes
 router.post(
   "/students",
