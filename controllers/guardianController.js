@@ -574,6 +574,98 @@ const createTransportInvoicePayment = async (req, res) => {
     });
   }
 };
+ const getTransportInvoiceByOwnStudentId  = async (req, res) => {
+   try{
+    const student_id = req.params.id;
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const searchQuery = req.query.q || "";
+    let whereClause = {
+      school_id: school_id,
+      trash: false
+    };
+    if(searchQuery){
+      whereClause.term ={[Op.like]:`%${searchQuery}%`};
+    }
+    const student = await Student.findOne({
+      where: { id: student_id ,guardian_id:user_id},
+      attributes: ["id"],
+    });
+    if(!student){
+      return res.status(404).json({ error: "Student not found" });
+    }
+    const { count, rows: transportInvoices } = await TransportInvoice.findAndCountAll({
+      where: { student_id: student_id },
+      include: [
+        {
+          model: Stop,     
+          attributes: ["id", "stop_name"],
+        },
+      ],
+      offset,
+      limit,
+    });
+    
+   const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data:transportInvoices,
+    });
+   }catch(error){
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching payments:",
+      error
+    );
+    console.error("Fetch Error:", error);
+    res.status(500).json({ error: "Failed to fetch payments" });
+   }
+  };  
+  const getTransportInvoiceById= async (req, res) => {
+    try {
+      const id = req.params.id;
+      const school_id = req.user.school_id;
+      const transportInvoice = await TransportInvoice.findOne({
+      where: { id: id, school_id: school_id },
+      include:[
+        {
+          model:Stop,
+          attributes: ["id", "stop_name"],
+          include:[
+            {
+              model: Routes,
+              as: "routes",
+              attributes: ["id","route_name","type","active"],
+              through: { attributes: ["priority"] },
+            },
+          ],
+        },
+      ],
+    });
+    if (!transportInvoice) {
+      return res.status(404).json({ error: "Transport invoice not found" });
+    }
+    res.status(200).json({
+      message: "Transport invoice fetched successfully",
+      data:transportInvoice,
+    });
+    } catch (error) {
+      logger.error(
+        "userId:",
+        req.user.user_id,
+        "Error fetching transport:",
+        error
+      );
+      console.error("Fetch Error:", error);
+      res.status(500).json({ error: "Failed to fetch transport" });
+    }
+  };
 const createLeaveRequest = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -2026,7 +2118,10 @@ module.exports = {
   getInvoiceByStudentId,
   createPayment,
   updatePayment,
+
   createTransportInvoicePayment,
+  getTransportInvoiceByOwnStudentId,
+  getTransportInvoiceById,
 
   createLeaveRequest,
   getAllLeaveRequests,

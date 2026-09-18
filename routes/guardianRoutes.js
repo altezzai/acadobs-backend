@@ -40,6 +40,12 @@ router.post(
   storageUploadMiddleware("payment_attachments"),
   guardianController.createTransportInvoicePayment,
 );
+router.get("/getTransportInvoiceByOwnStudentId/:id", 
+  guardianController.getTransportInvoiceByOwnStudentId);
+router.get("/getTransportInvoiceById/:id", 
+  guardianController.getTransportInvoiceById);
+
+
 const leaveRequestValidation = [
   body("student_id").notEmpty().trim().escape(),
   body("from_date").notEmpty().trim().escape(),
@@ -248,7 +254,6 @@ router.put(
 );
 
 router.get("/getPaymentById/:id", commonController.getPaymentById);
-router.get("/getTransportInvoiceByStudentId/:id", commonController.getTransportInvoiceByStudentId);
 router.get(
   "/getAchievementsBySchool",
   commonController.getAchievementsBySchool,
