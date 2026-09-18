@@ -249,6 +249,54 @@ const getInvoiceByStudentId = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch invoices" });
   }
 };
+const getStudentInvoiceById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const invoice = await InvoiceStudent.findOne({
+      where: { id,},
+      include: [
+        {
+          model: Invoice,
+          where:{trash:false, school_id:school_id},
+          attributes:["id","title","amount","description", "due_date","category"]
+        },
+        {
+          model: Student,
+          where: {
+            guardian_id: user_id,
+          },
+          attributes: ["id", "full_name"],
+        },
+      ],
+    });
+    if (!invoice) {
+      return res.status(404).json({ error: "Invoice not found" });
+    }
+    const totalAmountPaid = await Payment.sum("amount", {
+      where: {
+        invoice_student_id: id,
+        payment_status: "completed",
+      },
+    });
+    const pendingAmount = invoice.amount - totalAmountPaid;
+    res.status(200).json({
+      totalAmountPaid: totalAmountPaid,
+      pendingAmount: pendingAmount,
+      data: invoice,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error getting invoice by id:",
+      error,
+    );
+    console.error("Error fetching invoice:", error);
+    res.status(500).json({ error: "Failed to fetch invoice" });
+  }
+};
 const createPayment = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -651,8 +699,19 @@ const createTransportInvoicePayment = async (req, res) => {
     if (!transportInvoice) {
       return res.status(404).json({ error: "Transport invoice not found" });
     }
+    const totalAmountPaid = await Payment.sum("amount", {
+      where: {
+        transport_invoice_id: transportInvoice.id,
+        payment_status: "completed",
+      },
+    });
+    const totalAmount = transportInvoice.amount ;
+    const pendingAmount = totalAmount - totalAmountPaid;
+    
     res.status(200).json({
       message: "Transport invoice fetched successfully",
+      pendingAmount,
+      totalAmountPaid,
       data:transportInvoice,
     });
     } catch (error) {
@@ -2116,6 +2175,7 @@ module.exports = {
   getNoticeByStudentId,
   getPaymentByStudentId,
   getInvoiceByStudentId,
+  getStudentInvoiceById,
   createPayment,
   updatePayment,
 

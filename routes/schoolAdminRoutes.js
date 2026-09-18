@@ -640,6 +640,8 @@ router.get("/getAllTransportationInvoices",
 schoolAdminController.getAllTransportationInvoices);
 router.get("/getPendingAmountByTransportInvoiceId/:id",
 schoolAdminController.getPendingAmountByTransportInvoiceId);
+router.get("/getUnpaidTransportInvoiceByStudentId/:id",
+schoolAdminController.getUnpaidTransportInvoiceByStudentId);
 router.delete("/deleteTransportationInvoice/:id",
 schoolAdminController.deleteTransportationInvoice);
 router.patch("/restoreTransportationInvoice/:id",
@@ -648,6 +650,7 @@ router.get("/getTrashedTransportationInvoices",
 schoolAdminController.getTrashedTransportationInvoices);
 router.delete("/permanentDeleteTransportationInvoice/:id",
 schoolAdminController.permanentDeleteTransportationInvoice);
+
 
 // CompetencyAssesment
 router.get("/getCompetencyAssesmentByStudentId/:student_id",

@@ -22,6 +22,10 @@ router.get(
   "/getInvoiceByStudentId/:student_id",
   guardianController.getInvoiceByStudentId,
 );
+router.get(
+  "/getStudentInvoiceById/:id",
+  guardianController.getStudentInvoiceById,
+);
 router.post(
   "/payments",
   uploadWithErrorHandler(upload.single("payment_attachment")),

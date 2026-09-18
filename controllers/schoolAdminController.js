@@ -11058,6 +11058,54 @@ const getPendingAmountByTransportInvoiceId=async(req,res) =>{
     });
   }
 } 
+const getUnpaidTransportInvoiceByStudentId=async(req,res) =>{
+  try {
+    const school_id = req.user.school_id || "";
+    const student_id = req.params.id || "";
+    if(!student_id){
+      return res.status(400).json({
+        message: "Student ID is required",
+      });
+    }
+    const transportInvoice = await TransportInvoice.findOne({
+      where: {
+        student_id,
+        school_id,
+        trash: false,
+        status: { [Op.ne]:"paid" },
+    
+      },
+      attributes: ["id", "amount","due_date","term"],
+      include:[
+        {
+          model:Stop,
+          attributes:["id","stop_name","charge"],
+        },
+      ],
+    });
+    if(!transportInvoice){
+      return res.status(404).json({
+        message: "Transport invoice not found",
+      });
+    }
+    
+    return res.status(200).json({
+      transportInvoice,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "Get Transport Invoice By Student ID Error:",
+      error
+    );
+    console.error("Get Transport Invoice By Student ID Error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
 const deleteTransportationInvoice =async(req,res) =>{
   try {
     const school_id = req.user.school_id || "";
@@ -12512,6 +12560,7 @@ module.exports = {
   bulkCreateTransportationInvoice,
   getAllTransportationInvoices,
   getPendingAmountByTransportInvoiceId,
+  getUnpaidTransportInvoiceByStudentId,
   deleteTransportationInvoice,
   restoreTransportationInvoice,
   getTrashedTransportationInvoices,
