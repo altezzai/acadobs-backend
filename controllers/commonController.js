@@ -35,6 +35,8 @@ const Staff = require("../models/staff");
 const StudentCompetencyAssessment = require("../models/assesment/student_competency_assessment");
 const Competency = require("../models/assesment/competency");
 const CompetencyIndicator = require("../models/assesment/competency_indicator");
+const CoScholasticArea = require("../models/assesment/co_scholastic_area");
+const StudentCoScholasticAssessment = require("../models/assesment/student_co_scholastic_assessment");
 const Exam = require("../models/exams");
 const { error } = require("winston");
 const { Console } = require("winston/lib/winston/transports");
@@ -1743,7 +1745,91 @@ const getClassRangeForSubject = async (req, res) => {
     console.error("Error fetching class range for subject:", error);
     res.status(500).json({ error: "Failed to fetch class range for subject" });
   }
-}
+};
+
+const getCoScholasticAssessmentByStudentId = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const student_id = req.params.student_id;
+    const exam_id = req.query.exam_id || null;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 100;
+    const offset = (page - 1) * limit;
+
+    let whereClause = {
+      school_id,
+      student_id,
+    };
+
+    if (exam_id) {
+      whereClause.exam_id = exam_id;
+    }
+
+    const { count, rows: assessments } =
+      await StudentCoScholasticAssessment.findAndCountAll({
+        where: whereClause,
+        limit,
+        offset,
+        distinct: true,
+        include: [
+          {
+            model: CoScholasticArea,
+            attributes: [
+              "id",
+              "name",
+              "class_group",
+              "display_order",
+              "status",
+            ],
+            where: searchQuery
+              ? {
+                  name: { [Op.like]: `%${searchQuery}%` },
+                }
+              : undefined,
+          },
+          {
+            model: Student,
+            attributes: ["id", "full_name", "roll_number"],
+          },
+          {
+            model: Exam,
+            attributes: ["id", "exam_name", "education_year"],
+          },
+          {
+            model: User,
+            as: "Recorder",
+            attributes: ["id", "full_name", "email"],
+          },
+        ],
+        order: [
+          [CoScholasticArea, "display_order", "ASC"],
+          ["id", "ASC"],
+        ],
+      });
+
+    const totalPages = Math.ceil(count / limit);
+    return res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data: assessments,
+    });
+  } catch (error) {
+    logger.error(
+      "school_id:",
+      req.user?.school_id,
+      "Error fetching co-scholastic assessments by student id:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch co-scholastic assessments",
+      details: error.message,
+    });
+  }
+};
+
 module.exports = {
   getStudentsByClassId,
   getSpecialClassStudentsByClassId,
@@ -1792,6 +1878,7 @@ module.exports = {
 
   getMyProfileAndSchoolDetails,
   getCompetencyAssesmentByStudentId,
+  getCoScholasticAssessmentByStudentId,
   getLeaveTypes,
   getExamTitles,
   getTermTypeForTransportationInvoice,

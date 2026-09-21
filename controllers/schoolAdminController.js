@@ -53,6 +53,8 @@ const LiveLocation = require("../models/tracker/livelocation");
 const StudentCompetencyAssessment = require("../models/assesment/student_competency_assessment");
 const Competency = require("../models/assesment/competency");
 const CompetencyIndicator = require("../models/assesment/competency_indicator");
+const CoScholasticArea = require("../models/assesment/co_scholastic_area");
+const StudentCoScholasticAssessment = require("../models/assesment/student_co_scholastic_assessment");
 const { error } = require("winston");
 const { Console } = require("winston/lib/winston/transports");
 const { deleteFile } = require("../middlewares/storageUploads");
@@ -2552,7 +2554,7 @@ const updateStudent = async (req, res) => {
       status,
       second_language,
       alumni,
-
+      
       // Guardian fields
       guardian_name,
       guardian_contact,
@@ -2817,6 +2819,35 @@ const updateStudent = async (req, res) => {
     res.status(500).json({ error: "Failed to update student" });
   }
 };
+const changeStudentGurdianId=async(req,res)=>{
+  try{
+    const school_id = req.user.school_id;
+    const {guardian_id,student_id}= req.body;
+    const student= await Student.findOne({
+      where:{
+        id:student_id,
+        school_id,
+        trash:false
+      }
+    });
+    if(!student){
+      return res.status(404).json({error:"Student not found"});
+    }
+    await student.update({
+      guardian_id,
+    });
+    res.status(200).json({message:"Student guardian id changed successfully"});
+  }catch(error){
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error changing student guardian id:",
+      error,
+    );
+    console.error("Error changing student guardian id:", error);
+    res.status(500).json({ error: "Failed to change student guardian id" });
+  }
+}
 const deleteStudent = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -12323,6 +12354,218 @@ const updateOwnDatasForSchool = async (req, res) => {
   }
 };
 
+const createCoScholasticArea = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { name, class_group, display_order, status } = req.body;
+
+    if (!name || !school_id) {
+      return res.status(400).json({ error: "name and school_id are required" });
+    }
+
+    const newArea = await CoScholasticArea.create({
+      school_id,
+      name: name.trim(),
+      class_group: class_group || null,
+      display_order: display_order !== undefined ? Number(display_order) : 0,
+      status: status !== undefined ? Boolean(status) : true,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Co-scholastic area created successfully",
+      data: newArea,
+    });
+  } catch (error) {
+    logger.error(
+      "school_id:",
+      req.user?.school_id,
+      "Error creating co-scholastic area:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      error: "Failed to create co-scholastic area",
+      details: error.message,
+    });
+  }
+};
+
+const getCoScholasticAreas = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { search, class_group, status, page, limit } = req.query;
+
+    const whereClause = {
+      [Op.or]: [{ school_id: school_id }, { school_id: null }],
+    };
+
+    if (status !== undefined) {
+      whereClause.status =
+        status === "true" || status === true || status === 1 || status === "1";
+    }
+
+    if (class_group) {
+      whereClause[Op.and] = [
+        ...(whereClause[Op.and] || []),
+        {
+          [Op.or]: [
+            { class_group: class_group },
+            { class_group: "All" },
+            { class_group: null },
+          ],
+        },
+      ];
+    }
+
+    if (search) {
+      whereClause[Op.and] = [
+        ...(whereClause[Op.and] || []),
+        {
+          name: { [Op.like]: `%${search}%` },
+        },
+      ];
+    }
+
+    if (page && limit) {
+      const pageNum = parseInt(page, 10) || 1;
+      const limitNum = parseInt(limit, 10) || 10;
+      const offset = (pageNum - 1) * limitNum;
+
+      const { count, rows } = await CoScholasticArea.findAndCountAll({
+        where: whereClause,
+        limit: limitNum,
+        offset,
+        order: [
+          ["display_order", "ASC"],
+          ["id", "ASC"],
+        ],
+      });
+
+      return res.status(200).json({
+        success: true,
+        totalItems: count,
+        totalPages: Math.ceil(count / limitNum),
+        currentPage: pageNum,
+        data: rows,
+      });
+    }
+
+    const areas = await CoScholasticArea.findAll({
+      where: whereClause,
+      order: [
+        ["display_order", "ASC"],
+        ["id", "ASC"],
+      ],
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Co-scholastic areas fetched successfully",
+      data: areas,
+    });
+  } catch (error) {
+    logger.error(
+      "school_id:",
+      req.user?.school_id,
+      "Error fetching co-scholastic areas:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch co-scholastic areas",
+      details: error.message,
+    });
+  }
+};
+
+const updateCoScholasticArea = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { id } = req.params;
+    const { name, class_group, display_order, status } = req.body;
+
+    const area = await CoScholasticArea.findOne({
+      where: {
+        id,
+        [Op.or]: [{ school_id }, { school_id: null }],
+      },
+    });
+
+    if (!area) {
+      return res.status(404).json({
+        success: false,
+        error: "Co-scholastic area not found",
+      });
+    }
+
+    if (name !== undefined) area.name = name.trim();
+    if (class_group !== undefined) area.class_group = class_group;
+    if (display_order !== undefined) area.display_order = Number(display_order);
+    if (status !== undefined) area.status = Boolean(status);
+
+    await area.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Co-scholastic area updated successfully",
+      data: area,
+    });
+  } catch (error) {
+    logger.error(
+      "school_id:",
+      req.user?.school_id,
+      "Error updating co-scholastic area:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      error: "Failed to update co-scholastic area",
+      details: error.message,
+    });
+  }
+};
+
+const deleteCoScholasticArea = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { id } = req.params;
+
+    const area = await CoScholasticArea.findOne({
+      where: {
+        id,
+        school_id,
+      },
+    });
+
+    if (!area) {
+      return res.status(404).json({
+        success: false,
+        error: "Co-scholastic area not found or cannot be deleted",
+      });
+    }
+
+    await area.destroy();
+
+    return res.status(200).json({
+      success: true,
+      message: "Co-scholastic area deleted successfully",
+    });
+  } catch (error) {
+    logger.error(
+      "school_id:",
+      req.user?.school_id,
+      "Error deleting co-scholastic area:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      error: "Failed to delete co-scholastic area",
+      details: error.message,
+    });
+  }
+};
+
 module.exports = {
   createClass,
   getAllClasses,
@@ -12383,6 +12626,7 @@ module.exports = {
   getAllStudents,
   getStudentById,
   updateStudent,
+  changeStudentGurdianId,
   bulkUpdateStudentsToAlumni,
   bulkUpdateStudentsClass,
   getAlumniStudents,
@@ -12583,4 +12827,9 @@ module.exports = {
   
   getOwnDatasForSchool,
   updateOwnDatasForSchool,
+
+  createCoScholasticArea,
+  getCoScholasticAreas,
+  updateCoScholasticArea,
+  deleteCoScholasticArea,
 };

@@ -234,6 +234,14 @@ router.get(
   "/getLeaveRequestByStudentId/:student_id",
   commonController.getLeaveRequestByStudentId,
 );
+router.get(
+  "/getCompetencyAssesmentByStudentId/:student_id",
+  commonController.getCompetencyAssesmentByStudentId,
+);
+router.get(
+  "/getCoScholasticAssessmentByStudentId/:student_id",
+  commonController.getCoScholasticAssessmentByStudentId,
+);
 
 router.put(
   "/changePassword",
@@ -271,5 +279,8 @@ router.post(
 
 router.get("/getSchoolDetails", commonController.getSchoolDetails);
 router.get("/getExamTitles",commonController.getExamTitles);
+
+router.get("/getCompetencyAssesmentByStudentId/:student_id",
+commonController.getCompetencyAssesmentByStudentId);
 
 module.exports = router;

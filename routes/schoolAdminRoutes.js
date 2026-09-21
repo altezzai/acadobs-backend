@@ -157,6 +157,10 @@ router.put(
   storageUploadMiddleware("students"),
   schoolAdminController.updateStudent,
 );
+router.put(
+  "/changeStudentGurdianId",
+  schoolAdminController.changeStudentGurdianId,
+);
 router.delete("/students/:id", schoolAdminController.deleteStudent);
 router.patch("/students/:id", schoolAdminController.restoreStudent);
 router.delete("/permanentDeleteStudent/:id", schoolAdminController.permanentDeleteStudent);
@@ -655,6 +659,13 @@ schoolAdminController.permanentDeleteTransportationInvoice);
 // CompetencyAssesment
 router.get("/getCompetencyAssesmentByStudentId/:student_id",
 commonController.getCompetencyAssesmentByStudentId);
+
+// Co-Scholastic Areas & Assessment
+router.post("/createCoScholasticArea", schoolAdminController.createCoScholasticArea);
+router.get("/getCoScholasticAreas", schoolAdminController.getCoScholasticAreas);
+router.put("/updateCoScholasticArea/:id", schoolAdminController.updateCoScholasticArea);
+router.delete("/deleteCoScholasticArea/:id", schoolAdminController.deleteCoScholasticArea);
+router.get("/getCoScholasticAssessmentByStudentId/:student_id", commonController.getCoScholasticAssessmentByStudentId);
 // Student Transfer routes
 router.post("/studentTransfer", transferController.adminCreateTransferRequest);
 router.get(
