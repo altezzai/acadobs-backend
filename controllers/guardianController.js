@@ -1455,13 +1455,13 @@ const changeIdentifiersAndName = async (req, res) => {
         },
       });
 
-      if (existingEmail) {
+      if (existingEmail && existingEmail !=="" ) {
         return res
           .status(400)
           .json({ error: "Guardian email already exists in user table" });
       }
       await User.update(
-        { email: guardian_email },
+        { email: guardian_email || null },
         {
           where: { id: userId },
         },

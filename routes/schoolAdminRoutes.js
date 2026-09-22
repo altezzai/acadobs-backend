@@ -20,8 +20,9 @@ router.get("/classes/:id", schoolAdminController.getClassById);
 router.put("/classes/:id", schoolAdminController.updateClass);
 router.delete("/classes/:id", schoolAdminController.deleteClass);
 router.patch("/classes/:id", schoolAdminController.restoreClass);
-router.get("/getSpecialClassesByYear/:year", schoolAdminController.getSpecialClassesByYear); // Get classes by year
-router.get("/getWithOutSpecialClassesByYear/:year", schoolAdminController.getWithOutSpecialClassesByYear); // Get classes by year
+router.get("/getSpecialClassesByYear/:year", schoolAdminController.getSpecialClassesByYear); 
+router.get("/getWithOutSpecialClasses", schoolAdminController.getWithOutSpecialClasses);
+router.get("/getWithOutSpecialClassesByYear/:year", schoolAdminController.getWithOutSpecialClassesByYear);
 router.get("/getTrashedClasses", schoolAdminController.getTrashedClasses);
 router.delete(
   "/permanentDeleteClass/:id",
@@ -160,6 +161,10 @@ router.put(
 router.put(
   "/changeStudentGurdianId",
   schoolAdminController.changeStudentGurdianId,
+);
+router.get(
+  "/getUserGuardian",
+  schoolAdminController.getUserGuardian,
 );
 router.delete("/students/:id", schoolAdminController.deleteStudent);
 router.patch("/students/:id", schoolAdminController.restoreStudent);

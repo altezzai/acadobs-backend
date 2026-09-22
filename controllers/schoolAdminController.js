@@ -262,6 +262,50 @@ const getWithOutSpecialClassesByYear = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getWithOutSpecialClasses= async (req, res) => {
+  try {
+   const school_id=req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const year = req.query.year || null;
+    const division = req.query.division || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    let whereClause = {
+      school_id,
+      trash: false,
+      special:false,
+    };
+    if (searchQuery) {
+      whereClause.classname = { [Op.like]: `%${searchQuery}%` };
+    }
+    if (year) {
+      whereClause.year = year;
+    }
+    if (division) {
+      whereClause.division = division;
+    }
+
+    const { count, rows: classes } = await Class.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      order: [["createdAt", "DESC"]],
+
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      classes,
+    });
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Error fetching special classes:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
 //get trashed classes
 const getTrashedClasses = async (req, res) => {
   try {
@@ -1867,9 +1911,6 @@ const updateGuardian = async (req, res) => {
 
     await guardian.update({
       guardian_relation: normalizeGuardianRelation(guardian_relation),
-      guardian_name,
-      guardian_contact,
-      guardian_email,
       guardian_job,
       guardian2_relation: normalizeGuardianRelation(guardian2_relation),
       guardian2_name,
@@ -1898,9 +1939,9 @@ const updateGuardian = async (req, res) => {
       fileName = fileUrl;
     }
     await user.update({
-      name: guardian.guardian_name,
-      email: guardian.guardian_email,
-      phone: guardian.guardian_contact,
+      name: guardian_name,
+      email: guardian_email || null,
+      phone: guardian_contact,
       dp: fileName,
     });
     //
@@ -2009,6 +2050,51 @@ const checkGuardianAlreadyExist= async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getUserGuardian =async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = (page - 1) * limit;
+    const searchQuery = req.query.q;
+    const whereClause={
+      school_id,
+      trash:false,
+      role:"guardian"
+    }
+ if (searchQuery) {
+        whereClause[Op.or] = [
+        { name: { [Op.like]: `%${searchQuery}%` } },
+        { phone: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const {count ,rows:Guardian} = await User.findAndCountAll({
+      where:whereClause,
+      limit,
+      offset,
+      attributes: ["id", "name", "phone"],
+      order: [["createdAt", "DESC"]],
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    return res.status(200).json({
+      message: "Fetched successfully",
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data:Guardian,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting guardian:",
+      error,
+    );
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // Create Student
 const createStudent = async (req, res) => {
   try {
@@ -12575,6 +12661,7 @@ module.exports = {
   getClassesByYear,
   getSpecialClassesByYear,
   getWithOutSpecialClassesByYear,
+  getWithOutSpecialClasses,
   getTrashedClasses,
   restoreClass,
   permanentDeleteClass,
@@ -12617,6 +12704,7 @@ module.exports = {
   createGuardianService,
   deleteGuardian,
   checkGuardianAlreadyExist,
+  getUserGuardian,
 
   getGuardianBySchoolId,
   updateGuardianUserPassword,
