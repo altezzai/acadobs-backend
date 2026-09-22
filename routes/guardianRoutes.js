@@ -38,6 +38,7 @@ router.put(
   storageUploadMiddleware("payment_attachments"),
   guardianController.updatePayment,
 )
+router.get("/getPaymentById/:id", guardianController.getPaymentById);
 router.post(
   "/createTransportInvoicePayment",
   uploadWithErrorHandler(upload.single("payment_attachment")),
@@ -265,7 +266,6 @@ router.put(
   commonController.updateDp,
 );
 
-router.get("/getPaymentById/:id", commonController.getPaymentById);
 router.get(
   "/getAchievementsBySchool",
   commonController.getAchievementsBySchool,

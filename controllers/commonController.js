@@ -1206,6 +1206,28 @@ const getPaymentByStudnetId = async (req, res) => {
           model: Student,
           attributes: ["id", "full_name", "reg_no", "image"],
         },
+        {
+          model:InvoiceStudent,
+          required:false,
+          attributes:["id"],
+          include:[
+            {
+              model:Invoice,
+              attributes:["title","amount"]
+            }
+          ]
+        },
+        {
+          model:TransportInvoice,
+          required:false,
+          attributes:["id","amount","term","due_date"],
+          include:[
+            {
+              model:Stop,
+              attributes:["stop_name","charge"]
+            }
+          ]
+        }
       ],
     });
     if (!payment || payment.trash)

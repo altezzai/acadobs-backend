@@ -495,6 +495,57 @@ const updatePayment = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 }
+const getPaymentById = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
+    if (!school_id) {
+      return res.status(404).json({ error: "School not found" });
+    }
+
+    const payment = await Payment.findOne({
+      where: { id: req.params.id, school_id, trash: false },
+      include: [
+        {
+          model: Student,
+          where: {
+            guardian_id: user_id,
+          },
+          attributes: ["id", "full_name", "reg_no", "image"],
+        },
+        {
+          model:InvoiceStudent,
+          required:false,
+          attributes:["id"],
+          include:[
+            {
+              model:Invoice,
+              attributes:["title","amount"]
+            }
+          ]
+        },
+        {
+          model:TransportInvoice,
+          required:false,
+          attributes:["id","amount","term","due_date"],
+          include:[
+            {
+              model:Stop,
+              attributes:["stop_name","charge"]
+            }
+          ]
+        }
+      ],
+    });
+    if (!payment)
+      return res.status(404).json({ error: "Payment not found" });
+    res.status(200).json(payment);
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error fetching payment:", error);
+    console.error("Error fetching payment:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
 const createTransportInvoicePayment = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -2178,6 +2229,7 @@ module.exports = {
   getStudentInvoiceById,
   createPayment,
   updatePayment,
+  getPaymentById,
 
   createTransportInvoicePayment,
   getTransportInvoiceByOwnStudentId,
