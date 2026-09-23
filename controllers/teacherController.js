@@ -4266,20 +4266,20 @@ const markSelfAttendance = async (req, res) => {
   try {
     const staff_id = req.user.user_id;
     const school_id = req.user.school_id;
-    const { remarks, latitude, longitude,marked_device_id } = req.body;
+    const role = (req.user.role || "").toLowerCase();
+    const { remarks, latitude, longitude, marked_device_id } = req.body;
     const date = new Date().toISOString().split("T")[0];
 
-      const existing = await StaffAttendance.findOne({
+    const existing = await StaffAttendance.findOne({
       where: { staff_id, school_id, date, trash: false },
     });
    
     if (existing) {
-       if (existing.status === "Leave") {
-      return res
-        .status(400)
-        .json({ message: "You are on leave" });
-      
-    }
+      if (existing.status === "Leave") {
+        return res
+          .status(400)
+          .json({ message: "You are on leave" });
+      }
       return res
         .status(400)
         .json({ message: "Attendance already marked for today" });
@@ -4312,12 +4312,40 @@ const markSelfAttendance = async (req, res) => {
       });
     }
 
+    const now = new Date();
+    let status = "Present";
+
+    const expectedCheckInTime =
+      role === "teacher"
+        ? school.teacher_check_in_time
+        : school.staff_check_in_time;
+
+    if (expectedCheckInTime) {
+      const expectedMoment = moment(expectedCheckInTime, [
+        "HH:mm:ss",
+        "HH:mm",
+        "YYYY-MM-DD HH:mm:ss",
+      ]);
+      if (expectedMoment.isValid()) {
+        const threshold = moment().set({
+          hour: expectedMoment.hour(),
+          minute: expectedMoment.minute(),
+          second: expectedMoment.second(),
+          millisecond: 0,
+        });
+
+        if (moment().isAfter(threshold)) {
+          status = "Late";
+        }
+      }
+    }
+
     const newAttendance = await StaffAttendance.create({
       school_id,
       staff_id,
       date,
-      status:"Present",
-      check_in_time: new Date(),
+      status,
+      check_in_time: now,
       marked_by: staff_id,
       marked_method: "Self",
       remarks,
@@ -4339,17 +4367,6 @@ const markSelfAttendance = async (req, res) => {
       error,
     );
     logger.error("Error marking attendance show the veriable:", error.message);
-    console.error("Error marking attendance:",
-       staff_id,
-      date,
-      status,
-      "check_in_time:", new Date(),
-      "marked_by:" ,staff_id,
-      "marked_method:", marked_method,
-      remarks,
-      "latitude:", latitude,
-      "longitude:", longitude
-    );
     res.status(500).json({ error: "Failed to mark attendance" });
   }
 };

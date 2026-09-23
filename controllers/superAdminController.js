@@ -29,6 +29,11 @@ const createSchool = async (req, res) => {
       pass_percent,
       primary_colour,
       secondary_colour,
+      payment_section,
+      transpotation_section,
+      ai_section,
+      staff_check_in_time,
+      teacher_check_in_time,
     } = req.body;
     if (!name || !email || !phone || !admin_password) {
       return res.status(400).json({ error: "Required fields are missing" });
@@ -70,6 +75,11 @@ const createSchool = async (req, res) => {
       bg_image: bgImageUrl,
       primary_colour,
       secondary_colour,
+      payment_section,
+      transpotation_section,
+      ai_section,
+      staff_check_in_time,
+      teacher_check_in_time,
     }, { transaction });
 
     const hashedPassword = await bcrypt.hash(admin_password, 10);
@@ -155,6 +165,9 @@ const updateSchool = async (req, res) => {
       pass_percent,
       primary_colour,
       secondary_colour,
+      payment_section,
+      transpotation_section,
+      ai_section,
     } = req.body;
 
     const school = await School.findByPk(id);
@@ -186,7 +199,7 @@ const updateSchool = async (req, res) => {
       phone,
       address,
       period_count,
-      logo: finalLogo,
+      logo: finalLogo,  
       bg_image: finalBgImage,
       status,
       syllabus_id,
@@ -196,6 +209,11 @@ const updateSchool = async (req, res) => {
       pass_percent,
       primary_colour,
       secondary_colour,
+      payment_section,
+      transpotation_section,
+      ai_section,
+      staff_check_in_time,
+      teacher_check_in_time,
     });
     await User.update(
       {

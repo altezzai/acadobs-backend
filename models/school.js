@@ -188,6 +188,16 @@ const School = schoolSequelize.define(
       allowNull: true,
       defaultValue: false,
     },
+    staff_check_in_time: {
+      type: DataTypes.TIME,
+      allowNull: true,
+      defaultValue: null,
+    },
+    teacher_check_in_time: {
+      type: DataTypes.TIME,
+      allowNull: true,
+      defaultValue: null,
+    },
 
     trash: {
       type: DataTypes.BOOLEAN,
