@@ -706,6 +706,7 @@ const createTransportInvoicePayment = async (req, res) => {
       ],
       offset,
       limit,
+      order:[["createdAt", "DESC"]]
     });
     
    const totalPages = Math.ceil(count / limit);

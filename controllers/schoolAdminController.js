@@ -1666,9 +1666,9 @@ const createGuardian = async (req, res) => {
     const guardian = await Guardian.create({
       user_id: user.id,
       guardian_relation,
-      guardian_name,
-      guardian_contact: normalizeGuardianRelation(guardian_relation),
-      guardian_email,
+      // guardian_name,
+      // guardian_contact: normalizeGuardianRelation(guardian_relation),
+      // guardian_email,
       guardian_job,
       guardian2_relation: normalizeGuardianRelation(guardian2_relation),
       guardian2_name,
@@ -1757,9 +1757,9 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
     await Guardian.create({
       user_id: user.id,
       guardian_relation: normalizeGuardianRelation(guardian_relation),
-      guardian_name,
-      guardian_contact,
-      guardian_email,
+      // guardian_name,
+      // guardian_contact,
+      // guardian_email,
       guardian_job,
       guardian2_relation: normalizeGuardianRelation(guardian2_relation),
       guardian2_name,
@@ -1841,6 +1841,12 @@ const getGuardianById = async (req, res) => {
         id,
         trash: false,
       },
+      include:[
+        {
+          model: User,
+          attributes: ["name", "email", "phone", "dp"],
+        },
+      ],
     });
     res.status(200).json(guardians);
   } catch (error) {
@@ -9870,6 +9876,7 @@ const bulkCreateStaffAttendance = async (req, res) => {
     const school_id = req.user.school_id;
     const admin_id = req.user.user_id;
     const records = req.body.records;
+
     if (!records || !Array.isArray(records) || records.length === 0) {
       return res
         .status(400)
@@ -9877,75 +9884,120 @@ const bulkCreateStaffAttendance = async (req, res) => {
     }
 
     const processedRecords = [];
+
     for (const record of records) {
-      const { staff_id, date, status, remarks } = record;
-      // check the staff id is the same school
+      const {
+        staff_id,
+        date,
+        status,
+        remarks,
+        check_in_time,
+        check_out_time,
+      } = record;
+
+      if (!staff_id || !date) {
+        processedRecords.push({
+          staff_id,
+          date,
+          status: "Skipped",
+          message: "staff_id and date are required",
+        });
+        continue;
+      }
+
       const staff = await User.findOne({
         where: {
           id: staff_id,
           school_id,
           trash: false,
-          role: { [Op.in]: ["teacher", "staff"] },
+          role: {
+            [Op.in]: ["teacher", "staff"],
+          },
         },
       });
+
       if (!staff) {
-        return res.status(404).json({ error: "Staff not found" });
-      }
-
-      const check_in_time =
-        record.check_in_time || record.status === "present"
-          ? new Date().toISOString()
-          : null;
-      const check_out_time = record.check_out_time || null;
-      if (!staff_id || !date) continue;
-
-      const existing = await StaffAttendance.findOne({
-        where: { school_id, staff_id, date, trash: false },
-      });
-      if (existing) {
         processedRecords.push({
           staff_id,
-          school_id,
           date,
           status: "Skipped",
-          message: "Attendance already exists for this staff on the date",
+          message: "Staff not found",
         });
         continue;
       }
 
+      const attendanceStatus = status || "present";
+
+      const finalCheckInTime =
+        check_in_time ||
+        (attendanceStatus.toLowerCase() === "present"
+          ? new Date().toISOString()
+          : null);
+
+      const finalCheckOutTime = check_out_time || null;
+
       let total_hours = null;
-      if (check_in_time && check_out_time) {
+
+      if (finalCheckInTime && finalCheckOutTime) {
         const diff =
-          (new Date(check_out_time) - new Date(check_in_time)) /
+          (new Date(finalCheckOutTime) - new Date(finalCheckInTime)) /
           (1000 * 60 * 60);
-        total_hours = diff.toFixed(2);
+
+        total_hours = diff >= 0 ? diff.toFixed(2) : null;
       }
+
+      const existing = await StaffAttendance.findOne({
+        where: {
+          school_id,
+          staff_id,
+          date,
+          trash: false,
+        },
+      });
+
       const attendanceData = {
         school_id,
         staff_id,
         date,
-        status: status || "Present",
-        check_in_time:
-          check_in_time || status === "present"
-            ? new Date().toISOString()
-            : null,
-        check_out_time,
+        status: attendanceStatus,
+        check_in_time: finalCheckInTime,
+        check_out_time: finalCheckOutTime,
         total_hours,
         marked_by: admin_id,
         marked_method: "Manual",
-        remarks,
+        remarks: remarks || null,
       };
 
-      await StaffAttendance.create(attendanceData);
-      processedRecords.push({
-        staff_id,
-        date,
-        status: "Added",
-        message: "Attendance marked successfully",
-      });
+      if (existing) {
+        await existing.update({
+          status: attendanceData.status,
+          check_in_time: attendanceData.check_in_time,
+          check_out_time: attendanceData.check_out_time,
+          total_hours: attendanceData.total_hours,
+          marked_by: attendanceData.marked_by,
+          marked_method: attendanceData.marked_method,
+          remarks: attendanceData.remarks,
+        });
+
+        processedRecords.push({
+          staff_id,
+          date,
+          status: "Updated",
+          message: "Attendance updated successfully",
+        });
+      } else {
+        await StaffAttendance.create(attendanceData);
+
+        processedRecords.push({
+          staff_id,
+          date,
+          status: "Added",
+          message: "Attendance created successfully",
+        });
+      }
     }
 
-    res.status(201).json({
+    return res.status(200).json({
       message: "Bulk attendance processing completed",
       results: processedRecords,
     });
@@ -9953,11 +10005,15 @@ const bulkCreateStaffAttendance = async (req, res) => {
     logger.error(
       "schoolId:",
       req.user.school_id,
-      "Bulk attendance creation error:",
-      error,
+      "Bulk attendance creation/update error:",
+      error
     );
-    console.error("Bulk attendance creation error:", error);
-    res.status(500).json({ error: "Failed to process bulk attendance" });
+
+    console.error("Bulk attendance creation/update error:", error);
+
+    return res.status(500).json({
+      error: "Failed to process bulk attendance",
+    });
   }
 };
 const deleteStaffAttendance = async (req, res) => {
