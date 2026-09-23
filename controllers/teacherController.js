@@ -5312,40 +5312,55 @@ const deleteCompetencyAssessment = async (req, res) => {
   }
 };
 
-const getCoScholasticAreas = async (req, res) => {
+
+const getCoScholasticAreasListByStudentId = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const { class_group, status } = req.query;
+    const id = req.params.id;
+
+    const student = await Student.findOne({
+      where: {
+        id,
+        school_id,
+      },
+      attributes: ["id", "class_id"],
+      include: [
+        {
+          model: Class,
+          attributes: ["id", "classname", "year"],
+        },
+      ],
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: "Student not found",
+      });
+    }
+    const school = await School.findOne({
+      where: {
+        id: school_id,
+      },
+      attributes: ["id", "syllabus_id"],
+    });
+    const syllabus_id = school?.syllabus_id || null;
 
     const whereClause = {
       [Op.or]: [{ school_id: school_id }, { school_id: null }],
     };
-
-    if (status !== undefined) {
-      whereClause.status =
-        status === "true" || status === true || status === 1 || status === "1";
-    } else {
-      whereClause.status = true;
+    
+    if (syllabus_id) {
+      whereClause[Op.or].push({ syllabus_id: syllabus_id }, { syllabus_id: null });
     }
 
-    if (class_group) {
-      whereClause[Op.and] = [
-        ...(whereClause[Op.and] || []),
-        {
-          [Op.or]: [
-            { class_group: class_group },
-            { class_group: "All" },
-            { class_group: null },
-          ],
-        },
-      ];
-    }
 
     const areas = await CoScholasticArea.findAll({
       where: whereClause,
       attributes: [
         "id",
         "school_id",
+        "syllabus_id",
         "name",
         "class_group",
         "display_order",
@@ -5357,10 +5372,22 @@ const getCoScholasticAreas = async (req, res) => {
       ],
     });
 
+    const studentYear = student.Class?.year;
+
+    const filteredAreas = areas.filter((area) => {
+      const group = area.class_group;
+      if (!group || group.trim().toLowerCase() === "all") return true;
+      if (studentYear === null || studentYear === undefined) return false;
+      return group
+        .split(",")
+        .map((s) => s.trim())
+        .includes(String(studentYear));
+    });
+
     return res.status(200).json({
       success: true,
       message: "Co-scholastic areas fetched successfully",
-      data: areas,
+      data: filteredAreas,
     });
   } catch (error) {
     logger.error(
@@ -5834,7 +5861,7 @@ module.exports = {
   bulkUpdateCompetencyAssessmentbyStudentIdandExamId,
   deleteCompetencyAssessment,
 
-  getCoScholasticAreas,
+  getCoScholasticAreasListByStudentId,
   createStudentCoScholasticAssessment,
   getCoScholasticAssessmentbyStudentIdandExamId,
   bulkUpdateCoScholasticAssessmentbyStudentIdandExamId,

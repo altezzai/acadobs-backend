@@ -2048,10 +2048,9 @@ const checkGuardianAlreadyExist= async (req, res) => {
       where: {phone, trash: false ,role:"guardian"},
       attributes: ["id", "name", "phone"],
     });
-    if (!user) {
-      return res.status(404).json({ error: "Guardian not found" });
-    }
-    res.status(200).json({ user });
+    res.status(200).json({ 
+      status:user?true:false,
+      user });
   } catch (error) {
     logger.error(
       "schoolId:",
