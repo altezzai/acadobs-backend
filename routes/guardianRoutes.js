@@ -149,7 +149,7 @@ router.put(
 router.put(
   "/changeIdentifiersAndName",
   [
-    body("guardian_email").optional().isEmail().normalizeEmail(),
+    body("guardian_email").optional({ values: "falsy" }).isEmail(),
     body("guardian_name").optional().isString().trim().escape(),
     body("guardian_contact").optional().isString().trim().escape(),
   ],

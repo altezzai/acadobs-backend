@@ -280,7 +280,7 @@ const getStudentInvoiceById = async (req, res) => {
         payment_status: "completed",
       },
     });
-    const pendingAmount = invoice.amount - totalAmountPaid;
+    const pendingAmount =  invoice.Invoice.amount - totalAmountPaid;
     res.status(200).json({
       totalAmountPaid: totalAmountPaid,
       pendingAmount: pendingAmount,
@@ -729,6 +729,7 @@ const createTransportInvoicePayment = async (req, res) => {
   const getTransportInvoiceById= async (req, res) => {
     try {
       const id = req.params.id;
+      const user_id=req.user.user_id;
       const school_id = req.user.school_id;
       const transportInvoice = await TransportInvoice.findOne({
       where: { id: id, school_id: school_id },
@@ -745,6 +746,11 @@ const createTransportInvoicePayment = async (req, res) => {
             },
           ],
         },
+        {
+          model:Student,
+          where:{guardian_id:user_id},
+          attributes:["id","full_name"]
+        }
       ],
     });
     if (!transportInvoice) {
@@ -1427,8 +1433,8 @@ const changeIdentifiersAndName = async (req, res) => {
     const userId = req.user.user_id;
     const { guardian_email, guardian_name, guardian_contact } = req.body;
 
-    const guardian = await Guardian.findOne({
-      where: { user_id: userId },
+    const guardian = await User.findOne({
+      where: { id: userId,role:"guardian" },
     });
 
     if (!guardian) return res.status(404).json({ error: "Guardian not found" });
@@ -1455,18 +1461,18 @@ const changeIdentifiersAndName = async (req, res) => {
         },
       });
 
-      if (existingEmail && existingEmail !=="@" || existingEmail !=="" ) {
+      if (existingEmail ) {
         return res
           .status(400)
           .json({ error: "Guardian email already exists in user table" });
       }
-      await User.update(
+    }
+    await User.update(
         { email: guardian_email || null },
         {
           where: { id: userId },
         },
       );
-    }
     if (guardian_name) {
       await User.update(
         { name: guardian_name },
