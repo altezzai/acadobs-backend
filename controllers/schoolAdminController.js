@@ -9878,12 +9878,33 @@ const bulkCreateStaffAttendance = async (req, res) => {
     const records = req.body.records;
 
     if (!records || !Array.isArray(records) || records.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "No attendance records provided" });
+      return res.status(400).json({
+        message: "No attendance records provided",
+      });
     }
 
-    const processedRecords = [];
+    const staffIds = records
+      .map((record) => record.staff_id)
+      .filter(Boolean);
+
+    const staffs = await User.findAll({
+      where: {
+        id: {
+          [Op.in]: staffIds,
+        },
+        school_id,
+        trash: false,
+        role: {
+          [Op.in]: ["teacher", "staff"],
+        },
+      },
+      attributes: ["id"],
+    });
+
+    const validStaffIds = new Set(staffs.map((staff) => staff.id));
+
+    const attendanceRecords = [];
+    const results = [];
 
     for (const record of records) {
       const {
@@ -9896,7 +9917,7 @@ const bulkCreateStaffAttendance = async (req, res) => {
       } = record;
 
       if (!staff_id || !date) {
-        processedRecords.push({
+        results.push({
           staff_id,
           date,
           status: "Skipped",
@@ -9905,19 +9926,8 @@ const bulkCreateStaffAttendance = async (req, res) => {
         continue;
       }
 
-      const staff = await User.findOne({
-        where: {
-          id: staff_id,
-          school_id,
-          trash: false,
-          role: {
-            [Op.in]: ["teacher", "staff"],
-          },
-        },
-      });
-
-      if (!staff) {
-        processedRecords.push({
+      if (!validStaffIds.has(Number(staff_id))) {
+        results.push({
           staff_id,
           date,
           status: "Skipped",
@@ -9926,12 +9936,12 @@ const bulkCreateStaffAttendance = async (req, res) => {
         continue;
       }
 
-      const attendanceStatus = status || "present";
+      const attendanceStatus = (status || "present").toLowerCase();
 
       const finalCheckInTime =
         check_in_time ||
-        (attendanceStatus.toLowerCase() === "present"
-          ? new Date().toISOString()
+        (attendanceStatus === "present"
+          ? new Date()
           : null);
 
       const finalCheckOutTime = check_out_time || null;
@@ -9940,22 +9950,14 @@ const bulkCreateStaffAttendance = async (req, res) => {
 
       if (finalCheckInTime && finalCheckOutTime) {
         const diff =
-          (new Date(finalCheckOutTime) - new Date(finalCheckInTime)) /
+          (new Date(finalCheckOutTime) -
+            new Date(finalCheckInTime)) /
           (1000 * 60 * 60);
 
         total_hours = diff >= 0 ? diff.toFixed(2) : null;
       }
 
-      const existing = await StaffAttendance.findOne({
-        where: {
-          school_id,
-          staff_id,
-          date,
-          trash: false,
-        },
-      });
-
-      const attendanceData = {
+      attendanceRecords.push({
         school_id,
         staff_id,
         date,
@@ -9966,50 +9968,55 @@ const bulkCreateStaffAttendance = async (req, res) => {
         marked_by: admin_id,
         marked_method: "Manual",
         remarks: remarks || null,
-      };
-
-      if (existing) {
-        await existing.update({
-          status: attendanceData.status,
-          check_in_time: attendanceData.check_in_time,
-          check_out_time: attendanceData.check_out_time,
-          total_hours: attendanceData.total_hours,
-          marked_by: attendanceData.marked_by,
-          marked_method: attendanceData.marked_method,
-          remarks: attendanceData.remarks,
-        });
-
-        processedRecords.push({
-          staff_id,
-          date,
-          status: "Updated",
-          message: "Attendance updated successfully",
-        });
-      } else {
-        await StaffAttendance.create(attendanceData);
-
-        processedRecords.push({
-          staff_id,
-          date,
-          status: "Added",
-          message: "Attendance created successfully",
-        });
-      }
+        trash: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
     }
 
+    if (attendanceRecords.length === 0) {
+      return res.status(400).json({
+        message: "No valid attendance records to process",
+        results,
+      });
+    }
+
+    await StaffAttendance.bulkCreate(attendanceRecords, {
+      updateOnDuplicate: [
+        "status",
+        "check_in_time",
+        "check_out_time",
+        "total_hours",
+        "marked_by",
+        "marked_method",
+        "remarks",
+        "trash",
+        "updatedAt",
+      ],
+    });
+
+    attendanceRecords.forEach((record) => {
+      results.push({
+        staff_id: record.staff_id,
+        date: record.date,
+        status: "Processed",
+        message: "Attendance created or updated successfully",
+      });
+    });
+
     return res.status(200).json({
-      message: "Bulk attendance processing completed",
-      results: processedRecords,
+      message: "Bulk attendance processed successfully",
+      results,
     });
   } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
-      "Bulk attendance creation/update error:",
+      "Bulk attendance upsert error:",
       error
     );
 
-    console.error("Bulk attendance creation/update error:", error);
+    console.error("Bulk attendance upsert error:", error);
 
     return res.status(500).json({
       error: "Failed to process bulk attendance",
