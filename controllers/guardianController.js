@@ -1475,11 +1475,6 @@ const changeIdentifiersAndName = async (req, res) => {
         },
       );
     }
-    await guardian.update({
-      guardian_email,
-      guardian_name,
-      guardian_contact,
-    });
     res.status(200).json({ message: "Guardian Identifiers updated", guardian });
   } catch (error) {
     logger.error(

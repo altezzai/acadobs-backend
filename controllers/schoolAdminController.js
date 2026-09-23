@@ -1791,20 +1791,26 @@ const getAllGuardians = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    let whereClause = {
+      trash: false,
+      school_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { name: { [Op.like]: `%${searchQuery}%` } },
+        { phone: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
 
     const { count, rows: guardians } = await Guardian.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: {
-        guardian_name: { [Op.like]: `%${searchQuery}%` },
-        trash: false,
-      },
       include: [
         {
           model: User,
+          where:whereClause,
           attributes: ["name", "email", "phone", "dp"],
-          where: { school_id },
         },
       ],
       order: [["createdAt", "DESC"]],
@@ -2829,12 +2835,6 @@ const updateStudent = async (req, res) => {
         }
 
         await guardian.update({
-          guardian_name: guardian_name || guardian.guardian_name,
-          guardian_contact: guardian_contact || guardian.guardian_contact,
-          guardian_email:
-            guardian_email !== undefined
-              ? guardian_email
-              : guardian.guardian_email,
           guardian_relation: guardian_relation
             ? normalizeGuardianRelation(guardian_relation)
             : guardian.guardian_relation,
@@ -2869,7 +2869,6 @@ const updateStudent = async (req, res) => {
           country: country !== undefined ? country : guardian.country,
           post: post !== undefined ? post : guardian.post,
           pincode: pincode !== undefined ? pincode : guardian.pincode,
-          dp: guardianDpFilename,
         });
 
         // Sync guardian User record
@@ -5038,9 +5037,26 @@ const getPaymentById = async (req, res) => {
           as: "updated",
           attributes: ["id", "name"],
         },
+        {
+          model: InvoiceStudent,
+          attributes: ["id", "status"],
+          required:false,
+          include: [
+            {
+              model: Invoice,
+              attributes: ["id", "title", "category","description","amount","due_date"],
+              required: false,
+            },
+          ],
+        },
+        {
+          model: TransportInvoice,
+          attributes: ["id", "term","amount","due_date","status"],
+          required:false,
+        },
       ],
     });
-    if (!payment || payment.trash)
+    if (!payment)
       return res.status(404).json({ error: "Payment not found" });
     res.status(200).json(payment);
   } catch (error) {
@@ -5962,32 +5978,115 @@ const getAllInvoices = async (req, res) => {
 const getInvoiceById = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const invoice = await Invoice.findOne({
-      where: { id: req.params.id, school_id, trash: false },
+    const id = req.params.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const status = req.query.status || "";
+    const searchQuery = req.query.q || "";
+    const whereClause = {
+      id ,
+      trash: false,
+      school_id: school_id,
+    };
+      const invoice = await Invoice.findOne({
+      where: whereClause,
+      attributes:["id","title","description","amount","due_date","category"],
+    });
+    if (!invoice) return res.status(404).json({ error: "Invoice not found" });
+    const whereClause2 = {
+      invoice_id:id,
+    }
+    if(status){
+      whereClause2.status = status;
+    }
+    const {count, rows: invoiceStudent} = await InvoiceStudent.findAndCountAll({
+      where: whereClause2,
+      offset,
+      limit,
+      attributes:["id","student_id","status"],
       include: [
         {
-          model: InvoiceStudent,
+          model: Student,
+          attributes: ["id", "full_name", "reg_no"],
+          where: {
+            [Op.or]: [
+              { full_name: { [Op.like]: `%${searchQuery}%` } },
+              { reg_no: { [Op.like]: `%${searchQuery}%` } },
+            ],
+          },
           include: [
             {
-              model: Student,
-              attributes: ["id", "full_name", "reg_no"],
-              include: [
-                {
-                  model: Class,
-                  attributes: ["id", "classname", "year", "division"],
-                },
-              ],
+              model: Class,
+              attributes: ["id", "classname", "year", "division"],
             },
           ],
         },
       ],
+    })
+  
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      invoice,
+      invoiceStudent,      
     });
-    if (!invoice) return res.status(404).json({ error: "Invoice not found" });
-    res.status(200).json(invoice);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+const getUnPaidStudentsInvoiceByInvoiceId = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const id = req.params.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const searchQuery = req.query.q || ""
+    const whereClause = {
+      invoice_id:id,
+      status:{[Op.ne]:"paid"}
+    }
+   
+    const {count, rows: invoiceStudent} = await InvoiceStudent.findAndCountAll({
+      where: whereClause,
+      offset,
+      limit,
+      attributes:["id","student_id","status"],
+      include: [
+        {
+          model: Student,
+          where: {
+            trash: false,
+            school_id,
+            [Op.or]: [
+              { full_name: { [Op.like]: `%${searchQuery}%` } },
+              { reg_no: { [Op.like]: `%${searchQuery}%` } },
+            ],
+          },
+          attributes: ["id", "full_name", "reg_no"],
+          include: [
+            {
+              model: Class,
+              attributes: ["id", "classname", "year", "division"],
+            },
+          ],
+        },
+      ],
+    })
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      invoiceStudent,      
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};  
 const updateInvoice = async (req, res) => {
   try {
     const { id } = req.params;
@@ -12771,6 +12870,7 @@ module.exports = {
   addInvoiceStudentsbyInvoiceId,
   getAllInvoices,
   getInvoiceById,
+  getUnPaidStudentsInvoiceByInvoiceId,
   updateInvoice,
   getPendingAmountByInvoiceStudentId,
   deleteInvoice,

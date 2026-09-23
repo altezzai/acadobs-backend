@@ -288,6 +288,10 @@ router.post(
 );
 router.get("/invoices", schoolAdminController.getAllInvoices);
 router.get("/invoices/:id", schoolAdminController.getInvoiceById);
+router.get(
+  "/getUnPaidStudentsInvoiceByInvoiceId/:id",
+  schoolAdminController.getUnPaidStudentsInvoiceByInvoiceId,
+);
 router.get("/getPendingAmountByInvoiceStudentId/:id", schoolAdminController.getPendingAmountByInvoiceStudentId);
 router.put("/invoices/:id", schoolAdminController.updateInvoice);
 router.delete("/invoices/:id", schoolAdminController.deleteInvoice);
