@@ -1455,7 +1455,7 @@ const changeIdentifiersAndName = async (req, res) => {
         },
       });
 
-      if (existingEmail && existingEmail !=="" ) {
+      if (existingEmail && existingEmail !=="@" || existingEmail !=="" ) {
         return res
           .status(400)
           .json({ error: "Guardian email already exists in user table" });
@@ -2261,8 +2261,6 @@ module.exports = {
 
   getAchievementById,
   getRoutesForGuardian,
-  // getExamsByStudentId,
-  // getExamMarksByStudentId,
   getGuardianRouteCount,
   
   getStopsByRouteId,

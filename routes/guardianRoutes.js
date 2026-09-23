@@ -4,6 +4,7 @@ const guardianController = require("../controllers/guardianController");
 const commonController = require("../controllers/commonController");
 const trackerController = require("../controllers/trackerController");
 const transferController = require("../controllers/transferController");
+const selectionListController = require("../controllers/selectionListController");
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { body, param } = require("express-validator");
 const { validate } = require("../middlewares/validateMiddleware");
@@ -79,7 +80,6 @@ router.put(
   guardianController.updateLeaveRequest,
 );
 router.delete("/leaveRequest/:id", guardianController.deleteLeaveRequest);
-router.get("/getLeaveTypes", commonController.getLeaveTypes);
 
 router.get("/getSchoolsByUser", guardianController.getSchoolsByUser);
 router.get("/getSchoolById/:id", guardianController.getSchoolById);
@@ -277,10 +277,14 @@ router.post(
   commonController.accountDeleteRequests,
 );
 
-router.get("/getSchoolDetails", commonController.getSchoolDetails);
-router.get("/getExamTitles",commonController.getExamTitles);
-
 router.get("/getCompetencyAssesmentByStudentId/:student_id",
 commonController.getCompetencyAssesmentByStudentId);
+router.get("/getSchoolDetails", commonController.getSchoolDetails);
+//selection list controller
+router.get("/getExamTitles",selectionListController.getExamTitles);
+router.get("/getLeaveTypes", selectionListController.getLeaveTypes);
+router.get("/getPaymentCategories",selectionListController.getPaymentCategories);
+router.get("/getGuardianRelations",selectionListController.getGuardianRelations);
+
 
 module.exports = router;

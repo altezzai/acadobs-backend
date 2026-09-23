@@ -6,6 +6,7 @@ const commonController = require("../controllers/commonController");
 const reportController = require("../controllers/reportController");
 const transferController = require("../controllers/transferController");
 const publicController = require("../controllers/publicController");
+const selectionListController = require("../controllers/selectionListController");
 
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
@@ -755,12 +756,14 @@ router.get(
 router.get("/getStudents", commonController.getStudents);
 
 router.get("/getAllDriverUsers", commonController.getAllDriverUsers);
-router.get("/getLeaveTypes", commonController.getLeaveTypes);
+router.get("/getLeaveTypes", selectionListController.getLeaveTypes);
 router.get("/getMyProfileAndSchoolDetails",commonController.getMyProfileAndSchoolDetails);
-router.get("/getExamTitles",commonController.getExamTitles);
+router.get("/getExamTitles",selectionListController.getExamTitles);
 router.put("/changePassword", commonController.changePassword);
 
-router.get("/getTermTypeForTransportationInvoice",commonController.getTermTypeForTransportationInvoice);
-router.get("/getClassRangeForSubject",commonController.getClassRangeForSubject);
+router.get("/getTermTypeForTransportationInvoice",selectionListController.getTermTypeForTransportationInvoice);
+router.get("/getClassRangeForSubject",selectionListController.getClassRangeForSubject);
+router.get("/getPaymentCategories",selectionListController.getPaymentCategories);
+router.get("/getGuardianRelations",selectionListController.getGuardianRelations);
 
 module.exports = router;

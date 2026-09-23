@@ -3,6 +3,7 @@ const router = express.Router();
 const teacherController = require("../controllers/teacherController");
 const commonController = require("../controllers/commonController");
 const reportController = require("../controllers/reportController");
+const selectionListController = require("../controllers/selectionListController");
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
 
@@ -214,7 +215,6 @@ router.put(
 );
 router.delete("/leaveRequest/:id", teacherController.deleteLeaveRequest);
 router.patch("/leaveRequest/:id", teacherController.restoreLeaveRequest);
-router.get("/getLeaveTypes", commonController.getLeaveTypes);
 
 //student leave request for class teacher
 router.get(
@@ -365,6 +365,8 @@ router.get(
   commonController.getAchievementById,
 );
 router.get("/getMyProfileAndSchoolDetails",commonController.getMyProfileAndSchoolDetails);
-router.get("/getExamTitles",commonController.getExamTitles);
+
+router.get("/getExamTitles",selectionListController.getExamTitles);
+router.get("/getLeaveTypes", selectionListController.getLeaveTypes);
 
 module.exports = router;
