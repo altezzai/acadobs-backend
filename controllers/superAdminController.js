@@ -168,6 +168,8 @@ const updateSchool = async (req, res) => {
       payment_section,
       transpotation_section,
       ai_section,
+      staff_check_in_time,
+      teacher_check_in_time,
     } = req.body;
 
     const school = await School.findByPk(id);
