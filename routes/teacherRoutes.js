@@ -25,11 +25,12 @@ const staffAllowedRoutes = [
   "/todayAttendanceStatus",
   "/markSelfAttendance",
   "/markCheckOutSelfAttendance",
+  "/getMyStaffAttendance",
   "/getProfileDetails",
   "/updateProfileDetails",
   "/changePassword",
   "/updateDp",
-  "/getMyPrfileAndSchoolDetails"
+  "/getMyPrfileAndSchoolDetails",
 ];
 
 router.use(verifyTeacherOrStaff);
@@ -259,14 +260,15 @@ router.get("/getMyClassTodayTimetable", teacherController.getMyClassTodayTimetab
 router.get("/getMyClassAllDayTimetable", teacherController.getMyClassAllDayTimetable);
 
 router.get("/getNavigationBarCounts", teacherController.getNavigationBarCounts);
-
+//staff attendance
 router.post("/markSelfAttendance", teacherController.markSelfAttendance);
 router.put(
   "/markCheckOutSelfAttendance",
   teacherController.markCheckOutSelfAttendance,
 );
 router.get("/todayAttendanceStatus", teacherController.todayAttendanceStatus);
-
+router.get("/getMyStaffAttendance", teacherController.getMyStaffAttendance);
+//profile
 router.put(
   "/updateProfileDetails",
   uploadWithErrorHandler(upload.single("dp")),
@@ -275,6 +277,7 @@ router.put(
 );
 router.get("/getProfileDetails", teacherController.getProfileDetails);
 
+//subject
 router.get("/getSubjects", teacherController.getSubjects);
 router.get("/getStaffSubjects", teacherController.getStaffSubjects);
 

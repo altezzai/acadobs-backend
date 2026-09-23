@@ -89,6 +89,8 @@ StaffPermission.belongsTo(User, { foreignKey: "user_id" });
 User.hasOne(StaffPermission, { foreignKey: "user_id" });
 
 StaffAttendance.belongsTo(User, { foreignKey: "staff_id" });
+StaffAttendance.belongsTo(User, { foreignKey: "marked_by",as:"markedBy" });
+
 User.hasOne(StaffAttendance, { foreignKey: "staff_id" });
 
 staffsubject.belongsTo(Staff, { foreignKey: "staff_id" });

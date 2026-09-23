@@ -4461,6 +4461,55 @@ const todayAttendanceStatus = async (req, res) => {
       .json({ error: "Failed to fetch today's attendance status" });
   }
 };
+const getMyStaffAttendance = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const staff_id = req.user.user_id;
+    const date = req.query.date || "";
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {school_id, staff_id, trash: false};
+    if (date) {
+      whereClause.date = date;
+    }
+    const { count, rows: attendanceRecords } = await StaffAttendance.findAndCountAll({
+      where:whereClause,
+      attributes:[
+        "id",
+        "school_id",
+        "staff_id",
+        "date",
+        "status",
+        "check_in_time",
+        "check_out_time",
+        "total_hours",
+        "marked_method",
+        "remarks",
+        "marked_device_id",
+      ],
+      limit,
+      offset,
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data:attendanceRecords,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching my staff attendance:",
+      error,
+    );
+    console.error("Error fetching my staff attendance:", error);
+    res.status(500).json({ error: "Failed to fetch my staff attendance" });
+  }
+};
 const updateProfileDetails = async (req, res) => {
   try {
     const user_id = req.user.user_id;
@@ -5746,6 +5795,7 @@ module.exports = {
   markSelfAttendance,
   markCheckOutSelfAttendance,
   todayAttendanceStatus,
+  getMyStaffAttendance,
 
   updateProfileDetails,
   getProfileDetails,
