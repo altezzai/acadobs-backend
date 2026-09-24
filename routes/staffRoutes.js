@@ -633,6 +633,8 @@ router.get("/getSchoolsList", publicController.getSchoolsList);
 //teacher controller
 router.get("/getMyPermissions", teacherController.getMyPermissions);
 //common Controller
+router.get("/getCompetencyAssesmentByStudentId/:student_id",
+commonController.getCompetencyAssesmentByStudentId);
 router.get("/getAllDriverUsers",  transportationPermission,
  commonController.getAllDriverUsers);
 
