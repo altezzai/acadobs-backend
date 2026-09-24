@@ -576,12 +576,6 @@ router.get(
 );
 
 router.post(
-  "/driver",
-  uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
-  storageUploadMiddleware("drivers"),
-  schoolAdminController.createDriver,
-);
-router.post(
   "/vehicle",
   uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
   storageUploadMiddleware("vehicles"),
@@ -590,7 +584,13 @@ router.post(
 router.get("/getAllVehicles", schoolAdminController.getAllVehicles);
 router.get("/getVehicleById/:id", schoolAdminController.getVehicleById);
 router.delete("/deleteVehicle/:id", schoolAdminController.deleteVehicle);
-router.get("/getAllRoutes", schoolAdminController.getAllRoutes);
+
+router.post(
+  "/driver",
+  uploadWithErrorHandler(upload.fields([{ name: "photo", maxCount: 10 }])),
+  storageUploadMiddleware("drivers"),
+  schoolAdminController.createDriver,
+);
 router.get("/getDriverById/:id", trackerController.getDriverById);
 router.get("/getAllDrivers", schoolAdminController.getAllDrivers);
 router.put(
@@ -599,9 +599,19 @@ router.put(
   storageUploadMiddleware("drivers"),
   trackerController.updateDriverById,
 );
-router.get("/getStopByIdAndRouteId/:id/:route_id", trackerController.getStopByIdAndRouteId);
 router.delete("/deleteDriverById/:id", trackerController.deleteDriverById);
+
 router.post("/stop", schoolAdminController.createStop);
+router.get("/getAllStops", schoolAdminController.getAllStops);
+router.get("/getStopById/:id", schoolAdminController.getStopById);
+router.put("/updateStop/:id", schoolAdminController.updateStop);
+router.delete("/deleteStop/:id", schoolAdminController.deleteStop);
+router.get("/getTrashedStop", schoolAdminController.getTrashedStop);
+router.patch("/restoreStop/:id", schoolAdminController.restoreStop);
+
+
+router.get("/getStopByIdAndRouteId/:id/:route_id", trackerController.getStopByIdAndRouteId);
+router.get("/getAllRoutes", schoolAdminController.getAllRoutes);
 router.delete("/deleteStopById/:id", trackerController.deleteStopById);
 router.post("/route", upload.none(), schoolAdminController.createRoute);
 router.get("/getRouteById/:id", trackerController.getRouteById);
