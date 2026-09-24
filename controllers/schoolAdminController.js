@@ -5984,62 +5984,171 @@ const getInvoiceById = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const id = req.params.id;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
+
     const status = req.query.status || "";
+    const download = req.query.download || "";
     const searchQuery = req.query.q || "";
+    const unpaid = req.query.unpaid || "";
+
+    let { page = 1, limit = 10 } = req.query;
+
+    if (download === "true") {
+      page = null;
+      limit = null;
+    } else {
+      page = parseInt(page) || 1;
+      limit = parseInt(limit) || 10;
+    }
+
+    const offset = page && limit ? (page - 1) * limit : 0;
+
     const whereClause = {
-      id ,
+      id: id,
       trash: false,
       school_id: school_id,
     };
-      const invoice = await Invoice.findOne({
+
+    const invoice = await Invoice.findOne({
       where: whereClause,
-      attributes:["id","title","description","amount","due_date","category"],
+      attributes: [
+        "id",
+        "title",
+        "description",
+        "amount",
+        "due_date",
+        "category",
+      ],
     });
-    if (!invoice) return res.status(404).json({ error: "Invoice not found" });
-    const whereClause2 = {
-      invoice_id:id,
+
+    if (!invoice) {
+      return res.status(404).json({
+        error: "Invoice not found",
+      });
     }
-    if(status){
+
+    const whereClause2 = {
+      invoice_id: id,
+    };
+
+    if (status) {
       whereClause2.status = status;
     }
-    const {count, rows: invoiceStudent} = await InvoiceStudent.findAndCountAll({
-      where: whereClause2,
-      offset,
-      limit,
-      attributes:["id","student_id","status"],
-      include: [
-        {
-          model: Student,
-          attributes: ["id", "full_name", "reg_no"],
-          where: {
-            [Op.or]: [
-              { full_name: { [Op.like]: `%${searchQuery}%` } },
-              { reg_no: { [Op.like]: `%${searchQuery}%` } },
+
+    if (unpaid === "true") {
+      whereClause2.status = {
+        [Op.ne]: "paid",
+      };
+    }
+
+    const { count, rows: invoiceStudents } =
+      await InvoiceStudent.findAndCountAll({
+        where: whereClause2,
+
+        ...(download !== "true" && {
+          offset,
+          limit,
+        }),
+
+        attributes: [
+          "id",
+          "student_id",
+          "status",
+        ],
+
+        include: [
+          {
+            model: Student,
+            attributes: [
+              "id",
+              "full_name",
+              "reg_no",
+            ],
+
+            where: {
+              [Op.or]: [
+                {
+                  full_name: {
+                    [Op.like]: `%${searchQuery}%`,
+                  },
+                },
+                {
+                  reg_no: {
+                    [Op.like]: `%${searchQuery}%`,
+                  },
+                },
+              ],
+            },
+
+            include: [
+              {
+                model: Class,
+                attributes: [
+                  "id",
+                  "classname",
+                  "year",
+                  "division",
+                ],
+              },
             ],
           },
-          include: [
-            {
-              model: Class,
-              attributes: ["id", "classname", "year", "division"],
+        ],
+      });
+
+    const invoiceStudentWithPayments = await Promise.all(
+      invoiceStudents.map(async (invoiceStudent) => {
+        const totalAmountPaid =
+          (await Payment.sum("amount", {
+            where: {
+              invoice_student_id: invoiceStudent.id,
+              payment_status: "completed",
             },
-          ],
-        },
-      ],
-    })
-  
-    const totalPages = Math.ceil(count / limit);
-    res.status(200).json({
+          })) || 0;
+
+        const invoiceAmount = Number(invoice.amount) || 0;
+
+        const paidAmount = Number(totalAmountPaid) || 0;
+
+        const pendingAmount = Math.max(
+          invoiceAmount - paidAmount,
+          0
+        );
+
+        return {
+          ...invoiceStudent.toJSON(),
+
+          invoiceAmount,
+          paidAmount,
+          pendingAmount,
+        };
+      })
+    );
+
+    const totalPages =
+      download === "true"
+        ? null
+        : Math.ceil(count / limit);
+
+    return res.status(200).json({
       totalcontent: count,
       totalPages,
-      currentPage: page,
+      currentPage:
+        download === "true"
+          ? null
+          : page,
+
       invoice,
-      invoiceStudent,      
+
+      invoiceStudent: invoiceStudentWithPayments,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(
+      "getInvoiceById error:",
+      error
+    );
+
+    return res.status(500).json({
+      error: error.message,
+    });
   }
 };
 const getUnPaidStudentsInvoiceByInvoiceId = async (req, res) => {
