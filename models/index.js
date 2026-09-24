@@ -51,6 +51,8 @@ const TransportInvoice = require("./transport_invoice");
 const Competency = require("./assesment/competency");
 const CompetencyIndicator = require("./assesment/competency_indicator");
 const StudentCompetencyAssessment = require("./assesment/student_competency_assessment");
+const CoScholasticArea = require("./assesment/co_scholastic_area");
+const StudentCoScholasticAssessment = require("./assesment/student_co_scholastic_assessment");
 
 // Relations
 
@@ -87,6 +89,8 @@ StaffPermission.belongsTo(User, { foreignKey: "user_id" });
 User.hasOne(StaffPermission, { foreignKey: "user_id" });
 
 StaffAttendance.belongsTo(User, { foreignKey: "staff_id" });
+StaffAttendance.belongsTo(User, { foreignKey: "marked_by",as:"markedBy" });
+
 User.hasOne(StaffAttendance, { foreignKey: "staff_id" });
 
 staffsubject.belongsTo(Staff, { foreignKey: "staff_id" });
@@ -150,6 +154,8 @@ Payment.belongsTo(Student, { foreignKey: "student_id" });
 Payment.belongsTo(User, { as: "recorded", foreignKey: "recorded_by" });
 Payment.belongsTo(User,{as: "updated", foreignKey: "updated_by" });
 Payment.belongsTo(InvoiceStudent, { foreignKey: "invoice_student_id" });
+Payment.belongsTo(TransportInvoice, { foreignKey: "transport_invoice_id" });
+TransportInvoice.hasMany(Payment, { foreignKey: "transport_invoice_id" });
 
 Invoice.belongsTo(School, { foreignKey: "school_id" });
 Invoice.hasMany(InvoiceStudent, { foreignKey: "invoice_id" });
@@ -383,6 +389,44 @@ StudentCompetencyAssessment.belongsTo(User, {
   as: "Recorder",
 });
 
+// Co-Scholastic Area & Assessment associations
+CoScholasticArea.belongsTo(School, { foreignKey: "school_id" });
+School.hasMany(CoScholasticArea, { foreignKey: "school_id" });
+
+CoScholasticArea.hasMany(StudentCoScholasticAssessment, {
+  foreignKey: "area_id",
+  onDelete: "CASCADE",
+});
+StudentCoScholasticAssessment.belongsTo(CoScholasticArea, {
+  foreignKey: "area_id",
+});
+
+StudentCoScholasticAssessment.belongsTo(School, {
+  foreignKey: "school_id",
+});
+School.hasMany(StudentCoScholasticAssessment, {
+  foreignKey: "school_id",
+});
+
+StudentCoScholasticAssessment.belongsTo(Student, {
+  foreignKey: "student_id",
+});
+Student.hasMany(StudentCoScholasticAssessment, {
+  foreignKey: "student_id",
+});
+
+StudentCoScholasticAssessment.belongsTo(Exams, {
+  foreignKey: "exam_id",
+});
+Exams.hasMany(StudentCoScholasticAssessment, {
+  foreignKey: "exam_id",
+});
+
+StudentCoScholasticAssessment.belongsTo(User, {
+  foreignKey: "recorded_by",
+  as: "Recorder",
+});
+
 module.exports = {
   Exams,
   Homework,
@@ -427,4 +471,6 @@ module.exports = {
   Competency,
   CompetencyIndicator,
   StudentCompetencyAssessment,
+  CoScholasticArea,
+  StudentCoScholasticAssessment,
 };

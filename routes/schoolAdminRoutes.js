@@ -6,6 +6,7 @@ const commonController = require("../controllers/commonController");
 const reportController = require("../controllers/reportController");
 const transferController = require("../controllers/transferController");
 const publicController = require("../controllers/publicController");
+const selectionListController = require("../controllers/selectionListController");
 
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
@@ -20,8 +21,9 @@ router.get("/classes/:id", schoolAdminController.getClassById);
 router.put("/classes/:id", schoolAdminController.updateClass);
 router.delete("/classes/:id", schoolAdminController.deleteClass);
 router.patch("/classes/:id", schoolAdminController.restoreClass);
-router.get("/getSpecialClassesByYear/:year", schoolAdminController.getSpecialClassesByYear); // Get classes by year
-router.get("/getWithOutSpecialClassesByYear/:year", schoolAdminController.getWithOutSpecialClassesByYear); // Get classes by year
+router.get("/getSpecialClassesByYear/:year", schoolAdminController.getSpecialClassesByYear); 
+router.get("/getWithOutSpecialClasses", schoolAdminController.getWithOutSpecialClasses);
+router.get("/getWithOutSpecialClassesByYear/:year", schoolAdminController.getWithOutSpecialClassesByYear);
 router.get("/getTrashedClasses", schoolAdminController.getTrashedClasses);
 router.delete(
   "/permanentDeleteClass/:id",
@@ -130,7 +132,7 @@ router.put(
   "/updateGuardianUserPassword/:user_id",
   schoolAdminController.updateGuardianUserPassword,
 );
-
+router.get("/checkGuardianAlreadyExist/:phone", schoolAdminController.checkGuardianAlreadyExist);
 // Student routes
 router.post(
   "/students",
@@ -156,6 +158,14 @@ router.put(
   ),
   storageUploadMiddleware("students"),
   schoolAdminController.updateStudent,
+);
+router.put(
+  "/changeStudentGurdianId",
+  schoolAdminController.changeStudentGurdianId,
+);
+router.get(
+  "/getUserGuardian",
+  schoolAdminController.getUserGuardian,
 );
 router.delete("/students/:id", schoolAdminController.deleteStudent);
 router.patch("/students/:id", schoolAdminController.restoreStudent);
@@ -278,6 +288,11 @@ router.post(
 );
 router.get("/invoices", schoolAdminController.getAllInvoices);
 router.get("/invoices/:id", schoolAdminController.getInvoiceById);
+router.get(
+  "/getUnPaidStudentsInvoiceByInvoiceId/:id",
+  schoolAdminController.getUnPaidStudentsInvoiceByInvoiceId,
+);
+router.get("/getPendingAmountByInvoiceStudentId/:id", schoolAdminController.getPendingAmountByInvoiceStudentId);
 router.put("/invoices/:id", schoolAdminController.updateInvoice);
 router.delete("/invoices/:id", schoolAdminController.deleteInvoice);
 router.patch("/invoices/:id", schoolAdminController.restoreInvoice);
@@ -637,6 +652,10 @@ schoolAdminController.bulkCreateTransportationInvoice,
 );
 router.get("/getAllTransportationInvoices",
 schoolAdminController.getAllTransportationInvoices);
+router.get("/getPendingAmountByTransportInvoiceId/:id",
+schoolAdminController.getPendingAmountByTransportInvoiceId);
+router.get("/getUnpaidTransportInvoiceByStudentId/:id",
+schoolAdminController.getUnpaidTransportInvoiceByStudentId);
 router.delete("/deleteTransportationInvoice/:id",
 schoolAdminController.deleteTransportationInvoice);
 router.patch("/restoreTransportationInvoice/:id",
@@ -646,9 +665,17 @@ schoolAdminController.getTrashedTransportationInvoices);
 router.delete("/permanentDeleteTransportationInvoice/:id",
 schoolAdminController.permanentDeleteTransportationInvoice);
 
+
 // CompetencyAssesment
 router.get("/getCompetencyAssesmentByStudentId/:student_id",
 commonController.getCompetencyAssesmentByStudentId);
+
+// Co-Scholastic Areas & Assessment
+router.post("/createCoScholasticArea", schoolAdminController.createCoScholasticArea);
+router.get("/getCoScholasticAreas", schoolAdminController.getCoScholasticAreas);
+router.put("/updateCoScholasticArea/:id", schoolAdminController.updateCoScholasticArea);
+router.delete("/deleteCoScholasticArea/:id", schoolAdminController.deleteCoScholasticArea);
+router.get("/getCoScholasticAssessmentByStudentId/:student_id", commonController.getCoScholasticAssessmentByStudentId);
 // Student Transfer routes
 router.post("/studentTransfer", transferController.adminCreateTransferRequest);
 router.get(
@@ -733,12 +760,14 @@ router.get(
 router.get("/getStudents", commonController.getStudents);
 
 router.get("/getAllDriverUsers", commonController.getAllDriverUsers);
-router.get("/getLeaveTypes", commonController.getLeaveTypes);
+router.get("/getLeaveTypes", selectionListController.getLeaveTypes);
 router.get("/getMyProfileAndSchoolDetails",commonController.getMyProfileAndSchoolDetails);
-router.get("/getExamTitles",commonController.getExamTitles);
+router.get("/getExamTitles",selectionListController.getExamTitles);
 router.put("/changePassword", commonController.changePassword);
 
-router.get("/getTermTypeForTransportationInvoice",commonController.getTermTypeForTransportationInvoice);
-router.get("/getClassRangeForSubject",commonController.getClassRangeForSubject);
+router.get("/getTermTypeForTransportationInvoice",selectionListController.getTermTypeForTransportationInvoice);
+router.get("/getClassRangeForSubject",selectionListController.getClassRangeForSubject);
+router.get("/getPaymentCategories",selectionListController.getPaymentCategories);
+router.get("/getGuardianRelations",selectionListController.getGuardianRelations);
 
 module.exports = router;

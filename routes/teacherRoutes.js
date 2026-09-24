@@ -3,6 +3,7 @@ const router = express.Router();
 const teacherController = require("../controllers/teacherController");
 const commonController = require("../controllers/commonController");
 const reportController = require("../controllers/reportController");
+const selectionListController = require("../controllers/selectionListController");
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
 
@@ -24,11 +25,12 @@ const staffAllowedRoutes = [
   "/todayAttendanceStatus",
   "/markSelfAttendance",
   "/markCheckOutSelfAttendance",
+  "/getMyStaffAttendance",
   "/getProfileDetails",
   "/updateProfileDetails",
   "/changePassword",
   "/updateDp",
-  "/getMyPrfileAndSchoolDetails"
+  "/getMyPrfileAndSchoolDetails",
 ];
 
 router.use(verifyTeacherOrStaff);
@@ -70,7 +72,7 @@ router.get("/myMultiTeacherSubjectInternalMarks", teacherController.getMultiTeac
 router.get("/getClassWaiseTermMarksPdf", reportController.getClassWaiseTermMarksPdf);
 router.get("/getprograsReportByStudentId/:student_id", reportController.getprograsReportByStudentId);
 router.get("/getMissingStudentsFromClassByInternalMarkId/:id", teacherController.getMissingStudentsFromClassByInternalMarkId);
-router.get("/getMissingStudentsListfromClassId/:id", teacherController.getMissingStudentsListfromClassId);
+router.post("/getMissingStudentsListfromClassId/:class_id", teacherController.getMissingStudentsListfromClassId);
 
 router.get(
   "/getInternalMarkByRecordedBy",
@@ -214,7 +216,6 @@ router.put(
 );
 router.delete("/leaveRequest/:id", teacherController.deleteLeaveRequest);
 router.patch("/leaveRequest/:id", teacherController.restoreLeaveRequest);
-router.get("/getLeaveTypes", commonController.getLeaveTypes);
 
 //student leave request for class teacher
 router.get(
@@ -259,14 +260,15 @@ router.get("/getMyClassTodayTimetable", teacherController.getMyClassTodayTimetab
 router.get("/getMyClassAllDayTimetable", teacherController.getMyClassAllDayTimetable);
 
 router.get("/getNavigationBarCounts", teacherController.getNavigationBarCounts);
-
+//staff attendance
 router.post("/markSelfAttendance", teacherController.markSelfAttendance);
 router.put(
   "/markCheckOutSelfAttendance",
   teacherController.markCheckOutSelfAttendance,
 );
 router.get("/todayAttendanceStatus", teacherController.todayAttendanceStatus);
-
+router.get("/getMyStaffAttendance", teacherController.getMyStaffAttendance);
+//profile
 router.put(
   "/updateProfileDetails",
   uploadWithErrorHandler(upload.single("dp")),
@@ -275,6 +277,7 @@ router.put(
 );
 router.get("/getProfileDetails", teacherController.getProfileDetails);
 
+//subject
 router.get("/getSubjects", teacherController.getSubjects);
 router.get("/getStaffSubjects", teacherController.getStaffSubjects);
 
@@ -285,6 +288,13 @@ router.post("/createStudentCompetencyAssessment", teacherController.createStuden
 router.get("/getCompetencyAssessmentbyStudentIdandExamId/:student_id/:exam_id", teacherController.getCompetencyAssessmentbyStudentIdandExamId);
 router.put("/bulkUpdateCompetencyAssessmentbyStudentIdandExamId", teacherController.bulkUpdateCompetencyAssessmentbyStudentIdandExamId);
 router.delete("/deleteCompetencyAssessment/:student_id/:exam_id", teacherController.deleteCompetencyAssessment);
+
+// Co-Scholastic Assessment
+router.get("/getCoScholasticAreasListByStudentId/:id", teacherController.getCoScholasticAreasListByStudentId);
+router.post("/createStudentCoScholasticAssessment", teacherController.createStudentCoScholasticAssessment);
+router.get("/getCoScholasticAssessmentbyStudentIdandExamId/:student_id/:exam_id", teacherController.getCoScholasticAssessmentbyStudentIdandExamId);
+router.put("/bulkUpdateCoScholasticAssessmentbyStudentIdandExamId", teacherController.bulkUpdateCoScholasticAssessmentbyStudentIdandExamId);
+router.delete("/deleteCoScholasticAssessment/:student_id/:exam_id", teacherController.deleteCoScholasticAssessment);
 
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);
@@ -358,6 +368,8 @@ router.get(
   commonController.getAchievementById,
 );
 router.get("/getMyProfileAndSchoolDetails",commonController.getMyProfileAndSchoolDetails);
-router.get("/getExamTitles",commonController.getExamTitles);
+
+router.get("/getExamTitles",selectionListController.getExamTitles);
+router.get("/getLeaveTypes", selectionListController.getLeaveTypes);
 
 module.exports = router;

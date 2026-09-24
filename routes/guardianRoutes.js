@@ -4,6 +4,7 @@ const guardianController = require("../controllers/guardianController");
 const commonController = require("../controllers/commonController");
 const trackerController = require("../controllers/trackerController");
 const transferController = require("../controllers/transferController");
+const selectionListController = require("../controllers/selectionListController");
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { body, param } = require("express-validator");
 const { validate } = require("../middlewares/validateMiddleware");
@@ -22,6 +23,10 @@ router.get(
   "/getInvoiceByStudentId/:student_id",
   guardianController.getInvoiceByStudentId,
 );
+router.get(
+  "/getStudentInvoiceById/:id",
+  guardianController.getStudentInvoiceById,
+);
 router.post(
   "/payments",
   uploadWithErrorHandler(upload.single("payment_attachment")),
@@ -34,6 +39,19 @@ router.put(
   storageUploadMiddleware("payment_attachments"),
   guardianController.updatePayment,
 )
+router.get("/getPaymentById/:id", guardianController.getPaymentById);
+router.post(
+  "/createTransportInvoicePayment",
+  uploadWithErrorHandler(upload.single("payment_attachment")),
+  storageUploadMiddleware("payment_attachments"),
+  guardianController.createTransportInvoicePayment,
+);
+router.get("/getTransportInvoiceByOwnStudentId/:id", 
+  guardianController.getTransportInvoiceByOwnStudentId);
+router.get("/getTransportInvoiceById/:id", 
+  guardianController.getTransportInvoiceById);
+
+
 const leaveRequestValidation = [
   body("student_id").notEmpty().trim().escape(),
   body("from_date").notEmpty().trim().escape(),
@@ -62,7 +80,6 @@ router.put(
   guardianController.updateLeaveRequest,
 );
 router.delete("/leaveRequest/:id", guardianController.deleteLeaveRequest);
-router.get("/getLeaveTypes", commonController.getLeaveTypes);
 
 router.get("/getSchoolsByUser", guardianController.getSchoolsByUser);
 router.get("/getSchoolById/:id", guardianController.getSchoolById);
@@ -132,7 +149,7 @@ router.put(
 router.put(
   "/changeIdentifiersAndName",
   [
-    body("guardian_email").optional().isEmail().normalizeEmail(),
+    body("guardian_email").optional({ values: "falsy" }).isEmail(),
     body("guardian_name").optional().isString().trim().escape(),
     body("guardian_contact").optional().isString().trim().escape(),
   ],
@@ -218,6 +235,14 @@ router.get(
   "/getLeaveRequestByStudentId/:student_id",
   commonController.getLeaveRequestByStudentId,
 );
+router.get(
+  "/getCompetencyAssesmentByStudentId/:student_id",
+  commonController.getCompetencyAssesmentByStudentId,
+);
+router.get(
+  "/getCoScholasticAssessmentByStudentId/:student_id",
+  commonController.getCoScholasticAssessmentByStudentId,
+);
 
 router.put(
   "/changePassword",
@@ -241,7 +266,6 @@ router.put(
   commonController.updateDp,
 );
 
-router.get("/getPaymentById/:id", commonController.getPaymentById);
 router.get(
   "/getAchievementsBySchool",
   commonController.getAchievementsBySchool,
@@ -253,7 +277,14 @@ router.post(
   commonController.accountDeleteRequests,
 );
 
+router.get("/getCompetencyAssesmentByStudentId/:student_id",
+commonController.getCompetencyAssesmentByStudentId);
 router.get("/getSchoolDetails", commonController.getSchoolDetails);
-router.get("/getExamTitles",commonController.getExamTitles);
+//selection list controller
+router.get("/getExamTitles",selectionListController.getExamTitles);
+router.get("/getLeaveTypes", selectionListController.getLeaveTypes);
+router.get("/getPaymentCategories",selectionListController.getPaymentCategories);
+router.get("/getGuardianRelations",selectionListController.getGuardianRelations);
+
 
 module.exports = router;

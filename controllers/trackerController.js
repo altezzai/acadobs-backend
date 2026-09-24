@@ -301,6 +301,10 @@ const DriverAssignedRoutes = async (req, res) => {
         where: {
           route_id: route.id,
         },
+        include:[{
+          model:Stop,
+          where:{trash:false}
+        }]
       });
       
       route.dataValues.StopUnAssignedStudents = StopUnAssignedStudents;

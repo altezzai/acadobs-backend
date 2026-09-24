@@ -25,8 +25,8 @@ const NewsImage = require("../models/newsimage");
 const SpecialClassStudent = require("../models/special_class_students");
 const InvoiceStudent = require("../models/invoice_students");
 const Invoice = require("../models/invoice");
+const TransportInvoice = require("../models/transport_invoice");
 const Guardian = require("../models/guardian");
-// const Driver = require("../models/tracker/driver");
 const Notice = require("../models/notice");
 const Stop = require("../models/tracker/stop");
 const Vehicle = require("../models/tracker/vehicle");
@@ -35,6 +35,8 @@ const Staff = require("../models/staff");
 const StudentCompetencyAssessment = require("../models/assesment/student_competency_assessment");
 const Competency = require("../models/assesment/competency");
 const CompetencyIndicator = require("../models/assesment/competency_indicator");
+const CoScholasticArea = require("../models/assesment/co_scholastic_area");
+const StudentCoScholasticAssessment = require("../models/assesment/student_co_scholastic_assessment");
 const Exam = require("../models/exams");
 const { error } = require("winston");
 const { Console } = require("winston/lib/winston/transports");
@@ -1204,6 +1206,28 @@ const getPaymentByStudnetId = async (req, res) => {
           model: Student,
           attributes: ["id", "full_name", "reg_no", "image"],
         },
+        {
+          model:InvoiceStudent,
+          required:false,
+          attributes:["id"],
+          include:[
+            {
+              model:Invoice,
+              attributes:["title","amount"]
+            }
+          ]
+        },
+        {
+          model:TransportInvoice,
+          required:false,
+          attributes:["id","amount","term","due_date"],
+          include:[
+            {
+              model:Stop,
+              attributes:["stop_name","charge"]
+            }
+          ]
+        }
       ],
     });
     if (!payment || payment.trash)
@@ -1264,7 +1288,52 @@ const getPaymentByStudnetId = async (req, res) => {
     console.error("Fetch Error:", error);
     res.status(500).json({ error: "Failed to fetch payments" });
    }
-  };    
+  };  
+  const getTransportInvoiceByStudentId  = async (req, res) => {
+   try{
+    const student_id = req.params.id;
+    const school_id = req.user.school_id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const searchQuery = req.query.q || "";
+    let whereClause = {
+      school_id: school_id,
+      trash: false
+    };
+    if(searchQuery){
+      whereClause.term ={[Op.like]:`%${searchQuery}%`};
+    }
+    const { count, rows: transportInvoices } = await TransportInvoice.findAndCountAll({
+      where: { student_id: student_id },
+      include: [
+        {
+          model: Stop,     
+          attributes: ["id", "stop_name"],
+        },
+      ],
+      offset,
+      limit,
+    });
+    
+   const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data:transportInvoices,
+    });
+   }catch(error){
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching payments:",
+      error
+    );
+    console.error("Fetch Error:", error);
+    res.status(500).json({ error: "Failed to fetch payments" });
+   }
+  };  
 
 const getLatestEvents = async (req, res) => {
   try {
@@ -1620,85 +1689,89 @@ const getCompetencyAssesmentByStudentId= async (req, res) => {
   }
   }
 
-const getExamTitles = async (req, res) => {
-  try{
-  const titiles =[
-    "PT",
-    "Term",
-    "Internal",
-    "Model",
-  ]
-  res.status(200).json(titiles)
-  }catch(error){
-    logger.error("userId:", req.user.user_id, "Error fetching profile details:", error);
-    console.error("Error fetching profile details:", error);
-    res.status(500).json({ error: "Failed to fetch profile details" });
-  }
+const getCoScholasticAssessmentByStudentId = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const student_id = req.params.student_id;
+    const exam_id = req.query.exam_id || null;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 100;
+    const offset = (page - 1) * limit;
 
-}
-const getLeaveTypes = async (req, res) => {
-  try {
-    const leaveTypes = [
-      "sick", "casual", "emergency", "vacation", "onduty","c-off","other"
-    ]
-    res.status(200).json(leaveTypes);
-  } catch (error) {
-    logger.error("Error fetching leave types:", error);
-    console.error("Error fetching leave types:", error);
-    res.status(500).json({ error: "Failed to fetch leave types" });
-  }
-}
-const getTermTypeForTransportationInvoice = async (req, res) => {
-  try {
-    const school_id = req.user.school_id;
-  
-    let termTypeForTransportationInvoice = [
-      "Term1", "Term2", "Term3"
-    ]
-    res.status(200).json(termTypeForTransportationInvoice);
-  } catch (error) {
-    logger.error("Error fetching term type for transportation invoice:", error);
-    console.error("Error fetching term type for transportation invoice:", error);
-    res.status(500).json({ error: "Failed to fetch term type for transportation invoice" });
-  }
-}
-const getClassRangeForSubject = async (req, res) => {
-  try{
-    const school_id = req.user.school_id;
-    //set an array value and label
-  let range = [
-    {
-    label: "LKG-2 (FS)",
-    key:"FS"
-    },
-    {
-      label:"3-5 (PS)",
-      key:"PS"
-    },
-    {
-      label:"6-8 (MS)",
-      key:"MS"
-    },
-    {
-      label:"9-12 (SS)",
-      key:"SS"
-    },
-    {
-      label:"common",
-      key:"common"
-    },
-    {
-      label:"other",
-      key:"other"
+    let whereClause = {
+      school_id,
+      student_id,
+    };
+
+    if (exam_id) {
+      whereClause.exam_id = exam_id;
     }
-  ]
-    res.status(200).json({range});
-  }catch(error){
-    logger.error("Error fetching class range for subject:", error);
-    console.error("Error fetching class range for subject:", error);
-    res.status(500).json({ error: "Failed to fetch class range for subject" });
+
+    const { count, rows: assessments } =
+      await StudentCoScholasticAssessment.findAndCountAll({
+        where: whereClause,
+        limit,
+        offset,
+        distinct: true,
+        include: [
+          {
+            model: CoScholasticArea,
+            attributes: [
+              "id",
+              "name",
+              "class_group",
+              "display_order",
+              "status",
+            ],
+            where: searchQuery
+              ? {
+                  name: { [Op.like]: `%${searchQuery}%` },
+                }
+              : undefined,
+          },
+          {
+            model: Student,
+            attributes: ["id", "full_name", "roll_number"],
+          },
+          {
+            model: Exam,
+            attributes: ["id", "exam_name", "education_year"],
+          },
+          {
+            model: User,
+            as: "Recorder",
+            attributes: ["id", "full_name", "email"],
+          },
+        ],
+        order: [
+          [CoScholasticArea, "display_order", "ASC"],
+          ["id", "ASC"],
+        ],
+      });
+
+    const totalPages = Math.ceil(count / limit);
+    return res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data: assessments,
+    });
+  } catch (error) {
+    logger.error(
+      "school_id:",
+      req.user?.school_id,
+      "Error fetching co-scholastic assessments by student id:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch co-scholastic assessments",
+      details: error.message,
+    });
   }
-}
+};
+
 module.exports = {
   getStudentsByClassId,
   getSpecialClassStudentsByClassId,
@@ -1730,6 +1803,7 @@ module.exports = {
   getPaymentByStudnetId,
   getPaymentById,
   getInvoiceByStudentId,
+  getTransportInvoiceByStudentId,
 
   getLatestEvents,
   getLatestNews,
@@ -1746,8 +1820,6 @@ module.exports = {
 
   getMyProfileAndSchoolDetails,
   getCompetencyAssesmentByStudentId,
-  getLeaveTypes,
-  getExamTitles,
-  getTermTypeForTransportationInvoice,
-  getClassRangeForSubject,
-};
+  getCoScholasticAssessmentByStudentId,
+
+}; 

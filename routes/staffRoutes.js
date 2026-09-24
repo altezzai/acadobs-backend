@@ -7,6 +7,7 @@ const reportController = require("../controllers/reportController");
 const transferController = require("../controllers/transferController");
 const publicController = require("../controllers/publicController");
 const teacherController = require("../controllers/teacherController");
+const selectionListController = require("../controllers/selectionListController");
 
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
@@ -674,9 +675,11 @@ router.get(
   commonController.getStudentsByClassId,
 );
 router.get("/getMyProfileAndSchoolDetails",commonController.getMyProfileAndSchoolDetails);
-router.get("/getLeaveTypes", commonController.getLeaveTypes);
-router.get("/getExamTitles",commonController.getExamTitles);
+
 router.put("/changePassword", commonController.changePassword);
+router.get("/getExamTitles",selectionListController.getExamTitles);
+router.get("/getLeaveTypes", selectionListController.getLeaveTypes);
+
 
 
 module.exports = router;

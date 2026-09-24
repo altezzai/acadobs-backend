@@ -33,6 +33,8 @@ const HomeworkAssignment = require("../models/homeworkassignment");
 const StudentCompetencyAssessment = require("../models/assesment/student_competency_assessment");
 const Competency = require("../models/assesment/competency");
 const CompetencyIndicator = require("../models/assesment/competency_indicator");
+const CoScholasticArea = require("../models/assesment/co_scholastic_area");
+const StudentCoScholasticAssessment = require("../models/assesment/student_co_scholastic_assessment");
 const {
   getStaffsForFilter,
 } = require("./commonController");
@@ -1102,9 +1104,6 @@ const getMissingStudentsListfromClassId = async (req, res) => {
     const classId = req.params.class_id;
     const rawStudentIds = req.body.studentIds || [];
 
-    if (!school_id) {
-      return res.status(400).json({ error: "School context is missing" });
-    }
 
     if (!classId) {
       return res.status(400).json({ error: "classid is required" });
@@ -4267,20 +4266,20 @@ const markSelfAttendance = async (req, res) => {
   try {
     const staff_id = req.user.user_id;
     const school_id = req.user.school_id;
-    const { remarks, latitude, longitude,marked_device_id } = req.body;
+    const role = (req.user.role || "").toLowerCase();
+    const { remarks, latitude, longitude, marked_device_id } = req.body;
     const date = new Date().toISOString().split("T")[0];
 
-      const existing = await StaffAttendance.findOne({
+    const existing = await StaffAttendance.findOne({
       where: { staff_id, school_id, date, trash: false },
     });
    
     if (existing) {
-       if (existing.status === "Leave") {
-      return res
-        .status(400)
-        .json({ message: "You are on leave" });
-      
-    }
+      if (existing.status === "Leave") {
+        return res
+          .status(400)
+          .json({ message: "You are on leave" });
+      }
       return res
         .status(400)
         .json({ message: "Attendance already marked for today" });
@@ -4313,12 +4312,40 @@ const markSelfAttendance = async (req, res) => {
       });
     }
 
+    const now = new Date();
+    let status = "Present";
+
+    const expectedCheckInTime =
+      role === "teacher"
+        ? school.teacher_check_in_time
+        : school.staff_check_in_time;
+
+    if (expectedCheckInTime) {
+      const expectedMoment = moment(expectedCheckInTime, [
+        "HH:mm:ss",
+        "HH:mm",
+        "YYYY-MM-DD HH:mm:ss",
+      ]);
+      if (expectedMoment.isValid()) {
+        const threshold = moment().set({
+          hour: expectedMoment.hour(),
+          minute: expectedMoment.minute(),
+          second: expectedMoment.second(),
+          millisecond: 0,
+        });
+
+        if (moment().isAfter(threshold)) {
+          status = "Late";
+        }
+      }
+    }
+
     const newAttendance = await StaffAttendance.create({
       school_id,
       staff_id,
       date,
-      status:"Present",
-      check_in_time: new Date(),
+      status,
+      check_in_time: now,
       marked_by: staff_id,
       marked_method: "Self",
       remarks,
@@ -4340,17 +4367,6 @@ const markSelfAttendance = async (req, res) => {
       error,
     );
     logger.error("Error marking attendance show the veriable:", error.message);
-    console.error("Error marking attendance:",
-       staff_id,
-      date,
-      status,
-      "check_in_time:", new Date(),
-      "marked_by:" ,staff_id,
-      "marked_method:", marked_method,
-      remarks,
-      "latitude:", latitude,
-      "longitude:", longitude
-    );
     res.status(500).json({ error: "Failed to mark attendance" });
   }
 };
@@ -4460,6 +4476,55 @@ const todayAttendanceStatus = async (req, res) => {
     res
       .status(500)
       .json({ error: "Failed to fetch today's attendance status" });
+  }
+};
+const getMyStaffAttendance = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const staff_id = req.user.user_id;
+    const date = req.query.date || "";
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {school_id, staff_id, trash: false};
+    if (date) {
+      whereClause.date = date;
+    }
+    const { count, rows: attendanceRecords } = await StaffAttendance.findAndCountAll({
+      where:whereClause,
+      attributes:[
+        "id",
+        "school_id",
+        "staff_id",
+        "date",
+        "status",
+        "check_in_time",
+        "check_out_time",
+        "total_hours",
+        "marked_method",
+        "remarks",
+        "marked_device_id",
+      ],
+      limit,
+      offset,
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data:attendanceRecords,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching my staff attendance:",
+      error,
+    );
+    console.error("Error fetching my staff attendance:", error);
+    res.status(500).json({ error: "Failed to fetch my staff attendance" });
   }
 };
 const updateProfileDetails = async (req, res) => {
@@ -5247,6 +5312,442 @@ const deleteCompetencyAssessment = async (req, res) => {
   }
 };
 
+
+const getCoScholasticAreasListByStudentId = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const id = req.params.id;
+
+    const student = await Student.findOne({
+      where: {
+        id,
+        school_id,
+      },
+      attributes: ["id", "class_id"],
+      include: [
+        {
+          model: Class,
+          attributes: ["id", "classname", "year"],
+        },
+      ],
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: "Student not found",
+      });
+    }
+    const school = await School.findOne({
+      where: {
+        id: school_id,
+      },
+      attributes: ["id", "syllabus_id"],
+    });
+    const syllabus_id = school?.syllabus_id || null;
+
+    const whereClause = {
+      [Op.or]: [{ school_id: school_id }, { school_id: null }],
+    };
+    
+    if (syllabus_id) {
+      whereClause[Op.or].push({ syllabus_id: syllabus_id }, { syllabus_id: null });
+    }
+
+
+    const areas = await CoScholasticArea.findAll({
+      where: whereClause,
+      attributes: [
+        "id",
+        "school_id",
+        "syllabus_id",
+        "name",
+        "class_group",
+        "display_order",
+        "status",
+      ],
+      order: [
+        ["display_order", "ASC"],
+        ["id", "ASC"],
+      ],
+    });
+
+    const studentYear = student.Class?.year;
+
+    const filteredAreas = areas.filter((area) => {
+      const group = area.class_group;
+      if (!group || group.trim().toLowerCase() === "all") return true;
+      if (studentYear === null || studentYear === undefined) return false;
+      return group
+        .split(",")
+        .map((s) => s.trim())
+        .includes(String(studentYear));
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Co-scholastic areas fetched successfully",
+      data: filteredAreas,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user?.user_id,
+      "Error fetching co-scholastic areas:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch co-scholastic areas",
+      error: error.message,
+    });
+  }
+};
+
+const createStudentCoScholasticAssessment = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+
+    if (!school_id) {
+      return res.status(400).json({ error: "school_id is required" });
+    }
+
+    const {
+      student_id,
+      exam_id,
+      area_id,
+      grade,
+      score,
+      remarks,
+      assessed_at,
+      assessments,
+    } = req.body || {};
+
+    let assessmentList = [];
+
+    if (Array.isArray(req.body)) {
+      assessmentList = req.body;
+    } else if (Array.isArray(assessments) && assessments.length > 0) {
+      assessmentList = assessments.map((item) => ({
+        student_id: item.student_id || student_id,
+        exam_id: item.exam_id || exam_id,
+        area_id: item.area_id,
+        grade: item.grade,
+        score: item.score !== undefined ? item.score : null,
+        remarks: item.remarks !== undefined ? item.remarks : null,
+        assessed_at:
+          item.assessed_at || assessed_at || moment().format("YYYY-MM-DD"),
+      }));
+    } else if (student_id && exam_id && area_id) {
+      assessmentList = [
+        {
+          student_id,
+          exam_id,
+          area_id,
+          grade: grade !== undefined ? grade : null,
+          score: score !== undefined ? score : null,
+          remarks: remarks !== undefined ? remarks : null,
+          assessed_at: assessed_at || moment().format("YYYY-MM-DD"),
+        },
+      ];
+    } else {
+      return res.status(400).json({
+        error:
+          "Invalid payload. Required fields: student_id, exam_id, and area_id (or an array of assessments).",
+      });
+    }
+
+    if (assessmentList.length === 0) {
+      return res.status(400).json({ error: "No assessment data provided." });
+    }
+
+    for (const item of assessmentList) {
+      if (!item.student_id || !item.exam_id || !item.area_id) {
+        return res.status(400).json({
+          error:
+            "Missing required fields in one or more assessment items (student_id, exam_id, area_id).",
+        });
+      }
+    }
+
+    const recordsToSave = assessmentList.map((item) => ({
+      school_id,
+      recorded_by,
+      student_id: Number(item.student_id),
+      exam_id: Number(item.exam_id),
+      area_id: Number(item.area_id),
+      grade: item.grade ? String(item.grade).trim() : null,
+      score:
+        item.score !== undefined && item.score !== null && item.score !== ""
+          ? Number(item.score)
+          : null,
+      remarks: item.remarks !== undefined ? item.remarks : null,
+      assessed_at: item.assessed_at || moment().format("YYYY-MM-DD"),
+    }));
+
+    const result = await StudentCoScholasticAssessment.bulkCreate(
+      recordsToSave,
+      {
+        updateOnDuplicate: [
+          "grade",
+          "score",
+          "remarks",
+          "recorded_by",
+          "assessed_at",
+          "updatedAt",
+        ],
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Student co-scholastic assessment saved successfully",
+      data: result,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "userId:",
+      req.user?.user_id,
+      "Error creating student co-scholastic assessment:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      error: "Failed to save student co-scholastic assessment",
+      details: error.message,
+    });
+  }
+};
+
+const getCoScholasticAssessmentbyStudentIdandExamId = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const student_id = req.params.student_id || req.query.student_id;
+    const exam_id = req.params.exam_id || req.query.exam_id;
+
+    if (!student_id || !exam_id) {
+      return res.status(400).json({
+        success: false,
+        error: "student_id and exam_id are required",
+      });
+    }
+
+    const assessments = await StudentCoScholasticAssessment.findAll({
+      where: {
+        school_id,
+        student_id,
+        exam_id,
+      },
+      include: [
+        {
+          model: CoScholasticArea,
+          attributes: [
+            "id",
+            "name",
+            "class_group",
+            "display_order",
+            "status",
+          ],
+        },
+        {
+          model: Student,
+          attributes: ["id", "full_name", "roll_number"],
+        },
+        {
+          model: Exam,
+          attributes: ["id", "exam_name", "education_year"],
+        },
+        {
+          model: User,
+          as: "Recorder",
+          attributes: ["id", "full_name", "email"],
+        },
+      ],
+      order: [
+        [CoScholasticArea, "display_order", "ASC"],
+        ["id", "ASC"],
+      ],
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Co-scholastic assessments fetched successfully",
+      data: assessments,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "userId:",
+      req.user?.user_id,
+      "Error fetching co-scholastic assessment by student and exam:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch co-scholastic assessments",
+      details: error.message,
+    });
+  }
+};
+
+const bulkUpdateCoScholasticAssessmentbyStudentIdandExamId = async (
+  req,
+  res
+) => {
+  try {
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+
+    if (!school_id) {
+      return res.status(400).json({ error: "school_id is required" });
+    }
+
+    const student_id = req.body.student_id;
+    const exam_id = req.body.exam_id;
+
+    const rawAssessments = Array.isArray(req.body)
+      ? req.body
+      : req.body.assessments;
+
+    if (
+      !rawAssessments ||
+      !Array.isArray(rawAssessments) ||
+      rawAssessments.length === 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: "assessments array is required and cannot be empty",
+      });
+    }
+
+    const recordsToSave = [];
+    for (const item of rawAssessments) {
+      const sId = item.student_id || student_id;
+      const eId = item.exam_id || exam_id;
+      const aId = item.area_id;
+
+      if (!sId || !eId || !aId) {
+        return res.status(400).json({
+          success: false,
+          error:
+            "Each assessment must contain student_id, exam_id, and area_id",
+        });
+      }
+
+      recordsToSave.push({
+        school_id,
+        recorded_by,
+        student_id: Number(sId),
+        exam_id: Number(eId),
+        area_id: Number(aId),
+        grade: item.grade ? String(item.grade).trim() : null,
+        score:
+          item.score !== undefined && item.score !== null && item.score !== ""
+            ? Number(item.score)
+            : null,
+        remarks: item.remarks !== undefined ? item.remarks : null,
+        assessed_at:
+          item.assessed_at || moment().format("YYYY-MM-DD"),
+      });
+    }
+
+    const result = await StudentCoScholasticAssessment.bulkCreate(
+      recordsToSave,
+      {
+        updateOnDuplicate: [
+          "grade",
+          "score",
+          "remarks",
+          "recorded_by",
+          "assessed_at",
+          "updatedAt",
+        ],
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Co-scholastic assessments updated successfully",
+      data: result,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "userId:",
+      req.user?.user_id,
+      "Error bulk updating co-scholastic assessment:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      error: "Failed to update co-scholastic assessments",
+      details: error.message,
+    });
+  }
+};
+
+const deleteCoScholasticAssessment = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const student_id =
+      req.params.student_id || req.query.student_id || req.body?.student_id;
+    const exam_id =
+      req.params.exam_id || req.query.exam_id || req.body?.exam_id;
+    const area_id =
+      req.params.area_id || req.query.area_id || req.body?.area_id;
+
+    if (!student_id || !exam_id) {
+      return res.status(400).json({
+        success: false,
+        error: "student_id and exam_id are required",
+      });
+    }
+
+    const whereClause = { school_id, student_id, exam_id };
+    if (area_id) whereClause.area_id = area_id;
+
+    const assessments = await StudentCoScholasticAssessment.findAll({
+      where: whereClause,
+    });
+
+    if (!assessments || assessments.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Co-scholastic assessment not found",
+      });
+    }
+
+    for (const assessment of assessments) {
+      await assessment.destroy();
+    }
+
+    return res.status(200).json({
+      success: true,
+      deletedCount: assessments.length,
+      message: "Co-scholastic assessment deleted successfully",
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "userId:",
+      req.user?.user_id,
+      "Error deleting co-scholastic assessment:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      error: "Failed to delete co-scholastic assessment",
+      details: error.message,
+    });
+  }
+};
+
 module.exports = {
   createInternalMarkWithMarks,
   checkExistingInternal,
@@ -5338,6 +5839,7 @@ module.exports = {
   markSelfAttendance,
   markCheckOutSelfAttendance,
   todayAttendanceStatus,
+  getMyStaffAttendance,
 
   updateProfileDetails,
   getProfileDetails,
@@ -5358,5 +5860,11 @@ module.exports = {
   getCompetencyAssessmentbyStudentIdandExamId,
   bulkUpdateCompetencyAssessmentbyStudentIdandExamId,
   deleteCompetencyAssessment,
+
+  getCoScholasticAreasListByStudentId,
+  createStudentCoScholasticAssessment,
+  getCoScholasticAssessmentbyStudentIdandExamId,
+  bulkUpdateCoScholasticAssessmentbyStudentIdandExamId,
+  deleteCoScholasticAssessment,
 
 };

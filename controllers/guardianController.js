@@ -19,6 +19,7 @@ const Student = require("../models/student");
 const School = require("../models/school");
 const User = require("../models/user");
 const Payment = require("../models/payment");
+const TransportInvoice = require("../models/transport_invoice");
 const LeaveRequest = require("../models/leaverequest");
 const Notice = require("../models/notice");
 const NoticeClass = require("../models/noticeclass");
@@ -248,10 +249,57 @@ const getInvoiceByStudentId = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch invoices" });
   }
 };
+const getStudentInvoiceById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const invoice = await InvoiceStudent.findOne({
+      where: { id,},
+      include: [
+        {
+          model: Invoice,
+          where:{trash:false, school_id:school_id},
+          attributes:["id","title","amount","description", "due_date","category"]
+        },
+        {
+          model: Student,
+          where: {
+            guardian_id: user_id,
+          },
+          attributes: ["id", "full_name"],
+        },
+      ],
+    });
+    if (!invoice) {
+      return res.status(404).json({ error: "Invoice not found" });
+    }
+    const totalAmountPaid = await Payment.sum("amount", {
+      where: {
+        invoice_student_id: id,
+        payment_status: "completed",
+      },
+    });
+    const pendingAmount =  invoice.Invoice.amount - totalAmountPaid;
+    res.status(200).json({
+      totalAmountPaid: totalAmountPaid,
+      pendingAmount: pendingAmount,
+      data: invoice,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error getting invoice by id:",
+      error,
+    );
+    console.error("Error fetching invoice:", error);
+    res.status(500).json({ error: "Failed to fetch invoice" });
+  }
+};
 const createPayment = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-
     const {
       student_id,
       invoice_student_id,
@@ -277,7 +325,6 @@ const createPayment = async (req, res) => {
 
     const payment = await schoolSequelize.transaction(async (transaction) => {
 
-      // Check transaction ID
       if (transaction_id) {
         const existingTransaction = await Payment.findOne({
           where: {
@@ -291,7 +338,6 @@ const createPayment = async (req, res) => {
         }
       }
 
-      // Check duplicate payment
       const existingPayment = await Payment.findOne({
         where: {
           school_id,
@@ -312,7 +358,6 @@ const createPayment = async (req, res) => {
       const payment_attachmentUrl =
         req.uploadedFiles?.payment_attachment?.url || null;
 
-      // Create payment
       const payment = await Payment.create(
         {
           school_id,
@@ -332,7 +377,6 @@ const createPayment = async (req, res) => {
         }
       );
 
-      // Update invoice
       await InvoiceStudent.update(
         {
           status: "waiting_for_approval",
@@ -451,6 +495,294 @@ const updatePayment = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 }
+const getPaymentById = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
+    if (!school_id) {
+      return res.status(404).json({ error: "School not found" });
+    }
+
+    const payment = await Payment.findOne({
+      where: { id: req.params.id, school_id, trash: false },
+      include: [
+        {
+          model: Student,
+          where: {
+            guardian_id: user_id,
+          },
+          attributes: ["id", "full_name", "reg_no", "image"],
+        },
+        {
+          model:InvoiceStudent,
+          required:false,
+          attributes:["id"],
+          include:[
+            {
+              model:Invoice,
+              attributes:["title","amount"]
+            }
+          ]
+        },
+        {
+          model:TransportInvoice,
+          required:false,
+          attributes:["id","amount","term","due_date"],
+          include:[
+            {
+              model:Stop,
+              attributes:["stop_name","charge"]
+            }
+          ]
+        }
+      ],
+    });
+    if (!payment)
+      return res.status(404).json({ error: "Payment not found" });
+    res.status(200).json(payment);
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error fetching payment:", error);
+    console.error("Error fetching payment:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+const createTransportInvoicePayment = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const {
+      student_id,
+      amount,
+      payment_date,
+      transaction_id,
+      payment_method,
+      transport_invoice_id,
+    } = req.body;
+
+    if (
+      !student_id ||
+      !school_id ||
+      amount == null ||
+      !transport_invoice_id ||
+      !payment_date ||
+      !payment_method
+    ) {
+      return res.status(400).json({
+        error: "Required fields are missing",
+      });
+    }
+
+    const payment = await schoolSequelize.transaction(async (transaction) => {
+
+      if (transaction_id) {
+        const existingTransaction = await Payment.findOne({
+          where: {
+            transaction_id,
+          },
+          transaction,
+        });
+
+        if (existingTransaction) {
+          throw new Error("Transaction ID already exists");
+        }
+      }
+
+      const existingPayment = await Payment.findOne({
+        where: {
+          school_id,
+          student_id,
+          amount,
+          payment_date,
+          payment_category:"transport",
+        },
+        transaction,
+      });
+
+      if (existingPayment) {
+        throw new Error(
+          "Payment with the same details already exists"
+        );
+      }
+
+      const payment_attachmentUrl =
+        req.uploadedFiles?.payment_attachment?.url || null;
+
+      const payment = await Payment.create(
+        {
+          school_id,
+          student_id,
+          amount,
+          payment_date,
+          payment_category:"transport",
+          transaction_id: transaction_id || null,
+          payment_method,
+          payment_status: "pending",
+          recorded_by: req.user.user_id,
+          payment_attachment: payment_attachmentUrl,
+          transport_invoice_id ,
+        },
+        {
+          transaction,
+        }
+      );
+
+      await TransportInvoice.update(
+        {
+          status: "waiting_for_approval",
+        },
+        {
+          where: {
+            id: transport_invoice_id,
+          },
+          transaction,
+        }
+      );
+
+      return payment;
+    });
+
+    return res.status(201).json({
+      message: "Payment created",
+      payment,
+    });
+
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "createPayment:",
+      error
+    );
+
+    if (error.message === "Transaction ID already exists") {
+      return res.status(400).json({
+        error: error.message,
+      });
+    }
+
+    if (
+      error.message ===
+      "Payment with the same details already exists"
+    ) {
+      return res.status(400).json({
+        error: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      error: error.message,
+    });
+  }
+};
+ const getTransportInvoiceByOwnStudentId  = async (req, res) => {
+   try{
+    const student_id = req.params.id;
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const searchQuery = req.query.q || "";
+    let whereClause = {
+      school_id: school_id,
+      trash: false
+    };
+    if(searchQuery){
+      whereClause.term ={[Op.like]:`%${searchQuery}%`};
+    }
+    const student = await Student.findOne({
+      where: { id: student_id ,guardian_id:user_id},
+      attributes: ["id"],
+    });
+    if(!student){
+      return res.status(404).json({ error: "Student not found" });
+    }
+    const { count, rows: transportInvoices } = await TransportInvoice.findAndCountAll({
+      where: { student_id: student_id },
+      include: [
+        {
+          model: Stop,     
+          attributes: ["id", "stop_name"],
+        },
+      ],
+      offset,
+      limit,
+      order:[["createdAt", "DESC"]]
+    });
+    
+   const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data:transportInvoices,
+    });
+   }catch(error){
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error fetching payments:",
+      error
+    );
+    console.error("Fetch Error:", error);
+    res.status(500).json({ error: "Failed to fetch payments" });
+   }
+  };  
+  const getTransportInvoiceById= async (req, res) => {
+    try {
+      const id = req.params.id;
+      const user_id=req.user.user_id;
+      const school_id = req.user.school_id;
+      const transportInvoice = await TransportInvoice.findOne({
+      where: { id: id, school_id: school_id },
+      include:[
+        {
+          model:Stop,
+          attributes: ["id", "stop_name"],
+          include:[
+            {
+              model: Routes,
+              as: "routes",
+              attributes: ["id","route_name","type","active"],
+              through: { attributes: ["priority"] },
+            },
+          ],
+        },
+        {
+          model:Student,
+          where:{guardian_id:user_id},
+          attributes:["id","full_name"]
+        }
+      ],
+    });
+    if (!transportInvoice) {
+      return res.status(404).json({ error: "Transport invoice not found" });
+    }
+    const totalAmountPaid = await Payment.sum("amount", {
+      where: {
+        transport_invoice_id: transportInvoice.id,
+        payment_status: "completed",
+      },
+    });
+    const totalAmount = transportInvoice.amount ;
+    const pendingAmount = totalAmount - totalAmountPaid;
+    
+    res.status(200).json({
+      message: "Transport invoice fetched successfully",
+      pendingAmount,
+      totalAmountPaid,
+      data:transportInvoice,
+    });
+    } catch (error) {
+      logger.error(
+        "userId:",
+        req.user.user_id,
+        "Error fetching transport:",
+        error
+      );
+      console.error("Fetch Error:", error);
+      res.status(500).json({ error: "Failed to fetch transport" });
+    }
+  };
 const createLeaveRequest = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -1102,8 +1434,8 @@ const changeIdentifiersAndName = async (req, res) => {
     const userId = req.user.user_id;
     const { guardian_email, guardian_name, guardian_contact } = req.body;
 
-    const guardian = await Guardian.findOne({
-      where: { user_id: userId },
+    const guardian = await User.findOne({
+      where: { id: userId,role:"guardian" },
     });
 
     if (!guardian) return res.status(404).json({ error: "Guardian not found" });
@@ -1130,18 +1462,18 @@ const changeIdentifiersAndName = async (req, res) => {
         },
       });
 
-      if (existingEmail) {
+      if (existingEmail ) {
         return res
           .status(400)
           .json({ error: "Guardian email already exists in user table" });
       }
-      await User.update(
-        { email: guardian_email },
+    }
+    await User.update(
+        { email: guardian_email || null },
         {
           where: { id: userId },
         },
       );
-    }
     if (guardian_name) {
       await User.update(
         { name: guardian_name },
@@ -1150,11 +1482,6 @@ const changeIdentifiersAndName = async (req, res) => {
         },
       );
     }
-    await guardian.update({
-      guardian_email,
-      guardian_name,
-      guardian_contact,
-    });
     res.status(200).json({ message: "Guardian Identifiers updated", guardian });
   } catch (error) {
     logger.error(
@@ -1901,8 +2228,14 @@ module.exports = {
   getNoticeByStudentId,
   getPaymentByStudentId,
   getInvoiceByStudentId,
+  getStudentInvoiceById,
   createPayment,
   updatePayment,
+  getPaymentById,
+
+  createTransportInvoicePayment,
+  getTransportInvoiceByOwnStudentId,
+  getTransportInvoiceById,
 
   createLeaveRequest,
   getAllLeaveRequests,
@@ -1930,8 +2263,6 @@ module.exports = {
 
   getAchievementById,
   getRoutesForGuardian,
-  // getExamsByStudentId,
-  // getExamMarksByStudentId,
   getGuardianRouteCount,
   
   getStopsByRouteId,

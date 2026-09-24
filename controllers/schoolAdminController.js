@@ -53,6 +53,8 @@ const LiveLocation = require("../models/tracker/livelocation");
 const StudentCompetencyAssessment = require("../models/assesment/student_competency_assessment");
 const Competency = require("../models/assesment/competency");
 const CompetencyIndicator = require("../models/assesment/competency_indicator");
+const CoScholasticArea = require("../models/assesment/co_scholastic_area");
+const StudentCoScholasticAssessment = require("../models/assesment/student_co_scholastic_assessment");
 const { error } = require("winston");
 const { Console } = require("winston/lib/winston/transports");
 const { deleteFile } = require("../middlewares/storageUploads");
@@ -255,6 +257,50 @@ const getWithOutSpecialClassesByYear = async (req, res) => {
 
     if (!classData) return res.status(404).json({ message: "Special classes not found" });
     res.status(200).json(classData);
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "Error fetching special classes:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+const getWithOutSpecialClasses= async (req, res) => {
+  try {
+   const school_id=req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const year = req.query.year || null;
+    const division = req.query.division || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    let whereClause = {
+      school_id,
+      trash: false,
+      special:false,
+    };
+    if (searchQuery) {
+      whereClause.classname = { [Op.like]: `%${searchQuery}%` };
+    }
+    if (year) {
+      whereClause.year = year;
+    }
+    if (division) {
+      whereClause.division = division;
+    }
+
+    const { count, rows: classes } = await Class.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      where: whereClause,
+      order: [["createdAt", "DESC"]],
+
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      classes,
+    });
   } catch (error) {
     logger.error("schoolId:", req.user.school_id, "Error fetching special classes:", error);
     res.status(500).json({ error: error.message });
@@ -1620,9 +1666,9 @@ const createGuardian = async (req, res) => {
     const guardian = await Guardian.create({
       user_id: user.id,
       guardian_relation,
-      guardian_name,
-      guardian_contact: normalizeGuardianRelation(guardian_relation),
-      guardian_email,
+      // guardian_name,
+      // guardian_contact: normalizeGuardianRelation(guardian_relation),
+      // guardian_email,
       guardian_job,
       guardian2_relation: normalizeGuardianRelation(guardian2_relation),
       guardian2_name,
@@ -1711,9 +1757,9 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
     await Guardian.create({
       user_id: user.id,
       guardian_relation: normalizeGuardianRelation(guardian_relation),
-      guardian_name,
-      guardian_contact,
-      guardian_email,
+      // guardian_name,
+      // guardian_contact,
+      // guardian_email,
       guardian_job,
       guardian2_relation: normalizeGuardianRelation(guardian2_relation),
       guardian2_name,
@@ -1745,20 +1791,26 @@ const getAllGuardians = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    let whereClause = {
+      trash: false,
+      school_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { name: { [Op.like]: `%${searchQuery}%` } },
+        { phone: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
 
     const { count, rows: guardians } = await Guardian.findAndCountAll({
       offset,
       distinct: true,
       limit,
-      where: {
-        guardian_name: { [Op.like]: `%${searchQuery}%` },
-        trash: false,
-      },
       include: [
         {
           model: User,
+          where:whereClause,
           attributes: ["name", "email", "phone", "dp"],
-          where: { school_id },
         },
       ],
       order: [["createdAt", "DESC"]],
@@ -1789,6 +1841,12 @@ const getGuardianById = async (req, res) => {
         id,
         trash: false,
       },
+      include:[
+        {
+          model: User,
+          attributes: ["name", "email", "phone", "dp"],
+        },
+      ],
     });
     res.status(200).json(guardians);
   } catch (error) {
@@ -1865,9 +1923,6 @@ const updateGuardian = async (req, res) => {
 
     await guardian.update({
       guardian_relation: normalizeGuardianRelation(guardian_relation),
-      guardian_name,
-      guardian_contact,
-      guardian_email,
       guardian_job,
       guardian2_relation: normalizeGuardianRelation(guardian2_relation),
       guardian2_name,
@@ -1896,9 +1951,9 @@ const updateGuardian = async (req, res) => {
       fileName = fileUrl;
     }
     await user.update({
-      name: guardian.guardian_name,
-      email: guardian.guardian_email,
-      phone: guardian.guardian_contact,
+      name: guardian_name,
+      email: guardian_email || null,
+      phone: guardian_contact,
       dp: fileName,
     });
     //
@@ -1986,6 +2041,71 @@ const updateGuardianUserPassword = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const checkGuardianAlreadyExist= async (req, res) => {
+  try {
+    const phone = req.params.phone;
+    const user= await User.findOne({
+      where: {phone, trash: false ,role:"guardian"},
+      attributes: ["id", "name", "phone"],
+    });
+    res.status(200).json({ 
+      status:user?true:false,
+      user });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error checking guardian:",
+      error,
+    );
+    res.status(500).json({ error: error.message });
+  }
+};
+const getUserGuardian =async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = (page - 1) * limit;
+    const searchQuery = req.query.q;
+    const whereClause={
+      school_id,
+      trash:false,
+      role:"guardian"
+    }
+ if (searchQuery) {
+        whereClause[Op.or] = [
+        { name: { [Op.like]: `%${searchQuery}%` } },
+        { phone: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const {count ,rows:Guardian} = await User.findAndCountAll({
+      where:whereClause,
+      limit,
+      offset,
+      attributes: ["id", "name", "phone"],
+      order: [["createdAt", "DESC"]],
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    return res.status(200).json({
+      message: "Fetched successfully",
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data:Guardian,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting guardian:",
+      error,
+    );
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // Create Student
 const createStudent = async (req, res) => {
   try {
@@ -2531,7 +2651,7 @@ const updateStudent = async (req, res) => {
       status,
       second_language,
       alumni,
-
+      
       // Guardian fields
       guardian_name,
       guardian_contact,
@@ -2720,12 +2840,6 @@ const updateStudent = async (req, res) => {
         }
 
         await guardian.update({
-          guardian_name: guardian_name || guardian.guardian_name,
-          guardian_contact: guardian_contact || guardian.guardian_contact,
-          guardian_email:
-            guardian_email !== undefined
-              ? guardian_email
-              : guardian.guardian_email,
           guardian_relation: guardian_relation
             ? normalizeGuardianRelation(guardian_relation)
             : guardian.guardian_relation,
@@ -2760,7 +2874,6 @@ const updateStudent = async (req, res) => {
           country: country !== undefined ? country : guardian.country,
           post: post !== undefined ? post : guardian.post,
           pincode: pincode !== undefined ? pincode : guardian.pincode,
-          dp: guardianDpFilename,
         });
 
         // Sync guardian User record
@@ -2796,6 +2909,35 @@ const updateStudent = async (req, res) => {
     res.status(500).json({ error: "Failed to update student" });
   }
 };
+const changeStudentGurdianId=async(req,res)=>{
+  try{
+    const school_id = req.user.school_id;
+    const {guardian_id,student_id}= req.body;
+    const student= await Student.findOne({
+      where:{
+        id:student_id,
+        school_id,
+        trash:false
+      }
+    });
+    if(!student){
+      return res.status(404).json({error:"Student not found"});
+    }
+    await student.update({
+      guardian_id,
+    });
+    res.status(200).json({message:"Student guardian id changed successfully"});
+  }catch(error){
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error changing student guardian id:",
+      error,
+    );
+    console.error("Error changing student guardian id:", error);
+    res.status(500).json({ error: "Failed to change student guardian id" });
+  }
+}
 const deleteStudent = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -4458,7 +4600,6 @@ const permanentDeleteEvent = async (req, res) => {
       where: { id: req.params.id, school_id },
     });
     if (!event) return res.status(404).json({ error: "Event not found" });
-    const uploadPath = "uploads/event_files/";
     if (event.file) {
       await deleteFile(event.file);
     }
@@ -4477,8 +4618,9 @@ const permanentDeleteEvent = async (req, res) => {
 };
 const createPayment = async (req, res) => {
   try {
-    const school_id = req.user.school_id; 
-    const userId=req.user.user_id;
+    const school_id = req.user.school_id;
+    const userId = req.user.user_id;
+
     const {
       student_id,
       invoice_student_id,
@@ -4488,6 +4630,7 @@ const createPayment = async (req, res) => {
       transaction_id,
       payment_method,
       payment_status,
+      transport_invoice_id,
     } = req.body;
 
     if (
@@ -4499,111 +4642,174 @@ const createPayment = async (req, res) => {
     ) {
       return res.status(400).json({ error: "All fields are required" });
     }
-    const parsedStudentId =
-      student_id !== undefined &&
-      student_id !== null &&
-      student_id !== "" &&
-      student_id !== "null" &&
-      student_id !== "undefined"
-        ? Number(student_id)
+
+    const toInt = (value) =>
+      value && !["null", "undefined"].includes(String(value))
+        ? Number(value)
         : null;
 
-    const parsedInvoiceStudentId =
-      invoice_student_id !== undefined &&
-      invoice_student_id !== null &&
-      invoice_student_id !== "" &&
-      invoice_student_id !== "null" &&
-      invoice_student_id !== "undefined"
-        ? Number(invoice_student_id)
-        : null;
-
-    const parsedTransactionId =
-      transaction_id && typeof transaction_id === "string" && transaction_id.trim() !== ""
+    const studentId = toInt(student_id);
+    const invoiceStudentId = toInt(invoice_student_id);
+    const transportInvoiceId = toInt(transport_invoice_id);
+    const transactionId =
+      typeof transaction_id === "string" && transaction_id.trim()
         ? transaction_id.trim()
         : null;
 
-    // check if transaction_id already exists for this school
-    if (parsedTransactionId) {
-      const existingTransaction_id = await Payment.findOne({
-        where: { transaction_id: parsedTransactionId, school_id },
-      });
-      if (
-        existingTransaction_id &&
-        existingTransaction_id.transaction_id !== ""
-      ) {
-        return res.status(400).json({ error: "Transaction ID already exists" });
-      }
-    }
-
-    const existingPayment = await Payment.findOne({
-      where: {
-        invoice_student_id: parsedInvoiceStudentId,
-        school_id,
-        student_id: parsedStudentId,
-        payment_date,
-        payment_category,
-      },
-    });
-    if (existingPayment) {
-      return res
-        .status(400)
-        .json({ error: "Payment with the same details already exists" });
-    }
-    let transcation_status = payment_status;
-    if (payment_category === "donation" && !payment_status) {
-      transcation_status = "completed";
-    }
-
-    const payment = await Payment.create({
-      school_id,
-      student_id: parsedStudentId,
-      invoice_student_id: parsedInvoiceStudentId,
-      amount,
-      payment_date,
-      payment_category,
-      transaction_id: parsedTransactionId,
-      payment_method,
-      payment_status: transcation_status || "pending",
-      recorded_by: userId,
-      updated_by: userId,
-    });
-    let invoice_status = "";
-
- 
-    if (transcation_status === "completed" && parsedInvoiceStudentId) {
-      const invoiceStudent = await InvoiceStudent.findOne({
-        where: { id: parsedInvoiceStudentId },
-        include: [{ model: Invoice, attributes: ["id", "amount"] }],
-      });
-      //the same invoice_student_id used payment amount also get and check
-      let totalPaid = 0;
-      if (parsedInvoiceStudentId) {
-        totalPaid = await Payment.sum("amount", {
-          where: {
-            invoice_student_id: parsedInvoiceStudentId,
-            payment_status: "completed",
-            trash: false,
-          },
+    const result = await schoolSequelize.transaction(async (transaction) => {
+      if (transactionId) {
+        const exists = await Payment.findOne({
+          where: { transaction_id: transactionId, school_id },
+          transaction,
+          lock: transaction.LOCK.UPDATE,
         });
-      }
-      const invoiceAmount = invoiceStudent?.Invoice?.amount || 0;
 
-      if (invoiceStudent && totalPaid >= invoiceAmount) {
-        await invoiceStudent.update({ status: "paid" });
-        invoice_status = "paid";
-      } else {
-        await invoiceStudent.update({ status: "partially_paid" });
-        invoice_status = "partially_paid";
+        if (exists) {
+          throw new Error("Transaction ID already exists");
+        }
       }
-    }
-    res.status(201).json({
+
+      const existingPayment = transportInvoiceId
+        ? await TransportInvoice.findOne({
+            where: {
+              id: transportInvoiceId,
+              school_id,
+              status: "paid",
+            },
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+          })
+        : await Payment.findOne({
+            where: {
+              invoice_student_id: invoiceStudentId,
+              school_id,
+              student_id: studentId,
+              payment_date,
+              payment_category,
+            },
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+          });
+
+      if (existingPayment) {
+        throw new Error("Payment with the same details already exists");
+      }
+
+      const status =
+        payment_category === "donation" && !payment_status
+          ? "completed"
+          : payment_status || "pending";
+
+      const payment = await Payment.create(
+        {
+          school_id,
+          student_id: studentId,
+          invoice_student_id: invoiceStudentId,
+          amount,
+          payment_date,
+          payment_category,
+          transaction_id: transactionId,
+          payment_method,
+          payment_status: status,
+          recorded_by: userId,
+          updated_by: userId,
+          transport_invoice_id: transportInvoiceId,
+        },
+        { transaction }
+      );
+
+      let invoice_status = "";
+
+      if (status === "completed" && invoiceStudentId) {
+        const invoiceStudent = await InvoiceStudent.findOne({
+          where: { id: invoiceStudentId },
+          include: [{ model: Invoice, attributes: ["id", "amount"] }],
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        if (!invoiceStudent) {
+          throw new Error("Invoice student not found");
+        }
+
+        const totalPaid =
+          (await Payment.sum("amount", {
+            where: {
+              invoice_student_id: invoiceStudentId,
+              payment_status: "completed",
+              trash: false,
+            },
+            transaction,
+          })) || 0;
+
+        const invoiceAmount = Number(invoiceStudent.Invoice?.amount || 0);
+        const invoiceStatus =
+          Number(totalPaid) >= invoiceAmount ? "paid" : "partially_paid";
+
+        await invoiceStudent.update(
+          { status: invoiceStatus },
+          { transaction }
+        );
+
+        invoice_status = invoiceStatus;
+      }
+      if (transportInvoiceId) {
+        const transportInvoice = await TransportInvoice.findOne({
+          where: {
+            id: transportInvoiceId,
+            school_id,
+            student_id: studentId,
+          },
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        if (!transportInvoice) {
+          throw new Error("Transport invoice not found");
+        }
+
+        const totalPaid =
+          (await Payment.sum("amount", {
+            where: {
+              transport_invoice_id: transportInvoiceId,
+              payment_status: "completed",
+              trash: false,
+            },
+            transaction,
+          })) || 0;
+
+        const invoiceStatus =
+          Number(totalPaid) >= Number(transportInvoice.amount)
+            ? "paid"
+            : "partially_paid";
+
+        await transportInvoice.update(
+          { status: invoiceStatus },
+          { transaction }
+        );
+
+        invoice_status = `transport invoice - ${invoiceStatus}`;
+      }
+
+      return { payment, invoice_status };
+    });
+
+    return res.status(201).json({
       message: "Payment created",
-      payment,
-      "invoice status": invoice_status,
+      payment: result.payment,
+      "invoice status": result.invoice_status,
     });
   } catch (error) {
-    logger.error("schoolId:", req.user.school_id, "createPayment :", error);
-    res.status(500).json({ error: error.message });
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "createPayment:",
+      error
+    );
+
+    return res.status(500).json({
+      error: error.message,
+    });
   }
 };
 
@@ -4836,9 +5042,26 @@ const getPaymentById = async (req, res) => {
           as: "updated",
           attributes: ["id", "name"],
         },
+        {
+          model: InvoiceStudent,
+          attributes: ["id", "status"],
+          required:false,
+          include: [
+            {
+              model: Invoice,
+              attributes: ["id", "title", "category","description","amount","due_date"],
+              required: false,
+            },
+          ],
+        },
+        {
+          model: TransportInvoice,
+          attributes: ["id", "term","amount","due_date","status"],
+          required:false,
+        },
       ],
     });
-    if (!payment || payment.trash)
+    if (!payment)
       return res.status(404).json({ error: "Payment not found" });
     res.status(200).json(payment);
   } catch (error) {
@@ -4850,17 +5073,161 @@ const paymentVerification = async (req, res) => {
     const school_id = req.user.school_id;
     const userId = req.user.user_id;
     const id = req.params.id;
-    const status = req.body.status;
+    const { status } = req.body;
+
     if (!["completed", "failed"].includes(status)) {
+      return res.status(400).json({ error: "Invalid payment status" });
+    }
+
+    const result = await schoolSequelize.transaction(async (transaction) => {
+      const payment = await Payment.findOne({
+        where: { id, school_id, trash: false },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      if (!payment) throw new Error("Payment not found");
+
+      await payment.update(
+        {
+          payment_status: status,
+          updated_by: userId,
+        },
+        { transaction }
+      );
+
+      let invoice_status = "";
+
+      if (status !== "completed") {
+        return { payment, invoice_status };
+      }
+
+      if (payment.invoice_student_id) {
+        const invoiceStudent = await InvoiceStudent.findOne({
+          where: { id: payment.invoice_student_id },
+          include: [{ model: Invoice, attributes: ["id", "amount"] }],
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        if (!invoiceStudent) throw new Error("Invoice student not found");
+
+        const totalPaid =
+          (await Payment.sum("amount", {
+            where: {
+              invoice_student_id: payment.invoice_student_id,
+              payment_status: "completed",
+              trash: false,
+            },
+            transaction,
+          })) || 0;
+
+        const invoiceStatus =
+          Number(totalPaid) >= Number(invoiceStudent.Invoice?.amount || 0)
+            ? "paid"
+            : "partially_paid";
+
+        await invoiceStudent.update(
+          { status: invoiceStatus },
+          { transaction }
+        );
+
+        invoice_status = invoiceStatus;
+      }
+
+      if (payment.transport_invoice_id) {
+        const transportInvoice = await TransportInvoice.findOne({
+          where: {
+            id: payment.transport_invoice_id,
+            school_id,
+            student_id: payment.student_id,
+          },
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        if (!transportInvoice) {
+          throw new Error("Transport invoice not found");
+        }
+
+        const totalPaid =
+          (await Payment.sum("amount", {
+            where: {
+              transport_invoice_id: payment.transport_invoice_id,
+              payment_status: "completed",
+              trash: false,
+            },
+            transaction,
+          })) || 0;
+
+        const invoiceStatus =
+          Number(totalPaid) >= Number(transportInvoice.amount || 0)
+            ? "paid"
+            : "partially_paid";
+
+        await transportInvoice.update(
+          { status: invoiceStatus },
+          { transaction }
+        );
+
+        invoice_status = `transport invoice - ${invoiceStatus}`;
+      }
+
+      return { payment, invoice_status };
+    });
+
+    return res.status(200).json({
+      message: "Payment verification successful",
+      payment: result.payment,
+      invoice_status: result.invoice_status,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "paymentVerification:",
+      error
+    );
+
+    const notFound = [
+      "Payment not found",
+      "Invoice student not found",
+      "Transport invoice not found",
+    ];
+
+    return res.status(notFound.includes(error.message) ? 404 : 500).json({
+      error: error.message,
+    });
+  }
+};
+
+const updatePayment = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const userId = req.user.user_id;
+    const Id = req.params.id;
+
+    const {
+      student_id,
+      amount,
+      payment_date,
+      payment_category,
+      transaction_id,
+      payment_status,
+      payment_method,
+    } = req.body;
+
+    if (!amount || !payment_date || !payment_category || !student_id) {
       return res.status(400).json({
-        error: "Invalid payment status",
+        error:
+          "student_id, amount, payment_date, payment_category are required",
       });
     }
 
     const result = await schoolSequelize.transaction(async (transaction) => {
       const payment = await Payment.findOne({
         where: {
-          id,
+          id: Id,
           school_id,
           trash: false,
         },
@@ -4869,20 +5236,58 @@ const paymentVerification = async (req, res) => {
       });
 
       if (!payment) {
-        throw new Error("Payment not found");
+        const error = new Error("Payment not found");
+        error.statusCode = 404;
+        throw error;
       }
 
-      payment.payment_status = status;
-      payment.updated_by = userId;
+      if (transaction_id && transaction_id.trim() !== "") {
+        const existingTransaction = await Payment.findOne({
+          where: {
+            transaction_id: transaction_id.trim(),
+            school_id,
+            id: {
+              [Op.ne]: Id,
+            },
+          },
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
 
-      await payment.save({
+        if (existingTransaction) {
+          const error = new Error("Transaction ID already exists");
+          error.statusCode = 400;
+          throw error;
+        }
+      }
+
+      const existingPayment = await Payment.findOne({
+        where: {
+          school_id,
+          student_id,
+          amount,
+          payment_date,
+          payment_category,
+          id: {
+            [Op.ne]: Id,
+          },
+        },
         transaction,
+        lock: transaction.LOCK.UPDATE,
       });
 
-      let invoice_status = "";
+      if (existingPayment) {
+        const error = new Error(
+          "Payment with the same details already exists"
+        );
+        error.statusCode = 400;
+        throw error;
+      }
 
+      let invoice_status = "";
       if (
-        status === "completed" &&
+        payment.payment_status !== "completed" &&
+        payment_status === "completed" &&
         payment.invoice_student_id
       ) {
         const invoiceStudent = await InvoiceStudent.findOne({
@@ -4899,183 +5304,137 @@ const paymentVerification = async (req, res) => {
           lock: transaction.LOCK.UPDATE,
         });
 
-        if (!invoiceStudent) {
-          throw new Error("Invoice student not found");
-        }
+        if (invoiceStudent) {
+          const totalPaid =
+            (await Payment.sum("amount", {
+              where: {
+                invoice_student_id: payment.invoice_student_id,
+                payment_status: "completed",
+                id: {
+                  [Op.ne]: Id,
+                },
+              },
+              transaction,
+            })) || 0;
 
-        const totalPaid =
-          (await Payment.sum("amount", {
+          const paid = Number(totalPaid) + Number(amount);
+          const invoiceAmount = Number(
+            invoiceStudent.Invoice?.amount || 0
+          );
+
+          if (paid >= invoiceAmount) {
+            await invoiceStudent.update(
+              {
+                status: "paid",
+              },
+              {
+                transaction,
+              }
+            );
+
+            invoice_status = "paid";
+          } else {
+            await invoiceStudent.update(
+              {
+                status: "partially_paid",
+              },
+              {
+                transaction,
+              }
+            );
+
+            invoice_status = "partially_paid";
+          }
+        }
+      }
+      else if (
+        payment.payment_status !== "completed" &&
+        payment_status === "completed" &&
+        payment.transport_invoice_id 
+      ) {
+        const transportInvoice= await TransportInvoice.findOne({
+            where:{
+              id:payment.transport_invoice_id,
+            },
+            transaction,
+            lock:transaction.LOCK.UPDATE,
+          });
+          if(!transportInvoice){
+            throw new Error("Transport invoice not found");
+          }
+          const paidamount= await Payment.sum("amount", {
             where: {
-              invoice_student_id: payment.invoice_student_id,
+              transport_invoice_id: payment.transport_invoice_id,
               payment_status: "completed",
+              id: {[Op.ne]: Id},
               trash: false,
             },
             transaction,
-          })) || 0;
-
-        const invoiceAmount =
-          Number(invoiceStudent?.Invoice?.amount) || 0;
-
-        const paidAmount = Number(totalPaid);
-
-        if (paidAmount >= invoiceAmount) {
-          await invoiceStudent.update(
-            {
-              status: "paid",
-            },
-            {
-              transaction,
-            }
-          );
-
-          invoice_status = "paid";
-        } else {
-          await invoiceStudent.update(
-            {
-              status: "partially_paid",
-            },
-            {
-              transaction,
-            }
-          );
-
-          invoice_status = "partially_paid";
-        }
+          });
+          const totalPaid = Number(paidamount || 0) + Number(amount);
+          const invoiceAmount = Number(transportInvoice.amount || 0);
+          if(totalPaid>=invoiceAmount){
+            await TransportInvoice.update({status: "paid"},
+              {
+                where: {
+                  id:payment.transport_invoice_id,
+                  student_id: payment.student_id,
+                },
+                transaction,
+        });
+        invoice_status="transport invoice -paid"
+       }else{
+          await TransportInvoice.update({status: "partially_paid"},
+        {
+          where: {
+            id:payment.transport_invoice_id,
+            student_id: payment.student_id,
+          },
+          transaction,
+        });
+        invoice_status="transport invoice -partially paid"
+       }
       }
-      return {
-        payment,
+      await payment.update(
+        {
+          student_id,
+          amount,
+          payment_date,
+          payment_category,
+          transaction_id:
+            transaction_id && transaction_id.trim() !== ""
+              ? transaction_id.trim()
+              : null,
+          payment_status,
+          payment_method,
+          updated_by: userId,
+        },
+        {
+          transaction,
+        }
+      );
+    return {
         invoice_status,
+        payment,
       };
     });
 
     return res.status(200).json({
-      message: "Payment verification successful",
-      payment: result.payment,
+      message: "Payment updated",
       invoice_status: result.invoice_status,
+      payment: result.payment,
     });
-
   } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
-      "paymentVerification:",
+      "updatePayment:",
       error
     );
 
-    if (error.message === "Payment not found") {
-      return res.status(404).json({
-        error: error.message,
-      });
-    }
-
-    if (error.message === "Invoice student not found") {
-      return res.status(404).json({
-        error: error.message,
-      });
-    }
-
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       error: error.message,
     });
-  }
-};
-
-const updatePayment = async (req, res) => {
-  try {
-    const school_id = req.user.school_id;
-    const userId=req.user.user_id;
-    const {
-      student_id,
-      amount,
-      payment_date,
-      payment_category,
-      transaction_id,
-      payment_status,
-      payment_method,
-    } = req.body;
-    if (!amount || !payment_date || !payment_category || !student_id) {
-      return res.status(400).json({
-        error: "student_id,amount,payment_date,payment_category are required",
-      });
-    }
-    const Id = req.params.id;
-    const payment = await Payment.findOne({
-      where: { id: Id, school_id },
-    });
-    if (!payment || payment.trash)
-      return res.status(404).json({ error: "Payment not found" });
-    const existingTransaction_id = await Payment.findOne({
-      where: { transaction_id, id: { [Op.ne]: req.params.id } },
-    });
-    if (
-      existingTransaction_id &&
-      existingTransaction_id.transaction_id !== ""
-    ) {
-      return res.status(400).json({ error: "Transaction ID already exists" });
-    }
-
-    const existingPayment = await Payment.findOne({
-      where: {
-        school_id,
-        student_id,
-        amount,
-        payment_date,
-        payment_category,
-
-        id: { [Op.ne]: Id },
-      },
-    });
-    if (existingPayment) {
-      return res
-        .status(400)
-        .json({ error: "Payment with the same details already exists" });
-    }
-
-    let invoice_status = "";
-    if (
-      payment.payment_status !== "completed" &&
-      payment_status === "completed" &&
-      payment.invoice_student_id
-    ) {
-      const invoiceStudent = await InvoiceStudent.findOne({
-        where: { id: payment.invoice_student_id },
-        include: [{ model: Invoice, attributes: ["id", "amount"] }],
-      });
-      let totalPaid = 0;
-      if (payment.invoice_student_id) {
-        totalPaid = await Payment.sum("amount", {
-          where: {
-            invoice_student_id: payment.invoice_student_id,
-            payment_status: "completed",
-          },
-        });
-      }
-      const paid = amount + totalPaid;
-      const invoiceAmount = invoiceStudent?.Invoice?.amount || 0;
-
-      if (invoiceStudent && paid >= invoiceAmount) {
-        await invoiceStudent.update({ status: "paid" });
-        invoice_status = "paid";
-      } else {
-        await invoiceStudent.update({ status: "partially_paid" });
-        invoice_status = "partially_paid";
-      }
-    }
-
-    await payment.update({
-      student_id,
-      amount,
-      payment_date,
-      payment_category,
-      transaction_id,
-      payment_status,
-      payment_method,
-      updated_by:userId,
-    });
-    res.status(200).json({ message: "Payment updated", payment });
-  } catch (error) {
-    logger.error("schoolId:", req.user.school_id, "updatePayment :", error);
-    res.status(500).json({ error: error.message });
   }
 };
 
@@ -5624,32 +5983,115 @@ const getAllInvoices = async (req, res) => {
 const getInvoiceById = async (req, res) => {
   try {
     const school_id = req.user.school_id;
-    const invoice = await Invoice.findOne({
-      where: { id: req.params.id, school_id, trash: false },
+    const id = req.params.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const status = req.query.status || "";
+    const searchQuery = req.query.q || "";
+    const whereClause = {
+      id ,
+      trash: false,
+      school_id: school_id,
+    };
+      const invoice = await Invoice.findOne({
+      where: whereClause,
+      attributes:["id","title","description","amount","due_date","category"],
+    });
+    if (!invoice) return res.status(404).json({ error: "Invoice not found" });
+    const whereClause2 = {
+      invoice_id:id,
+    }
+    if(status){
+      whereClause2.status = status;
+    }
+    const {count, rows: invoiceStudent} = await InvoiceStudent.findAndCountAll({
+      where: whereClause2,
+      offset,
+      limit,
+      attributes:["id","student_id","status"],
       include: [
         {
-          model: InvoiceStudent,
+          model: Student,
+          attributes: ["id", "full_name", "reg_no"],
+          where: {
+            [Op.or]: [
+              { full_name: { [Op.like]: `%${searchQuery}%` } },
+              { reg_no: { [Op.like]: `%${searchQuery}%` } },
+            ],
+          },
           include: [
             {
-              model: Student,
-              attributes: ["id", "full_name", "reg_no"],
-              include: [
-                {
-                  model: Class,
-                  attributes: ["id", "classname", "year", "division"],
-                },
-              ],
+              model: Class,
+              attributes: ["id", "classname", "year", "division"],
             },
           ],
         },
       ],
+    })
+  
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      invoice,
+      invoiceStudent,      
     });
-    if (!invoice) return res.status(404).json({ error: "Invoice not found" });
-    res.status(200).json(invoice);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+const getUnPaidStudentsInvoiceByInvoiceId = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const id = req.params.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const searchQuery = req.query.q || ""
+    const whereClause = {
+      invoice_id:id,
+      status:{[Op.ne]:"paid"}
+    }
+   
+    const {count, rows: invoiceStudent} = await InvoiceStudent.findAndCountAll({
+      where: whereClause,
+      offset,
+      limit,
+      attributes:["id","student_id","status"],
+      include: [
+        {
+          model: Student,
+          where: {
+            trash: false,
+            school_id,
+            [Op.or]: [
+              { full_name: { [Op.like]: `%${searchQuery}%` } },
+              { reg_no: { [Op.like]: `%${searchQuery}%` } },
+            ],
+          },
+          attributes: ["id", "full_name", "reg_no"],
+          include: [
+            {
+              model: Class,
+              attributes: ["id", "classname", "year", "division"],
+            },
+          ],
+        },
+      ],
+    })
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      invoiceStudent,      
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};  
 const updateInvoice = async (req, res) => {
   try {
     const { id } = req.params;
@@ -5669,6 +6111,44 @@ const updateInvoice = async (req, res) => {
     res.status(200).json({ message: "Invoice updated", invoice });
   } catch (error) {
     logger.error("schoolId:", req.user.school_id, "updateInvoice :", error);
+    res.status(500).json({ error: error.message });
+  }
+};  
+const getPendingAmountByInvoiceStudentId = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const invoice_student_id = req.params.id;
+    const invoiceStudent = await InvoiceStudent.findOne({
+      where: {
+        id: invoice_student_id,
+      },
+      attributes:["id","status"],
+      include:[
+        {
+          model:Invoice,
+          attributes:["id", "amount"],
+          where:{
+            school_id:school_id,
+            trash:false
+          }
+        }
+      ]
+    });
+    let pendingAmount =0;
+    if(!invoiceStudent) return res.status(404).json({ error: "Invoice student not found" });
+    const totalAmountPaid = await Payment.sum("amount", {
+      where: {
+        invoice_student_id: invoiceStudent.id,
+        payment_status: "completed",
+      },
+    });
+    pendingAmount = invoiceStudent.Invoice.amount - totalAmountPaid;
+    res.status(200).json({
+       pendingAmount ,
+       totalAmountPaid,
+      invoiceStudent});
+  } catch (error) {
+    logger.error("schoolId:", req.user.school_id, "getPendingAmountByStudentId :", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -9395,94 +9875,151 @@ const bulkCreateStaffAttendance = async (req, res) => {
     const school_id = req.user.school_id;
     const admin_id = req.user.user_id;
     const records = req.body.records;
+
     if (!records || !Array.isArray(records) || records.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "No attendance records provided" });
+      return res.status(400).json({
+        message: "No attendance records provided",
+      });
     }
 
-    const processedRecords = [];
-    for (const record of records) {
-      const { staff_id, date, status, remarks } = record;
-      // check the staff id is the same school
-      const staff = await User.findOne({
-        where: {
-          id: staff_id,
-          school_id,
-          trash: false,
-          role: { [Op.in]: ["teacher", "staff"] },
+    const staffIds = records
+      .map((record) => record.staff_id)
+      .filter(Boolean);
+
+    const staffs = await User.findAll({
+      where: {
+        id: {
+          [Op.in]: staffIds,
         },
-      });
-      if (!staff) {
-        return res.status(404).json({ error: "Staff not found" });
-      }
+        school_id,
+        trash: false,
+        role: {
+          [Op.in]: ["teacher", "staff"],
+        },
+      },
+      attributes: ["id"],
+    });
 
-      const check_in_time =
-        record.check_in_time || record.status === "present"
-          ? new Date().toISOString()
-          : null;
-      const check_out_time = record.check_out_time || null;
-      if (!staff_id || !date) continue;
+    const validStaffIds = new Set(staffs.map((staff) => staff.id));
 
-      const existing = await StaffAttendance.findOne({
-        where: { school_id, staff_id, date, trash: false },
-      });
-      if (existing) {
-        processedRecords.push({
+    const attendanceRecords = [];
+    const results = [];
+
+    for (const record of records) {
+      const {
+        staff_id,
+        date,
+        status,
+        remarks,
+        check_in_time,
+        check_out_time,
+      } = record;
+
+      if (!staff_id || !date) {
+        results.push({
           staff_id,
-          school_id,
           date,
           status: "Skipped",
-          message: "Attendance already exists for this staff on the date",
+          message: "staff_id and date are required",
         });
         continue;
       }
 
-      let total_hours = null;
-      if (check_in_time && check_out_time) {
-        const diff =
-          (new Date(check_out_time) - new Date(check_in_time)) /
-          (1000 * 60 * 60);
-        total_hours = diff.toFixed(2);
+      if (!validStaffIds.has(Number(staff_id))) {
+        results.push({
+          staff_id,
+          date,
+          status: "Skipped",
+          message: "Staff not found",
+        });
+        continue;
       }
-      const attendanceData = {
+
+      const attendanceStatus = (status || "present").toLowerCase();
+
+      const finalCheckInTime =
+        check_in_time ||
+        (attendanceStatus === "present"
+          ? new Date()
+          : null);
+
+      const finalCheckOutTime = check_out_time || null;
+
+      let total_hours = null;
+
+      if (finalCheckInTime && finalCheckOutTime) {
+        const diff =
+          (new Date(finalCheckOutTime) -
+            new Date(finalCheckInTime)) /
+          (1000 * 60 * 60);
+
+        total_hours = diff >= 0 ? diff.toFixed(2) : null;
+      }
+
+      attendanceRecords.push({
         school_id,
         staff_id,
         date,
-        status: status || "Present",
-        check_in_time:
-          check_in_time || status === "present"
-            ? new Date().toISOString()
-            : null,
-        check_out_time,
+        status: attendanceStatus,
+        check_in_time: finalCheckInTime,
+        check_out_time: finalCheckOutTime,
         total_hours,
         marked_by: admin_id,
         marked_method: "Manual",
-        remarks,
-      };
-
-      await StaffAttendance.create(attendanceData);
-      processedRecords.push({
-        staff_id,
-        date,
-        status: "Added",
-        message: "Attendance marked successfully",
+        remarks: remarks || null,
+        trash: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
     }
 
-    res.status(201).json({
-      message: "Bulk attendance processing completed",
-      results: processedRecords,
+    if (attendanceRecords.length === 0) {
+      return res.status(400).json({
+        message: "No valid attendance records to process",
+        results,
+      });
+    }
+
+    await StaffAttendance.bulkCreate(attendanceRecords, {
+      updateOnDuplicate: [
+        "status",
+        "check_in_time",
+        "check_out_time",
+        "total_hours",
+        "marked_by",
+        "marked_method",
+        "remarks",
+        "trash",
+        "updatedAt",
+      ],
+    });
+
+    attendanceRecords.forEach((record) => {
+      results.push({
+        staff_id: record.staff_id,
+        date: record.date,
+        status: "Processed",
+        message: "Attendance created or updated successfully",
+      });
+    });
+
+    return res.status(200).json({
+      message: "Bulk attendance processed successfully",
+      results,
     });
   } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
-      "Bulk attendance creation error:",
-      error,
+      "Bulk attendance upsert error:",
+      error
     );
-    console.error("Bulk attendance creation error:", error);
-    res.status(500).json({ error: "Failed to process bulk attendance" });
+
+    console.error("Bulk attendance upsert error:", error);
+
+    return res.status(500).json({
+      error: "Failed to process bulk attendance",
+    });
   }
 };
 const deleteStaffAttendance = async (req, res) => {
@@ -10750,6 +11287,97 @@ const getAllTransportationInvoices =async(req,res) =>{
     });
   }
 }
+const getPendingAmountByTransportInvoiceId=async(req,res) =>{
+  try {
+    const school_id = req.user.school_id || "";
+    const transport_invoice_id = req.params.id || "";
+    if(!transport_invoice_id){
+      return res.status(400).json({
+        message: "Transport invoice ID is required",
+      });
+    }
+    const transportInvoice = await TransportInvoice.findOne({
+      where: {
+        id: transport_invoice_id,
+        school_id,
+        trash: false,
+      },
+      attributes: ["id", "amount","due_date","term"],
+    });
+    if(!transportInvoice){
+      return res.status(404).json({
+        message: "Transport invoice not found",
+      });
+    }
+    let pendingAmount =0;
+    const totalAmountPaid = await Payment.sum("amount", {
+      where: {
+        transport_invoice_id,
+        payment_status: "completed",
+      },
+    });
+    pendingAmount = transportInvoice.amount - totalAmountPaid;
+    return res.status(200).json({
+      pending_amount: pendingAmount,
+      totalAmountPaid,
+      transportInvoice,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "Get Pending Amount By Transport Invoice ID Error:",
+      error
+    );
+    console.error("Get Pending Amount By Transport Invoice ID Error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+} 
+const getUnpaidTransportInvoiceByStudentId=async(req,res) =>{
+  try {
+    const school_id = req.user.school_id || "";
+    const student_id = req.params.id || "";
+    if(!student_id){
+      return res.status(400).json({
+        message: "Student ID is required",
+      });
+    }
+    const transportInvoice = await TransportInvoice.findOne({
+      where: {
+        student_id,
+        school_id,
+        trash: false,
+        status: { [Op.ne]:"paid" },
+    
+      },
+      attributes: ["id", "amount","due_date","term"],
+      include:[
+        {
+          model:Stop,
+          attributes:["id","stop_name","charge"],
+        },
+      ],
+    });
+    return res.status(200).json({
+      transportInvoice,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "Get Transport Invoice By Student ID Error:",
+      error
+    );
+    console.error("Get Transport Invoice By Student ID Error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
 const deleteTransportationInvoice =async(req,res) =>{
   try {
     const school_id = req.user.school_id || "";
@@ -11973,6 +12601,218 @@ const updateOwnDatasForSchool = async (req, res) => {
   }
 };
 
+const createCoScholasticArea = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { name, class_group, display_order, status } = req.body;
+
+    if (!name || !school_id) {
+      return res.status(400).json({ error: "name and school_id are required" });
+    }
+
+    const newArea = await CoScholasticArea.create({
+      school_id,
+      name: name.trim(),
+      class_group: class_group || null,
+      display_order: display_order !== undefined ? Number(display_order) : 0,
+      status: status !== undefined ? Boolean(status) : true,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Co-scholastic area created successfully",
+      data: newArea,
+    });
+  } catch (error) {
+    logger.error(
+      "school_id:",
+      req.user?.school_id,
+      "Error creating co-scholastic area:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      error: "Failed to create co-scholastic area",
+      details: error.message,
+    });
+  }
+};
+
+const getCoScholasticAreas = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { search, class_group, status, page, limit } = req.query;
+
+    const whereClause = {
+      [Op.or]: [{ school_id: school_id }, { school_id: null }],
+    };
+
+    if (status !== undefined) {
+      whereClause.status =
+        status === "true" || status === true || status === 1 || status === "1";
+    }
+
+    if (class_group) {
+      whereClause[Op.and] = [
+        ...(whereClause[Op.and] || []),
+        {
+          [Op.or]: [
+            { class_group: class_group },
+            { class_group: "All" },
+            { class_group: null },
+          ],
+        },
+      ];
+    }
+
+    if (search) {
+      whereClause[Op.and] = [
+        ...(whereClause[Op.and] || []),
+        {
+          name: { [Op.like]: `%${search}%` },
+        },
+      ];
+    }
+
+    if (page && limit) {
+      const pageNum = parseInt(page, 10) || 1;
+      const limitNum = parseInt(limit, 10) || 10;
+      const offset = (pageNum - 1) * limitNum;
+
+      const { count, rows } = await CoScholasticArea.findAndCountAll({
+        where: whereClause,
+        limit: limitNum,
+        offset,
+        order: [
+          ["display_order", "ASC"],
+          ["id", "ASC"],
+        ],
+      });
+
+      return res.status(200).json({
+        success: true,
+        totalItems: count,
+        totalPages: Math.ceil(count / limitNum),
+        currentPage: pageNum,
+        data: rows,
+      });
+    }
+
+    const areas = await CoScholasticArea.findAll({
+      where: whereClause,
+      order: [
+        ["display_order", "ASC"],
+        ["id", "ASC"],
+      ],
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Co-scholastic areas fetched successfully",
+      data: areas,
+    });
+  } catch (error) {
+    logger.error(
+      "school_id:",
+      req.user?.school_id,
+      "Error fetching co-scholastic areas:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch co-scholastic areas",
+      details: error.message,
+    });
+  }
+};
+
+const updateCoScholasticArea = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { id } = req.params;
+    const { name, class_group, display_order, status } = req.body;
+
+    const area = await CoScholasticArea.findOne({
+      where: {
+        id,
+        [Op.or]: [{ school_id }, { school_id: null }],
+      },
+    });
+
+    if (!area) {
+      return res.status(404).json({
+        success: false,
+        error: "Co-scholastic area not found",
+      });
+    }
+
+    if (name !== undefined) area.name = name.trim();
+    if (class_group !== undefined) area.class_group = class_group;
+    if (display_order !== undefined) area.display_order = Number(display_order);
+    if (status !== undefined) area.status = Boolean(status);
+
+    await area.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Co-scholastic area updated successfully",
+      data: area,
+    });
+  } catch (error) {
+    logger.error(
+      "school_id:",
+      req.user?.school_id,
+      "Error updating co-scholastic area:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      error: "Failed to update co-scholastic area",
+      details: error.message,
+    });
+  }
+};
+
+const deleteCoScholasticArea = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const { id } = req.params;
+
+    const area = await CoScholasticArea.findOne({
+      where: {
+        id,
+        school_id,
+      },
+    });
+
+    if (!area) {
+      return res.status(404).json({
+        success: false,
+        error: "Co-scholastic area not found or cannot be deleted",
+      });
+    }
+
+    await area.destroy();
+
+    return res.status(200).json({
+      success: true,
+      message: "Co-scholastic area deleted successfully",
+    });
+  } catch (error) {
+    logger.error(
+      "school_id:",
+      req.user?.school_id,
+      "Error deleting co-scholastic area:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      error: "Failed to delete co-scholastic area",
+      details: error.message,
+    });
+  }
+};
+
 module.exports = {
   createClass,
   getAllClasses,
@@ -11982,6 +12822,7 @@ module.exports = {
   getClassesByYear,
   getSpecialClassesByYear,
   getWithOutSpecialClassesByYear,
+  getWithOutSpecialClasses,
   getTrashedClasses,
   restoreClass,
   permanentDeleteClass,
@@ -12023,6 +12864,8 @@ module.exports = {
   updateGuardian,
   createGuardianService,
   deleteGuardian,
+  checkGuardianAlreadyExist,
+  getUserGuardian,
 
   getGuardianBySchoolId,
   updateGuardianUserPassword,
@@ -12032,6 +12875,7 @@ module.exports = {
   getAllStudents,
   getStudentById,
   updateStudent,
+  changeStudentGurdianId,
   bulkUpdateStudentsToAlumni,
   bulkUpdateStudentsClass,
   getAlumniStudents,
@@ -12088,7 +12932,9 @@ module.exports = {
   addInvoiceStudentsbyInvoiceId,
   getAllInvoices,
   getInvoiceById,
+  getUnPaidStudentsInvoiceByInvoiceId,
   updateInvoice,
+  getPendingAmountByInvoiceStudentId,
   deleteInvoice,
   restoreInvoice,
   permanentDeleteInvoiceStudent,
@@ -12201,6 +13047,8 @@ module.exports = {
 
   bulkCreateTransportationInvoice,
   getAllTransportationInvoices,
+  getPendingAmountByTransportInvoiceId,
+  getUnpaidTransportInvoiceByStudentId,
   deleteTransportationInvoice,
   restoreTransportationInvoice,
   getTrashedTransportationInvoices,
@@ -12229,4 +13077,9 @@ module.exports = {
   
   getOwnDatasForSchool,
   updateOwnDatasForSchool,
+
+  createCoScholasticArea,
+  getCoScholasticAreas,
+  updateCoScholasticArea,
+  deleteCoScholasticArea,
 };
