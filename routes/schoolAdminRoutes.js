@@ -608,6 +608,10 @@ router.put("/updateStop/:id", schoolAdminController.updateStop);
 router.delete("/deleteStop/:id", schoolAdminController.deleteStop);
 router.get("/getTrashedStop", schoolAdminController.getTrashedStop);
 router.patch("/restoreStop/:id", schoolAdminController.restoreStop);
+router.get("/getUnAssignedStopsInPairRouteByRouteId/:route_id",
+   trackerController.getUnAssignedStopsInPairRouteByRouteId);
+router.post("/assignedStopIdsFromPairRoute/:route_id", 
+  trackerController.assignedStopIdsFromPairRoute);
 
 
 router.get("/getStopByIdAndRouteId/:id/:route_id", trackerController.getStopByIdAndRouteId);
