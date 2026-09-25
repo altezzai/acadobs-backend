@@ -10255,9 +10255,7 @@ const getAllStops = async (req, res) => {
       school_id: school_id,
     };
     if (searchQuery) {
-      whereClause[Op.or] = [
-        { stop_name: { [Op.iLike]: `%${searchQuery}%` } },
-      ];
+      whereClause.stop_name={ [Op.like]: `%${searchQuery}%` }
     }
     const { count, rows: stops } = await Stop.findAndCountAll({
       where:whereClause,
@@ -10389,7 +10387,7 @@ const getTrashedStop = async (req, res) => {
     };
     if (searchQuery) {
       whereClause[Op.or] = [
-        { stop_name: { [Op.iLike]: `%${searchQuery}%` } },
+        { stop_name: { [Op.Like]: `%${searchQuery}%` } },
       ];
     }
     const { count, rows: stops } = await Stop.findAndCountAll({
