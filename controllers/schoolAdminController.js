@@ -10162,7 +10162,7 @@ const createStop = async (req, res) => {
     try {
     const school_id = req.user.school_id;
     const user_id = req.user.user_id;
-    const { route_id, stop_name, priority, latitude, longitude ,both} = req.body;
+    const { route_id, stop_name, priority, latitude, longitude,charge,both} = req.body;
 
     if (!route_id || !stop_name) {
       return res.status(400).json({ message: "Fields are missing" });
@@ -10213,6 +10213,7 @@ const createStop = async (req, res) => {
           stop_name,
           latitude,
           longitude,
+          charge,
           trash: false,
           recorded_by: user_id,
         },
@@ -10327,7 +10328,7 @@ const updateStop = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const { stop_name, latitude, longitude } = req.body;
+    const { stop_name, latitude, longitude ,charge,} = req.body;
     const stop = await Stop.findOne({
       where: { id, school_id, trash: false },
     });
@@ -10337,6 +10338,7 @@ const updateStop = async (req, res) => {
     stop.stop_name = stop_name || stop.stop_name;
     stop.latitude = latitude || stop.latitude;
     stop.longitude = longitude || stop.longitude;
+    stop.charge = charge || stop.charge;
     await stop.save();
     res.status(200).json({
       message: "Stop updated successfully",
