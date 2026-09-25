@@ -1614,12 +1614,50 @@ const getCompetencyAssesmentByStudentId= async (req, res) => {
     const student_id = req.params.student_id ;
     const exam_id = req.query.exam_id||null;
     const searchQuery = req.query.q || "";
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 100;
-    const offset = (page - 1) * limit;
-    let whereClause = {
+ 
+    const today = new Date();
+
+    const month = today.getMonth() + 1;
+    const year = today.getFullYear();
+
+    const academicStartYear =
+      month >= 6 ? year : year - 1;
+
+    const educationYear =
+      `${academicStartYear}-${String(
+        academicStartYear + 1
+      ).slice(-2)}`;
+       const exams = await Exam.findAll({
+      where: {
+        school_id,
+        education_year: educationYear,
+        trash: false,
+      },
+      attributes: [
+        "id",
+        "exam_name",
+        "education_year",
+      ],
+      order: [
+        ["id", "ASC"],
+      ],
+    });
+
+    if (!exams.length) {
+      return res.status(404).json({
+        error: `No exams found for education year ${educationYear}`,
+      });
+    }
+
+    const examIds = exams.map(
+      (exam) => exam.id
+    );
+     let whereClause = {
       school_id,
       student_id,
+      exam_id: {
+                [Op.in]: examIds,
+              },
     };
     if (exam_id) {
       whereClause.exam_id = exam_id;
@@ -1630,11 +1668,9 @@ const getCompetencyAssesmentByStudentId= async (req, res) => {
         { description: { [Op.like]: `%${searchQuery}%` } },
       ];
     }
-    const {count,rows:assessments}  = await StudentCompetencyAssessment.findAndCountAll({
+
+    const assessments = await StudentCompetencyAssessment.findAll({
       where:whereClause,
-      limit,
-      offset,
-      distinct:true,
       order: [["createdAt", "DESC"]],
       include: [
         {
@@ -1672,11 +1708,7 @@ const getCompetencyAssesmentByStudentId= async (req, res) => {
     });
 
 
-    const totalPages = Math.ceil(count / limit);
     res.status(200).json({
-      totalcontent: count,
-      totalPages,
-      currentPage: page,
       data: assessments,
     });
   } catch (error) {
