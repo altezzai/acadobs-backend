@@ -10386,9 +10386,7 @@ const getTrashedStop = async (req, res) => {
       school_id: school_id,
     };
     if (searchQuery) {
-      whereClause[Op.or] = [
-        { stop_name: { [Op.Like]: `%${searchQuery}%` } },
-      ];
+      whereClause.stop_name={ [Op.like]: `%${searchQuery}%` }
     }
     const { count, rows: stops } = await Stop.findAndCountAll({
       where:whereClause,
