@@ -10270,7 +10270,7 @@ const getAllStops = async (req, res) => {
           attributes: ["id", "route_name", "type", "pickId"],
         },
       ],
-      order: [["createdAt", "DESC"]],
+     order: [["createdAt", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -10278,6 +10278,7 @@ const getAllStops = async (req, res) => {
       totalcontent: count,
       totalPages,
       currentPage: page,
+      data:stops
     });
   } catch (error) {
     logger.error( "schoolId:",
@@ -10410,6 +10411,7 @@ const getTrashedStop = async (req, res) => {
       totalcontent: count,
       totalPages,
       currentPage: page,
+      data:stops,
     });
   } catch (error) {
     logger.error( "schoolId:",
