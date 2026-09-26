@@ -1767,7 +1767,7 @@ const getCoScholasticAssessmentByStudentId = async (req, res) => {
           {
             model: User,
             as: "Recorder",
-            attributes: ["id", "full_name", "email"],
+            attributes: ["id", "name", "email"],
           },
         ],
         order: [
