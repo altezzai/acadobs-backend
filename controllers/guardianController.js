@@ -1099,7 +1099,7 @@ const getSchoolById = async (req, res) => {
     const { id } = req.params;
     const school = await School.findOne({
        where: { id , trash: false}, 
-       attributes:["id","name","address","phone","email","logo","bg_image","primary_colour","secondary_colour","status","location"],
+       attributes:["id","name","address","phone","email","logo","bg_image","primary_colour","secondary_colour","status","location","upi_id","upi_name"],
     });
     if (!school) return res.status(404).json({ error: "School not found" });
     res.status(200).json({ school });

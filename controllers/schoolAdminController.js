@@ -12826,8 +12826,6 @@ const updateOwnDatasForSchool = async (req, res) => {
       pass_percent,
       primary_colour,
       secondary_colour,
-      upi_id,
-      upi_name,
       payment_enabled,
       slug,
       short_name,
@@ -13377,8 +13375,6 @@ module.exports = {
   deleteStop,
   getTrashedStop,
   restoreStop,
-
-
   
   createVehicle,
   getAllVehicles,
@@ -13388,7 +13384,6 @@ module.exports = {
   createDriver,
   assignDriverToRoutes,
   getAllDrivers,
-  // updateStudentToRoute,
   deleteStudentFromRoute,
   changeStudentRouteAndStop,
   bulkUpdateStopCharges,

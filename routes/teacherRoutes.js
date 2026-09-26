@@ -370,6 +370,8 @@ router.get(
 router.get("/getMyProfileAndSchoolDetails",commonController.getMyProfileAndSchoolDetails);
 router.get("/getCompetencyAssesmentByStudentId/:student_id",
 commonController.getCompetencyAssesmentByStudentId);
+router.get("/getCoScholasticAssessmentByStudentId/:student_id",
+  commonController.getCoScholasticAssessmentByStudentId);
 
 router.get("/getExamTitles",selectionListController.getExamTitles);
 router.get("/getLeaveTypes", selectionListController.getLeaveTypes);

@@ -630,11 +630,20 @@ router.delete(
 );
 
 router.get("/getSchoolsList", publicController.getSchoolsList);
+
+// Co-Scholastic Areas & Assessment
+router.post("/createCoScholasticArea", schoolAdminController.createCoScholasticArea);
+router.get("/getCoScholasticAreas", schoolAdminController.getCoScholasticAreas);
+router.put("/updateCoScholasticArea/:id", schoolAdminController.updateCoScholasticArea);
+router.delete("/deleteCoScholasticArea/:id", schoolAdminController.deleteCoScholasticArea);
+router.get("/getCoScholasticAssessmentByStudentId/:student_id", 
+  commonController.getCoScholasticAssessmentByStudentId);
 //teacher controller
 router.get("/getMyPermissions", teacherController.getMyPermissions);
 //common Controller
 router.get("/getCompetencyAssesmentByStudentId/:student_id",
 commonController.getCompetencyAssesmentByStudentId);
+
 router.get("/getAllDriverUsers",  transportationPermission,
  commonController.getAllDriverUsers);
 

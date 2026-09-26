@@ -1727,9 +1727,6 @@ const getCoScholasticAssessmentByStudentId = async (req, res) => {
     const student_id = req.params.student_id;
     const exam_id = req.query.exam_id || null;
     const searchQuery = req.query.q || "";
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 100;
-    const offset = (page - 1) * limit;
 
     let whereClause = {
       school_id,
@@ -1740,12 +1737,9 @@ const getCoScholasticAssessmentByStudentId = async (req, res) => {
       whereClause.exam_id = exam_id;
     }
 
-    const { count, rows: assessments } =
-      await StudentCoScholasticAssessment.findAndCountAll({
+    const assessments =
+      await StudentCoScholasticAssessment.findAll({
         where: whereClause,
-        limit,
-        offset,
-        distinct: true,
         include: [
           {
             model: CoScholasticArea,
@@ -1782,11 +1776,7 @@ const getCoScholasticAssessmentByStudentId = async (req, res) => {
         ],
       });
 
-    const totalPages = Math.ceil(count / limit);
     return res.status(200).json({
-      totalcontent: count,
-      totalPages,
-      currentPage: page,
       data: assessments,
     });
   } catch (error) {

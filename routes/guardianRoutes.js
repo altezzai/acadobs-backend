@@ -278,7 +278,10 @@ router.post(
 );
 
 router.get("/getCompetencyAssesmentByStudentId/:student_id",
-commonController.getCompetencyAssesmentByStudentId);
+  commonController.getCompetencyAssesmentByStudentId);
+router.get("/getCoScholasticAssessmentByStudentId/:student_id",
+  commonController.getCoScholasticAssessmentByStudentId);
+
 router.get("/getSchoolDetails", commonController.getSchoolDetails);
 //selection list controller
 router.get("/getExamTitles",selectionListController.getExamTitles);
