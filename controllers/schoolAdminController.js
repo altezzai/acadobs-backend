@@ -12845,6 +12845,8 @@ const updateOwnDatasForSchool = async (req, res) => {
       admission_enabled,
       seo_title,
       seo_description,
+      upi_id,
+      upi_name,
     } = req.body;
     const school = await School.findOne({
       where: { id: school_id },
@@ -12910,6 +12912,8 @@ const updateOwnDatasForSchool = async (req, res) => {
       admission_enabled,
       seo_title,
       seo_description,
+      upi_id,
+      upi_name,
     }, { transaction });
 
     await User.update({

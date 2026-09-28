@@ -6,8 +6,6 @@ module.exports = {
     const tables = [
       'vehicle',
       'route',
-      'route_drivers',
-      'route_stop_log',
     ];
 
     const [results] = await queryInterface.sequelize.query(`
@@ -22,9 +20,7 @@ module.exports = {
         AND REFERENCED_COLUMN_NAME = 'id'
         AND TABLE_NAME IN (
           'vehicle',
-          'route',
-          'route_drivers',
-          'route_stop_log'
+          'route'
         );
     `);
 

@@ -1767,7 +1767,7 @@ const getCoScholasticAssessmentByStudentId = async (req, res) => {
           {
             model: User,
             as: "Recorder",
-            attributes: ["id", "name", "email"],
+            attributes: ["id", "name"],
           },
         ],
         order: [
@@ -1843,5 +1843,6 @@ module.exports = {
   getMyProfileAndSchoolDetails,
   getCompetencyAssesmentByStudentId,
   getCoScholasticAssessmentByStudentId,
+
 
 }; 
