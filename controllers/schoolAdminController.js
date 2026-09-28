@@ -10268,6 +10268,18 @@ const getAllStops = async (req, res) => {
           as: "routes",
           attributes: ["id", "route_name", "type", "pickId"],
         },
+        {
+          model: Student,
+          as: "students",
+          attributes: ["id", "name","reg_no"],
+          include:[
+            {
+              model: Class,
+              as: "class",
+              attributes: ["id", "classname"],
+            }
+          ]
+        },
       ],
      order: [["createdAt", "DESC"]],
     });
@@ -10443,6 +10455,181 @@ const restoreStop = async (req, res) => {
     res.status(500).json({ error: "Failed to restore stop" });
   }
 } 
+const assignStudentsToStop = async (req, res) => {
+  try {
+    const { student_ids, stop_id } = req.body;
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
+
+    if (
+      !Array.isArray(student_ids) ||
+      student_ids.length === 0 ||
+      !stop_id
+    ) {
+      return res.status(400).json({
+        message: "student_ids (array) and stop_id are required",
+      });
+    }
+
+    const driver = await User.findOne({
+      where: {
+        id: user_id,
+        trash: false,
+        role: "driver",
+        school_id,
+      },
+    });
+
+    if (!driver) {
+      return res.status(403).json({
+        message: "Driver profile not found",
+      });
+    }
+
+    const stop = await Stop.findOne({
+      where: {
+        id: stop_id,
+        trash: false,
+        school_id,
+      },
+      include: [
+        {
+          model: Routes,
+          as: "routes",
+          attributes: ["id", "driver_id", "type"], // id added
+          where: {
+            driver_id: user_id,
+            type: "pickup",
+            school_id,
+            trash: false,
+          },
+          required: true,
+        },
+      ],
+    });
+
+    if (!stop) {
+      return res.status(404).json({
+        message: "Stop not found or not assigned to this driver",
+      });
+    }
+
+    const route = Array.isArray(stop.routes)
+      ? stop.routes[0]
+      : stop.routes;
+
+    if (!route) {
+      return res.status(404).json({
+        message: "Pickup route not found for this stop",
+      });
+    }
+
+    const route_id = route.id;
+
+    const students = await Student.findAll({
+      where: {
+        id: student_ids,
+        route_id,
+        school_id,
+        trash: false,
+      },
+      attributes: ["id", "full_name", "route_id", "stop_id"],
+    });
+
+    if (students.length !== student_ids.length) {
+      return res.status(404).json({
+        message:
+          "One or more students not found or not assigned to this driver's pickup route",
+      });
+    }
+
+    await Student.update(
+      {
+        stop_id,
+      },
+      {
+        where: {
+          id: student_ids,
+          route_id,
+          school_id,
+          trash: false,
+        },
+      }
+    );
+
+    return res.status(200).json({
+      message: "Students assigned to stop successfully",
+      assigned_count: students.length,
+      route_id,
+      stop_id,
+    });
+  } catch (error) {
+    logger.error(
+      "role:",
+      req.user.role,
+      "userId:",
+      req.user.user_id,
+      "Error assigning students to stop:",
+      error
+    );
+
+    console.error("Error assigning students to stop:", error);
+
+    return res.status(500).json({
+      error: "Failed to assign students to stop",
+    });
+  }
+};
+const deleteStudentFromStop = async (req, res) => {
+  try {
+    const {stop_id, student_id } = req.params;
+    const school_id = req.user.school_id;
+
+    const stop = await Stop.findOne({
+      where: { id: stop_id, trash: false ,school_id:school_id},
+      include: [
+        {
+          model: Routes,
+          as: "routes",
+          attributes: ["id", "isLock"],
+        },
+      ],
+    });
+
+    if (!stop) {
+      return res.status(404).json({
+        message: "Stop not found or not assigned to this driver",
+      });
+    }
+    const student = await Student.findOne({
+      where: {
+        id: student_id,
+        stop_id: stop_id,
+        trash: false,
+      },
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found in this stop",
+      });
+    }
+    await student.update({
+      stop_id: null,
+    });
+
+    return res.status(200).json({
+      message: "Student marked as deleted successfully",
+    });
+
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error deleting students from stop:", error);
+    console.error("Error deleting students from stop:", error);
+    return res.status(500).json({
+      error: "Failed to delete students from stop",
+    });
+  }
+};
 const createDriver = async (req, res) => {
   const transaction = await schoolSequelize.transaction();
 
@@ -13379,6 +13566,7 @@ module.exports = {
   deleteStop,
   getTrashedStop,
   restoreStop,
+  assignStudentsToStop,
   
   createVehicle,
   getAllVehicles,
