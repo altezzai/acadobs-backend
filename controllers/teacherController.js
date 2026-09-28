@@ -1,5 +1,7 @@
 const { Op, where, Sequelize } = require("sequelize");
 const moment = require("moment");
+const momentTimezone = require("moment-timezone");
+
 const geolib = require("geolib");
 const logger = require("../utils/logger");
 const Mark = require("../models/marks");
@@ -42,6 +44,7 @@ const { sendPushNotification } = require("../utils/notifcationHandler");
 const { deleteFile } = require("../middlewares/storageUploads");
 const Exam = require("../models/exams");
 const ExamTimetable = require("../models/exam_timetable");
+const { Console } = require("winston/lib/winston/transports");
 
 const createInternalMarkWithMarks = async (req, res) => {
   try {
@@ -4262,27 +4265,68 @@ const getNavigationBarCounts = async (req, res) => {
   }
 };
 
+
+const countryTimezones = {
+  India: "Asia/Kolkata",
+  UAE: "Asia/Dubai",
+  "United Arab Emirates": "Asia/Dubai",
+  "Saudi Arabia": "Asia/Riyadh",
+  Qatar: "Asia/Qatar",
+  Oman: "Asia/Muscat",
+  Kuwait: "Asia/Kuwait",
+  Bahrain: "Asia/Bahrain",
+  Singapore: "Asia/Singapore",
+  Malaysia: "Asia/Kuala_Lumpur",
+  "United Kingdom": "Europe/London",
+  UK: "Europe/London",
+  "United States": "America/New_York",
+  USA: "America/New_York",
+  Canada: "America/Toronto",
+  Australia: "Australia/Sydney",
+};
+
 const markSelfAttendance = async (req, res) => {
   try {
     const staff_id = req.user.user_id;
     const school_id = req.user.school_id;
     const role = (req.user.role || "").toLowerCase();
     const { remarks, latitude, longitude, marked_device_id } = req.body;
-    const date = new Date().toISOString().split("T")[0];
+
+    const school = await School.findOne({
+      where: { id: school_id },
+    });
+
+    if (!school) {
+      return res.status(400).json({
+        message: "School not found",
+      });
+    }
+
+    const country = "India";
+    const timezone = countryTimezones[country] || "Asia/Kolkata";
+
+    const currentMoment = momentTimezone.tz(timezone);
+    const date = currentMoment.format("YYYY-MM-DD");
 
     const existing = await StaffAttendance.findOne({
-      where: { staff_id, school_id, date, trash: false },
+      where: {
+        staff_id,
+        school_id,
+        date,
+        trash: false,
+      },
     });
-   
+
     if (existing) {
       if (existing.status === "Leave") {
-        return res
-          .status(400)
-          .json({ message: "You are on leave" });
+        return res.status(400).json({
+          message: "You are on leave",
+        });
       }
-      return res
-        .status(400)
-        .json({ message: "Attendance already marked for today" });
+
+      return res.status(400).json({
+        message: "Attendance already marked for today",
+      });
     }
 
     if (!latitude || !longitude) {
@@ -4291,16 +4335,16 @@ const markSelfAttendance = async (req, res) => {
       });
     }
 
-    const school = await School.findOne({ where: { id: school_id } });
-    if (!school || !school.location) {
-      return res
-        .status(400)
-        .json({ message: "School location not configured" });
+    if (!school.location) {
+      return res.status(400).json({
+        message: "School location not configured",
+      });
     }
 
-    const [schoolLat, schoolLon] = school.location.split(",").map(Number);
+    const [schoolLat, schoolLon] = school.location
+      .split(",")
+      .map(Number);
 
-    // ✅ Calculate distance using geolib
     const distance = geolib.getDistance(
       { latitude, longitude },
       { latitude: schoolLat, longitude: schoolLon },
@@ -4312,7 +4356,8 @@ const markSelfAttendance = async (req, res) => {
       });
     }
 
-    const now = new Date();
+    const now = currentMoment.toDate();
+
     let status = "Present";
 
     const expectedCheckInTime =
@@ -4321,20 +4366,21 @@ const markSelfAttendance = async (req, res) => {
         : school.staff_check_in_time;
 
     if (expectedCheckInTime) {
-      const expectedMoment = moment(expectedCheckInTime, [
-        "HH:mm:ss",
-        "HH:mm",
-        "YYYY-MM-DD HH:mm:ss",
-      ]);
+      const expectedMoment = momentTimezone.tz(
+        expectedCheckInTime,
+        ["HH:mm:ss", "HH:mm", "YYYY-MM-DD HH:mm:ss"],
+        timezone,
+      );
+
       if (expectedMoment.isValid()) {
-        const threshold = moment().set({
+        const threshold = currentMoment.clone().set({
           hour: expectedMoment.hour(),
           minute: expectedMoment.minute(),
           second: expectedMoment.second(),
           millisecond: 0,
         });
 
-        if (moment().isAfter(threshold)) {
+        if (currentMoment.isAfter(threshold)) {
           status = "Late";
         }
       }
@@ -4358,6 +4404,9 @@ const markSelfAttendance = async (req, res) => {
       message: "Attendance marked successfully",
       attendance: newAttendance,
       distance: `${distance} meters`,
+      country,
+      timezone,
+      current_time: currentMoment.format("YYYY-MM-DD HH:mm:ss"),
     });
   } catch (error) {
     logger.error(
@@ -4366,8 +4415,15 @@ const markSelfAttendance = async (req, res) => {
       "Error marking attendance:",
       error,
     );
-    logger.error("Error marking attendance show the veriable:", error.message);
-    res.status(500).json({ error: "Failed to mark attendance" });
+
+    logger.error(
+      "Error marking attendance:",
+      error.message,
+    );
+
+    res.status(500).json({
+      error: "Failed to mark attendance",
+    });
   }
 };
 
@@ -4375,8 +4431,28 @@ const markCheckOutSelfAttendance = async (req, res) => {
   try {
     const staff_id = req.user.user_id;
     const school_id = req.user.school_id;
-    const date = new Date().toISOString().split("T")[0];
     const { latitude, longitude } = req.body;
+
+    const school = await School.findOne({
+      where: { id: school_id },
+    });
+
+    if (!school) {
+      return res.status(400).json({
+        message: "School not found",
+      });
+    }
+
+    if (!school.location) {
+      return res.status(400).json({
+        message: "School location not configured",
+      });
+    }
+
+    const country = "India";
+    const timezone = countryTimezones[country] || "Asia/Kolkata";
+    const currentTime = momentTimezone.tz(timezone);
+    const date = currentTime.format("YYYY-MM-DD");
 
     if (!latitude || !longitude) {
       return res.status(400).json({
@@ -4384,19 +4460,11 @@ const markCheckOutSelfAttendance = async (req, res) => {
       });
     }
 
-    const school = await School.findOne({ where: { id: school_id } });
-    if (!school || !school.location) {
-      return res
-        .status(400)
-        .json({ message: "School location not configured" });
-    }
-
     const [schoolLat, schoolLon] = school.location.split(",").map(Number);
 
-    // ✅ Calculate distance using geolib
     const distance = geolib.getDistance(
       { latitude, longitude },
-      { latitude: schoolLat, longitude: schoolLon },
+      { latitude: schoolLat, longitude: schoolLon }
     );
 
     if (distance > 100) {
@@ -4404,24 +4472,34 @@ const markCheckOutSelfAttendance = async (req, res) => {
         message: `You are too far from the school to mark attendance (Distance: ${distance}m)`,
       });
     }
-    // Check if already marked today
+
     const existing = await StaffAttendance.findOne({
-      where: { staff_id, school_id, date, trash: false },
+      where: {
+        staff_id,
+        school_id,
+        date,
+        trash: false,
+      },
     });
 
-    if (!existing)
-      return res
-        .status(400)
-        .json({ message: "Attendance not marked for today" });
-    if (existing.check_out_time)
-      return res
-        .status(400)
-        .json({ message: "Check-out already marked for today" });
+    if (!existing) {
+      return res.status(400).json({
+        message: "Attendance not marked for today",
+      });
+    }
 
-    const checkOut = new Date();
-    const diff =
-      (new Date(checkOut) - new Date(existing.check_in_time)) /
-      (1000 * 60 * 60);
+    if (existing.check_out_time) {
+      return res.status(400).json({
+        message: "Check-out already marked for today",
+      });
+    }
+
+    const checkOut = currentTime.toDate();
+
+    const checkIn = moment(existing.check_in_time);
+
+    const diff = currentTime.diff(checkIn, "minutes") / 60;
+
     const total_hours = diff.toFixed(2);
 
     existing.check_out_time = checkOut;
@@ -4432,16 +4510,24 @@ const markCheckOutSelfAttendance = async (req, res) => {
     res.status(200).json({
       message: "Check-out marked successfully",
       attendance: existing,
+      timezone,
+      current_date: date,
+      current_time: currentTime.format("YYYY-MM-DD HH:mm:ss"),
+      total_hours,
     });
   } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error marking check-out attendance:",
-      error,
+      error
     );
+
     console.error("Error marking check-out attendance:", error);
-    res.status(500).json({ error: "Failed to mark check-out attendance" });
+
+    res.status(500).json({
+      error: "Failed to mark check-out attendance",
+    });
   }
 };
 const todayAttendanceStatus = async (req, res) => {
