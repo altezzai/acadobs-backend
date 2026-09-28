@@ -10598,7 +10598,7 @@ const deleteStudentFromStop = async (req, res) => {
 
     if (!stop) {
       return res.status(404).json({
-        message: "Stop not found or not assigned to this driver",
+        message: "Stop not found",
       });
     }
     const student = await Student.findOne({
@@ -13567,6 +13567,7 @@ module.exports = {
   getTrashedStop,
   restoreStop,
   assignStudentsToStop,
+  deleteStudentFromStop,
   
   createVehicle,
   getAllVehicles,
