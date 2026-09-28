@@ -546,6 +546,84 @@ const getPaymentById = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getUnPaidInvoicesByGuardian = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
+    const students= await Student.findAll({
+      where:{
+        guardian_id:user_id,
+        school_id:school_id,
+        trash:false
+      },
+      attributes:["id"]
+    })
+    if(!students||students.length === 0)
+      return res.status(404).json({ error: "No students found" });
+   const invoices = await InvoiceStudent.findAll({
+    where:{
+     student_id: { [Op.in]: students.map((student) => student.id) },
+     status:{ [Op.ne]: "paid" }
+    },
+    attributes:["id","status"],
+    include:[
+      {
+        model:Invoice,
+        attributes:["id","title","amount", "due_date","category"]
+      },
+      {
+        model:Student,
+        attributes:["id","full_name"]
+      }
+    ],
+    order:[["createdAt","DESC"]]
+   })
+    res.status(200).json({
+      count:invoices.length,
+      data:invoices});
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error fetching invoices:", error);
+    console.error("Error fetching invoices:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+const getUnPaidTransportInvoicesByGuardian = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
+    const students= await Student.findAll({
+      where:{
+        guardian_id:user_id,
+        school_id:school_id,
+        trash:false
+      },
+      attributes:["id"]
+    })
+    if(!students||students.length === 0)
+      return res.status(404).json({ error: "No students found" });
+   const invoices = await TransportInvoice.findAll({
+    where:{
+     student_id: { [Op.in]: students.map((student) => student.id) },
+     status:{ [Op.ne]: "paid" }
+    },
+    attributes:["id","amount","term","due_date"],
+    include:[
+      {
+        model:Student,
+        attributes:["id","full_name"]
+      }
+    ],
+    order:[["createdAt","DESC"]]
+   })
+    res.status(200).json({
+      count:invoices.length,
+      data:invoices});
+  } catch (error) {
+    logger.error("userId:", req.user.user_id, "Error fetching invoices:", error);
+    console.error("Error fetching invoices:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
 const createTransportInvoicePayment = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -2232,6 +2310,8 @@ module.exports = {
   createPayment,
   updatePayment,
   getPaymentById,
+  getUnPaidInvoicesByGuardian,
+  getUnPaidTransportInvoicesByGuardian,
 
   createTransportInvoicePayment,
   getTransportInvoiceByOwnStudentId,

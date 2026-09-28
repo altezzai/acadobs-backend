@@ -40,6 +40,9 @@ router.put(
   guardianController.updatePayment,
 )
 router.get("/getPaymentById/:id", guardianController.getPaymentById);
+router.get("/getUnPaidInvoicesByGuardian", guardianController.getUnPaidInvoicesByGuardian);
+router.get("/getUnPaidTransportInvoicesByGuardian", guardianController.getUnPaidTransportInvoicesByGuardian);
+
 router.post(
   "/createTransportInvoicePayment",
   uploadWithErrorHandler(upload.single("payment_attachment")),

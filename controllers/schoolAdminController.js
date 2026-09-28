@@ -10271,11 +10271,10 @@ const getAllStops = async (req, res) => {
         {
           model: Student,
           as: "students",
-          attributes: ["id", "name","reg_no"],
+          attributes: ["id", "full_name","reg_no"],
           include:[
             {
               model: Class,
-              as: "class",
               attributes: ["id", "classname"],
             }
           ]
