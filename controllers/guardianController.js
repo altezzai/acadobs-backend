@@ -1120,6 +1120,20 @@ const getStudentsUnderGuardianBySchoolId = async (req, res) => {
           model: Class,
           attributes: ["id", "classname", "year", "division"],
         },
+        {
+          model:InvoiceStudent,
+          required:false,
+          where:{
+                // status:{ [Op.ne]: "paid" }
+                status:"overdue",
+              },
+          include:[
+            {
+              model:Invoice,
+              attributes:["id","title","category","due_date","amount"],
+            }
+          ]
+        }
       ],
     });
     if (!students || students.length === 0) {

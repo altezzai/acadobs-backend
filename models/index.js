@@ -162,6 +162,7 @@ Invoice.hasMany(InvoiceStudent, { foreignKey: "invoice_id" });
 Invoice.belongsTo(User,{ foreignKey: "recorded_by" });
 InvoiceStudent.belongsTo(Invoice, { foreignKey: "invoice_id" });
 InvoiceStudent.belongsTo(Student, { foreignKey: "student_id" });
+Student.hasMany(InvoiceStudent, { foreignKey: "student_id" });
 
 TransportInvoice.belongsTo(School, { foreignKey: "school_id" });
 School.hasMany(TransportInvoice, { foreignKey: "school_id" });
