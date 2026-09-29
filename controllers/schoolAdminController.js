@@ -10280,7 +10280,7 @@ const getAllStops = async (req, res) => {
           ]
         },
       ],
-     order: [["createdAt", "DESC"]],
+     order: [["id", "DESC"]],
     });
     const totalPages = Math.ceil(count / limit);
     res.status(200).json({
@@ -10470,20 +10470,6 @@ const assignStudentsToStop = async (req, res) => {
       });
     }
 
-    const driver = await User.findOne({
-      where: {
-        id: user_id,
-        trash: false,
-        role: "driver",
-        school_id,
-      },
-    });
-
-    if (!driver) {
-      return res.status(403).json({
-        message: "Driver profile not found",
-      });
-    }
 
     const stop = await Stop.findOne({
       where: {
@@ -10495,9 +10481,8 @@ const assignStudentsToStop = async (req, res) => {
         {
           model: Routes,
           as: "routes",
-          attributes: ["id", "driver_id", "type"], // id added
+          attributes: ["id", "type"], // id added
           where: {
-            driver_id: user_id,
             type: "pickup",
             school_id,
             trash: false,
