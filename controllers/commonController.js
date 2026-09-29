@@ -186,7 +186,7 @@ const getStudents=async(req,res)=>{
  
     const {count,rows: students,} = await Student.findAndCountAll({
       where:whereClause,
-      attributes: ["id", "full_name", "roll_number", "class_id", "image"],
+      attributes: ["id", "full_name", "reg_no","roll_number", "class_id", "image"],
       include: [
         {
           model: Class,
