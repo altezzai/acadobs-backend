@@ -8,6 +8,7 @@ const {
   normalizeGender,
   normalizeGuardianRelation,
 } = require("../utils/supportingFunction");
+const { School } = require("../models");
 const Staff = require("../models/staff");
 const StaffPermission = require("../models/staff_permissions");
 const StaffSubject = require("../models/staffsubject");
@@ -41,26 +42,18 @@ const Homework = require("../models/homework");
 const HomeworkAssignment = require("../models/homeworkassignment");
 const StaffAttendance = require("../models/staff_attendance");
 const Syllabus = require("../models/syllabus");
-const { School } = require("../models");
 const StudentTransfer = require("../models/student_transfer");
 const Stop = require("../models/tracker/stop");
 const StopRoute = require("../models/tracker/stop_route");
-// const Driver  = require("../models/tracker/driver");
 const Vehicle  = require("../models/tracker/vehicle");
 const Routes = require("../models/tracker/routes");
 const StudentsStopStatus = require("../models/tracker/students_stop_status");
-const LiveLocation = require("../models/tracker/livelocation");
-const StudentCompetencyAssessment = require("../models/assesment/student_competency_assessment");
-const Competency = require("../models/assesment/competency");
-const CompetencyIndicator = require("../models/assesment/competency_indicator");
 const CoScholasticArea = require("../models/assesment/co_scholastic_area");
-const StudentCoScholasticAssessment = require("../models/assesment/student_co_scholastic_assessment");
-const { error } = require("winston");
-const { Console } = require("winston/lib/winston/transports");
-const { deleteFile } = require("../middlewares/storageUploads");
 const Exam = require("../models/exams");
 const ExamTimetable = require("../models/exam_timetable");
 const SpecialClassStudent = require("../models/special_class_students");
+const { error } = require("winston");
+const { deleteFile } = require("../middlewares/storageUploads");
 
 // CREATE
 const createClass = async (req, res) => {
@@ -13175,6 +13168,30 @@ const updateOwnDatasForSchool = async (req, res) => {
     });
   }
 };
+const getOwnSchoolLocation = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const school = await School.findOne({
+      where: { id: school_id },
+      attributes: ["id", "location"],
+    });
+    if (!school) {
+      return res.status(404).json({ success: false, error: "School not found" });
+    }
+    return res.status(200).json({
+      success: true,
+      message: "School location fetched successfully",
+      data: school,
+    });
+  } catch (error) {
+    logger.error("school_id:", req.user?.school_id, "Error fetching school location:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch school location",
+      error: error.message,
+    });
+  }
+};
 
 const createCoScholasticArea = async (req, res) => {
   try {
@@ -13662,6 +13679,7 @@ module.exports = {
   
   getOwnDatasForSchool,
   updateOwnDatasForSchool,
+  getOwnSchoolLocation,
 
   createCoScholasticArea,
   getCoScholasticAreas,

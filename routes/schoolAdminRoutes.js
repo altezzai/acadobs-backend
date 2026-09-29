@@ -543,7 +543,8 @@ router.delete("/permanentDeleteExamTimetable/:id", schoolAdminController.permane
 //OWN School data management routes
 router.get("/getOwnDatasForSchool", schoolAdminController.getOwnDatasForSchool);
 router.put("/updateOwnDatasForSchool",uploadWithErrorHandler(upload.fields(schoolUploads)),
-  storageUploadMiddleware("schools"),schoolAdminController.updateOwnDatasForSchool);
+storageUploadMiddleware("schools"),schoolAdminController.updateOwnDatasForSchool);
+router.get("/getOwnSchoolLocation", schoolAdminController.getOwnSchoolLocation);
 
 //REPORTS
 router.get("/invoiceReport", reportController.getInvoiceReport);
