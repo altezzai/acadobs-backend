@@ -53,7 +53,6 @@ const CompetencyIndicator = require("./assesment/competency_indicator");
 const StudentCompetencyAssessment = require("./assesment/student_competency_assessment");
 const CoScholasticArea = require("./assesment/co_scholastic_area");
 const StudentCoScholasticAssessment = require("./assesment/student_co_scholastic_assessment");
-
 // Relations
 
 // Associations
@@ -162,6 +161,7 @@ Invoice.hasMany(InvoiceStudent, { foreignKey: "invoice_id" });
 Invoice.belongsTo(User,{ foreignKey: "recorded_by" });
 InvoiceStudent.belongsTo(Invoice, { foreignKey: "invoice_id" });
 InvoiceStudent.belongsTo(Student, { foreignKey: "student_id" });
+Student.hasMany(InvoiceStudent, { foreignKey: "student_id" });
 
 TransportInvoice.belongsTo(School, { foreignKey: "school_id" });
 School.hasMany(TransportInvoice, { foreignKey: "school_id" });
@@ -205,11 +205,6 @@ Notice.hasMany(NoticeClass, { foreignKey: "notice_id" });
 Notice.belongsTo(User,{ foreignKey: "recorded_by" });
 NoticeClass.belongsTo(Notice, { foreignKey: "notice_id" });
 NoticeClass.belongsTo(Class, { foreignKey: "class_id" });
-
-Message.belongsTo(Chat, { foreignKey: "chat_id" });
-Chat.hasMany(Message, { foreignKey: "chat_id" });
-Chat.belongsTo(User, { as: "user1", foreignKey: "user1_id" });
-Chat.belongsTo(User, { as: "user2", foreignKey: "user2_id" });
 
 Timetable.belongsTo(School, { foreignKey: "school_id" });
 Timetable.belongsTo(Class, { foreignKey: "class_id" });
@@ -397,35 +392,29 @@ CoScholasticArea.hasMany(StudentCoScholasticAssessment, {
   foreignKey: "area_id",
   onDelete: "CASCADE",
 });
-StudentCoScholasticAssessment.belongsTo(CoScholasticArea, {
-  foreignKey: "area_id",
-});
+StudentCoScholasticAssessment.belongsTo(CoScholasticArea, {foreignKey: "area_id",});
+StudentCoScholasticAssessment.belongsTo(School, {foreignKey: "school_id",});
+School.hasMany(StudentCoScholasticAssessment, {foreignKey: "school_id",});
+StudentCoScholasticAssessment.belongsTo(Student, {foreignKey: "student_id",});
+Student.hasMany(StudentCoScholasticAssessment, {foreignKey: "student_id",});
+StudentCoScholasticAssessment.belongsTo(Exams, {foreignKey: "exam_id",});
+Exams.hasMany(StudentCoScholasticAssessment, {foreignKey: "exam_id",});
+StudentCoScholasticAssessment.belongsTo(User, {foreignKey: "recorded_by",});
 
-StudentCoScholasticAssessment.belongsTo(School, {
-  foreignKey: "school_id",
-});
-School.hasMany(StudentCoScholasticAssessment, {
-  foreignKey: "school_id",
-});
+// Chat Association 
+Message.belongsTo(Chat, {foreignKey: "chat_id",});
+Chat.hasMany(Message, {foreignKey: "chat_id",});
+Message.belongsTo(User, {foreignKey: "sender_id",as:"sender",});
+Message.belongsTo(User, {foreignKey: "receiver_id",as:"receiver",});
+Message.belongsTo(Student, {foreignKey: "student_id",});
+Student.hasMany(Message, {foreignKey: "student_id",});
 
-StudentCoScholasticAssessment.belongsTo(Student, {
-  foreignKey: "student_id",
-});
-Student.hasMany(StudentCoScholasticAssessment, {
-  foreignKey: "student_id",
-});
+Chat.belongsTo(User, {foreignKey: "user1_id",as:"user1",});
+Chat.belongsTo(User, {foreignKey: "user2_id",as:"user2",});
 
-StudentCoScholasticAssessment.belongsTo(Exams, {
-  foreignKey: "exam_id",
-});
-Exams.hasMany(StudentCoScholasticAssessment, {
-  foreignKey: "exam_id",
-});
+User.hasMany(Message, {foreignKey: "sender_id",});
+User.hasMany(Message, {foreignKey: "receiver_id",});
 
-StudentCoScholasticAssessment.belongsTo(User, {
-  foreignKey: "recorded_by",
-  as: "Recorder",
-});
 
 module.exports = {
   Exams,

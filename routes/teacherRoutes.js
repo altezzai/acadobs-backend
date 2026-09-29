@@ -4,6 +4,7 @@ const teacherController = require("../controllers/teacherController");
 const commonController = require("../controllers/commonController");
 const reportController = require("../controllers/reportController");
 const selectionListController = require("../controllers/selectionListController");
+const messageController = require("../controllers/messageController");
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { storageUploadMiddleware } = require("../middlewares/storageUploads");
 
@@ -368,8 +369,17 @@ router.get(
   commonController.getAchievementById,
 );
 router.get("/getMyProfileAndSchoolDetails",commonController.getMyProfileAndSchoolDetails);
-
+router.get("/getCompetencyAssesmentByStudentId/:student_id",
+commonController.getCompetencyAssesmentByStudentId);
+router.get("/getCoScholasticAssessmentByStudentId/:student_id",
+  commonController.getCoScholasticAssessmentByStudentId);
+//selection list
 router.get("/getExamTitles",selectionListController.getExamTitles);
 router.get("/getLeaveTypes", selectionListController.getLeaveTypes);
+//message
+router.post("/createMessage",messageController.createMessage);
+router.get("/getChats", messageController.myChats);
+router.get("/getMessagesByChatId/:chat_id", messageController.messagesByChatId);
+
 
 module.exports = router;

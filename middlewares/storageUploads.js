@@ -118,39 +118,4 @@ const storageUploadMiddleware = (folder = "uploads") => {
 };
 
 
-// const storageUploadMiddleware = (folder = "uploads") => {
-//     return async (req, res, next) => {
-//         try {
-//             let uploaded = {};
-
-//             if (req.files) {
-//                 for (const field in req.files) {
-//                     uploaded[field] = [];
-
-//                     for (const file of req.files[field]) {
-//                         const result = await uploadSingleFile(
-//                             file,
-//                             `${folder}/${field}`
-//                         );
-//                         uploaded[field].push(result);
-//                     }
-//                 }
-//             }
-
-//             if (req.file) {
-//                 const result = await uploadSingleFile(req.file, folder);
-//                 uploaded[req.file.fieldname] = result;
-//             }
-
-//             //  attach to req
-//             req.uploadedFiles = uploaded;
-
-//             next();
-//         } catch (err) {
-//             console.error("MinIO Upload Error:", err);
-//             return res.status(500).json({ error: "File upload failed" });
-//         }
-//     };
-// };
-
 module.exports = { storageUploadMiddleware, deleteFile, uploadMultipleFiles, compressImage };

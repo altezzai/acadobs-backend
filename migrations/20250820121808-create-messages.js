@@ -57,19 +57,7 @@ module.exports = {
         defaultValue: "sent",
       },
       type: {
-        type: Sequelize.ENUM(
-          "msg",
-          "homeworks",
-          "parent_notes",
-          "internal_marks",
-          "attendance",
-          "achievements",
-          "leave_requests",
-          "payments",
-          "events",
-          "notices",
-          "news"
-        ),
+        type: Sequelize.STRING,
         defaultValue: "msg",
       },
       type_id: {

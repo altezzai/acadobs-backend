@@ -8,6 +8,7 @@ const {
   normalizeGender,
   normalizeGuardianRelation,
 } = require("../utils/supportingFunction");
+const { School } = require("../models");
 const Staff = require("../models/staff");
 const StaffPermission = require("../models/staff_permissions");
 const StaffSubject = require("../models/staffsubject");
@@ -41,26 +42,18 @@ const Homework = require("../models/homework");
 const HomeworkAssignment = require("../models/homeworkassignment");
 const StaffAttendance = require("../models/staff_attendance");
 const Syllabus = require("../models/syllabus");
-const { School } = require("../models");
 const StudentTransfer = require("../models/student_transfer");
 const Stop = require("../models/tracker/stop");
 const StopRoute = require("../models/tracker/stop_route");
-// const Driver  = require("../models/tracker/driver");
 const Vehicle  = require("../models/tracker/vehicle");
 const Routes = require("../models/tracker/routes");
 const StudentsStopStatus = require("../models/tracker/students_stop_status");
-const LiveLocation = require("../models/tracker/livelocation");
-const StudentCompetencyAssessment = require("../models/assesment/student_competency_assessment");
-const Competency = require("../models/assesment/competency");
-const CompetencyIndicator = require("../models/assesment/competency_indicator");
 const CoScholasticArea = require("../models/assesment/co_scholastic_area");
-const StudentCoScholasticAssessment = require("../models/assesment/student_co_scholastic_assessment");
-const { error } = require("winston");
-const { Console } = require("winston/lib/winston/transports");
-const { deleteFile } = require("../middlewares/storageUploads");
 const Exam = require("../models/exams");
 const ExamTimetable = require("../models/exam_timetable");
 const SpecialClassStudent = require("../models/special_class_students");
+const { error } = require("winston");
+const { deleteFile } = require("../middlewares/storageUploads");
 
 // CREATE
 const createClass = async (req, res) => {
@@ -2561,7 +2554,7 @@ const getAllStudents = async (req, res) => {
     const totalPages = Math.ceil(count / limit);
     res
       .status(200)
-      .json({ totalcontent: count, totalPages, currentPage: page, students });
+      .json({ totalcontent: count, totalPages, currentPage: page, data:students });
   } catch (error) {
     logger.error(
       "schoolId:",
@@ -3215,7 +3208,7 @@ const getTrashedStudents = async (req, res) => {
     const totalPages = Math.ceil(count / limit);
     res
       .status(200)
-      .json({ totalcontent: count, totalPages, currentPage: page, students });
+      .json({ totalcontent: count, totalPages, currentPage: page, data:students });
   } catch (error) {
     logger.error(
       "schoolId:",
@@ -3370,7 +3363,7 @@ const getAlumniStudents = async (req, res) => {
     const totalPages = Math.ceil(count / limit);
     res
       .status(200)
-      .json({ totalcontent: count, totalPages, currentPage: page, students });
+      .json({ totalcontent: count, totalPages, currentPage: page,data:students });
   } catch (error) {
     logger.error(
       "schoolId:",
@@ -3414,7 +3407,7 @@ const getTrashedAlumniStudents = async (req, res) => {
     const totalPages = Math.ceil(count / limit);
     res
       .status(200)
-      .json({ totalcontent: count, totalPages, currentPage: page, students });
+      .json({ totalcontent: count, totalPages, currentPage: page, data:students });
   } catch (error) {
     logger.error(
       "schoolId:",
@@ -10158,16 +10151,17 @@ const deleteStaffAttendance = async (req, res) => {
 
 //create stop✅
 const createStop = async (req, res) => {
-  try {
+  const transaction = await Stop.sequelize.transaction();
+    try {
     const school_id = req.user.school_id;
     const user_id = req.user.user_id;
-    const { route_id, stop_name, priority, latitude, longitude } = req.body;
+    const { route_id, stop_name, priority, latitude, longitude,charge,both} = req.body;
 
     if (!route_id || !stop_name) {
       return res.status(400).json({ message: "Fields are missing" });
     }
     const route = await Routes.findOne({
-      where: { id: route_id, trash: false },
+      where: { id: route_id, trash: false,school_id },
     });
 
     if (!route) {
@@ -10176,32 +10170,66 @@ const createStop = async (req, res) => {
 
     const existingStop = await Stop.findOne({
       where: {
-        route_id,
         stop_name,
         trash: false,
+        school_id,
       },
     });
 
     if (existingStop) {
       return res.status(404).json({ message: "Stop already exists" });
     }
+      let pairedRouteId = null;
+        if (both === true && route.type === "DROP") {
+          pairedRouteId = route.pickId;
+        } else if (both === true) {
+          const dropRoute = await Routes.findOne({
+            where: { pickId: route.id, trash: false },
+            attributes: ["id"],
+          });
+          pairedRouteId = dropRoute?.id || null;
+        }
+    
+        if (both === true && !pairedRouteId) {
+          return res.status(400).json({
+            message: "Both routes must exist to create a stop for both routes",
+          });
+        }
+    
+        const routeIds = [route.id];
+        if (both === true && pairedRouteId !== route.id) {
+          routeIds.push(pairedRouteId);
+        }
+      const stop = await Stop.create(
+        {
+          school_id,
+          stop_name,
+          latitude,
+          longitude,
+          charge,
+          trash: false,
+          recorded_by: user_id,
+        },
+        { transaction },
+      );
+      const stopRoutes = await StopRoute.bulkCreate(
+        routeIds.map((id) => ({
+          route_id: id,
+          stop_id: stop.id,
+          priority: id === route.id ? priority : null,
+        })),
+        { transaction },
+      );
 
-    const stop = await Stop.create({
-      route_id,
-      stop_name,
-      priority,
-      latitude,
-      longitude,
-      school_id,
-      trash: false,
-      recorded_by: user_id,
-    });
+      await transaction.commit();
 
     res.status(201).json({
       message: "Stop created successfully",
       stop,
+      stopRoutes,
     });
   } catch (error) {
+     await transaction.rollback();
     logger.error( "schoolId:",
       req.user.school_id,
       "Error creating stop:", error);
@@ -10209,7 +10237,436 @@ const createStop = async (req, res) => {
     res.status(500).json({ error: "Failed to create stop" });
   }
 };
+const getAllStops = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    let whereClause = {
+      trash: false,
+      school_id: school_id,
+    };
+    if (searchQuery) {
+      whereClause.stop_name={ [Op.like]: `%${searchQuery}%` }
+    }
+    const { count, rows: stops } = await Stop.findAndCountAll({
+      where:whereClause,
+      limit,
+      offset,
+      include:[
+        {
+          model:Routes,
+          as: "routes",
+          attributes: ["id", "route_name", "type", "pickId"],
+        },
+        {
+          model: Student,
+          as: "students",
+          attributes: ["id", "full_name","reg_no"],
+          include:[
+            {
+              model: Class,
+              attributes: ["id", "classname"],
+            }
+          ]
+        },
+      ],
+     order: [["id", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data:stops
+    });
+  } catch (error) {
+    logger.error( "schoolId:",
+      req.user.school_id,
+      "Error fetching stops:", error);
+    console.error("Error fetching stops:", error);
+    res.status(500).json({ error: "Failed to fetch stops" });
+  }
+} 
+const getStopById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const stop = await Stop.findOne({
+      where: { id, school_id, trash: false },
+      include:[
+        {
+          model:Routes,
+          as: "routes",
+          attributes: ["id", "route_name", "type", "pickId"],
+        },
+        {
+          model:Student,
+          as:"students",
+          attributes: ["id", "full_name", "roll_number", "reg_no"],
+          include:[
+            {
+              model:Class,
+              attributes: ["id", "classname"],
+            }
+          ]
+        }
+      ],
+    });
+    res.status(200).json({
+      message: "Stop fetched successfully",
+      stop,
+    });
+  } catch (error) {
+    logger.error( "schoolId:",
+      req.user.school_id,
+      "Error fetching stop:", error);
+    console.error("Error fetching stop:", error);
+    res.status(500).json({ error: "Failed to fetch stop" });
+  }
+}
+const updateStop = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const { stop_name, latitude, longitude ,charge,} = req.body;
+    const stop = await Stop.findOne({
+      where: { id, school_id, trash: false },
+    });
+    if (!stop) {
+      return res.status(404).json({ error: "Stop not found" });
+    }
+    stop.stop_name = stop_name || stop.stop_name;
+    stop.latitude = latitude || stop.latitude;
+    stop.longitude = longitude || stop.longitude;
+    stop.charge = charge || stop.charge;
+    await stop.save();
+    res.status(200).json({
+      message: "Stop updated successfully",
+      stop,
+    });
+  } catch (error) {
+    logger.error( "schoolId:",
+      req.user.school_id,
+      "Error updating stop:", error);
+    console.error("Error updating stop:", error);
+    res.status(500).json({ error: "Failed to update stop" });
+  }
+}
+const deleteStop = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const stop = await Stop.findOne({
+      where: { id, school_id, trash: false },
+    });
+    if (!stop) {
+      return res.status(404).json({ error: "Stop not found" });
+    }
+    stop.trash = true;
+    await stop.save();
+    res.status(200).json({
+      message: "Stop deleted successfully",
+      stop,
+    });
+  } catch (error) {
+    logger.error( "schoolId:",
+      req.user.school_id,
+      "Error deleting stop:", error);
+    console.error("Error deleting stop:", error);
+    res.status(500).json({ error: "Failed to delete stop" });
+  }
+}
+const getTrashedStop = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    let whereClause = {
+      trash: true,
+      school_id: school_id,
+    };
+    if (searchQuery) {
+      whereClause.stop_name={ [Op.like]: `%${searchQuery}%` }
+    }
+    const { count, rows: stops } = await Stop.findAndCountAll({
+      where:whereClause,
+      limit,
+      offset,
+      include:[
+        {
+          model:Routes,
+          as: "routes",
+          attributes: ["id", "route_name", "type", "pickId"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data:stops,
+    });
+  } catch (error) {
+    logger.error( "schoolId:",
+      req.user.school_id,
+      "Error fetching trashed stops:", error);
+    console.error("Error fetching trashed stops:", error);
+    res.status(500).json({ error: "Failed to fetch trashed stops" });
+  }
+}
+const restoreStop = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const stop = await Stop.findOne({
+      where: { id, school_id, trash: true },
+    });
+    if (!stop) {
+      return res.status(404).json({ error: "Stop not found" });
+    }
+    stop.trash = false;
+    await stop.save();
+    res.status(200).json({
+      message: "Stop restored successfully",
+      stop,
+    });
+  } catch (error) {
+    logger.error( "schoolId:",
+      req.user.school_id,
+      "Error restoring stop:", error);
+    console.error("Error restoring stop:", error);
+    res.status(500).json({ error: "Failed to restore stop" });
+  }
+} 
+const assignStudentsToStop = async (req, res) => {
+  try {
+    const { student_ids, stop_id } = req.body;
+    const user_id = req.user.user_id;
+    const school_id = req.user.school_id;
 
+    if (
+      !Array.isArray(student_ids) ||
+      student_ids.length === 0 ||
+      !stop_id
+    ) {
+      return res.status(400).json({
+        message: "student_ids (array) and stop_id are required",
+      });
+    }
+
+
+    const stop = await Stop.findOne({
+      where: {
+        id: stop_id,
+        trash: false,
+        school_id,
+      },
+      include: [
+        {
+          model: Routes,
+          as: "routes",
+          attributes: ["id", "type"], // id added
+          where: {
+            type: "pickup",
+            school_id,
+            trash: false,
+          },
+          required: true,
+        },
+      ],
+    });
+
+    if (!stop) {
+      return res.status(404).json({
+        message: "Stop not found or not assigned to this driver",
+      });
+    }
+
+    const route = Array.isArray(stop.routes)
+      ? stop.routes[0]
+      : stop.routes;
+
+    if (!route) {
+      return res.status(404).json({
+        message: "Pickup route not found for this stop",
+      });
+    }
+
+    const route_id = route.id;
+
+    const students = await Student.findAll({
+      where: {
+        id: student_ids,
+        route_id,
+        school_id,
+        trash: false,
+      },
+      attributes: ["id", "full_name", "route_id", "stop_id"],
+    });
+
+    if (students.length !== student_ids.length) {
+      return res.status(404).json({
+        message:
+          "One or more students not found or not assigned to this driver's pickup route",
+      });
+    }
+
+    await Student.update(
+      {
+        stop_id,
+      },
+      {
+        where: {
+          id: student_ids,
+          route_id,
+          school_id,
+          trash: false,
+        },
+      }
+    );
+
+    return res.status(200).json({
+      message: "Students assigned to stop successfully",
+      assigned_count: students.length,
+      route_id,
+      stop_id,
+    });
+  } catch (error) {
+    logger.error(
+      "role:",
+      req.user.role,
+      "userId:",
+      req.user.user_id,
+      "Error assigning students to stop:",
+      error
+    );
+
+    console.error("Error assigning students to stop:", error);
+
+    return res.status(500).json({
+      error: "Failed to assign students to stop",
+    });
+  }
+};
+const deleteStudentFromStop = async (req, res) => {
+  try {
+    const {stop_id, student_id } = req.params;
+    const school_id = req.user.school_id;
+
+    const stop = await Stop.findOne({
+      where: { id: stop_id, trash: false ,school_id:school_id},
+      include: [
+        {
+          model: Routes,
+          as: "routes",
+          attributes: ["id", "isLock"],
+        },
+      ],
+    });
+
+    if (!stop) {
+      return res.status(404).json({
+        message: "Stop not found",
+      });
+    }
+    const student = await Student.findOne({
+      where: {
+        id: student_id,
+        stop_id: stop_id,
+        trash: false,
+      },
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found in this stop",
+      });
+    }
+    await student.update({
+      stop_id: null,
+    });
+
+    return res.status(200).json({
+      message: "Student marked as deleted successfully",
+    });
+
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error deleting students from stop:", error);
+    console.error("Error deleting students from stop:", error);
+    return res.status(500).json({
+      error: "Failed to delete students from stop",
+    });
+  }
+};
+const getStudentsWithUnassignedStopsByRouteId = async (req, res) => {
+  try {
+     const { route_id } = req.params;
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const route = await Routes.findOne({
+      where: { id: route_id, school_id: school_id, trash: false },
+      attributes: ["id",  "type","pickId","active"],
+    });
+    let whereClause={
+      trash: false,
+      school_id,
+      stop_id:null,
+    };
+    if (route.type === "DROP" ) {
+      whereClause.drop_route_id = route_id;
+    } else {
+      whereClause.route_id = route_id;
+    }
+    if(searchQuery){
+      whereClause.full_name = { [Op.like]: `%${searchQuery}%` };
+    }
+    const {count, rows: students} = await Student.findAndCountAll({
+      where: whereClause,
+      attributes: ["id", "full_name", "reg_no","roll_number","gender"],
+      include:[
+        {
+          model: User,
+          attributes: ["name", "phone"],
+          required: false,
+        },
+        {
+          model: Class,
+          attributes: ["classname"],
+          required: false,
+        }
+      ],
+      limit: limit,
+      offset: offset,
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    return res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      students,
+    });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching students:", error);
+    console.error("Error fetching students:", error);
+    return res.status(500).json({
+      error: "Failed to fetch students",
+    });
+  }
+};
 const createDriver = async (req, res) => {
   const transaction = await schoolSequelize.transaction();
 
@@ -12593,8 +13050,6 @@ const updateOwnDatasForSchool = async (req, res) => {
       pass_percent,
       primary_colour,
       secondary_colour,
-      upi_id,
-      upi_name,
       payment_enabled,
       slug,
       short_name,
@@ -12614,6 +13069,8 @@ const updateOwnDatasForSchool = async (req, res) => {
       admission_enabled,
       seo_title,
       seo_description,
+      upi_id,
+      upi_name,
     } = req.body;
     const school = await School.findOne({
       where: { id: school_id },
@@ -12679,6 +13136,8 @@ const updateOwnDatasForSchool = async (req, res) => {
       admission_enabled,
       seo_title,
       seo_description,
+      upi_id,
+      upi_name,
     }, { transaction });
 
     await User.update({
@@ -12705,6 +13164,30 @@ const updateOwnDatasForSchool = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to update school datas",
+      error: error.message,
+    });
+  }
+};
+const getOwnSchoolLocation = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const school = await School.findOne({
+      where: { id: school_id },
+      attributes: ["id", "location"],
+    });
+    if (!school) {
+      return res.status(404).json({ success: false, error: "School not found" });
+    }
+    return res.status(200).json({
+      success: true,
+      message: "School location fetched successfully",
+      data: school,
+    });
+  } catch (error) {
+    logger.error("school_id:", req.user?.school_id, "Error fetching school location:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch school location",
       error: error.message,
     });
   }
@@ -13134,18 +13617,28 @@ module.exports = {
 
 
   createRoute,
-  createVehicle,
-  createDriver,
-  createStop,
   assignStudentToRoute,
+  getAllRoutes,
+
+  createStop,
+  getAllStops,
+  getStopById,
+  updateStop,
+  deleteStop,
+  getTrashedStop,
+  restoreStop,
+  assignStudentsToStop,
+  deleteStudentFromStop,
+  getStudentsWithUnassignedStopsByRouteId,
+  
+  createVehicle,
   getAllVehicles,
   getVehicleById,
   deleteVehicle,
-  getAllRoutes,
-
+  
+  createDriver,
   assignDriverToRoutes,
   getAllDrivers,
-  // updateStudentToRoute,
   deleteStudentFromRoute,
   changeStudentRouteAndStop,
   bulkUpdateStopCharges,
@@ -13186,6 +13679,7 @@ module.exports = {
   
   getOwnDatasForSchool,
   updateOwnDatasForSchool,
+  getOwnSchoolLocation,
 
   createCoScholasticArea,
   getCoScholasticAreas,

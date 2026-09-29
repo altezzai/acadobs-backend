@@ -40,6 +40,9 @@ router.put(
   guardianController.updatePayment,
 )
 router.get("/getPaymentById/:id", guardianController.getPaymentById);
+router.get("/getUnPaidInvoicesByGuardian", guardianController.getUnPaidInvoicesByGuardian);
+router.get("/getUnPaidTransportInvoicesByGuardian", guardianController.getUnPaidTransportInvoicesByGuardian);
+
 router.post(
   "/createTransportInvoicePayment",
   uploadWithErrorHandler(upload.single("payment_attachment")),
@@ -278,7 +281,10 @@ router.post(
 );
 
 router.get("/getCompetencyAssesmentByStudentId/:student_id",
-commonController.getCompetencyAssesmentByStudentId);
+  commonController.getCompetencyAssesmentByStudentId);
+router.get("/getCoScholasticAssessmentByStudentId/:student_id",
+  commonController.getCoScholasticAssessmentByStudentId);
+
 router.get("/getSchoolDetails", commonController.getSchoolDetails);
 //selection list controller
 router.get("/getExamTitles",selectionListController.getExamTitles);
