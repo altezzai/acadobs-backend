@@ -2561,7 +2561,7 @@ const getAllStudents = async (req, res) => {
     const totalPages = Math.ceil(count / limit);
     res
       .status(200)
-      .json({ totalcontent: count, totalPages, currentPage: page, students });
+      .json({ totalcontent: count, totalPages, currentPage: page, data:students });
   } catch (error) {
     logger.error(
       "schoolId:",
@@ -3215,7 +3215,7 @@ const getTrashedStudents = async (req, res) => {
     const totalPages = Math.ceil(count / limit);
     res
       .status(200)
-      .json({ totalcontent: count, totalPages, currentPage: page, students });
+      .json({ totalcontent: count, totalPages, currentPage: page, data:students });
   } catch (error) {
     logger.error(
       "schoolId:",
@@ -3370,7 +3370,7 @@ const getAlumniStudents = async (req, res) => {
     const totalPages = Math.ceil(count / limit);
     res
       .status(200)
-      .json({ totalcontent: count, totalPages, currentPage: page, students });
+      .json({ totalcontent: count, totalPages, currentPage: page,data:students });
   } catch (error) {
     logger.error(
       "schoolId:",
@@ -3414,7 +3414,7 @@ const getTrashedAlumniStudents = async (req, res) => {
     const totalPages = Math.ceil(count / limit);
     res
       .status(200)
-      .json({ totalcontent: count, totalPages, currentPage: page, students });
+      .json({ totalcontent: count, totalPages, currentPage: page, data:students });
   } catch (error) {
     logger.error(
       "schoolId:",
@@ -10614,6 +10614,66 @@ const deleteStudentFromStop = async (req, res) => {
     });
   }
 };
+const getStudentsWithUnassignedStopsByRouteId = async (req, res) => {
+  try {
+     const { route_id } = req.params;
+    const school_id = req.user.school_id;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const route = await Routes.findOne({
+      where: { id: route_id, school_id: school_id, trash: false },
+      attributes: ["id",  "type","pickId","active"],
+    });
+    let whereClause={
+      trash: false,
+      school_id,
+      stop_id:null,
+    };
+    if (route.type === "DROP" ) {
+      whereClause.drop_route_id = route_id;
+    } else {
+      whereClause.route_id = route_id;
+    }
+    if(searchQuery){
+      whereClause.full_name = { [Op.like]: `%${searchQuery}%` };
+    }
+    const {count, rows: students} = await Student.findAndCountAll({
+      where: whereClause,
+      attributes: ["id", "full_name", "reg_no","roll_number","gender"],
+      include:[
+        {
+          model: User,
+          attributes: ["name", "phone"],
+          required: false,
+        },
+        {
+          model: Class,
+          attributes: ["classname"],
+          required: false,
+        }
+      ],
+      limit: limit,
+      offset: offset,
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    return res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data:students,
+    });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching students:", error);
+    console.error("Error fetching students:", error);
+    return res.status(500).json({
+      error: "Failed to fetch students",
+    });
+  }
+};
 const createDriver = async (req, res) => {
   const transaction = await schoolSequelize.transaction();
 
@@ -13552,6 +13612,7 @@ module.exports = {
   restoreStop,
   assignStudentsToStop,
   deleteStudentFromStop,
+  getStudentsWithUnassignedStopsByRouteId,
   
   createVehicle,
   getAllVehicles,

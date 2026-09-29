@@ -610,8 +610,8 @@ router.get("/getTrashedStop", schoolAdminController.getTrashedStop);
 router.patch("/restoreStop/:id", schoolAdminController.restoreStop);
 router.post("/assignStudentsToStop", schoolAdminController.assignStudentsToStop);
 router.delete("/deleteStudentFromStop/:stop_id/:student_id", schoolAdminController.deleteStudentFromStop);
+router.get("/getStudentsWithUnassignedStopsByRouteId/:route_id", schoolAdminController.getStudentsWithUnassignedStopsByRouteId);
 router.get("/getStudentsByRouteId/:route_id", trackerController.getStudentsByRouteId);
-router.get("/getStudentsWithUnassignedStopsByRouteId/:route_id", trackerController.getStudentsWithUnassignedStopsByRouteId);
 
 router.get("/getUnAssignedStopsInPairRouteByRouteId/:route_id",
    trackerController.getUnAssignedStopsInPairRouteByRouteId);
