@@ -10664,7 +10664,7 @@ const getStudentsWithUnassignedStopsByRouteId = async (req, res) => {
       totalcontent: count,
       totalPages,
       currentPage: page,
-      data:students,
+      students,
     });
   } catch (error) {
     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching students:", error);
