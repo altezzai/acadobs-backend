@@ -1021,12 +1021,9 @@ const getStopDetailsForDriver = async (req, res) => {
               attributes: ["classname"],
               required: false,
             }
-
           ]
-
         },
       ]
-
     });
     if (!singlestop) {
       return res.status(404).json({
