@@ -12,6 +12,14 @@ const { School } = require("../models");
 const Message = require("../models/messages");
 const Chat = require("../models/chat");
 const User = require("../models/user");
+const Homework = require("../models/homework");
+const Achievement = require("../models/achievement");
+const ParentNote = require("../models/parent_note");
+const InternalMark = require("../models/internal_marks");
+const Payment = require("../models/payment");
+const Attendance = require("../models/attendance");
+const Notice = require("../models/notice");
+const Invoice = require("../models/invoice");
 
 
 const createMessage = async (req, res) => {
@@ -314,7 +322,7 @@ const getMessagesByChatId = async(req,res) => {
                 [Op.like]: `%${searchQuery}%`
             }
         }
-        const {count,rows:data} = await Message.findAndCountAll({
+        const {count,rows:messages} = await Message.findAndCountAll({
             where: whereClause2,
             offset,
             limit,
@@ -343,6 +351,39 @@ const getMessagesByChatId = async(req,res) => {
             ],
             order: [["id", "DESC"]],
         });
+          const typeModels = {
+             Achievement,
+             Homework,
+             ParentNote,
+             InternalMark,
+             Payment,
+             Attendance,
+             Notice,
+             Invoice,
+        };
+
+        const data = await Promise.all(
+            messages.map(async (message) => {
+                const messageData = message.toJSON();
+
+                let typeData = null;
+
+                if (
+                    messageData.type &&
+                    messageData.type_id &&
+                    typeModels[messageData.type]
+                ) {
+                    typeData = await typeModels[
+                        messageData.type
+                    ].findByPk(messageData.type_id);
+                }
+
+                return {
+                    ...messageData,
+                    typeData
+                };
+            })
+        );
         await Message.update({
             status:"read"
         },{

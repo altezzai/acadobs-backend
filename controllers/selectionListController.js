@@ -125,12 +125,14 @@ const getMessageTypes = async(req,res)=>{
   try {
     const messageTypes = [
       "msg",
-      "homeworks",
-      "achievements",
-      "payments",
-      "transportation",
-      "attendance",
-
+      "Homework",
+      "Achievement",
+      "ParentNote",
+      "Payments",
+      "Invoice",
+      "InternalMark",
+      "Attendance",
+      "Notice",
     ]
     res.status(200).json(messageTypes);
   } catch (error) {
@@ -146,4 +148,5 @@ module.exports={
   getExamTitles,
   getPaymentCategories,
   getGuardianRelations,
+  getMessageTypes,
 }

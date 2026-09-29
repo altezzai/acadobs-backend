@@ -292,6 +292,7 @@ router.get("/getExamTitles",selectionListController.getExamTitles);
 router.get("/getLeaveTypes", selectionListController.getLeaveTypes);
 router.get("/getPaymentCategories",selectionListController.getPaymentCategories);
 router.get("/getGuardianRelations",selectionListController.getGuardianRelations);
+router.get("/getMessageTypes", selectionListController.getMessageTypes);
 
 //message
 router.post("/createMessage",messageController.createMessage);

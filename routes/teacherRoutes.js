@@ -376,6 +376,7 @@ router.get("/getCoScholasticAssessmentByStudentId/:student_id",
 //selection list
 router.get("/getExamTitles",selectionListController.getExamTitles);
 router.get("/getLeaveTypes", selectionListController.getLeaveTypes);
+router.get("/getMessageTypes", selectionListController.getMessageTypes);
 //message
 router.post("/createMessage",messageController.createMessage);
 router.get("/getChats", messageController.myChats);
