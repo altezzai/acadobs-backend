@@ -5,6 +5,7 @@ const commonController = require("../controllers/commonController");
 const trackerController = require("../controllers/trackerController");
 const transferController = require("../controllers/transferController");
 const selectionListController = require("../controllers/selectionListController");
+const messageController = require("../controllers/messageController");
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { body, param } = require("express-validator");
 const { validate } = require("../middlewares/validateMiddleware");
@@ -292,5 +293,9 @@ router.get("/getLeaveTypes", selectionListController.getLeaveTypes);
 router.get("/getPaymentCategories",selectionListController.getPaymentCategories);
 router.get("/getGuardianRelations",selectionListController.getGuardianRelations);
 
+//message
+router.post("/createMessage",messageController.createMessage);
+router.get("/getChats", messageController.myChats);
+router.get("/getMessagesByChatId/:chat_id", messageController.getMessagesByChatId);
 
 module.exports = router;

@@ -379,7 +379,7 @@ router.get("/getLeaveTypes", selectionListController.getLeaveTypes);
 //message
 router.post("/createMessage",messageController.createMessage);
 router.get("/getChats", messageController.myChats);
-router.get("/getMessagesByChatId/:chat_id", messageController.messagesByChatId);
+router.get("/getMessagesByChatId/:chat_id", messageController.getMessagesByChatId);
 
 
 module.exports = router;

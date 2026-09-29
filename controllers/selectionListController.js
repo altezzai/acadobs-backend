@@ -121,6 +121,24 @@ const getGuardianRelations = async(req,res)=>{
     res.status(500).json({ error: "Failed to fetch guardian relations" });
   }
 }
+const getMessageTypes = async(req,res)=>{
+  try {
+    const messageTypes = [
+      "msg",
+      "homeworks",
+      "achievements",
+      "payments",
+      "transportation",
+      "attendance",
+
+    ]
+    res.status(200).json(messageTypes);
+  } catch (error) {
+    logger.error("Error fetching message types:", error);
+    console.error("Error fetching message types:", error);
+    res.status(500).json({ error: "Failed to fetch message types" });
+  }
+}
 module.exports={
   getLeaveTypes,
   getTermTypeForTransportationInvoice,
