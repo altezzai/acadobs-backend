@@ -5648,7 +5648,6 @@ const getCoScholasticAssessmentbyStudentIdandExamId = async (req, res) => {
         },
         {
           model: User,
-          as: "Recorder",
           attributes: ["id", "name"],
         },
       ],

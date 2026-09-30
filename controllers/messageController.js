@@ -1,6 +1,6 @@
 const moment = require("moment");
 const bcrypt = require("bcrypt");
-const { Op, where } = require("sequelize");
+const { Op, where, Sequelize } = require("sequelize");
 const logger = require("../utils/logger");
 const { schoolSequelize } = require("../config/connection");
 
@@ -11,50 +11,16 @@ const {
 const { School } = require("../models");
 const Message = require("../models/messages");
 const Chat = require("../models/chat");
-const Staff = require("../models/staff");
-const StaffPermission = require("../models/staff_permissions");
-const StaffSubject = require("../models/staffsubject");
-const Class = require("../models/class");
-const Subject = require("../models/subject");
 const User = require("../models/user");
-const Guardian = require("../models/guardian");
-const Student = require("../models/student");
-const Duty = require("../models/duty");
-const DutyAssignment = require("../models/dutyassignment");
-const Achievement = require("../models/achievement");
-const StudentAchievement = require("../models/studentachievement");
-const Event = require("../models/event");
-const Payment = require("../models/payment");
-const LeaveRequest = require("../models/leaverequest");
-const News = require("../models/news");
-const NewsImage = require("../models/newsimage");
-const Notice = require("../models/notice");
-const NoticeClass = require("../models/noticeclass");
-const Timetable = require("../models/timetables");
-const TimetableSubstitution = require("../models/timetable_substitutions");
-const Attendance = require("../models/attendance");
-const AttendanceMarked = require("../models/attendancemarked");
-const Invoice = require("../models/invoice");
-const InvoiceStudent = require("../models/invoice_students");
-const TransportInvoice = require("../models/transport_invoice");
-const InternalMark = require("../models/internal_marks");
-const Marks = require("../models/marks");
 const Homework = require("../models/homework");
-const HomeworkAssignment = require("../models/homeworkassignment");
-const StaffAttendance = require("../models/staff_attendance");
-const Syllabus = require("../models/syllabus");
-const StudentTransfer = require("../models/student_transfer");
-const Stop = require("../models/tracker/stop");
-const StopRoute = require("../models/tracker/stop_route");
-const Vehicle  = require("../models/tracker/vehicle");
-const Routes = require("../models/tracker/routes");
-const StudentsStopStatus = require("../models/tracker/students_stop_status");
-const CoScholasticArea = require("../models/assesment/co_scholastic_area");
-const Exam = require("../models/exams");
-const ExamTimetable = require("../models/exam_timetable");
-const SpecialClassStudent = require("../models/special_class_students");
-const { error } = require("winston");
-const { deleteFile } = require("../middlewares/storageUploads");
+const Achievement = require("../models/achievement");
+const ParentNote = require("../models/parent_note");
+const InternalMark = require("../models/internal_marks");
+const Payment = require("../models/payment");
+const Attendance = require("../models/attendance");
+const Notice = require("../models/notice");
+const Invoice = require("../models/invoice");
+
 
 const createMessage = async (req, res) => {
     const transaction = await schoolSequelize.transaction();
@@ -148,7 +114,7 @@ if (!chat) {
         });
     }
 };
-const myChats = async (req, res) => {
+const getMyChats = async (req, res) => {
     try {
         const user_id = req.user.user_id;
         const searchQuery = req.query.q || "";
@@ -192,6 +158,21 @@ const myChats = async (req, res) => {
             offset,
             limit,
             distinct: true,
+            attributes: {
+                include: [
+                    [
+                        Sequelize.literal(`
+                            (
+                                SELECT COUNT(*)
+                                FROM messages AS unread_messages
+                                WHERE unread_messages.chat_id = Chat.id
+                                AND unread_messages.receiver_id = ${user_id}
+                            )
+                        `),
+                        "unseenCount"
+                    ]
+                ]
+            },
             include: [
                 {
                     model: User,
@@ -230,7 +211,7 @@ const myChats = async (req, res) => {
                             as: "sender",
                             attributes: [
                                 "id",
-                                "name",
+                                "name"
                             ]
                         }
                     ],
@@ -254,10 +235,21 @@ const myChats = async (req, res) => {
                 id: chatData.id,
                 user: opponent,
                 message: chatData.Messages?.[0] || null,
+                unseenCount: Number(chatData.unseenCount) || 0,
                 updatedAt: chatData.updatedAt
             };
         });
-
+        await Message.update({
+            status: "received"
+        }, {
+            where: {
+                chat_id: {
+                    [Op.in]: chats.map((chat) => chat.id)
+                },
+                receiver_id: user_id,
+                status: "sent"
+            }
+        });
         return res.status(200).json({
             message: "Chats fetched successfully",
             totalContent: count,
@@ -267,14 +259,14 @@ const myChats = async (req, res) => {
         });
 
     } catch (error) {
-        logger.error("myChats error:", error);
+        logger.error("getMyChats error:", error);
 
         return res.status(500).json({
             error: "Failed to fetch chats"
         });
     }
 };
-const messagesByChatId = async(req,res) => {
+const getMessagesByChatId = async(req,res) => {
     try {
         const user_id = req.user.user_id;
         const {chat_id} = req.params;
@@ -295,7 +287,6 @@ const messagesByChatId = async(req,res) => {
                 {
                     model: User,
                     as: "user1",
-                    where:{[Op.ne]:{id:user_id}},
                     attributes:[
                         "id",
                         "name",
@@ -306,7 +297,6 @@ const messagesByChatId = async(req,res) => {
                 {
                     model: User,
                     as: "user2",
-                    where:{[Op.ne]:{id:user_id}},
                     attributes:[
                         "id",
                         "name",
@@ -320,38 +310,106 @@ const messagesByChatId = async(req,res) => {
             return res.status(404).json({ error: "Chat not found" });
         }
         let whereClause2 ={
-             chat_id,
-                [Op.or]: [
-                    { sender_id: user_id },
-                    { receiver_id: user_id },
-                ],
+            chat_id,
+            trash:false,
+            [Op.or]: [
+                { sender_id: user_id },
+                { receiver_id: user_id },
+            ],
         }
         if(searchQuery){
             whereClause2.message = {
                 [Op.like]: `%${searchQuery}%`
             }
         }
-        const {count,rows:data} = await Message.findAndCountAll({
+        const {count,rows:messages} = await Message.findAndCountAll({
             where: whereClause2,
+            offset,
+            limit,
+            distinct: true,
+            attributes:[
+                "id",
+                "message",
+                "sender_id",
+                "status",
+                "type",
+                "type_id",
+                "replyToId",
+                "student_id",
+                "createdAt",
+                "updatedAt",
+            ],
+            include: [
+                {
+                model: User,
+                as: "sender",
+                attributes: [
+                    "id",
+                    "name",
+                ]
+                }
+            ],
             order: [["id", "DESC"]],
         });
+          const typeModels = {
+             Achievement,
+             Homework,
+             ParentNote,
+             InternalMark,
+             Payment,
+             Attendance,
+             Notice,
+             Invoice,
+        };
+
+        const data = await Promise.all(
+            messages.map(async (message) => {
+                const messageData = message.toJSON();
+
+                let typeData = null;
+
+                if (
+                    messageData.type &&
+                    messageData.type_id &&
+                    typeModels[messageData.type]
+                ) {
+                    typeData = await typeModels[
+                        messageData.type
+                    ].findByPk(messageData.type_id);
+                }
+
+                return {
+                    ...messageData,
+                    typeData
+                };
+            })
+        );
+        await Message.update({
+            status:"read"
+        },{
+            where:{
+                chat_id,
+                receiver_id: user_id,
+            },
+        });
+        const opponent = chats.user1_id == user_id ? chats.user2 : chats.user1;
         const totalPages = Math.ceil(count / limit);
         res.status(200).json({ 
             message: "Messages fetched successfully", 
             totalContent: count,
             currentPage: page,
             totalPages,
-            chats,
+            opponent,
             data,
         });
     } catch (error) {
-        logger.error("messagesByChatId error:", error);
+        logger.error("getMessagesByChatId error:", error);
         res.status(500).json({ error: "Failed to fetch messages" });
     }
 }
 module.exports = {
     createMessage,
-    myChats,
-    messagesByChatId,
+    getMyChats,
+    getMessagesByChatId,
 }
 

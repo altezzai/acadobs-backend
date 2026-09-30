@@ -376,10 +376,10 @@ router.get("/getCoScholasticAssessmentByStudentId/:student_id",
 //selection list
 router.get("/getExamTitles",selectionListController.getExamTitles);
 router.get("/getLeaveTypes", selectionListController.getLeaveTypes);
+router.get("/getMessageTypes", selectionListController.getMessageTypes);
 //message
 router.post("/createMessage",messageController.createMessage);
-router.get("/getChats", messageController.myChats);
-router.get("/getMessagesByChatId/:chat_id", messageController.messagesByChatId);
-
+router.get("/getMyChats", messageController.getMyChats);
+router.get("/getMessagesByChatId/:chat_id", messageController.getMessagesByChatId);
 
 module.exports = router;
