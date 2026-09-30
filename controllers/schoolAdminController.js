@@ -1967,12 +1967,105 @@ const deleteGuardian = async (req, res) => {
     const school_id = req.user.school_id;
     const guardian = await Guardian.findOne({
       where: { id, trash: false },
-      include: [{ model: User, where: { school_id } }],
+      include: [{ model: User }],
     });
     if (!guardian) return res.status(404).json({ error: "Guardian not found" });
+    if(guardian.user.school_id !== school_id) return res.status(403).json({ error: "You do not have permission to delete this guardian" });
 
+    const hasStudents = await Student.findOne({
+      where: { guardian_id: id },
+    });
+    if (hasStudents) return res.status(403).json({ error: "You cannot delete this guardian because it has students" });
     await guardian.update({ trash: true });
+    await guardian.user.update({ trash: true });
     res.status(200).json({ message: "Guardian moved to trash." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+const getTrashedGuardians = async (req, res) => {
+  try {
+     const searchQuery = req.query.q || "";
+    const school_id = req.user.school_id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    let whereClause = {
+      trash: true,
+      school_id,
+    };
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { name: { [Op.like]: `%${searchQuery}%` } },
+        { phone: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+
+    const { count, rows: guardians } = await Guardian.findAndCountAll({
+      offset,
+      distinct: true,
+      limit,
+      include: [
+        {
+          model: User,
+          where:whereClause,
+          attributes: ["name", "email", "phone", "dp"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    const totalPages = Math.ceil(count / limit);
+    res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      guardians,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user.school_id,
+      "Error getting guardians:",
+      error,
+    );
+    res.status(500).json({ error: error.message });
+  }
+};
+const restoreGuardian = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const guardian = await Guardian.findOne({
+      where: { id, trash: true },
+      include: [{ model: User }],
+    });
+    if (!guardian) return res.status(404).json({ error: "Guardian not found" });
+    if(guardian.user.school_id !== school_id) return res.status(403).json({ error: "You do not have permission to restore this guardian" });
+    await guardian.update({ trash: false });
+    await guardian.user.update({ trash: false });
+    res.status(200).json({ message: "Guardian restored successfully." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+const permanentDeleteGuardian = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const school_id = req.user.school_id;
+    const guardian = await Guardian.findOne({
+      where: { id, trash: true },
+      include: [{ model: User }],
+    });
+    if (!guardian) return res.status(404).json({ error: "Guardian not found" });
+    if(guardian.user.school_id !== school_id) return res.status(403).json({ error: "You do not have permission to delete this guardian" });
+    const hasStudents = await Student.findOne({
+      where: { guardian_id: id },
+    });
+    if (hasStudents) return res.status(403).json({ error: "You cannot delete this guardian because it has students" });
+    await guardian.destroy();
+    await guardian.user.destroy();
+    res.status(200).json({ message: "Guardian deleted successfully." });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -13456,9 +13549,12 @@ module.exports = {
   updateGuardian,
   createGuardianService,
   deleteGuardian,
-  checkGuardianAlreadyExist,
   getUserGuardian,
-
+  getTrashedGuardians,
+  restoreGuardian,
+  permanentDeleteGuardian,
+  
+  checkGuardianAlreadyExist,
   getGuardianBySchoolId,
   updateGuardianUserPassword,
 
@@ -13533,7 +13629,6 @@ module.exports = {
   getTrashedInvoices,
 
   createLeaveRequest,
-  // getAllLeaveRequests,
   getLeaveRequestById,
   updateLeaveRequest,
   leaveRequestPermission,

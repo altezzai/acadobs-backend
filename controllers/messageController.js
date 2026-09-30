@@ -114,7 +114,7 @@ if (!chat) {
         });
     }
 };
-const myChats = async (req, res) => {
+const getMyChats = async (req, res) => {
     try {
         const user_id = req.user.user_id;
         const searchQuery = req.query.q || "";
@@ -259,7 +259,7 @@ const myChats = async (req, res) => {
         });
 
     } catch (error) {
-        logger.error("myChats error:", error);
+        logger.error("getMyChats error:", error);
 
         return res.status(500).json({
             error: "Failed to fetch chats"
@@ -409,7 +409,7 @@ const getMessagesByChatId = async(req,res) => {
 }
 module.exports = {
     createMessage,
-    myChats,
+    getMyChats,
     getMessagesByChatId,
 }
 

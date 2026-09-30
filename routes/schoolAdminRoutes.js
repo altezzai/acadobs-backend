@@ -124,6 +124,9 @@ router.put(
   schoolAdminController.updateGuardian,
 );
 router.delete("/guardian/:id", schoolAdminController.deleteGuardian);
+router.get("/getTrashedGuardians", schoolAdminController.getTrashedGuardians);
+router.patch("/restoreGuardian/:id", schoolAdminController.restoreGuardian);
+router.delete("/permanentDeleteGuardian/:id", schoolAdminController.permanentDeleteGuardian);
 router.get(
   "/getGuardianBySchoolId",
   schoolAdminController.getGuardianBySchoolId,
