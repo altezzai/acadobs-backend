@@ -1771,9 +1771,15 @@ const getUnseenHomeworkCountByStudentId = async (req, res) => {
       where: { id: student_id, guardian_id: userId },
     });
     if(!student) return res.status(404).json({ error: "Student not found" });
-    
+
     const unseenHomeworkCount = await HomeworkAssignment.count({
       where: { student_id: student_id, is_seen: false },
+      include: [
+        {
+          model: Homework,
+          where: { trash: false },
+        },
+      ],
     });
     res.status(200).json({ unseenHomeworkCount });
   } catch (error) {
