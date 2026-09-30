@@ -1838,11 +1838,13 @@ const getGuardianById = async (req, res) => {
       include:[
         {
           model: User,
+          required:false,
           attributes: ["name", "email", "phone", "dp"],
           where: { trash: false },
           include:[
             {
               model:Student,
+              required:false,
               attributes: ["id","full_name","reg_no","roll_number","image"],
               where:{
                 trash:false,
@@ -1992,7 +1994,7 @@ const deleteGuardian = async (req, res) => {
     if(guardian.User.school_id !== school_id) return res.status(403).json({ error: "You do not have permission to delete this guardian" });
 
     const hasStudents = await Student.findOne({
-      where: { guardian_id: id },
+      where: { guardian_id: guardian.user_id },
     });
     if (hasStudents) return res.status(403).json({ error: "You cannot delete this guardian because it has students" });
     await guardian.update({ trash: true });
@@ -2079,7 +2081,7 @@ const permanentDeleteGuardian = async (req, res) => {
     if (!guardian) return res.status(404).json({ error: "Guardian not found" });
     if(guardian.User.school_id !== school_id) return res.status(403).json({ error: "You do not have permission to delete this guardian" });
     const hasStudents = await Student.findOne({
-      where: { guardian_id: id },
+      where: { guardian_id: guardian.user_id },
     });
     if (hasStudents) return res.status(403).json({ error: "You cannot delete this guardian because it has students" });
     await guardian.destroy();
@@ -10269,7 +10271,7 @@ const createStop = async (req, res) => {
     const user_id = req.user.user_id;
     const { route_id, stop_name, priority, latitude, longitude,charge,both} = req.body;
 
-    if (!route_id || !stop_name) {
+    if (!route_id || !stop_name ||!latitude ||!longitude ||!priority) {
       return res.status(400).json({ message: "Fields are missing" });
     }
     const route = await Routes.findOne({
