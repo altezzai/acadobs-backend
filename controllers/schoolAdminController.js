@@ -1829,6 +1829,7 @@ const getAllGuardians = async (req, res) => {
 const getGuardianById = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const guardians = await Guardian.findOne({
       where: {
         id,
@@ -1843,6 +1844,10 @@ const getGuardianById = async (req, res) => {
             {
               model:Student,
               attributes: ["id","full_name","reg_no","roll_number","image"],
+              where:{
+                trash:false,
+                school_id
+              },
               include:[
                 {
                   model:Class,
