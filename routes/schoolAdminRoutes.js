@@ -662,8 +662,8 @@ router.get("/getTrackedDataWithDateByRouteId/:route_id",
 router.get(
   "/getTodayTransportationByStudentId/:id", 
   trackerController.getTodayTransportationByStudentId);  
-router.get("/getStudentsWithUnassignedRouteByClassId/:class_id", 
-  trackerController.getStudentsWithUnassignedRouteByClassId);
+router.get("/getStudentsWithUnassignedRoute", 
+  trackerController.getStudentsWithUnassignedRoute);
 router.get("/getStudentsWithRouteId", 
   trackerController.getStudentsWithRouteId);
 

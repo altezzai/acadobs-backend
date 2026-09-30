@@ -1846,7 +1846,7 @@ const getGuardianById = async (req, res) => {
               attributes: ["id","full_name","reg_no","roll_number","image"],
               where:{
                 trash:false,
-                school_id
+                school_id 
               },
               include:[
                 {
