@@ -1838,7 +1838,21 @@ const getGuardianById = async (req, res) => {
         {
           model: User,
           attributes: ["name", "email", "phone", "dp"],
+          where: { trash: false },
+          include:[
+            {
+              model:Student,
+              attributes: ["id","full_name","reg_no","roll_number","image"],
+              include:[
+                {
+                  model:Class,
+                  attributes: ["id","classname"],
+                }
+              ]
+            }
+          ]
         },
+
       ],
     });
     res.status(200).json(guardians);
