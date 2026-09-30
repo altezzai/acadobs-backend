@@ -800,11 +800,12 @@ const getStudentsWithUnassignedStopsByRouteId = async (req, res) => {
     });
   }
 };
-const getStudentsWithUnassignedRouteByClassId = async (req, res) => { 
+const getStudentsWithUnassignedRoute = async (req, res) => { 
   try {
-    const { class_id } = req.params;
     const school_id = req.user.school_id;
- const searchQuery = req.query.q || "";
+    const searchQuery = req.query.q || "";
+    const class_id =req.query.class_id;
+    const year = req.query.year;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 100;
     const offset = (page - 1) * limit;
@@ -814,8 +815,10 @@ const getStudentsWithUnassignedRouteByClassId = async (req, res) => {
         alumni: false,
         trash: false,
         school_id,
-        class_id
       }
+    if (class_id) {
+      whereClause.class_id = class_id;
+    }
     if (searchQuery) {
       whereClause[Op.or] = [
         { reg_no: { [Op.like]: `%${searchQuery}%` } },
@@ -835,7 +838,8 @@ const getStudentsWithUnassignedRouteByClassId = async (req, res) => {
       },
       {
         model: Class,
-        attributes: ["classname"],
+        where: year ? {year:year}:{},
+        attributes: ["id","classname","year"],
       }
       ],
     });
@@ -2478,7 +2482,7 @@ module.exports = {
   assignStudentsToStop,
 
   getStudentsWithUnassignedStopsByRouteId,
-  getStudentsWithUnassignedRouteByClassId,
+  getStudentsWithUnassignedRoute,
   getStudentsWithRouteId,
 
   getStopsForDriverByRouteId,

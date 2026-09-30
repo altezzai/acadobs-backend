@@ -1829,6 +1829,7 @@ const getAllGuardians = async (req, res) => {
 const getGuardianById = async (req, res) => {
   try {
     const { id } = req.params;
+    const school_id = req.user.school_id;
     const guardians = await Guardian.findOne({
       where: {
         id,
@@ -1838,7 +1839,25 @@ const getGuardianById = async (req, res) => {
         {
           model: User,
           attributes: ["name", "email", "phone", "dp"],
+          where: { trash: false },
+          include:[
+            {
+              model:Student,
+              attributes: ["id","full_name","reg_no","roll_number","image"],
+              where:{
+                trash:false,
+                school_id 
+              },
+              include:[
+                {
+                  model:Class,
+                  attributes: ["id","classname"],
+                }
+              ]
+            }
+          ]
         },
+
       ],
     });
     res.status(200).json(guardians);
@@ -1970,14 +1989,14 @@ const deleteGuardian = async (req, res) => {
       include: [{ model: User }],
     });
     if (!guardian) return res.status(404).json({ error: "Guardian not found" });
-    if(guardian.user.school_id !== school_id) return res.status(403).json({ error: "You do not have permission to delete this guardian" });
+    if(guardian.User.school_id !== school_id) return res.status(403).json({ error: "You do not have permission to delete this guardian" });
 
     const hasStudents = await Student.findOne({
       where: { guardian_id: id },
     });
     if (hasStudents) return res.status(403).json({ error: "You cannot delete this guardian because it has students" });
     await guardian.update({ trash: true });
-    await guardian.user.update({ trash: true });
+    await guardian.User.update({ trash: true });
     res.status(200).json({ message: "Guardian moved to trash." });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -2041,9 +2060,9 @@ const restoreGuardian = async (req, res) => {
       include: [{ model: User }],
     });
     if (!guardian) return res.status(404).json({ error: "Guardian not found" });
-    if(guardian.user.school_id !== school_id) return res.status(403).json({ error: "You do not have permission to restore this guardian" });
+    if(guardian.User.school_id !== school_id) return res.status(403).json({ error: "You do not have permission to restore this guardian" });
     await guardian.update({ trash: false });
-    await guardian.user.update({ trash: false });
+    await guardian.User.update({ trash: false });
     res.status(200).json({ message: "Guardian restored successfully." });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -2058,13 +2077,13 @@ const permanentDeleteGuardian = async (req, res) => {
       include: [{ model: User }],
     });
     if (!guardian) return res.status(404).json({ error: "Guardian not found" });
-    if(guardian.user.school_id !== school_id) return res.status(403).json({ error: "You do not have permission to delete this guardian" });
+    if(guardian.User.school_id !== school_id) return res.status(403).json({ error: "You do not have permission to delete this guardian" });
     const hasStudents = await Student.findOne({
       where: { guardian_id: id },
     });
     if (hasStudents) return res.status(403).json({ error: "You cannot delete this guardian because it has students" });
     await guardian.destroy();
-    await guardian.user.destroy();
+    await guardian.User.destroy();
     res.status(200).json({ message: "Guardian deleted successfully." });
   } catch (error) {
     res.status(500).json({ error: error.message });
