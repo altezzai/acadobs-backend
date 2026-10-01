@@ -176,7 +176,7 @@ router.get("/getParentNotesByIdAndStudentId/:id/:student_id", guardianController
 router.get("/getParentNoteUnseenCount/:student_id", guardianController.getParentNoteUnseenCount);
 
 //report Controller
-router.get("/getprograsReportByStudentId/:student_id", reportController.getprograsReportByStudentId);
+router.get("/getProgressReportByStudentId/:student_id", reportController.getProgressReportByStudentId);
 
 //tracker
 router.get("/getRoutesForGuardian", guardianController.getRoutesForGuardian);

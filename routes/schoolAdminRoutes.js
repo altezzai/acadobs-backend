@@ -481,7 +481,7 @@ router.get("/getTrashedTermExams", schoolAdminController.getTrashedTermExams);
 router.patch("/restoreInternalmark/:id",schoolAdminController.restoreInternalMark);
 router.delete("/permanentDeleteInternalmark/:id",schoolAdminController.permanentDeleteInternalMark,);
 router.get("/getClassWaiseTermMarksPdf", reportController.getClassWaiseTermMarksPdf);
-router.get("/getprograsReportByStudentId/:student_id", reportController.getprograsReportByStudentId);
+router.get("/getProgressReportByStudentId/:student_id", reportController.getProgressReportByStudentId);
 
 router.get("/getHomeworkById/:id", schoolAdminController.getHomeworkById);
 router.put("/updateHomework/:id", schoolAdminController.updateHomework);

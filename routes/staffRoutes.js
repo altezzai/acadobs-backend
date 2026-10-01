@@ -438,6 +438,7 @@ router.get("/getTrashedTermExams",examPermission, schoolAdminController.getTrash
 router.patch("/restoreInternalmark/:id",commonInternalPermission,schoolAdminController.restoreInternalMark);
 router.delete("/permanentDeleteInternalmark/:id",commonInternalPermission,schoolAdminController.permanentDeleteInternalMark,);
 router.get("/getClassWaiseTermMarksPdf",examPermission, reportController.getClassWaiseTermMarksPdf);
+router.get("/getProgressReportByStudentId/:student_id", reportController.getProgressReportByStudentId);
 
 //staff attendance
 
