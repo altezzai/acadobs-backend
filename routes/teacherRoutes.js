@@ -71,7 +71,7 @@ router.put("/updateMark/:mark_id", teacherController.updateMark);
 router.put("/bulkUpdateMarks", teacherController.bulkUpdateMarks);
 router.get("/myMultiTeacherSubjectInternalMarks", teacherController.getMultiTeacherSubjectInternalMarks);
 router.get("/getClassWaiseTermMarksPdf", reportController.getClassWaiseTermMarksPdf);
-router.get("/getprograsReportByStudentId/:student_id", reportController.getprograsReportByStudentId);
+router.get("/getProgressReportByStudentId/:student_id", reportController.getProgressReportByStudentId);
 router.get("/getMissingStudentsFromClassByInternalMarkId/:id", teacherController.getMissingStudentsFromClassByInternalMarkId);
 router.post("/getMissingStudentsListfromClassId/:class_id", teacherController.getMissingStudentsListfromClassId);
 

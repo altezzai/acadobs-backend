@@ -6,6 +6,7 @@ const trackerController = require("../controllers/trackerController");
 const transferController = require("../controllers/transferController");
 const selectionListController = require("../controllers/selectionListController");
 const messageController = require("../controllers/messageController");
+const reportController =require("../controllers/reportController");
 const { upload, uploadWithErrorHandler } = require("../middlewares/upload");
 const { body, param } = require("express-validator");
 const { validate } = require("../middlewares/validateMiddleware");
@@ -173,6 +174,9 @@ router.get("/getAchievementById/:id", guardianController.getAchievementById);
 router.get("/getParentNotesByStudentId/:student_id", guardianController.getParentNotesByStudentId);
 router.get("/getParentNotesByIdAndStudentId/:id/:student_id", guardianController.getParentNotesByIdAndStudentId);
 router.get("/getParentNoteUnseenCount/:student_id", guardianController.getParentNoteUnseenCount);
+
+//report Controller
+router.get("/getProgressReportByStudentId/:student_id", reportController.getProgressReportByStudentId);
 
 //tracker
 router.get("/getRoutesForGuardian", guardianController.getRoutesForGuardian);

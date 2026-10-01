@@ -1419,7 +1419,7 @@ const getClassWaiseTermMarksPdf = async (req, res) => {
     }
   }
 };
-const getprograsReportByStudentId = async (req, res) => {
+const getProgressReportByStudentId = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const student_id = req.params.student_id;
@@ -1886,5 +1886,5 @@ module.exports = {
   getStudentReportByStudentId,
   getInternalmarksReport, 
   getClassWaiseTermMarksPdf,
-  getprograsReportByStudentId,
+  getProgressReportByStudentId,
 };
