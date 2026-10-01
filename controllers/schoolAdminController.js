@@ -12696,28 +12696,36 @@ const updateExamPublishStatus = async (req, res) => {
 };
 
 // Exam Timetable CRUD
-const createExamTimetable = async (req, res) => {
+const createBulkExamTimetable = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     const recorded_by = req.user.user_id;
     const {
       exam_id,
-      subject_id,
       title,
       standard,
-      exam_date,
-      start_time,
-      duration_minutes,
-      max_marks,
-      pass_marks,
-      instructions,
-      status,
     } = req.body;
 
-    if (!exam_id || !subject_id || !exam_date || !standard || !title) {
+    const schedules =
+      req.body.schedules ||
+      req.body.timetables ||
+      req.body.records ||
+      req.body.subjects ||
+      req.body.exams ||
+      req.body.data;
+
+    if (!exam_id || !title || standard === undefined || standard === null) {
       return res.status(400).json({
         success: false,
-        error: "exam_id, subject_id, exam_date, and start_time are required",
+        error: "exam_id, title, and standard are required",
+      });
+    }
+
+    if (!schedules || !Array.isArray(schedules) || schedules.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "Please provide a valid array of exam timetable records (schedules/timetables/records)",
       });
     }
 
@@ -12728,41 +12736,90 @@ const createExamTimetable = async (req, res) => {
       return res.status(404).json({ success: false, error: "Exam not found" });
     }
 
-    const subject = await Subject.findOne({
-      where: { id: subject_id, trash: false },
+    const subjectIds = [
+      ...new Set(schedules.map((s) => s.subject_id).filter(Boolean)),
+    ];
+    const subjects = await Subject.findAll({
+      where: { id: subjectIds, trash: false },
     });
-    if (!subject) {
-      return res.status(404).json({ success: false, error: "Subject not found" });
+    const existingSubjectIds = new Set(subjects.map((s) => s.id));
+
+    const seenEntries = new Set();
+    for (const item of schedules) {
+      if (!item.subject_id || !item.exam_date) {
+        return res.status(400).json({
+          success: false,
+          error:
+            "subject_id and exam_date are required for each timetable record",
+        });
+      }
+
+      if (!existingSubjectIds.has(item.subject_id)) {
+        return res.status(404).json({
+          success: false,
+          error: `Subject with ID ${item.subject_id} not found`,
+        });
+      }
+
+      const key = `${item.subject_id}-${item.exam_date}`;
+      if (seenEntries.has(key)) {
+        return res.status(400).json({
+          success: false,
+          error: `Duplicate timetable record for subject ID ${item.subject_id} on ${item.exam_date} in request`,
+        });
+      }
+      seenEntries.add(key);
+
+      const existExamTimetable = await ExamTimetable.findOne({
+        where: {
+          exam_id,
+          subject_id: item.subject_id,
+          standard,
+          exam_date: item.exam_date,
+          school_id,
+          trash: false,
+        },
+      });
+      if (existExamTimetable) {
+        return res.status(400).json({
+          success: false,
+          error: `Exam timetable already exists for subject ID ${item.subject_id} on ${item.exam_date}`,
+        });
+      }
     }
-    const existExamTimetable = await ExamTimetable.findOne({
-      where: { exam_id, subject_id, standard, exam_date, trash: false },
-    });
-    if (existExamTimetable) {
-      return res.status(400).json({ success: false, error: "Exam timetable already exists" });
-    }
-    const examTimetable = await ExamTimetable.create({
+
+    const recordsToCreate = schedules.map((item) => ({
       school_id,
       exam_id,
-      subject_id,
-      title: title || null,
+      title,
       standard,
-      exam_date,
-      start_time,
-      duration_minutes: duration_minutes || null,
-      max_marks: max_marks !== undefined ? max_marks : null,
-      pass_marks: pass_marks !== undefined ? pass_marks : null,
-      instructions: instructions || null,
-      status: status || "scheduled",
+      subject_id: item.subject_id,
+      exam_date: item.exam_date,
+      start_time: item.start_time || null,
+      duration_minutes: item.duration_minutes || null,
+      max_marks: item.max_marks !== undefined ? item.max_marks : null,
+      pass_marks: item.pass_marks !== undefined ? item.pass_marks : null,
+      instructions: item.instructions || null,
+      status: item.status || "scheduled",
       recorded_by,
-    });
+    }));
+
+    const createdExamTimetables = await ExamTimetable.bulkCreate(
+      recordsToCreate
+    );
 
     return res.status(201).json({
       success: true,
-      message: "Exam timetable created successfully",
-      data: examTimetable,
+      message: "Exam timetables created successfully",
+      data: createdExamTimetables,
     });
   } catch (error) {
-    logger.error("school_id:", req.user?.school_id, "Error creating exam timetable:", error);
+    logger.error(
+      "school_id:",
+      req.user?.school_id,
+      "Error creating exam timetable:",
+      error
+    );
     return res.status(500).json({
       success: false,
       message: "Failed to create exam timetable",
@@ -13822,7 +13879,8 @@ module.exports = {
   permanentDeleteExam,
   restoreExam,
 
-  createExamTimetable,
+  createBulkExamTimetable,
+  createExamTimetable: createBulkExamTimetable,
   updateExamTimetable,
   getAllExamTimetables,
   getExamTimetableById,
