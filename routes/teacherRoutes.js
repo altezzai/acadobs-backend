@@ -296,6 +296,8 @@ router.post("/createStudentCoScholasticAssessment", teacherController.createStud
 router.get("/getCoScholasticAssessmentbyStudentIdandExamId/:student_id/:exam_id", teacherController.getCoScholasticAssessmentbyStudentIdandExamId);
 router.put("/bulkUpdateCoScholasticAssessmentbyStudentIdandExamId", teacherController.bulkUpdateCoScholasticAssessmentbyStudentIdandExamId);
 router.delete("/deleteCoScholasticAssessment/:student_id/:exam_id", teacherController.deleteCoScholasticAssessment);
+//report Controller
+router.get("/getprograsReportByStudentId/:student_id", reportController.getprograsReportByStudentId);
 
 //common Controller
 router.get("/getLatestEvents", commonController.getLatestEvents);

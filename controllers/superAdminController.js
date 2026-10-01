@@ -56,7 +56,7 @@ const createSchool = async (req, res) => {
       seo_title,
       seo_description,
     } = req.body;
-    if (!name || !email || !phone || !admin_password) {
+    if (!name || !email || !phone || !admin_password || !syllabus_id) {
       return res.status(400).json({ error: "Required fields are missing" });
     }
 
