@@ -5017,6 +5017,86 @@ const examtimetableById = async (req, res) => {
     });
   }
 };
+const getExamTimeTablesByOwnSubjects = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const user_id = req.user.user_id;
+    const exam_id = req.query.exam_id || null;
+    const status = req.query.status || null;
+    const start_date = req.query.start_date || null;
+    const end_date = req.query.end_date || null;
+    const searchQuery = req.query.q || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const staff = await Staff.findOne({
+      where: { user_id,role:"teacher" },
+    });
+    if (!staff) {
+      return res.status(404).json({ success: false, error: "Staff not found" });
+    }
+    const subjectIds = await StaffSubject.findAll({
+      where: { staff_id: staff.id },
+      attributes: ["subject_id"],
+    });
+    const subjectIdsArray = subjectIds.map((subject) => subject.subject_id);
+    let whereClause = {
+      school_id,
+      subject_id: { [Op.in]: subjectIdsArray },
+    };
+    if (exam_id) whereClause.exam_id = exam_id;
+    if (status) whereClause.status = status;
+    if (start_date && end_date) {
+      whereClause.exam_date = { [Op.between]: [start_date, end_date] };
+    } else if (start_date) {
+      whereClause.exam_date = { [Op.gte]: start_date };
+    } else if (end_date) {
+      whereClause.exam_date = { [Op.lte]: end_date };
+    }
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${searchQuery}%` } },
+        { instructions: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: timetables } = await ExamTimetable.findAndCountAll({
+      where: whereClause,
+      limit,
+      offset,
+      distinct: true,
+      include: [
+        {
+          model: Exam,
+          attributes: ["id", "exam_name", "education_year", "publish"],
+        },
+        {
+          model: Subject,
+          attributes: ["id", "subject_name", "class_range", "is_multi_teacher", "priority"],
+        },
+      ],
+      order: [
+        ["exam_date", "ASC"],
+        ["start_time", "ASC"],
+        ["id", "DESC"],
+      ],
+    });
+    const totalPages = Math.ceil(count / limit);
+    return res.status(200).json({
+      success: true,
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data: timetables,
+    });
+  } catch (error) {
+    logger.error("userId:", req.user?.user_id, "Error fetching exam timetables by standard:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch exam timetables by standard",
+      error: error.message,
+    });
+  }
+};
 const getCompetencyAndIndicators = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -5939,6 +6019,7 @@ module.exports = {
 
   getAllExamTimeTablebyStandard,
   examtimetableById,
+  getExamTimeTablesByOwnSubjects,
   
   getCompetencyAndIndicators,
   createStudentCompetencyAssessment,
