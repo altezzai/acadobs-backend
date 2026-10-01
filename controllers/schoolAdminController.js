@@ -7776,7 +7776,35 @@ const bulkUpsertTimetable = async (req, res) => {
   try {
     const school_id = req.user.school_id;
     let { records } = req.body;
+
+    if (!records || !Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ error: "Invalid records format" });
+    }
+
+    // Check for duplicate entries within the request payload (class_id + day_of_week + period_number + staff_id)
+    const seenRecords = new Set();
     for (const record of records) {
+      if (
+        !record.class_id ||
+        record.day_of_week === undefined ||
+        record.period_number === undefined ||
+        !record.staff_id ||
+        !record.subject_id
+      ) {
+        return res.status(400).json({
+          error:
+            "Missing required fields in one or more records (class_id, day_of_week, period_number, staff_id, subject_id).",
+        });
+      }
+
+      const uniqueKey = `${record.class_id}-${record.day_of_week}-${record.period_number}-${record.staff_id}`;
+      if (seenRecords.has(uniqueKey)) {
+        return res.status(400).json({
+          error: `Duplicate timetable entry detected in request for class ID ${record.class_id}, day ${record.day_of_week}, period ${record.period_number}, and teacher ID ${record.staff_id}.`,
+        });
+      }
+      seenRecords.add(uniqueKey);
+
       const staff = await User.findOne({
         where: {
           id: record.staff_id,
@@ -7786,7 +7814,7 @@ const bulkUpsertTimetable = async (req, res) => {
         attributes: ["id", "trash"],
       });
       if (!staff) {
-        return res.status(400).json({ error: "Invalid staff_id" });
+        return res.status(400).json({ error: `Invalid staff_id: ${record.staff_id}` });
       }
 
       if (staff.trash) {
@@ -7796,16 +7824,16 @@ const bulkUpsertTimetable = async (req, res) => {
         });
       }
     }
-    if (!records || !Array.isArray(records)) {
-      return res.status(400).json({ error: "Invalid records format" });
-    }
+
     records = records.map((record) => ({
       ...record,
       school_id,
     }));
+
     await Timetable.bulkCreate(records, {
-      updateOnDuplicate: ["subject_id", "staff_id", "updatedAt"],
+      updateOnDuplicate: ["subject_id", "updatedAt"],
     });
+
     return res.json({
       success: true,
       message: "Timetable updated successfully",
@@ -7818,6 +7846,17 @@ const bulkUpsertTimetable = async (req, res) => {
       error,
     );
     console.error("bulkUpsertTimetable error:", error);
+
+    if (
+      error.name === "SequelizeUniqueConstraintError" ||
+      error.original?.code === "ER_DUP_ENTRY"
+    ) {
+      return res.status(400).json({
+        error:
+          "Duplicate entry: A timetable record for this class, day, period, and teacher already exists.",
+      });
+    }
+
     return res.status(500).json({ error: error.message });
   }
 };
