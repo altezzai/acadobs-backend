@@ -485,7 +485,7 @@ router.put(
 );
 
 // Exam Timetables
-router.post("/examTimetables", examPermission, schoolAdminController.createExamTimetable);
+router.post("/examTimetables", examPermission, schoolAdminController.createBulkExamTimetable);
 router.put("/examTimetables/:id", examPermission, schoolAdminController.updateExamTimetable);
 router.get("/examTimetables", examPermission, schoolAdminController.getAllExamTimetables);
 router.get("/examTimetables/:id", examPermission, schoolAdminController.getExamTimetableById);
