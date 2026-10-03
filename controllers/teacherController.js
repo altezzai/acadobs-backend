@@ -4886,6 +4886,7 @@ const getAllExamTimeTablebyStandard = async (req, res) => {
     const user_id = req.user.user_id;
     const standardInput = req.query.standard  || null;
     const exam_id = req.query.exam_id || null;
+    const title = req.query.title || null;
     const status = req.query.status || null;
     const start_date = req.query.start_date || null;
     const end_date = req.query.end_date || null;
@@ -4913,6 +4914,7 @@ const getAllExamTimeTablebyStandard = async (req, res) => {
       }
     }
     if (standard) whereClause.standard= standard;
+    if (title) whereClause.title = title;
     if (exam_id) whereClause.exam_id = exam_id;
     if (status) whereClause.status = status;
 

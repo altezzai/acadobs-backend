@@ -2181,16 +2181,16 @@ const mapStandardToClassRange = (standard) => {
 
 const getexamtimetablebyStudnetId = async (req, res) => {
   try {
-    const studentId = req.params.student_id || req.params.studentId || req.query.student_id || req.query.studentId;
+    const studentId = req.params.student_id;
     const guardian_id = req.user.user_id;
     const exam_id = req.query.exam_id || null;
     const status = req.query.status || null;
     const start_date = req.query.start_date || null;
     const end_date = req.query.end_date || null;
+    const title = req.query.title || null;
     const page = req.query.page || 1;
     const limit = req.query.limit || 10;
     const offset = (page - 1) * limit;
-    const title = req.query.title || null;
     if (!studentId) {
       return res.status(400).json({ success: false, error: "student_id is required" });
     }

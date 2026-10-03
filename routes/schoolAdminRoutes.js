@@ -771,6 +771,10 @@ router.get(
   commonController.getTermExamByStudentId,
 );
 router.get(
+  "/getAllExamsFromExamTable",
+  commonController.getAllExamsFromExamTable,
+);
+router.get(
   "/getLeaveRequestByStudentId/:student_id",
   commonController.getLeaveRequestByStudentId,
 );

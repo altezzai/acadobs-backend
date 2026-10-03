@@ -1063,6 +1063,30 @@ const getTermExamByStudentId = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getAllExamsFromExamTable = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const exams = await Exam.findAll({
+      where: {
+        school_id,
+        trash:false,
+      },
+      attributes: ["id", "exam_name", "education_year", "publish"],
+      order: [["createdAt", "DESC"]],
+    });
+    res.status(200).json({
+      exams,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user.user_id,
+      "Error in getting all exams from exam table:",
+      error
+    );
+    res.status(500).json({ error: error.message });
+  }
+};
 const getLeaveRequestByStudentId = async (req, res) => {
   try {
     const student_id = req.params.student_id;
@@ -1819,6 +1843,7 @@ module.exports = {
 
   getInternalMarkByStudentId,
   getTermExamByStudentId,
+  getAllExamsFromExamTable,
 
   getLeaveRequestByStudentId,
 

@@ -674,7 +674,14 @@ router.get(
   internalMarksPermission,
   commonController.getInternalMarkByStudentId,
 );
-
+router.get(
+  "/getTermExamByStudentId/:student_id",
+  commonController.getTermExamByStudentId,
+);
+router.get(
+  "/getAllExamsFromExamTable",
+  commonController.getAllExamsFromExamTable,
+);
 router.get(
   "/getLeaveRequestByStudentId/:student_id",
   leaveRequestPermission,
