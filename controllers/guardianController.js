@@ -2190,6 +2190,7 @@ const getexamtimetablebyStudnetId = async (req, res) => {
     const page = req.query.page || 1;
     const limit = req.query.limit || 10;
     const offset = (page - 1) * limit;
+    const title = req.query.title || null;
     if (!studentId) {
       return res.status(400).json({ success: false, error: "student_id is required" });
     }
@@ -2213,7 +2214,7 @@ const getexamtimetablebyStudnetId = async (req, res) => {
       trash: false,
       standard: student.Class.year,
     };
-
+    if (title) whereClause.title = title;
     if (exam_id) whereClause.exam_id = exam_id;
     if (status) whereClause.status = status;
 
@@ -2232,7 +2233,6 @@ const getexamtimetablebyStudnetId = async (req, res) => {
       include: [
         {
           model: Exams,
-          where: { publish: true },
           attributes: ["id", "exam_name", "education_year", "publish"],
         },
         {
