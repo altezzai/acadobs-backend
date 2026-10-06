@@ -10080,6 +10080,7 @@ const getStaffAttendanceByDate = async (req, res) => {
     const school_id = req.user.school_id;
     const role = req.query.role || null;
     const date = req.query.date || new Date().toISOString().split("T")[0];
+    const searchQuery=req.query.q || "";
     const whereClause = {
       role: { [Op.in]: ["teacher", "staff"] },
       school_id,
@@ -10087,6 +10088,9 @@ const getStaffAttendanceByDate = async (req, res) => {
     };
     if (role) {
       whereClause.role = role;
+    }
+    if(searchQuery){
+      whereClause.name = { [Op.like]: `%${searchQuery}%` };
     }
     const count = await User.count({ where: whereClause });
     const staffList = await User.findAll({
