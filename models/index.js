@@ -55,6 +55,8 @@ const CoScholasticArea = require("./assesment/co_scholastic_area");
 const StudentCoScholasticAssessment = require("./assesment/student_co_scholastic_assessment");
 // Relations
 
+User.belongsTo(School, { foreignKey: "school_id" });
+School.hasMany(User, { foreignKey: "school_id" });
 // Associations
 Class.belongsTo(School, { foreignKey: "school_id" });
 Class.hasMany(Student, { foreignKey: "class_id" });

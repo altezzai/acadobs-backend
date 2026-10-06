@@ -86,5 +86,12 @@ router.delete(
 router.get("/dashboardCounts", superAdminController.dashboardCounts);
 router.get("/recentActivities", superAdminController.recentActivities);
 
+router.get("/getAllUsersWithOutAdmin", superAdminController.getAllUsersWithOutAdmin);
+router.get("/getUserById/:id", superAdminController.getUserById);
+router.put("/editUsers/:id", superAdminController.editUsers);
+router.put("/changePassword/:id", superAdminController.changePassword);
+router.delete("/deleteUser/:id", superAdminController.deleteUser);
+router.patch("/restoreUser/:id", superAdminController.restoreUser);
+
 router.get("/getClassRangeForSubject",selectionListController.getClassRangeForSubject);
 module.exports = router;
