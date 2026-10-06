@@ -1213,6 +1213,146 @@ const recentActivities = async (req, res) => {
   }
 };
 
+const getAllUsersWithOutAdmin = async (req, res) => {
+  try {
+    const searchQuery = req.query.q || "";
+    const role = req.query.role || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: false,
+      role: {
+        [Op.notIn]: ["superadmin", "admin"],
+      },
+    };
+    if (role) {
+      whereClause.role = role;
+    }
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { name: { [Op.like]: `%${searchQuery}%` } },
+        { phone: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: users } = await User.findAndCountAll({
+      where: whereClause,
+      offset,
+      distinct: true,
+      limit,
+      attributes:["id","name","phone","email","role","status","school_id","dp"],
+      include: [
+        {
+          model: School,
+          attributes: ["id", "name"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    res.status(200).json({
+      totalcontent: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      users,
+    });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error getting users:", error);
+    res.status(500).json({ error: error.message });
+  }
+}
+const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findByPk(id, {
+      include: [
+        {
+          model: School,
+          attributes: ["id", "name"],
+        },
+      ],
+    });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.status(200).json(user);
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error getting user:", error);
+    res.status(500).json({ error: error.message });
+  }
+}
+const editUsers = async(req,res)=>{
+  try {
+    const { id } = req.params;
+    const { name, phone, email, role, status } = req.body;
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    user.name = name;
+    user.phone = phone;
+    user.email = email;
+    user.role = role;
+    user.status = status;
+    await user.save();
+    res.status(200).json({ message: "User updated successfully" });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error editing user:", error);
+    res.status(500).json({ error: error.message });
+  }
+}
+const changePassword = async(req,res)=>{
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+    if(!password){
+      return res.status(404).json({ error: "Password is required" });
+    }
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    if(user.password === password){
+      return res.status(404).json({ error: "Password is same as old password" });
+    }
+    user.password = bcrypt.hashSync(password, 10);
+    await user.save();
+    res.status(200).json({ message: "Password changed successfully" });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error changing password:", error);
+    res.status(500).json({ error: error.message });
+  }
+}
+const deleteUser = async(req,res)=>{
+  try {
+    const { id } = req.params;
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    user.trash=true;
+    await user.save();
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error deleting user:", error);
+    res.status(500).json({ error: error.message });
+  }
+}
+const restoreUser = async(req,res)=>{
+  try {
+    const { id } = req.params;
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    user.trash=false;
+    await user.save();
+    res.status(200).json({ message: "User restored successfully" });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error restoring user:", error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
 
 module.exports = {
   createSchool,
@@ -1256,4 +1396,11 @@ module.exports = {
 
   dashboardCounts,
   recentActivities,
+
+  getAllUsersWithOutAdmin,
+  getUserById,
+  editUsers,
+  changePassword,
+  deleteUser,
+  restoreUser,
 };
