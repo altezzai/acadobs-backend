@@ -270,6 +270,10 @@ router.delete(
 );
 //payment
 router.post("/payments", schoolAdminController.createPayment);
+router.post(
+  "/bulkCreatePaymentForTally",
+  schoolAdminController.bulkCreatePaymentForTally
+);
 router.get("/payments", schoolAdminController.getAllPayments);
 router.get("/donations", schoolAdminController.getDonations);
 router.get("/payments/:id", schoolAdminController.getPaymentById);
