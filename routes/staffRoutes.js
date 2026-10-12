@@ -201,11 +201,6 @@ router.delete(
 );
 //payment
 router.post("/payments", paymentPermission, schoolAdminController.createPayment);
-router.post(
-  "/bulkCreatePaymentForTally",
-  paymentPermission,
-  schoolAdminController.bulkCreatePaymentForTally
-);
 router.get("/payments", paymentPermission, schoolAdminController.getAllPayments);
 router.get("/donations", paymentPermission, schoolAdminController.getDonations);
 router.get("/payments/:id", paymentPermission, schoolAdminController.getPaymentById);
