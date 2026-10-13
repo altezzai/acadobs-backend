@@ -93,5 +93,9 @@ router.put("/changePassword/:id", superAdminController.changePassword);
 router.delete("/deleteUser/:id", superAdminController.deleteUser);
 router.patch("/restoreUser/:id", superAdminController.restoreUser);
 
+router.post(
+  "/bulkCreatePaymentForTallyBySchoolId/:school_id",
+ superAdminController.bulkCreatePaymentForTallyBySchoolId
+);
 router.get("/getClassRangeForSubject",selectionListController.getClassRangeForSubject);
 module.exports = router;

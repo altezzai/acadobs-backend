@@ -6,11 +6,13 @@ const Class = require("../models/class");
 const Subject = require("../models/subject");
 const AccountDelete = require("../models/accountdelete");
 const Syllabus = require("../models/syllabus");
+const Student = require("../models/student");
 const { schoolSequelize } = require("../config/connection");
 const { Op } = require("sequelize");
-const { Payment } = require("../models");
+const Payment = require("../models/payment");
 const Invoice = require("../models/invoice");
 const { deleteFile } = require("../middlewares/storageUploads");
+const moment = require("moment");
 
 const createSchool = async (req, res) => {
   const transaction = await schoolSequelize.transaction();
@@ -1337,6 +1339,53 @@ const deleteUser = async(req,res)=>{
     res.status(500).json({ error: error.message });
   }
 }
+const getTrashedUsersWithOutAdmin = async (req, res) => {
+  try {
+    const searchQuery = req.query.q || "";
+    const role = req.query.role || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereClause = {
+      trash: true,
+      role: {
+        [Op.notIn]: ["superadmin", "admin"],
+      },
+    };
+    if (role) {
+      whereClause.role = role;
+    }
+    if (searchQuery) {
+      whereClause[Op.or] = [
+        { name: { [Op.like]: `%${searchQuery}%` } },
+        { phone: { [Op.like]: `%${searchQuery}%` } },
+      ];
+    }
+    const { count, rows: users } = await User.findAndCountAll({
+      where: whereClause,
+      offset,
+      distinct: true,
+      limit,
+      attributes:["id","name","phone","email","role","status","school_id","dp"],
+      include: [
+        {
+          model: School,
+          attributes: ["id", "name"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    res.status(200).json({
+      totalcontent: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      users,
+    });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id,"Error getting users:", error);
+    res.status(500).json({ error: error.message });
+  }
+}
 const restoreUser = async(req,res)=>{
   try {
     const { id } = req.params;
@@ -1353,6 +1402,294 @@ const restoreUser = async(req,res)=>{
   }
 }
 
+const bulkCreatePaymentForTallyBySchoolId = async (req, res) => {
+  const transaction = await schoolSequelize.transaction();
+  try {
+    const school_id = req.params.school_id;
+    const userId = req.user.user_id;
+
+    // Accepts an array directly, or inside { payments }, { data }, or { records }
+    const rawPayments = Array.isArray(req.body)
+      ? req.body
+      : req.body.payments || req.body.data || req.body.records || (req.body.reg_no ? [req.body] : []);
+
+    if (!Array.isArray(rawPayments) || rawPayments.length === 0) {
+      await transaction.rollback();
+      return res.status(400).json({ error: "No payment records provided" });
+    }
+
+    // Extract unique registration numbers
+    const regNos = [
+      ...new Set(
+        rawPayments
+          .map((item) => item.reg_no && String(item.reg_no).trim())
+          .filter(Boolean)
+      ),
+    ];
+
+    if (regNos.length === 0) {
+      await transaction.rollback();
+      return res
+        .status(400)
+        .json({ error: "No valid reg_no found in payment records" });
+    }
+
+    // Query active/existing students for this school with matching reg_no
+    const students = await Student.findAll({
+      where: {
+        school_id,
+        reg_no: { [Op.in]: regNos },
+        trash: false,
+      },
+      attributes: ["id", "reg_no"],
+      transaction,
+    });
+
+    const studentMap = new Map();
+    students.forEach((student) => {
+      if (student.reg_no) {
+        studentMap.set(String(student.reg_no).trim().toLowerCase(), student.id);
+      }
+    });
+
+    const studentIds = Array.from(studentMap.values());
+
+    // Query existing payments for these students to prevent duplicate insertions
+    let existingPayments = [];
+    if (studentIds.length > 0) {
+      existingPayments = await Payment.findAll({
+        where: {
+          school_id,
+          student_id: { [Op.in]: studentIds },
+          trash: false,
+        },
+        attributes: [
+          "id",
+          "student_id",
+          "amount",
+          "payment_date",
+          "payment_category",
+          "transaction_id",
+        ],
+        transaction,
+      });
+    }
+
+    // Lookup sets for existing payments in database
+    const existingPaymentKeySet = new Set();
+    const existingTxnIdSet = new Set();
+
+    existingPayments.forEach((p) => {
+      if (p.student_id && p.payment_date && p.amount !== undefined) {
+        const cat = p.payment_category || "other";
+        const key = `${p.student_id}_${p.payment_date}_${Number(p.amount).toFixed(2)}_${cat}`;
+        existingPaymentKeySet.add(key);
+      }
+      if (p.transaction_id) {
+        existingTxnIdSet.add(String(p.transaction_id).trim());
+      }
+    });
+
+    // Tracking sets for duplicate prevention within the current batch
+    const batchProcessedKeys = new Set();
+    const paymentsToCreate = [];
+    const skippedRecords = [];
+
+    const allowedStatuses = ["pending", "completed", "failed", "refunded"];
+    const allowedMethods = [
+      "cash",
+      "bank_transfer",
+      "upi",
+      "credit_card",
+      "debit_card",
+      "wallet",
+    ];
+    const allowedCategories = [
+      "tuition",
+      "admission",
+      "exam",
+      "transport",
+      "hostel",
+      "lab",
+      "library",
+      "activity",
+      "fine",
+      "donation",
+      "event",
+      "excursion",
+      "other",
+    ];
+
+    for (let i = 0; i < rawPayments.length; i++) {
+      const item = rawPayments[i];
+      const {
+        reg_no,
+        amount,
+        payment_date,
+        payment_status,
+        payment_method,
+        payment_category,
+        remarks,
+      } = item;
+
+      if (!reg_no || !String(reg_no).trim()) {
+        skippedRecords.push({
+          index: i,
+          item,
+          reason: "reg_no is missing",
+        });
+        continue;
+      }
+
+      const regKey = String(reg_no).trim().toLowerCase();
+      const student_id = studentMap.get(regKey);
+
+      if (!student_id) {
+        skippedRecords.push({
+          index: i,
+          reg_no,
+          reason: `Student with reg_no '${reg_no}' not found in school`,
+        });
+        continue;
+      }
+
+      if (
+        amount === undefined ||
+        amount === null ||
+        isNaN(Number(amount)) ||
+        Number(amount) <= 0
+      ) {
+        skippedRecords.push({
+          index: i,
+          reg_no,
+          reason: "Valid positive amount is required",
+        });
+        continue;
+      }
+
+      if (!payment_date) {
+        skippedRecords.push({
+          index: i,
+          reg_no,
+          reason: "payment_date is required",
+        });
+        continue;
+      }
+
+      // Format/validate date string if possible
+      let formattedDate = String(payment_date).trim();
+      if (
+        moment(
+          formattedDate,
+          [
+            "YYYY-MM-DD",
+            "YYYY/MM/DD",
+            "DD-MM-YYYY",
+            "DD/MM/YYYY",
+            moment.ISO_8601,
+          ],
+          true
+        ).isValid()
+      ) {
+        formattedDate = moment(
+          formattedDate,
+          [
+            "YYYY-MM-DD",
+            "YYYY/MM/DD",
+            "DD-MM-YYYY",
+            "DD/MM/YYYY",
+            moment.ISO_8601,
+          ]
+        ).format("YYYY-MM-DD");
+      }
+
+      let status = payment_status
+        ? String(payment_status).trim().toLowerCase()
+        : "completed";
+      if (!allowedStatuses.includes(status)) {
+        status = "completed";
+      }
+
+      let method = payment_method
+        ? String(payment_method).trim().toLowerCase()
+        : "cash";
+      if (!allowedMethods.includes(method)) {
+        method = "cash";
+      }
+
+      let category = payment_category
+        ? String(payment_category).trim().toLowerCase()
+        : "other";
+      if (!allowedCategories.includes(category)) {
+        category = "other";
+      }
+
+      // Check duplicate payment in database or current batch (same student, date, amount, category)
+      const paymentKey = `${student_id}_${formattedDate}_${Number(
+        amount
+      ).toFixed(2)}_${category}`;
+      if (
+        existingPaymentKeySet.has(paymentKey) ||
+        batchProcessedKeys.has(paymentKey)
+      ) {
+        skippedRecords.push({
+          index: i,
+          reg_no,
+          reason: "Payment with the same details already exists",
+        });
+        continue;
+      }
+
+      // Mark as processed for current batch
+      batchProcessedKeys.add(paymentKey);
+
+      paymentsToCreate.push({
+        school_id,
+        student_id,
+        amount: Number(amount),
+        payment_date: formattedDate,
+        payment_status: status,
+        payment_method: method || "cash",
+        payment_category: category || "other",
+        remarks: remarks || "Tally Import",
+        recorded_by: userId || null,
+        trash: false,
+      });
+    }
+
+    if (paymentsToCreate.length === 0) {
+      await transaction.rollback();
+      return res.status(400).json({
+        error: "No valid payments could be processed",
+        skipped: skippedRecords,
+      });
+    }
+
+    const createdPayments = await Payment.bulkCreate(paymentsToCreate, {
+      transaction,
+      returning: true,
+    });
+
+    await transaction.commit();
+
+    return res.status(201).json({
+      message: "Payments created successfully for Tally",
+      total_created: createdPayments.length,
+      payments: createdPayments,
+      skipped_count: skippedRecords.length,
+      skipped: skippedRecords.length > 0 ? skippedRecords : undefined,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    logger.error(
+      "schoolId:",
+      req?.user?.school_id,
+      "bulkCreatePaymentForTallyBySchoolId:",
+      error
+    );
+    return res.status(500).json({ error: error.message });
+  }
+};
 
 module.exports = {
   createSchool,
@@ -1402,5 +1739,8 @@ module.exports = {
   editUsers,
   changePassword,
   deleteUser,
+  getTrashedUsersWithOutAdmin,
   restoreUser,
+
+  bulkCreatePaymentForTallyBySchoolId,
 };

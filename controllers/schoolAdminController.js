@@ -4920,6 +4920,8 @@ const createPayment = async (req, res) => {
   }
 };
 
+
+
 const getAllPayments = async (req, res) => {
   try {
     const school_id = req.user.school_id;
