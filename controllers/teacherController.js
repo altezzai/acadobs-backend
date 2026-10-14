@@ -5774,6 +5774,166 @@ const createStudentPhysicalAssessment = async (req, res) => {
   }
 };
 
+const getCoScholasticAssessmentRecordedByMe = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+
+    const searchQuery = req.query.q?.trim() || "";
+    const exam_id = req.query.exam_id;
+    const area_id = req.query.area_id;
+    const student_id = req.query.student_id;
+    const class_id = req.query.class_id;
+
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1);
+    const offset = (page - 1) * limit;
+
+    const whereClause = {
+      school_id,
+      recorded_by,
+    };
+
+    if (exam_id) {
+      whereClause.exam_id = exam_id;
+    }
+
+    if (area_id) {
+      whereClause.area_id = area_id;
+    }
+
+    if (student_id) {
+      whereClause.student_id = student_id;
+    }
+
+    const studentWhereClause = {};
+
+    if (searchQuery) {
+      studentWhereClause[Op.or] = [
+        {
+          full_name: {
+            [Op.like]: `%${searchQuery}%`,
+          },
+        },
+        {
+          reg_no: {
+            [Op.like]: `%${searchQuery}%`,
+          },
+        },
+      ];
+    }
+
+    if (class_id) {
+      studentWhereClause.class_id = class_id;
+    }
+
+    const { count, rows: assessments } =
+      await StudentCoScholasticAssessment.findAndCountAll({
+        where: whereClause,
+        limit,
+        offset,
+        distinct: true,
+        include: [
+          {
+            model: CoScholasticArea,
+            attributes: [
+              "id",
+              "name",
+              "class_group",
+              "display_order",
+              "status",
+            ],
+          },
+          {
+            model: Student,
+            where:studentWhereClause,
+            attributes: ["id", "full_name", "roll_number", "reg_no"],
+            include:[
+              {
+                model:Class,
+                attributes:["id","classname"]
+              }
+            ]
+          },
+          {
+            model: Exam,
+            attributes: ["id", "exam_name", "publish", "education_year"],
+          },
+        ],
+        order: [["id", "DESC"]],
+      });
+
+    const totalPages = Math.ceil(count / limit);
+
+    return res.status(200).json({
+      totalcontent: count,
+      totalPages,
+      currentPage: page,
+      data: assessments,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "userId:",
+      req.user?.user_id,
+      "Error fetching co-scholastic assessments:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch co-scholastic assessments",
+      details: error.message,
+    });
+  }
+};
+
+const updateCoScholasticAssessmentById = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
+    const id = req.params.id;
+    const { grade, score, remarks, assessed_at } = req.body || {};
+    const assessment = await StudentCoScholasticAssessment.findOne({
+      where: {
+        id,
+        school_id,
+        recorded_by,
+      },
+    });
+    if (!assessment) {
+      return res.status(404).json({
+        success: false,
+        error: "Co-scholastic assessment not found",
+      });
+    }
+    assessment.grade = grade;
+    assessment.score = score;
+    assessment.remarks = remarks;
+    assessment.assessed_at = assessed_at;
+    await assessment.save();
+    return res.status(200).json({
+      success: true,
+      message: "Co-scholastic assessment updated successfully",
+      data: assessment,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "userId:",
+      req.user?.user_id,
+      "Error updating co-scholastic assessment:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      error: "Failed to update co-scholastic assessment",
+      details: error.message,
+    });
+  }
+};
 
 const getCoScholasticAssessmentbyStudentIdandExamId = async (req, res) => {
   try {
@@ -6117,6 +6277,8 @@ module.exports = {
   getCoScholasticAreasListByStudentId,
   createStudentCoScholasticAssessment,
   createStudentPhysicalAssessment,
+  getCoScholasticAssessmentRecordedByMe,
+  updateCoScholasticAssessmentById,
   getCoScholasticAssessmentbyStudentIdandExamId,
   bulkUpdateCoScholasticAssessmentbyStudentIdandExamId,
   deleteCoScholasticAssessment,
