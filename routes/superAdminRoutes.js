@@ -91,6 +91,7 @@ router.get("/getUserById/:id", superAdminController.getUserById);
 router.put("/editUsers/:id", superAdminController.editUsers);
 router.put("/changePassword/:id", superAdminController.changePassword);
 router.delete("/deleteUser/:id", superAdminController.deleteUser);
+router.get("/getTrashedUsersWithOutAdmin", superAdminController.getTrashedUsersWithOutAdmin);
 router.patch("/restoreUser/:id", superAdminController.restoreUser);
 
 router.post(
