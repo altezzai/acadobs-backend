@@ -1732,7 +1732,7 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
     }
     const contactStr = String(guardian_contact);
 
-    const password = guardian_name.slice(0, 3) + contactStr.slice(0, 5);
+    const password = contactStr;
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
