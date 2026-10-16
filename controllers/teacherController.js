@@ -5571,6 +5571,70 @@ const getCoScholasticAreasListByStudentId = async (req, res) => {
     });
   }
 };
+const getCoScholasticMusicOrArtsOrRobticsByYear =async (req, res) => {
+  try {
+    const year = req.params.year;
+    const school_id = req.user.school_id;
+    const schooldata = await School.findOne({
+      where: {
+        id: school_id,
+      },
+      attributes: ["id", "syllabus_id"],
+    });
+
+    const whereClause = {
+      syllabus_id: schooldata.syllabus_id,
+      [Op.or]: [{ school_id: school_id }, { school_id: null }],
+      // class_group:year,
+      id:[3,4,6,7]
+    }
+    
+     const areas = await CoScholasticArea.findAll({
+      where: whereClause,
+      attributes: [
+        "id",
+        "school_id",
+        "syllabus_id",
+        "name",
+        "class_group",
+        "display_order",
+        "status",
+      ],
+      order: [
+        ["display_order", "ASC"],
+        ["id", "ASC"],
+      ],
+    });
+
+      const filteredAreas = areas.filter((area) => {
+      const group = area.class_group;
+      if (year === null || year === undefined) return false;
+      return group
+        .split(",")
+        .map((s) => s.trim())
+        .includes(String(year));
+    });
+
+
+    return res.status(200).json({
+      success: true,
+      message: "Co-scholastic music or arts or robtics fetched successfully",
+      data: filteredAreas,
+    });
+  } catch (error) {
+    logger.error(
+      "userId:",
+      req.user?.user_id,
+      "Error fetching co-scholastic music or arts or robtics:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch co-scholastic music or arts or robtics",
+      error: error.message,
+    });
+  }
+};
 
 const createStudentCoScholasticAssessment = async (req, res) => {
   try {
@@ -5773,7 +5837,88 @@ const createStudentPhysicalAssessment = async (req, res) => {
     });
   }
 };
+const createStudentMusicOrArtsOrRoboticsAssessment = async (req, res) => {
+  try {
+    const school_id = req.user.school_id;
+    const recorded_by = req.user.user_id;
 
+    if (!school_id) {
+      return res.status(400).json({ error: "school_id is required" });
+    }
+
+    const { exam_id,area_id, assessments, assessed_at } = req.body || {};
+
+    if (!exam_id ||!area_id ) {
+      return res.status(400).json({ error: "exam_id and area_id is required" });
+    }
+ 
+    if (!assessments || !Array.isArray(assessments) || assessments.length === 0) {
+      return res.status(400).json({
+        error: "assessments array is required and cannot be empty",
+      });
+    }
+
+    const defaultDate = assessed_at || moment().format("YYYY-MM-DD");
+
+    for (const item of assessments) {
+      if (!item.student_id || !item.grade) {
+        return res.status(400).json({
+          error: "Each assessment item must include student_id and grade",
+        });
+      }
+    }
+
+    const recordsToSave = assessments.map((item) => ({
+      school_id,
+      recorded_by,
+      student_id: Number(item.student_id),
+      exam_id: Number(item.exam_id || exam_id),
+      area_id,
+      grade: String(item.grade).trim(),
+      score:
+        item.score !== undefined && item.score !== null && item.score !== ""
+          ? Number(item.score)
+          : null,
+      remarks: item.remarks !== undefined ? item.remarks : null,
+      assessed_at: item.assessed_at || defaultDate,
+    }));
+
+    const result = await StudentCoScholasticAssessment.bulkCreate(
+      recordsToSave,
+      {
+        updateOnDuplicate: [
+          "grade",
+          "score",
+          "remarks",
+          "recorded_by",
+          "assessed_at",
+          "updatedAt",
+        ],
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Physical education assessments saved successfully",
+      count: result.length,
+      data: result,
+    });
+  } catch (error) {
+    logger.error(
+      "schoolId:",
+      req.user?.school_id,
+      "userId:",
+      req.user?.user_id,
+      "Error creating student physical assessment:",
+      error
+    );
+    return res.status(500).json({
+      success: false,
+      error: "Failed to save student physical assessment",
+      details: error.message,
+    });
+  }
+};
 const getCoScholasticAssessmentRecordedByMe = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -5894,7 +6039,7 @@ const updateCoScholasticAssessmentById = async (req, res) => {
     const school_id = req.user.school_id;
     const recorded_by = req.user.user_id;
     const id = req.params.id;
-    const { grade, score, remarks, assessed_at } = req.body || {};
+    const {exam_id,area_id,grade, score, remarks, assessed_at } = req.body || {};
     const assessment = await StudentCoScholasticAssessment.findOne({
       where: {
         id,
@@ -5908,10 +6053,24 @@ const updateCoScholasticAssessmentById = async (req, res) => {
         error: "Co-scholastic assessment not found",
       });
     }
-    assessment.grade = grade;
-    assessment.score = score;
-    assessment.remarks = remarks;
-    assessment.assessed_at = assessed_at;
+    if(exam_id){
+      assessment.exam_id = exam_id;
+    }
+    if(area_id){
+      assessment.area_id = area_id;
+    }
+    if(grade){
+      assessment.grade = grade;
+    }
+    if(score){
+      assessment.score = score;
+    }
+    if(remarks){
+      assessment.remarks = remarks;
+    }
+    if(assessed_at){
+      assessment.assessed_at = assessed_at;
+    }
     await assessment.save();
     return res.status(200).json({
       success: true,
@@ -6275,8 +6434,10 @@ module.exports = {
   deleteCompetencyAssessment,
 
   getCoScholasticAreasListByStudentId,
+  getCoScholasticMusicOrArtsOrRobticsByYear,
   createStudentCoScholasticAssessment,
   createStudentPhysicalAssessment,
+  createStudentMusicOrArtsOrRoboticsAssessment,
   getCoScholasticAssessmentRecordedByMe,
   updateCoScholasticAssessmentById,
   getCoScholasticAssessmentbyStudentIdandExamId,
