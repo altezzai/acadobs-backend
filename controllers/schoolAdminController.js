@@ -10403,6 +10403,7 @@ const getAllStops = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const route_id = req.query.route_id || null;
     let whereClause = {
       trash: false,
       school_id: school_id,
@@ -10418,6 +10419,7 @@ const getAllStops = async (req, res) => {
         {
           model:Routes,
           as: "routes",
+          where:route_id ? {id:route_id} : {},
           attributes: ["id", "route_name", "type", "pickId"],
         },
         {
@@ -11292,6 +11294,7 @@ const getAllRoutes = async (req, res) => {
       isLock: route.isLock,
       vehicle_number: route.vehicle?.vehicle_number || null,
       driver: route.driver.name,
+      driver_id: route.driver_id,
     }));
 
    const totalPages = Math.ceil(count / limit);
