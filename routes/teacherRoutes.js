@@ -292,8 +292,10 @@ router.delete("/deleteCompetencyAssessment/:student_id/:exam_id", teacherControl
 
 // Co-Scholastic Assessment
 router.get("/getCoScholasticAreasListByStudentId/:id", teacherController.getCoScholasticAreasListByStudentId);
+router.get("/getCoScholasticMusicOrArtsOrRobticsByYear/:year", teacherController.getCoScholasticMusicOrArtsOrRobticsByYear);
 router.post("/createStudentCoScholasticAssessment", teacherController.createStudentCoScholasticAssessment);
 router.post("/createStudentPhysicalAssessment", teacherController.createStudentPhysicalAssessment);
+router.post("/createStudentMusicOrArtsOrRoboticsAssessment", teacherController.createStudentMusicOrArtsOrRoboticsAssessment);
 router.get("/getCoScholasticAssessmentRecordedByMe", teacherController.getCoScholasticAssessmentRecordedByMe);
 router.put("/updateCoScholasticAssessmentById/:id", teacherController.updateCoScholasticAssessmentById);
 router.get("/getCoScholasticAssessmentbyStudentIdandExamId/:student_id/:exam_id", teacherController.getCoScholasticAssessmentbyStudentIdandExamId);
