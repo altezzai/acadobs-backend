@@ -1508,7 +1508,7 @@ const getProgressReportByStudentId = async (req, res) => {
 
     if (!exams.length) {
       return res.status(404).json({
-        error: `No exams found for education year ${educationYear}`,
+        error: `Not yet published exams for education year ${educationYear}`,
       });
     }
 
@@ -1967,7 +1967,7 @@ const getProgressReportForAdminByStudentId = async (req, res) => {
 
     if (!exams.length) {
       return res.status(404).json({
-        error: `No exams found for education year ${educationYear}`,
+        error: `Not yet published exams for education year ${educationYear}`,
       });
     }
 

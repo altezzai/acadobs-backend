@@ -1750,8 +1750,8 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
     await Guardian.create({
       user_id: user.id,
       guardian_relation: normalizeGuardianRelation(guardian_relation),
-      // guardian_name,
-      // guardian_contact,
+      guardian_name,
+      guardian_contact,
       // guardian_email,
       guardian_job,
       guardian2_relation: normalizeGuardianRelation(guardian2_relation),
