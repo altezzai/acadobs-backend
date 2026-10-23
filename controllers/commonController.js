@@ -343,6 +343,14 @@ const getStudentDetailsById = async (req, res) => {
           model: Class,
           attributes: ["id", "year", "division", "classname"],
         },
+        {
+          model:InvoiceStudent,
+          required:false,
+          where:{
+                status:{ [Op.ne]: "paid" }
+                // status:"overdue",
+              },
+        }
       ],
     });
 
