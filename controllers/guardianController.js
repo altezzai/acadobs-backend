@@ -1124,8 +1124,8 @@ const getStudentsUnderGuardianBySchoolId = async (req, res) => {
           model:InvoiceStudent,
           required:false,
           where:{
-                // status:{ [Op.ne]: "paid" }
-                status:"overdue",
+                status:{ [Op.ne]: "paid" }
+                // status:"overdue",
               },
           include:[
             {
