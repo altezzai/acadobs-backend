@@ -45,5 +45,64 @@ router.post(
 );
 router.get("/getSchoolsList", publicController.getSchoolsList);
 
+const otpRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 20, // Limit each IP to 20 OTP requests per 15 minutes
+  message: "Too many OTP requests from this IP, please try again after 15 minutes",
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+});
+
+// Forgot Password & SMS OTP routes
+router.post(
+  "/forgot-password",
+  otpRateLimiter,
+  [
+    body("identifier").optional().isString().trim(),
+    body("phone").optional().isString().trim(),
+  ],
+  validate,
+  publicController.forgotPassword
+);
+
+router.post(
+  "/verify-otp",
+  [
+    body("identifier").optional().isString().trim(),
+    body("phone").optional().isString().trim(),
+    body("otp").isString().trim().notEmpty().withMessage("OTP is required"),
+  ],
+  validate,
+  publicController.verifyOtp
+);
+
+router.post(
+  "/reset-password",
+  [
+    body("newPassword")
+      .isString()
+      .notEmpty()
+      .isLength({ min: 6 })
+      .withMessage("New password must be at least 6 characters long"),
+    body("resetToken").optional().isString().trim(),
+    body("identifier").optional().isString().trim(),
+    body("phone").optional().isString().trim(),
+    body("otp").optional().isString().trim(),
+  ],
+  validate,
+  publicController.resetPassword
+);
+
+router.post(
+  "/resend-otp",
+  otpRateLimiter,
+  [
+    body("identifier").optional().isString().trim(),
+    body("phone").optional().isString().trim(),
+  ],
+  validate,
+  publicController.resendOtp
+);
+
 
 module.exports = router;

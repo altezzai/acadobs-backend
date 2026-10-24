@@ -53,6 +53,7 @@ const CompetencyIndicator = require("./assesment/competency_indicator");
 const StudentCompetencyAssessment = require("./assesment/student_competency_assessment");
 const CoScholasticArea = require("./assesment/co_scholastic_area");
 const StudentCoScholasticAssessment = require("./assesment/student_co_scholastic_assessment");
+const Otp = require("./otp");
 // Relations
 
 User.belongsTo(School, { foreignKey: "school_id" });
@@ -464,4 +465,5 @@ module.exports = {
   StudentCompetencyAssessment,
   CoScholasticArea,
   StudentCoScholasticAssessment,
+  Otp,
 };
