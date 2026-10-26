@@ -208,6 +208,7 @@ const getInternalMarksById = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.user_id;
     const schoolId = req.user.school_id;
+    const searchQuery = req.query.q || "";
     const internalMark = await InternalMark.findOne({
       where: { id, school_id: schoolId, trash: false },
       attributes: ["id", "recorded_by"],
@@ -229,6 +230,9 @@ const getInternalMarksById = async (req, res) => {
 
     if (!isRecordedByUser && !staff?.class_id) {
       return res.status(403).json({ error: "You are not assigned to a class" });
+    }
+    if(searchQuery){
+      studentWhere.full_name = { [Op.like]: `%${searchQuery}%` };
     }
 
     const internal = await InternalMark.findOne({
@@ -627,12 +631,23 @@ const getExamMarkByRecordedBy = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const subject_id = req.query.subject_id;
+    const exam_id = req.query.exam_id;
+    const class_id = req.query.class_id;
     let whereClause = {
       recorded_by,
       trash: false,
       exam_id: { [Op.not]: null },
     };
-
+    if(subject_id){
+      whereClause.subject_id = subject_id;
+    }
+    if(exam_id){
+      whereClause.exam_id = exam_id;
+    }
+    if(class_id){
+      whereClause.class_id = class_id;
+    }
     if (searchQuery) {
       whereClause[Op.or] = [
         { internal_name: { [Op.like]: `%${searchQuery}%` } },
