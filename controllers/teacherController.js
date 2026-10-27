@@ -648,12 +648,9 @@ const getExamMarkByRecordedBy = async (req, res) => {
     if(class_id){
       whereClause.class_id = class_id;
     }
-    if (searchQuery) {
-      whereClause[Op.or] = [
-        { internal_name: { [Op.like]: `%${searchQuery}%` } },
-      ];
+      if (searchQuery) {
+     whereClause.internal_name= { [Op.like]: `%${searchQuery}%` };
     }
-
     const { count, rows: exams } = await InternalMark.findAndCountAll({
       offset,
       distinct: true,
@@ -728,12 +725,7 @@ const getMyClassInternalMark = async (req, res) => {
     };
 
     if (searchQuery) {
-      whereClause[Op.and].push({
-        [Op.or]: [
-          { internal_name: { [Op.like]: `%${searchQuery}%` } },
-          { date: { [Op.like]: `%${searchQuery}%` } },
-        ],
-      });
+     whereClause.internal_name= { [Op.like]: `%${searchQuery}%` };
     }
     if(subject_id){
       whereClause.subject_id = subject_id;
@@ -778,6 +770,8 @@ const getMyClassExamMark = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const subject_id = req.query.subject_id;
+    const exam_id = req.query.exam_id;
 
     const classRecord = await Staff.findOne({
       where: { user_id },
@@ -813,12 +807,13 @@ const getMyClassExamMark = async (req, res) => {
     };
 
     if (searchQuery) {
-      whereClause[Op.and].push({
-        [Op.or]: [
-          { internal_name: { [Op.like]: `%${searchQuery}%` } },
-          { date: { [Op.like]: `%${searchQuery}%` } },
-        ],
-      });
+     whereClause.internal_name= { [Op.like]: `%${searchQuery}%` };
+    }
+    if(subject_id){
+      whereClause.subject_id = subject_id;
+    }
+    if(exam_id){
+      whereClause.exam_id = exam_id;
     }
 
     const { count, rows: exams } = await InternalMark.findAndCountAll({
