@@ -3720,55 +3720,110 @@ const updateParentNote = async (req, res) => {
     const { note_title, note_content, studentIds } = req.body;
 
     const note = await ParentNote.findOne({
-      where: { id: noteId, school_id, recorded_by, trash: false },
+      where: {
+        id: noteId,
+        school_id,
+        recorded_by,
+        trash: false,
+      },
     });
 
     if (!note) {
-      return res.status(404).json({ error: "Parent note not found" });
+      return res.status(404).json({
+        error: "Parent note not found",
+      });
     }
 
-    const existingNote = await ParentNote.findOne({
-      where: {
-        school_id,
-        recorded_by,
-        note_title,
-        trash: false,
-        id: { [Op.ne]: noteId },
-      },
-    });
-    if (existingNote) {
-      return res.status(400).json({ error: "Note with same title exists" });
+    let parsedStudentIds = studentIds;
+
+    if (typeof studentIds === "string") {
+      try {
+        parsedStudentIds = JSON.parse(studentIds);
+      } catch {
+        return res.status(400).json({
+          error: "studentIds must be a valid JSON array",
+        });
+      }
+    }
+
+    if (parsedStudentIds !== undefined) {
+      if (
+        !Array.isArray(parsedStudentIds) ||
+        parsedStudentIds.some(
+          (id) => !Number.isInteger(Number(id)) || Number(id) <= 0
+        )
+      ) {
+        return res.status(400).json({
+          error: "studentIds must be an array of valid student IDs",
+        });
+      }
+
+      parsedStudentIds = [
+        ...new Set(parsedStudentIds.map(Number)),
+      ];
+    }
+
+    const updatedTitle = note_title ?? note.note_title;
+
+    if (updatedTitle) {
+      const existingNote = await ParentNote.findOne({
+        where: {
+          school_id,
+          recorded_by,
+          note_title: updatedTitle,
+          trash: false,
+          id: { [Op.ne]: noteId },
+        },
+      });
+
+      if (existingNote) {
+        return res.status(400).json({
+          error: "Note with same title exists",
+        });
+      }
     }
 
     let fileName = note.note_attachment;
-    const newFileUrl = req.uploadedFiles?.note_attachment?.url || null;
+    const newFileUrl = req.uploadedFiles?.note_attachment?.url;
 
     if (newFileUrl) {
-      if (fileName) {
-        await deleteFile(fileName);
-      }
       fileName = newFileUrl;
     }
 
-  const updatedNote =  await note.update({
-      note_title: note_title || note.note_title,
-      note_content: note_content || note.note_content,
+    const updatedNote = await note.update({
+      note_title: updatedTitle,
+      note_content: note_content ?? note.note_content,
       note_attachment: fileName,
     });
 
-    if (Array.isArray(studentIds)) {
-      const normalizedStudentIds = normalizeStudentIds(studentIds);
-      const existingLinks = await ParentNoteStudent.findAll({
-        where: { parentnote_id: noteId, trash: false },
-      });
-      const existingIds = new Set(existingLinks.map((item) => item.student_id));
-      const incomingIds = new Set(normalizedStudentIds);
+    if (newFileUrl && note.note_attachment && note.note_attachment !== newFileUrl) {
+      try {
+        await deleteFile(note.note_attachment);
+      } catch (deleteError) {
+        logger.error("Error deleting previous attachment:", deleteError);
+      }
+    }
 
-      const linksToCreate = normalizedStudentIds
+    if (parsedStudentIds !== undefined) {
+      const existingLinks = await ParentNoteStudent.findAll({
+        where: {
+          parentnote_id: noteId,
+          trash: false,
+        },
+      });
+
+      const existingIds = new Set(
+        existingLinks.map((item) => Number(item.student_id))
+      );
+
+      const incomingIds = new Set(parsedStudentIds);
+
+      const linksToCreate = parsedStudentIds
         .filter((student_id) => !existingIds.has(student_id))
         .map((student_id) => ({
           parentnote_id: noteId,
-          student_id
+          student_id,
+          trash: false,
         }));
 
       if (linksToCreate.length > 0) {
@@ -3776,25 +3831,33 @@ const updateParentNote = async (req, res) => {
       }
 
       const linksToDelete = existingLinks.filter(
-        (item) => !incomingIds.has(item.student_id),
+        (item) => !incomingIds.has(Number(item.student_id))
       );
+
       if (linksToDelete.length > 0) {
         await ParentNoteStudent.destroy({
-          where: { id: linksToDelete.map((item) => item.id) },
+          where: {
+            id: linksToDelete.map((item) => item.id),
+          },
         });
       }
     }
 
-    res.status(200).json({  message: "Parent note updated successfully", updatedNote });
+    return res.status(200).json({
+      message: "Parent note updated successfully",
+      updatedNote,
+    });
   } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error updating parent note:",
-      error,
+      error
     );
-    console.error("Error updating parent note:", error);
-    res.status(500).json({ error: "Failed to update parent note" });
+
+    return res.status(500).json({
+      error: "Failed to update parent note",
+    });
   }
 };
 
