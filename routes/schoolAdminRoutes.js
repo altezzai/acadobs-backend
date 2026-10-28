@@ -635,6 +635,11 @@ router.get(
   "/getDriverAssignedRoutes/:driverId",
   trackerController.getDriverAssignedRoutesAdmin,
 );
+router.get(
+  "/getLiveLocationHistoryWIthDateByRouteId/:id",
+  trackerController.getLiveLocationHistoryWIthDateByRouteId,
+);
+
 router.post(
   "/assignDriverToRoutes/:driverId",
   schoolAdminController.assignDriverToRoutes,

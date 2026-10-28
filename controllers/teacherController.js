@@ -3524,17 +3524,6 @@ const getStudentLeaveRequestsForClassTeacher = async (req, res) => {
 
 
 //parent note section
-
-const normalizeStudentIds = (studentIds) => {
-  if (!Array.isArray(studentIds)) return [];
-  const uniqueIds = new Set(
-    studentIds
-      .map((id) => Number(id))
-      .filter((id) => Number.isInteger(id) && id > 0),
-  );
-  return [...uniqueIds];
-};
-
 const createParentNote = async (req, res) => {
   try {
     const school_id = req.user.school_id;
@@ -3542,56 +3531,87 @@ const createParentNote = async (req, res) => {
     const { note_title, note_content, studentIds } = req.body;
 
     if (!note_title || !note_content) {
-      return res.status(400).json({ error: "Note title and content are required" });
+      return res.status(400).json({
+        error: "Note title and content are required",
+      });
     }
 
-    const normalizedStudentIds = normalizeStudentIds(studentIds);
-    if (normalizedStudentIds.length === 0) {
-      return res.status(400).json({ error: "At least one student is required" });
+    let parsedStudentIds = studentIds;
+
+    if (typeof studentIds === "string") {
+      try {
+        parsedStudentIds = JSON.parse(studentIds);
+      } catch {
+        return res.status(400).json({
+          error: "studentIds must be a valid JSON array",
+        });
+      }
+    }
+
+    if (
+      !Array.isArray(parsedStudentIds) ||
+      parsedStudentIds.length === 0 ||
+      parsedStudentIds.some(
+        (id) => !Number.isInteger(Number(id)) || Number(id) <= 0
+      )
+    ) {
+      return res.status(400).json({
+        error: "At least one valid student ID is required",
+      });
     }
 
     const existingNote = await ParentNote.findOne({
       where: {
         school_id,
         note_title,
+        note_content,
         recorded_by,
         trash: false,
       },
     });
 
     if (existingNote) {
-      return res.status(400).json({ error: "Note already exists" });
+      return res.status(400).json({
+        error: "Note already exists",
+      });
     }
 
-    const fileName = req.uploadedFiles?.note_attachment?.url || null;
+    const note_attachment =
+      req.uploadedFiles?.note_attachment?.url || null;
+
     const note = await ParentNote.create({
       school_id,
       note_title,
       note_content,
-      note_attachment: fileName,
+      note_attachment,
       recorded_by,
     });
 
     await ParentNoteStudent.bulkCreate(
-      normalizedStudentIds.map((student_id) => ({
+      [...new Set(parsedStudentIds.map(Number))].map((student_id) => ({
         parentnote_id: note.id,
         student_id,
-      })),
+      }))
     );
 
-
-    res.status(201).json({ message: "Parent note created successfully", note });
+    return res.status(201).json({
+      message: "Parent note created successfully",
+      note,
+    });
   } catch (error) {
     logger.error(
       "userId:",
       req.user.user_id,
       "Error creating parent note:",
-      error,
+      error
     );
-    console.error("Error creating parent note:", error);
-    res.status(500).json({ error: error.message });
+
+    return res.status(500).json({
+      error: error.message,
+    });
   }
 };
+
 const getAllParentNotesByTeacher = async (req, res) => {
   try {
     const school_id = req.user.school_id;

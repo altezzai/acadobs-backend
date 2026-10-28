@@ -1,4 +1,5 @@
 const { where } = require("sequelize");
+const moment = require("moment");
 const Driver = require("../models/tracker/driver");
 const Routes  = require("../models/tracker/routes");
 const Stop = require("../models/tracker/stop");
@@ -1990,6 +1991,85 @@ const deleteRoute = async (req, res) => {
     });
   }
 };
+const getLiveLocationHistoryWIthDateByRouteId=async (req, res) => {
+  try {
+    const  route_id = req.params.id;
+    const school_id = req.user.school_id;
+    const date = req.query.date || moment().format("YYYY-MM-DD");
+  
+    const routeData = await Routes.findOne({
+      where: {
+        id: route_id,
+        school_id: school_id,
+        trash: false,
+      },
+      attributes: ["id", "route_name", "type"],
+      include:[
+        {
+          model:Vehicle,
+          as:"vehicle",
+          attributes:["id","vehicle_number","type","model"],
+        },
+        {
+          model:User,
+          as:"driver",
+          attributes:["id","name","phone"],
+        },
+        {
+          model:Stop,
+          as: "stops",
+          attributes: ["id", "stop_name"],
+          include: [
+            {
+              model: StopRoute,
+              attributes: ["priority"],
+            },
+          ]
+        }
+      ],
+    });
+      const whereClause ={
+      route_id,
+      stop_id:{[Op.ne]: null},
+      createdAt: {
+        [Op.gte]: date + " 00:00:00",
+        [Op.lte]: date + " 23:59:59",
+      }
+    }
+    const liveLocationHistory = await LiveLocation.findAll({
+      where: whereClause,
+     include:[
+        {
+          model:StudentsStopStatus,
+          required:false,
+          include:[
+            {
+              model:Student,
+              attributes:["id","full_name","reg_no","roll_number"],
+              include:[
+                {
+                  model:Class,
+                  attributes:["id","classname"],
+                }
+              ]
+            },
+          ]
+        }
+    ]    
+    });
+    return res.status(200).json({
+      message: "Live location history fetched successfully",
+      routeData: routeData,
+      data: liveLocationHistory,
+    });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching live location history:", error);
+    console.error("Error fetching live location history:", error);
+    return res.status(500).json({
+      error: "Failed to fetch live location history",
+    });
+  }
+}
 const getStopByIdAndRouteId = async (req, res) => {
   try {
     const { id,route_id } = req.params;
@@ -2505,6 +2585,7 @@ module.exports = {
   getStopsByRouteId,
   getUnAssignedStopsInPairRouteByRouteId,
   assignedStopIdsFromPairRoute,
+  getLiveLocationHistoryWIthDateByRouteId,
 
   getStopByIdAndRouteId, 
   updateStopById, 
