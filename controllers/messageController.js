@@ -167,6 +167,7 @@ const getMyChats = async (req, res) => {
                                 FROM messages AS unread_messages
                                 WHERE unread_messages.chat_id = Chat.id
                                 AND unread_messages.receiver_id = ${user_id}
+                                AND unread_messages.status !='read'
                             )
                         `),
                         "unseenCount"
