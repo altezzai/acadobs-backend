@@ -29,7 +29,7 @@ const Payment = schoolSequelize.define(
     amount: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
     payment_date: { type: DataTypes.DATEONLY, allowNull: false },
     payment_status: {
-      type: DataTypes.ENUM("pending", "completed", "failed", "refunded"),
+      type: DataTypes.ENUM("pending", "completed", "failed", "refunded","excess"),
       defaultValue: "pending",
     },
     transaction_id: { type: DataTypes.STRING },

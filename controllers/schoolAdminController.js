@@ -1692,10 +1692,15 @@ const createGuardian = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-const createGuardianService = async (guardianData, fileBuffer, req) => {
+
+const createGuardianService = async (
+  guardianData,
+  school_id,
+  dp,
+  transaction
+) => {
   try {
     const {
-      school_id,
       guardian_relation,
       guardian_name,
       guardian_contact,
@@ -1716,8 +1721,11 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
       country,
       post,
       pincode,
-      dp,
     } = guardianData;
+
+    if (!school_id) {
+      throw new Error("school_id is required");
+    }
 
     if (!guardian_name || !guardian_contact) {
       throw new Error("Required guardian fields are missing");
@@ -1725,58 +1733,70 @@ const createGuardianService = async (guardianData, fileBuffer, req) => {
 
     const existingUser = await User.findOne({
       where: { phone: guardian_contact },
+      transaction,
     });
 
     if (existingUser) {
       throw new Error("Guardian phone already exists");
     }
-    const contactStr = String(guardian_contact);
 
-    const password = contactStr;
+    const hashedPassword = await bcrypt.hash(
+      String(guardian_contact),
+      10
+    );
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.create(
+      {
+        role: "guardian",
+        name: guardian_name,
+        email: guardian_email || null,
+        phone: guardian_contact,
+        dp: dp || null,
+        school_id,
+        status: "active",
+        password: hashedPassword,
+      },
+      { transaction }
+    );
 
-    const user = await User.create({
-      role: "guardian",
-      name: guardian_name,
-      email: guardian_email || null,
-      phone: guardian_contact,
-      dp: dp,
-      school_id,
-      status: "active",
-      password: hashedPassword,
-    });
-
-    await Guardian.create({
-      user_id: user.id,
-      guardian_relation: normalizeGuardianRelation(guardian_relation),
-      guardian_name,
-      guardian_contact,
-      // guardian_email,
-      guardian_job,
-      guardian2_relation: normalizeGuardianRelation(guardian2_relation),
-      guardian2_name,
-      guardian2_job,
-      guardian2_contact,
-      father_name,
-      mother_name,
-      house_name,
-      street,
-      city,
-      landmark,
-      district,
-      state,
-      country,
-      post,
-      pincode,
-    });
+    await Guardian.create(
+      {
+        user_id: user.id,
+        guardian_relation: normalizeGuardianRelation(guardian_relation),
+        guardian_name,
+        guardian_contact,
+        guardian_job,
+        guardian2_relation: normalizeGuardianRelation(guardian2_relation),
+        guardian2_name,
+        guardian2_job,
+        guardian2_contact,
+        father_name,
+        mother_name,
+        house_name,
+        street,
+        city,
+        landmark,
+        district,
+        state,
+        country,
+        post,
+        pincode,
+      },
+      { transaction }
+    );
 
     return user.id;
+
   } catch (error) {
-    logger.error("schoolId:", req.user.school_id, "Error creating guardian service:", error);
+    logger.error(
+      "Error creating guardian service:",
+      error.message
+    );
+
     throw error;
   }
 };
+
 const getAllGuardians = async (req, res) => {
   try {
     const searchQuery = req.query.q || "";
@@ -2214,9 +2234,13 @@ const getUserGuardian =async (req, res) => {
 };
 
 // Create Student
+
 const createStudent = async (req, res) => {
+  let transaction;
+
   try {
     const school_id = req.user.school_id;
+
     const {
       reg_no,
       roll_number,
@@ -2251,38 +2275,53 @@ const createStudent = async (req, res) => {
 
       update_roll_number,
     } = req.body;
+
     const guardian_email = req.body.guardian_email || null;
     const guardian_relation = req.body.guardian_relation || "father";
 
     if (
+      !school_id ||
       !guardian_contact ||
       !full_name ||
       !reg_no ||
       !class_id ||
       !roll_number
     ) {
-      return res.status(400).json({ error: "Required fields are missing" });
+      return res.status(400).json({
+        error: "Required fields are missing",
+      });
     }
 
     const normalizedRollNumber = Number(roll_number);
-    if (!Number.isInteger(normalizedRollNumber) || normalizedRollNumber < 1) {
-      return res.status(400).json({ error: "Roll number must be a positive integer" });
+
+    if (
+      !Number.isInteger(normalizedRollNumber) ||
+      normalizedRollNumber < 1
+    ) {
+      return res.status(400).json({
+        error: "Roll number must be a positive integer",
+      });
     }
 
-    const existingUser = await User.findOne({
-      where: { phone: guardian_contact },
-    });
+    const guardianDpUrl = req.uploadedFiles?.dp?.[0]?.url || null;
+    const studentImageUrl = req.uploadedFiles?.image?.[0]?.url || null;
+
+    transaction = await schoolSequelize.transaction();
+
     const existingRegNo = await Student.findOne({
-      where: { reg_no, school_id },
+      where: {
+        reg_no,
+        school_id,
+      },
+      transaction,
     });
 
     if (existingRegNo) {
-      return res.status(400).json({
-        error:
-          "Reg number already exists in student table" +
-          `, Reg No: ${existingRegNo.reg_no}: `,
-      });
+      throw new Error(
+        `Registration number already exists: ${existingRegNo.reg_no}`
+      );
     }
+
     const existingRollNumber = await Student.findOne({
       where: {
         roll_number: normalizedRollNumber,
@@ -2290,87 +2329,106 @@ const createStudent = async (req, res) => {
         class_id,
         trash: false,
       },
+      transaction,
     });
+
     if (existingRollNumber && update_roll_number !== "true") {
-      return res.status(400).json({
-        error: "Roll number already exists in student table for this class",
-      });
+      throw new Error(
+        "Roll number already exists in student table for this class"
+      );
     }
+
     if (existingRollNumber && update_roll_number === "true") {
       const studentsToShift = await Student.findAll({
         where: {
           school_id,
           class_id,
           trash: false,
-          roll_number: { [Op.gte]: normalizedRollNumber },
+          roll_number: {
+            [Op.gte]: normalizedRollNumber,
+          },
         },
+        transaction,
       });
 
-      await Promise.all(
-        studentsToShift.map((student) =>
-          student.update({
-            roll_number: Number(student.roll_number) + 1,
-          }),
-        ),
+      studentsToShift.sort(
+        (a, b) => Number(b.roll_number) - Number(a.roll_number)
       );
+
+      for (const student of studentsToShift) {
+        await student.update(
+          {
+            roll_number: Number(student.roll_number) + 1,
+          },
+          { transaction }
+        );
+      }
     }
 
     let guardianUserId;
-    const guardianDpUrl = req.uploadedFiles?.dp?.[0]?.url || null;
-    const studentImageUrl = req.uploadedFiles?.image?.[0]?.url || null;
+
+    const existingUser = await User.findOne({
+      where: {
+        phone: guardian_contact,
+      },
+      transaction,
+    });
 
     if (existingUser) {
-      if (existingUser.role === "guardian") {
-        const existingGuardian = await Guardian.findOne({
-          where: { user_id: existingUser.id },
-        });
-
-        if (!existingGuardian) {
-          return res
-            .status(400)
-            .json({ error: "User exists but no guardian record found." });
-        }
-        guardianUserId = existingUser.id;
-      } else {
-        return res.status(400).json({
-          error:
-            "User already exists. user is a " +
-            existingUser.role +
-            ", Phone: " +
-            existingUser.phone,
-        });
+      if (existingUser.role !== "guardian") {
+        throw new Error(
+          `User already exists with role ${existingUser.role}, Phone: ${existingUser.phone}`
+        );
       }
+
+      const existingGuardian = await Guardian.findOne({
+        where: {
+          user_id: existingUser.id,
+        },
+        transaction,
+      });
+
+      if (!existingGuardian) {
+        throw new Error(
+          "Guardian user exists but no guardian record found"
+        );
+      }
+
+      guardianUserId = existingUser.id;
+
     } else {
+
       if (guardian_email) {
         const existingEmail = await User.findOne({
-          where: { email: guardian_email },
+          where: {
+            email: guardian_email,
+          },
+          transaction,
         });
-        if (existingEmail && guardian_email !== "") {
-          return res.status(400).json({
-            error: "Guardian email already exists with other phone number",
-          });
+
+        if (existingEmail) {
+          throw new Error(
+            "Guardian email already exists with another user"
+          );
         }
       }
-      if (!guardian_name || !guardian_contact || !guardian_relation) {
-        return res
-          .status(400)
-          .json({ error: "Required fields are missing for guardian data" });
+
+      if (!guardian_name) {
+        throw new Error("Guardian name is required");
       }
 
       const guardianData = {
-        school_id,
         guardian_email,
         guardian_name,
         guardian_contact,
-        guardian_relation: guardian_relation ? guardian_relation : "father",
+        guardian_relation,
         guardian_job,
         guardian2_name,
-        guardian2_relation: guardian2_relation ? guardian2_relation : "mother",
+        guardian2_relation: guardian2_relation || "mother",
         guardian2_contact,
         guardian2_job,
         father_name,
         mother_name,
-        school_id,
         house_name,
         street,
         city,
@@ -2380,65 +2438,108 @@ const createStudent = async (req, res) => {
         country,
         post,
         pincode,
-        dp: guardianDpUrl,
       };
 
-      const newGuardian = await createGuardianService(
+      guardianUserId = await createGuardianService(
         guardianData,
-        // guardianDpFile,
+        school_id,
+        guardianDpUrl,
+        transaction
       );
-      guardianUserId = newGuardian;
-    }
-    let fileName = null;
-    if (studentImageUrl) {
-      fileName = studentImageUrl;
     }
 
-    const student = await Student.create({
-      school_id,
-      guardian_id: guardianUserId,
-      reg_no,
-      roll_number,
-      full_name,
-      date_of_birth,
-      gender: normalizeGender(gender),
-      class_id,
-      admission_date,
-      address,
-      second_language,
-      status,
-      image: fileName ? fileName : null,
+    const student = await Student.create(
+      {
+        school_id,
+        guardian_id: guardianUserId,
+        reg_no,
+        roll_number: normalizedRollNumber,
+        full_name,
+        date_of_birth,
+        gender: normalizeGender(gender),
+        class_id,
+        admission_date: admission_date || null,
+        address,
+        second_language,
+        status,
+        image: studentImageUrl || null,
+      },
+      { transaction }
+    );
+
+    await transaction.commit();
+
+    return res.status(201).json({
+      success: true,
+      message: "Student and guardian created successfully",
+      student,
     });
 
-    res.status(201).json({ success: true, student });
   } catch (error) {
+
+    if (transaction && !transaction.finished) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        console.error("Transaction rollback error:", rollbackError);
+      }
+    }
+
     logger.error(
       "schoolId:",
-      req.user.school_id,
+      req.user?.school_id,
       "Error creating student:",
-      error,
+      error.parent?.message || error.message
     );
-    console.error("Error creating student:", error);
-    res.status(500).json({ error: "Failed to create student" });
+
+    console.error("Create student error:", {
+      message: error.message,
+      parent: error.parent?.message,
+      sql: error.sql,
+      stack: error.stack,
+    });
+
+    return res.status(500).json({
+      success: false,
+      error: error.parent?.message || error.message,
+    });
   }
 };
+
+
 const bulkCreateStudents = async (req, res) => {
-  const transaction = await schoolSequelize.transaction();
+  let transaction;
+
   try {
     const school_id = req.user.school_id;
     const studentsData = req.body.students;
     const class_id = req.body.class_id;
-    // expect array
+
     if (!Array.isArray(studentsData) || studentsData.length === 0) {
-      return res.status(400).json({ error: "No students provided" });
+      return res.status(400).json({
+        error: "No students provided",
+      });
     }
+
     if (!class_id) {
-      return res.status(400).json({ error: "Class ID is required" });
+      return res.status(400).json({
+        error: "Class ID is required",
+      });
     }
+
+    if (!school_id) {
+      return res.status(400).json({
+        error: "School ID is required",
+      });
+    }
+
+    transaction = await schoolSequelize.transaction();
 
     const createdStudents = [];
 
-    for (const studentObj of studentsData) {
+    for (let i = 0; i < studentsData.length; i++) {
+      const studentObj = studentsData[i];
+
       const {
         reg_no,
         roll_number,
@@ -2449,8 +2550,6 @@ const bulkCreateStudents = async (req, res) => {
         admission_date,
         status,
         second_language,
-
-        // guardian
         guardian_email,
         guardian_name,
         guardian_contact,
@@ -2462,7 +2561,6 @@ const bulkCreateStudents = async (req, res) => {
         guardian2_job,
         father_name,
         mother_name,
-
         house_name,
         street,
         city,
@@ -2474,89 +2572,112 @@ const bulkCreateStudents = async (req, res) => {
         pincode,
       } = studentObj;
 
+      // 4. Validate student
       if (!guardian_contact || !full_name || !reg_no || !roll_number) {
-        throw new Error("Required fields missing for student: " + full_name);
-      }
-
-      // ✅ Check duplicate roll_number in same class
-      const existingRoll = await Student.findOne({
-        where: { roll_number, school_id, class_id, trash: false },
-        transaction,
-      });
-      if (existingRoll) {
         throw new Error(
-          `Roll number ${roll_number} already exists for class ${class_id}`,
+          `Required fields missing for student: ${full_name || "Unknown"}`
         );
       }
 
-      // ✅ Check duplicate reg_no
-      const existingReg = await Student.findOne({
-        where: { reg_no, school_id },
+      // 5. Check duplicate roll number
+      const existingRoll = await Student.findOne({
+        where: {
+          roll_number,
+          school_id,
+          class_id,
+          trash: false,
+        },
         transaction,
       });
-      if (existingReg) {
-        throw new Error(`Reg No ${reg_no} already exists`);
+
+      if (existingRoll) {
+        throw new Error(
+          `Roll number ${roll_number} already exists for this class`
+        );
       }
 
-      // ✅ Guardian handling
+      // 6. Check duplicate registration number
+      const existingReg = await Student.findOne({
+        where: {
+          reg_no,
+          school_id,
+        },
+        transaction,
+      });
+
+      if (existingReg) {
+        throw new Error(`Registration number ${reg_no} already exists`);
+      }
+
+      // 7. Find existing guardian user
       let guardianUserId;
+
       const existingUser = await User.findOne({
-        where: { phone: guardian_contact },
+        where: {
+          phone: guardian_contact,
+        },
         transaction,
       });
 
       if (existingUser) {
-        if (existingUser.role === "guardian") {
-          const existingGuardian = await Guardian.findOne({
-            where: { user_id: existingUser.id },
-            transaction,
-          });
-          if (!existingGuardian) {
-            throw new Error(
-              `Guardian user exists but no guardian record found for phone ${guardian_contact}`,
-            );
-          }
-          guardianUserId = existingGuardian.user_id;
-        } else {
-          return res.status(400).json({
-            error: "User already exists and user is a " + existingUser.role,
-          });
+        if (existingUser.role !== "guardian") {
+          throw new Error(
+            `Phone ${guardian_contact} already exists with role ${existingUser.role}`
+          );
         }
+
+        const existingGuardian = await Guardian.findOne({
+          where: {
+            user_id: existingUser.id,
+          },
+          transaction,
+        });
+
+        if (!existingGuardian) {
+          throw new Error(
+            `Guardian record not found for phone ${guardian_contact}`
+          );
+        }
+
+        guardianUserId = existingUser.id;
+
       } else {
+
+        // 8. Check guardian email
         if (guardian_email) {
           const existingEmail = await User.findOne({
-            where: { email: guardian_email },
+            where: {
+              email: guardian_email,
+            },
             transaction,
           });
-          if (existingEmail && guardian_email !== "") {
-            return res.status(400).json({
-              error: `Guardian email  ${existingEmail.email} already exists with other phone number`,
-            });
+
+          if (existingEmail) {
+            throw new Error(
+              `Guardian email ${guardian_email} already exists`
+            );
           }
         }
 
-        if (!guardian_name || !guardian_contact) {
-          return res.status(400).json({
-            error: `Required guardian fields missing for student: ${full_name}'s guardian details`,
-          });
+        if (!guardian_name) {
+          throw new Error(
+            `Guardian name is required for student ${full_name}`
+          );
         }
 
+        // 9. Prepare guardian data
         const guardianData = {
-          school_id,
-          guardian_email: guardian_email ? guardian_email : null,
+          guardian_email: guardian_email || null,
           guardian_name,
           guardian_contact,
-          guardian_relation: guardian_relation ? guardian_relation : "father",
+          guardian_relation: guardian_relation || "father",
           guardian_job,
           guardian2_name,
-          guardian2_relation: guardian2_relation
-            ? guardian2_relation
-            : "mother",
+          guardian2_relation: guardian2_relation || "mother",
           guardian2_contact,
           guardian2_job,
           father_name,
           mother_name,
-          school_id,
           house_name,
           street,
           city,
@@ -2568,16 +2689,20 @@ const bulkCreateStudents = async (req, res) => {
           pincode,
         };
 
-        // Guardian dp upload (if any) -> expect req.files keyed by something like `dp_${index}`
-        const guardianDpFile = req.files?.[`dp_${roll_number}`]?.[0];
+        // 10. Get guardian profile image
+        const guardianDpFile =
+          req.files?.[`dp_${roll_number}`]?.[0]?.url || null;
 
-        const newGuardianId = await createGuardianService(
+        // 11. Create guardian using SAME transaction
+        guardianUserId = await createGuardianService(
           guardianData,
+          school_id,
           guardianDpFile,
-          transaction,
+          transaction
         );
-        guardianUserId = newGuardianId;
       }
+
+      // 12. Prepare student data
       createdStudents.push({
         school_id,
         guardian_id: guardianUserId,
@@ -2587,33 +2712,63 @@ const bulkCreateStudents = async (req, res) => {
         date_of_birth,
         gender: normalizeGender(gender),
         class_id,
-        admission_date: admission_date ? admission_date : null,
+        admission_date: admission_date || null,
         address,
         status,
         second_language,
-        // image: fileName,
       });
     }
 
-    const inserted = await Student.bulkCreate(createdStudents, { transaction });
+    // 13. Insert all students
+    const inserted = await Student.bulkCreate(
+      createdStudents,
+      {
+        transaction,
+        validate: true,
+      }
+    );
 
+    // 14. Commit ONLY after successful student insertion
     await transaction.commit();
+
     return res.status(201).json({
       success: true,
+      message: "Students and guardians created successfully",
       count: inserted.length,
     });
+
   } catch (error) {
+
+    // 15. Rollback everything if any operation fails
+    if (transaction && !transaction.finished) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        console.error("Rollback error:", rollbackError);
+      }
+    }
+
     logger.error(
       "schoolId:",
-      req.user.school_id,
+      req.user?.school_id,
       "Error bulk creating students:",
-      error,
+      error.parent?.message || error.message
     );
-    await transaction.rollback();
-    console.error("Error bulk creating students:", error);
-    return res.status(500).json({ error: error.message });
+
+    console.error("Bulk student creation error:", {
+      message: error.message,
+      parent: error.parent?.message,
+      sql: error.sql,
+      stack: error.stack,
+    });
+
+    return res.status(500).json({
+      success: false,
+      error: error.parent?.message || error.message,
+    });
   }
 };
+
 const getAllStudents = async (req, res) => {
   try {
     const school_id = req.user.school_id;

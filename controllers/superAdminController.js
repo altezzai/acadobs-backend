@@ -14,8 +14,10 @@ const Invoice = require("../models/invoice");
 const { deleteFile } = require("../middlewares/storageUploads");
 const moment = require("moment");
 
+
 const createSchool = async (req, res) => {
-  const transaction = await schoolSequelize.transaction();
+  let transaction;
+
   try {
     const {
       name,
@@ -58,99 +60,139 @@ const createSchool = async (req, res) => {
       seo_title,
       seo_description,
     } = req.body;
+
     if (!name || !email || !phone || !admin_password || !syllabus_id) {
-      return res.status(400).json({ error: "Required fields are missing" });
+      return res.status(400).json({
+        error: "Required fields are missing",
+      });
     }
 
     const existingUser = await User.findOne({
-      where: { email: email },
+      where: { email },
     });
 
     if (existingUser) {
-      return res
-        .status(400)
-        .json({ error: "SchoolAdmin email already exists in user table" });
+      return res.status(400).json({
+        error: "SchoolAdmin email already exists in user table",
+      });
     }
+
+    const existingPhone = await User.findOne({
+      where: { phone },
+    });
+
+    if (existingPhone) {
+      return res.status(400).json({
+        error: "SchoolAdmin phone already exists in user table",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(admin_password, 10);
 
     const logoUrl = req.uploadedFiles?.logo?.[0]?.url || null;
     const bgImageUrl = req.uploadedFiles?.image?.[0]?.url || null;
 
-    const existingPhone = await User.findOne({
-      where: { phone: phone },
-    });
-    if (existingPhone) {
-      return res
-        .status(400)
-        .json({ error: "SchoolAdmin phone already exists in user table" });
-    }
-    const school = await School.create({
-      name,
-      email,
-      phone,
-      address,
-      period_count,
-      logo: logoUrl,
-      syllabus_id,
-      attendance_count,
-      education_year_start,
-      location,
-      pass_percent,
-      bg_image: bgImageUrl,
-      primary_colour,
-      secondary_colour,
-      payment_section,
-      transpotation_section,
-      ai_section,
-      staff_check_in_time,
-      teacher_check_in_time,
-      upi_id,
-      upi_name,
-      payment_enabled,
-      slug,
-      short_name,
-      tagline,
-      about,
-      description,
-      website,
-      whatsapp,
-      alternate_phone,
-      pincode,
-      district,
-      state,
-      google_map_url,
-      facebook_url,
-      instagram_url,
-      youtube_url,
-      admission_enabled,
-      seo_title,
-      seo_description,
-    }, { transaction });
+    transaction = await schoolSequelize.transaction();
 
-    const hashedPassword = await bcrypt.hash(admin_password, 10);
+    const school = await School.create(
+      {
+        name,
+        email,
+        phone,
+        address,
+        period_count,
+        logo: logoUrl,
+        syllabus_id,
+        attendance_count,
+        education_year_start,
+        location,
+        pass_percent,
+        bg_image: bgImageUrl,
+        primary_colour,
+        secondary_colour,
+        payment_section,
+        transpotation_section,
+        ai_section,
+        staff_check_in_time,
+        teacher_check_in_time,
+        upi_id,
+        upi_name,
+        payment_enabled,
+        slug,
+        short_name,
+        tagline,
+        about,
+        description,
+        website,
+        whatsapp,
+        alternate_phone,
+        pincode,
+        district,
+        state,
+        google_map_url,
+        facebook_url,
+        instagram_url,
+        youtube_url,
+        admission_enabled,
+        seo_title,
+        seo_description,
+      },
+      { transaction }
+    );
 
-    await User.create({
-      name: name,
-      email: email,
-      phone,
-      password: hashedPassword,
-      school_id: school.id,
-      dp: logoUrl,
-      role: "admin",
-      status: "active",
-    }, { transaction });
+    await User.create(
+      {
+        name,
+        email,
+        phone,
+        password: hashedPassword,
+        school_id: school.id,
+        dp: logoUrl,
+        role: "admin",
+        status: "active",
+      },
+      { transaction }
+    );
 
+    // 9. Commit transaction
     await transaction.commit();
 
-    res
-      .status(201)
-      .json({ message: "School and admin created successfully", school });
+    return res.status(201).json({
+      message: "School and admin created successfully",
+      school,
+    });
+
   } catch (error) {
-    console.error("Create school error:", error);
-    logger.error("role:", req.user.role,"userId:", req.user.user_id, "schoolId:", req.user.school_id, "error:", "Create school error:", error);
-    await transaction.rollback();
-    res.status(500).json({ error: error.message });
+
+    console.error("Create school error:", {
+      message: error.message,
+      name: error.name,
+      parent: error.parent?.message,
+      original: error.original?.message,
+      sql: error.sql,
+      stack: error.stack,
+    });
+
+    logger.error(
+      "Create school error:",
+      error.parent?.message || error.message
+    );
+
+    if (transaction && !transaction.finished) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        console.error("Transaction rollback error:", rollbackError);
+      }
+    }
+
+    return res.status(500).json({
+      error: "Failed to create school",
+      details: error.parent?.message || error.message,
+    });
   }
 };
+
 
 const getAllSchools = async (req, res) => {
   try {

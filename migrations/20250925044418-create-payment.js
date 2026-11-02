@@ -39,7 +39,7 @@ module.exports = {
       amount: { type: Sequelize.DECIMAL(10, 2), allowNull: false },
       payment_date: { type: Sequelize.DATEONLY, allowNull: false },
       payment_status: {
-        type: Sequelize.ENUM("pending", "completed", "failed", "refunded"),
+        type: Sequelize.ENUM("pending", "completed", "failed", "refunded","excess"),
         defaultValue: "pending",
       },
       transaction_id: { type: Sequelize.STRING},
