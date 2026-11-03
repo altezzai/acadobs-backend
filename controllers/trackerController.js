@@ -2053,8 +2053,14 @@ const getLiveLocationHistoryWIthDateByRouteId=async (req, res) => {
                 }
               ]
             },
-          ]
-        }
+          ],
+        },
+        {
+          model:Stop,
+          where:{trash:false},
+          required:true,
+          attributes: ["id", "stop_name"]
+        },
     ]    
     });
     return res.status(200).json({
