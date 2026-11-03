@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const { Op, where } = require("sequelize");
 const logger = require("../utils/logger");
 const { schoolSequelize } = require("../config/connection");
+const { sendPushNotification } = require("../utils/notifcationHandler");
 
 const {
   normalizeGender,
@@ -6169,13 +6170,13 @@ const createInvoice = async (req, res) => {
         ),
       ];
 
-      const guardians = await Guardian.findAll({
-        where: {
-          id: guardianIds,
-          school_id,
-        },
-        attributes: ["id", "fcm_token"],
-      });
+        const guardians = await User.findAll({
+            where: {
+              id: guardianIds,
+              fcm_token: { [Op.ne]: null },
+            },
+            attributes: ["id", "fcm_token", "name"],
+          });
 
       const tokens = guardians
         .map((g) => g.fcm_token)
