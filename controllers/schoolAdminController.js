@@ -6279,13 +6279,13 @@ const addInvoiceStudentsbyInvoiceId = async (req, res) => {
           ),
         ];
 
-        const guardians = await Guardian.findAll({
-          where: {
-            id: guardianIds,
-            school_id,
-          },
-          attributes: ["id", "fcm_token"],
-        });
+           const guardians = await User.findAll({
+        where: {
+          id: guardianIds,
+          fcm_token: { [Op.ne]: null },
+        },
+        attributes: ["id", "fcm_token", "name"],
+      });
 
         if (guardians.length > 0) {
           for (const student of newStudents) {
