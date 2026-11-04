@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const { Op, where } = require("sequelize");
 const logger = require("../utils/logger");
 const { schoolSequelize } = require("../config/connection");
+const { sendPushNotification } = require("../utils/notifcationHandler");
 
 const {
   normalizeGender,
@@ -6115,21 +6116,25 @@ const createInvoice = async (req, res) => {
   try {
     const { title, description, amount, due_date, category, student_ids } =
       req.body;
+
     const school_id = req.user.school_id;
     const recorded_by = req.user.user_id;
 
     if (!title || !amount || !category || !due_date) {
       return res.status(400).json({ error: "Missing required fields" });
     }
+
     const existingInvoice = await Invoice.findOne({
       where: { school_id, title, category, due_date },
     });
+
     if (existingInvoice) {
       return res.status(400).json({
         error:
           "An invoice with the same title, due date and category already exists",
       });
     }
+
     const invoice = await Invoice.create({
       school_id,
       title,
@@ -6146,7 +6151,66 @@ const createInvoice = async (req, res) => {
         student_id: sid,
         status: "pending",
       }));
+
       await InvoiceStudent.bulkCreate(invoiceStudents);
+
+      const studentRecords = await Student.findAll({
+        where: {
+          id: student_ids,
+          school_id,
+        },
+        attributes: ["id", "full_name", "guardian_id"],
+      });
+
+      const guardianIds = [
+        ...new Set(
+          studentRecords
+            .map((student) => student.guardian_id)
+            .filter(Boolean)
+        ),
+      ];
+
+        const guardians = await User.findAll({
+            where: {
+              id: guardianIds,
+              fcm_token: { [Op.ne]: null },
+            },
+            attributes: ["id", "fcm_token", "name"],
+          });
+
+      const tokens = guardians
+        .map((g) => g.fcm_token)
+        .filter(Boolean);
+
+      if (tokens.length > 0) {
+        for (const student of studentRecords) {
+          const guardian = guardians.find(
+            (g) => g.id === student.guardian_id
+          );
+
+          if (guardian && guardian.fcm_token) {
+            const notificationTitle = "New Invoice Generated";
+
+            const notificationBody = `A new invoice "${title}" of ₹${amount} has been generated for ${student.full_name}. Due date: ${due_date}.`;
+
+            await sendPushNotification(
+              [guardian.fcm_token],
+              notificationTitle,
+              notificationBody,
+              {
+                type: "invoice_alert",
+                invoice_id: String(invoice.id),
+                student_id: String(student.id),
+                title: String(title),
+                amount: String(amount),
+                due_date: String(due_date),
+                category: String(category),
+                status: "pending",
+              }
+            );
+          }
+        }
+      }
     }
 
     res.status(201).json(invoice);
@@ -6159,13 +6223,13 @@ const addInvoiceStudentsbyInvoiceId = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const {
-      student_ids, // array of student_ids to attach
-    } = req.body;
+
+    const { student_ids } = req.body;
 
     const invoice = await Invoice.findOne({
       where: { id, school_id, trash: false },
     });
+
     if (!invoice) {
       return res.status(404).json({ error: "Invoice not found" });
     }
@@ -6173,33 +6237,102 @@ const addInvoiceStudentsbyInvoiceId = async (req, res) => {
     if (student_ids && Array.isArray(student_ids)) {
       const students = await Student.findAll({
         where: { id: student_ids, school_id, trash: false },
+        attributes: ["id", "full_name", "guardian_id"],
       });
+
       if (!students || students.length !== student_ids.length) {
         return res
           .status(400)
           .json({ error: "One or more students not found in this school" });
       }
 
-      const invoiceStudents = student_ids.map((student_id) => ({
-        invoice_id: id,
-        student_id,
-        status: "pending",
-      }));
+      const existingInvoiceStudents = await InvoiceStudent.findAll({
+        where: {
+          invoice_id: id,
+          student_id: student_ids,
+        },
+        attributes: ["student_id"],
+      });
 
-      await InvoiceStudent.bulkCreate(invoiceStudents);
+      const existingStudentIds = existingInvoiceStudents.map(
+        (item) => Number(item.student_id)
+      );
+
+      const newStudents = students.filter(
+        (student) => !existingStudentIds.includes(Number(student.id))
+      );
+
+      if (newStudents.length > 0) {
+        const invoiceStudents = newStudents.map((student) => ({
+          invoice_id: id,
+          student_id: student.id,
+          status: "pending",
+        }));
+
+        await InvoiceStudent.bulkCreate(invoiceStudents);
+
+        const guardianIds = [
+          ...new Set(
+            newStudents
+              .map((student) => student.guardian_id)
+              .filter(Boolean)
+          ),
+        ];
+
+           const guardians = await User.findAll({
+        where: {
+          id: guardianIds,
+          fcm_token: { [Op.ne]: null },
+        },
+        attributes: ["id", "fcm_token", "name"],
+      });
+
+        if (guardians.length > 0) {
+          for (const student of newStudents) {
+            const guardian = guardians.find(
+              (g) => g.id === student.guardian_id
+            );
+
+            if (guardian && guardian.fcm_token) {
+              const notificationTitle = "New Invoice Generated";
+
+              const notificationBody = `A new invoice "${invoice.title}" of ₹${invoice.amount} has been generated for ${student.full_name}. Due date: ${invoice.due_date}.`;
+
+              await sendPushNotification(
+                [guardian.fcm_token],
+                notificationTitle,
+                notificationBody,
+                {
+                  type: "invoice_alert",
+                  invoice_id: String(invoice.id),
+                  student_id: String(student.id),
+                  title: String(invoice.title),
+                  amount: String(invoice.amount),
+                  due_date: String(invoice.due_date),
+                  category: String(invoice.category),
+                  status: "pending",
+                }
+              );
+            }
+          }
+        }
+      }
     }
 
-    res
-      .status(200)
-      .json({ success: true, message: "Invoice updated successfully" });
+    res.status(200).json({
+      success: true,
+      message: "Invoice updated successfully",
+    });
   } catch (error) {
     logger.error(
       "schoolId:",
       req.user.school_id,
       "addInvoiceStudentsbyInvoiceId :",
-      error,
+      error
     );
+
     console.error("Error updating invoice:", error);
+
     res.status(500).json({ error: "Failed to update invoice" });
   }
 };

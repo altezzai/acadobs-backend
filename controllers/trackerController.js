@@ -1708,7 +1708,7 @@ const getTodayTransportationByStudentId = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const today = new Date().toISOString().split("T")[0];
+    const today =req.query.date||new Date().toISOString().split("T")[0];
     const student = await Student.findOne({
       where: {
         id,
