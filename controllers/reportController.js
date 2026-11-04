@@ -458,6 +458,7 @@ const getHomeworkReport = async (req, res) => {
         subject: hw.subject_id ? hw.Subject.subject_name : "null",
         teacher: hw.teacher_id ? hw.User.name : "null",
         title: hw.title,
+        createdAt:hw.createdAt,
         due_date: hw.due_date,
         total_students,
         point_1_count,
