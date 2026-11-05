@@ -5161,6 +5161,7 @@ const getExamTimeTablesByOwnSubjects = async (req, res) => {
     const start_date = req.query.start_date || null;
     const end_date = req.query.end_date || null;
     const searchQuery = req.query.q || "";
+    const title =req.query.title||null;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -5181,6 +5182,7 @@ const getExamTimeTablesByOwnSubjects = async (req, res) => {
     };
     if (exam_id) whereClause.exam_id = exam_id;
     if (status) whereClause.status = status;
+    if(title) whereClause.title = title ;
     if (start_date && end_date) {
       whereClause.exam_date = { [Op.between]: [start_date, end_date] };
     } else if (start_date) {
