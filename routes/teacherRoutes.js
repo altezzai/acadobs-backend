@@ -54,7 +54,6 @@ router.use((req, res, next) => {
 });
 
 router.get("/getExams", teacherController.getExams);
-router.get("/getAllExams", teacherController.getAllExams);
 // Exam Timetable
 router.get("/getAllExamTimeTablebyStandard", teacherController.getAllExamTimeTablebyStandard);
 router.get("/examtimetableById/:id", teacherController.examtimetableById);
@@ -346,6 +345,8 @@ router.get(
   "/getTermExamByStudentId/:student_id",
   commonController.getTermExamByStudentId,
 );
+router.get("/getAllExams", commonController.getAllExams);
+
 router.get(
   "/getAllExamsFromExamTable",
   commonController.getAllExamsFromExamTable,

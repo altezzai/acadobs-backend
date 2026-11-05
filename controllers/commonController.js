@@ -1095,6 +1095,30 @@ const getAllExamsFromExamTable = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getAllExams = async (req, res) => {
+  try {
+    const school_id = req.user.school_id || "";
+    const exams = await Exam.findAll({
+      where: {
+        school_id,
+        trash:false,
+      },
+      attributes: ["id", "exam_name", "education_year"],
+      order: [["createdAt", "DESC"]],
+    });
+    return res.status(200).json({
+      success: true,
+      message: "Exams fetched successfully",
+      data: exams,
+    });
+  } catch (e) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch exams",
+      error: e.message,
+    });
+  }
+};
 const getLeaveRequestByStudentId = async (req, res) => {
   try {
     const student_id = req.params.student_id;
@@ -1851,6 +1875,7 @@ module.exports = {
   getInternalMarkByStudentId,
   getTermExamByStudentId,
   getAllExamsFromExamTable,
+  getAllExams,
 
   getLeaveRequestByStudentId,
 
