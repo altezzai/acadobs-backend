@@ -2188,8 +2188,8 @@ const getexamtimetablebyStudnetId = async (req, res) => {
     const start_date = req.query.start_date || null;
     const end_date = req.query.end_date || null;
     const title = req.query.title || null;
-    const page = req.query.page || 1;
-    const limit = req.query.limit || 10;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     if (!studentId) {
       return res.status(400).json({ success: false, error: "student_id is required" });
