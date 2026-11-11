@@ -791,13 +791,12 @@ router.get(
   commonController.getStudentsByClassId,
 );
 router.get("/getStudents", commonController.getStudents);
-
-router.get("/getAllDriverUsers", commonController.getAllDriverUsers);
-router.get("/getLeaveTypes", selectionListController.getLeaveTypes);
-router.get("/getMyProfileAndSchoolDetails",commonController.getMyProfileAndSchoolDetails);
-router.get("/getExamTitles",selectionListController.getExamTitles);
 router.put("/changePassword", commonController.changePassword);
+router.get("/getMyProfileAndSchoolDetails",commonController.getMyProfileAndSchoolDetails);
+router.get("/getAllDriverUsers", commonController.getAllDriverUsers);
 
+router.get("/getLeaveTypes", selectionListController.getLeaveTypes);
+router.get("/getExamTitles",selectionListController.getExamTitles);
 router.get("/getTermTypeForTransportationInvoice",selectionListController.getTermTypeForTransportationInvoice);
 router.get("/getClassRangeForSubject",selectionListController.getClassRangeForSubject);
 router.get("/getPaymentCategories",selectionListController.getPaymentCategories);

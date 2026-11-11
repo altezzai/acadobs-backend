@@ -239,6 +239,8 @@ router.get(
   "/getTermExamByStudentId/:student_id",
   commonController.getTermExamByStudentId,
 );
+router.get("/getAllExams", commonController.getAllExams);
+
 router.get(
   "/getAllExamsFromExamTable",
   commonController.getAllExamsFromExamTable,
