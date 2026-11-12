@@ -195,6 +195,10 @@ router.get(
   "/getTodayTransportationByStudentId/:id",
   trackerController.getTodayTransportationByStudentId,
 );
+router.get(
+  "/getLivelocationLastDataWIthRouteId/:route_id",
+  trackerController.getLivelocationLastDataWIthRouteId,
+);
 //transfer
 router.post(
   "/studentTransfer",

@@ -1708,7 +1708,9 @@ const getTodayTransportationByStudentId = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const today =req.query.date||new Date().toISOString().split("T")[0];
+    const date = req.query.date || moment().format("YYYY-MM-DD");
+    const routeType = req.query.routeType || "pickup";
+
     const student = await Student.findOne({
       where: {
         id,
@@ -1743,8 +1745,8 @@ const getTodayTransportationByStudentId = async (req, res) => {
     })
     if (!route) {
       return res.status(404).json({ message: "Route not found" });
-    }
-    if (!route.active) {      
+    }  
+    if (routeType === "drop") {
       const dropRoute = await Routes.findOne({
         where: {
           pickId: route_id,
@@ -1753,13 +1755,10 @@ const getTodayTransportationByStudentId = async (req, res) => {
         },
         attributes: ["id", "route_name","type","active"],
       })
-      if (dropRoute.active) {
         route_id = dropRoute.id
         route = dropRoute
-      }else {
-        return res.status(404).json({ message: "No active route found for today" });
-      }
-    } 
+    }
+    
     const stops = await Stop.findAll({
       where: {
         trash: false,
@@ -1776,17 +1775,17 @@ const getTodayTransportationByStudentId = async (req, res) => {
     if (!stops) {
       return res.status(404).json({ message: "Stops not found" });
     }
- 
+    const whereClause ={
+      route_id,
+      stop_id:{[Op.ne]: null},
+      createdAt: {
+        [Op.gte]: date + " 00:00:00",
+        [Op.lte]: date + " 23:59:59",
+      }
+    }
     const trackedData = await LiveLocation.findAll({
-      where: {
-        route_id,
-        stop_id:{[Op.ne]: null},
-        createdAt: {
-          [Op.gte]: today + " 00:00:00",
-          [Op.lte]: today + " 23:59:59",
-        }
-      },
-      attributes: ["latitude", "longitude", "route_id", "stop_id"],
+      where: whereClause,
+      attributes: ["latitude", "longitude", "route_id", "stop_id","createdAt"],
       order: [["createdAt", "DESC"]],
       include: [
         {
@@ -1810,13 +1809,20 @@ const getTodayTransportationByStudentId = async (req, res) => {
       ]
     }
     );
-  
+   const lastLoaction  = await LiveLocation.findOne({
+      where:route_id,
+      createdAt: {
+        [Op.gte]: date + " 00:00:00",
+        [Op.lte]: date + " 23:59:59",
+      } });
+
     return res.status(200).json({
       message: "Route fetched successfully",
       student,
       route,
       stops,
       data: trackedData,
+      lastLoaction,     
     });
   } catch (error) {
     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error in getting route details:", error);
@@ -2063,10 +2069,19 @@ const getLiveLocationHistoryWIthDateByRouteId=async (req, res) => {
         },
     ]    
     });
+    const lastLoaction  = await LiveLocation.findOne({
+      where:route_id,
+      createdAt: {
+        [Op.gte]: date + " 00:00:00",
+        [Op.lte]: date + " 23:59:59",
+      } });
+
     return res.status(200).json({
       message: "Live location history fetched successfully",
       routeData: routeData,
       data: liveLocationHistory,
+      active:routeData.active,
+      lastLoaction,
     });
   } catch (error) {
     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching live location history:", error);
@@ -2076,6 +2091,42 @@ const getLiveLocationHistoryWIthDateByRouteId=async (req, res) => {
     });
   }
 }
+const getLivelocationLastDataWIthRouteId = async (req, res) => {
+  try {
+    const {route_id } = req.params;
+    const school_id = req.user.school_id;
+    const route = await Routes.findOne({
+      where:{
+        id:route_id,
+        school_id,
+        trash:false,
+      } 
+    })
+    if(!route){ return res.status(404).json({ message: "Route not found" });}
+    if(route.active!=true){
+      return res.status(404).json({ message: "Route is not active" }); 
+    }
+    const liveLocation = await LiveLocation.findOne({
+      where: {
+        route_id,
+      },
+      order: [["createdAt", "DESC"]],
+    });
+    return res.status(200).json({
+      message: "Live location last data fetched successfully",
+      data: liveLocation,
+      route,
+    });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching live location last data:", error);
+    console.error("Error fetching live location last data:", error);
+    return res.status(500).json({
+      error: "Failed to fetch live location last data",
+    });
+  }
+}   
+    
+
 const getStopByIdAndRouteId = async (req, res) => {
   try {
     const { id,route_id } = req.params;
@@ -2599,7 +2650,7 @@ module.exports = {
   updateStopForDriver ,
 
   getTodayTransportationByStudentId,
-
+  getLivelocationLastDataWIthRouteId,
 };
 
 
