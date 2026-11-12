@@ -639,7 +639,10 @@ router.get(
   "/getLiveLocationHistoryWIthDateByRouteId/:id",
   trackerController.getLiveLocationHistoryWIthDateByRouteId,
 );
-
+router.get(
+  "/getLivelocationLastDataWIthRouteId/:route_id",
+  trackerController.getLivelocationLastDataWIthRouteId,
+);
 router.post(
   "/assignDriverToRoutes/:driverId",
   schoolAdminController.assignDriverToRoutes,
