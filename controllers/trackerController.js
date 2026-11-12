@@ -12,6 +12,7 @@ const Vehicle = require("../models/tracker/vehicle");
 const Class = require("../models/class");
 const { Sequelize } = require("sequelize");
 const { Op } = require("sequelize");
+const cron = require("node-cron");
 const { deleteFile } = require("../middlewares/storageUploads");
 const logger = require("../utils/logger");
 const { schoolSequelize } = require("../config/connection");
@@ -1723,7 +1724,7 @@ const getTodayTransportationByStudentId = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const routeType = req.query.routeType || "pickup";
+    const routeType = req.query.routeType || "PICKUP";
     const today = moment().format("YYYY-MM-DD");
     const date = req.query.date || today;
     const isToday = date === today;
@@ -1762,8 +1763,8 @@ const getTodayTransportationByStudentId = async (req, res) => {
     if (!route) {
       return res.status(404).json({ message: "Route not found" });
     }
-    if (routeType === "drop") {
-      const dropRoute = await Routes.findOne({
+    if (routeType === "DROP") {
+       route = await Routes.findOne({
         where: {
           pickId: route_id,
           school_id: school_id,
@@ -1783,11 +1784,10 @@ const getTodayTransportationByStudentId = async (req, res) => {
           },
         ],
       });
-      if (!dropRoute) {
+      if (!route) {
         return res.status(404).json({ message: "Drop route not found" });
       }
-      route_id = dropRoute.id;
-      route = dropRoute;
+      route_id = route.id;
     }
 
     const stops = await Stop.findAll({
@@ -2102,80 +2102,90 @@ const deleteRoute = async (req, res) => {
     });
   }
 };
-const getLiveLocationHistoryWIthDateByRouteId=async (req, res) => {
+const getLiveLocationHistoryWIthDateByRouteId = async (req, res) => {
   try {
-    const  route_id = req.params.id;
+    const route_id = req.params.id;
     const school_id = req.user.school_id;
-    const date = req.query.date || moment().format("YYYY-MM-DD");
-  
+    const today = moment().format("YYYY-MM-DD");
+    const date = req.query.date || today;
+    const isToday = date === today;
+
     const routeData = await Routes.findOne({
       where: {
         id: route_id,
         school_id: school_id,
         trash: false,
       },
-      attributes: ["id", "route_name", "type"],
-      include:[
+      attributes: ["id", "route_name", "type", "active"],
+      include: [
         {
-          model:Vehicle,
-          as:"vehicle",
-          attributes:["id","vehicle_number","type","model"],
+          model: Vehicle,
+          as: "vehicle",
+          attributes: ["id", "vehicle_number", "type", "model"],
         },
         {
-          model:User,
-          as:"driver",
-          attributes:["id","name","phone"],
+          model: User,
+          as: "driver",
+          attributes: ["id", "name", "phone"],
         },
         {
-          model:Stop,
+          model: Stop,
           as: "stops",
-          attributes: ["id", "stop_name"],
+          where: { trash: false },
+          required: false,
+          attributes: ["id", "stop_name", "latitude", "longitude"],
           include: [
             {
               model: StopRoute,
+              where: { route_id },
+              required: false,
               attributes: ["priority"],
             },
-          ]
-        }
+          ],
+        },
       ],
     });
-      const whereClause ={
+
+    if (!routeData) {
+      return res.status(404).json({ message: "Route not found" });
+    }
+
+    const whereClause = {
       route_id,
-      stop_id:{[Op.ne]: null},
+      stop_id: { [Op.ne]: null },
       createdAt: {
         [Op.gte]: date + " 00:00:00",
         [Op.lte]: date + " 23:59:59",
-      }
-    }
+      },
+    };
     const liveLocationHistory = await LiveLocation.findAll({
       where: whereClause,
-     include:[
+      include: [
         {
-          model:StudentsStopStatus,
-          required:false,
-          include:[
+          model: StudentsStopStatus,
+          required: false,
+          include: [
             {
-              model:Student,
-              attributes:["id","full_name","reg_no","roll_number"],
-              include:[
+              model: Student,
+              attributes: ["id", "full_name", "reg_no", "roll_number"],
+              include: [
                 {
-                  model:Class,
-                  attributes:["id","classname"],
-                }
-              ]
+                  model: Class,
+                  attributes: ["id", "classname"],
+                },
+              ],
             },
           ],
         },
         {
-          model:Stop,
-          where:{trash:false},
-          required:true,
-          attributes: ["id", "stop_name"]
+          model: Stop,
+          where: { trash: false },
+          required: true,
+          attributes: ["id", "stop_name"],
         },
-    ]    
+      ],
     });
-    
-    
+
     const lastLoaction = await LiveLocation.findOne({
       where: {
         route_id,
@@ -2187,7 +2197,7 @@ const getLiveLocationHistoryWIthDateByRouteId=async (req, res) => {
       include: [
         {
           model: Stop,
-          required:false,
+          required: false,
           attributes: ["id", "stop_name", "latitude", "longitude"],
         },
       ],
@@ -2195,16 +2205,18 @@ const getLiveLocationHistoryWIthDateByRouteId=async (req, res) => {
     });
 
     let nearestStop = null;
-    if (routeData.active === true && isToday ===true ) {
+    if (isToday && routeData.active === true) {
+
       if (
         lastLoaction &&
         lastLoaction.latitude != null &&
         lastLoaction.longitude != null
       ) {
         const collectedStopIds = new Set(
-          trackedData.map((item) => Number(item.stop_id))
+          liveLocationHistory.map((item) => Number(item.stop_id))
         );
 
+        const stops = routeData.stops || [];
         const remainingStops = stops.filter(
           (stop) =>
             !collectedStopIds.has(Number(stop.id)) &&
@@ -2251,14 +2263,15 @@ const getLiveLocationHistoryWIthDateByRouteId=async (req, res) => {
       }
     }
 
-    return res.status(200).json({
+    const responsePayload = {
       message: "Live location history fetched successfully",
       routeData: routeData,
       data: liveLocationHistory,
-      active:routeData.active,
+      active: routeData.active,
       lastLoaction,
       nearestStop,
-    });
+    };
+    return res.status(200).json(responsePayload);
   } catch (error) {
     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching live location history:", error);
     console.error("Error fetching live location history:", error);
@@ -2783,6 +2796,61 @@ const assignedStopIdsFromPairRoute = async (req, res) => {
   }
 };
 
+// Auto-inactivate routes that are currently active=true and updatedAt is >= 2 hours ago
+const autoInactive = async (req, res) => {
+  try {
+    const twoHoursAgo = moment().subtract(2, "hours").toDate();
+
+    const [updatedCount] = await Routes.update(
+      { active: false },
+      {
+        where: {
+          active: true,
+          trash: false,
+          activated_at: {
+            [Op.lte]: twoHoursAgo,
+          },
+        },
+      }
+    );
+
+    logger.info(
+      `Auto-inactivated ${updatedCount} route(s) that were active for more than 2 hours.`
+    );
+
+    if (res && typeof res.status === "function") {
+      return res.status(200).json({
+        message: "Routes auto-inactivated successfully",
+        updatedCount,
+      });
+    }
+
+    return { updatedCount };
+  } catch (error) {
+    logger.error("Error in autoInactive routes:", error);
+    console.error("Error in autoInactive routes:", error);
+    if (res && typeof res.status === "function") {
+      return res.status(500).json({
+        error: "Failed to auto-inactivate routes",
+      });
+    }
+  }
+};
+
+// Schedule autoInactive to run daily at 12:00 PM and 8:00 PM (Asia/Kolkata)
+cron.schedule(
+  "0 12,20 * * *",
+  async () => {
+    logger.info("Running scheduled autoInactive cron job (12:00 PM / 8:00 PM)...");
+    await autoInactive();
+  },
+  {
+    timezone: "Asia/Kolkata",
+  }
+);
+
+
+
 module.exports = {
   getDriverById,
   updateDriverById,
@@ -2802,6 +2870,7 @@ module.exports = {
   getStopDetailsForDriver,
   updateRouteActive,
   routeInactive,
+  autoInactive,
   getStudentsByRouteId,
   deleteStudentFromStop,
   bulkchangeStopPrioritybyRouteId,
