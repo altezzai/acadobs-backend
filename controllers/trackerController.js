@@ -12,6 +12,7 @@ const Vehicle = require("../models/tracker/vehicle");
 const Class = require("../models/class");
 const { Sequelize } = require("sequelize");
 const { Op } = require("sequelize");
+const cron = require("node-cron");
 const { deleteFile } = require("../middlewares/storageUploads");
 const logger = require("../utils/logger");
 const { schoolSequelize } = require("../config/connection");
@@ -1704,119 +1705,229 @@ const getTrackedDataWithDateByRouteId = async (req, res) => {
     res.status(500).json({ error: "Failed to get route details" });
   }
 }
+const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
+  const toRad = (value) => (Number(value) * Math.PI) / 180;
+  const R = 6371; // Earth's radius in km
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
 const getTodayTransportationByStudentId = async (req, res) => {
   try {
     const { id } = req.params;
     const school_id = req.user.school_id;
-    const today =req.query.date||new Date().toISOString().split("T")[0];
+    const routeType = req.query.routeType || "PICKUP";
+    const today = moment().format("YYYY-MM-DD");
+    const date = req.query.date || today;
+    const isToday = date === today;
     const student = await Student.findOne({
       where: {
         id,
         school_id: school_id,
         trash: false,
       },
-      attributes: ["id", "full_name", "reg_no", "route_id","stop_id"],
+      attributes: ["id", "full_name", "reg_no", "route_id", "stop_id"],
     });
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
     }
-    let route_id = student.route_id
+    let route_id = student.route_id;
     let route = await Routes.findOne({
       where: {
         id: route_id,
         school_id: school_id,
         trash: false,
       },
-      attributes: ["id", "route_name","type","active"],
+      attributes: ["id", "route_name", "type", "active"],
       include: [
         {
-        model:Vehicle,
-        as: "vehicle",
-        attributes: ["id", "vehicle_number","type","model"],
+          model: Vehicle,
+          as: "vehicle",
+          attributes: ["id", "vehicle_number", "type", "model"],
         },
         {
-          model:User,
+          model: User,
           as: "driver",
           attributes: ["id", "name"],
         },
       ],
-    })
+    });
     if (!route) {
       return res.status(404).json({ message: "Route not found" });
     }
-    if (!route.active) {      
-      const dropRoute = await Routes.findOne({
+    if (routeType === "DROP") {
+       route = await Routes.findOne({
         where: {
           pickId: route_id,
           school_id: school_id,
           trash: false,
         },
-        attributes: ["id", "route_name","type","active"],
-      })
-      if (dropRoute.active) {
-        route_id = dropRoute.id
-        route = dropRoute
-      }else {
-        return res.status(404).json({ message: "No active route found for today" });
+        attributes: ["id", "route_name", "type", "active"],
+        include: [
+          {
+            model: Vehicle,
+            as: "vehicle",
+            attributes: ["id", "vehicle_number", "type", "model"],
+          },
+          {
+            model: User,
+            as: "driver",
+            attributes: ["id", "name"],
+          },
+        ],
+      });
+      if (!route) {
+        return res.status(404).json({ message: "Drop route not found" });
       }
-    } 
+      route_id = route.id;
+    }
+
     const stops = await Stop.findAll({
       where: {
         trash: false,
       },
-      attributes: ["id", "stop_name","latitude","longitude"],
+      attributes: ["id", "stop_name", "latitude", "longitude"],
       include: [
-            {
-              model: StopRoute,
-              where: {route_id},
-              attributes: ["priority"],
-            },
-          ]
-    })
+        {
+          model: StopRoute,
+          where: { route_id },
+          attributes: ["priority"],
+        },
+      ],
+      order: [[StopRoute, "priority", "ASC"]],
+    });
     if (!stops) {
       return res.status(404).json({ message: "Stops not found" });
     }
- 
-    const trackedData = await LiveLocation.findAll({
-      where: {
-        route_id,
-        stop_id:{[Op.ne]: null},
-        createdAt: {
-          [Op.gte]: today + " 00:00:00",
-          [Op.lte]: today + " 23:59:59",
-        }
+    const whereClause = {
+      route_id,
+      stop_id: { [Op.ne]: null },
+      createdAt: {
+        [Op.gte]: date + " 00:00:00",
+        [Op.lte]: date + " 23:59:59",
       },
-      attributes: ["latitude", "longitude", "route_id", "stop_id"],
+    };
+    const trackedData = await LiveLocation.findAll({
+      where: whereClause,
+      attributes: ["latitude", "longitude", "route_id", "stop_id", "createdAt"],
       order: [["createdAt", "DESC"]],
       include: [
         {
           model: Stop,
-          attributes: ["id", "stop_name","latitude","longitude"],
+          attributes: ["id", "stop_name", "latitude", "longitude"],
           include: [
             {
               model: StopRoute,
+              where: { route_id },
+              required: false,
               attributes: ["priority"],
             },
-          ]
-        }, 
+          ],
+        },
         {
           model: StudentsStopStatus,
           where: {
-            student_id: id
+            student_id: id,
           },
           required: false,
           attributes: ["id", "student_id", "status"],
         },
-      ]
+      ],
+    });
+
+    let lastLoaction = null;
+    let nearestStop = null;
+
+    lastLoaction = await LiveLocation.findOne({
+      where: {
+        route_id,
+        createdAt: {
+          [Op.gte]: date + " 00:00:00",
+          [Op.lte]: date + " 23:59:59",
+        },
+      },
+         include: [
+        {
+          model: Stop,
+          required:false,
+          attributes: ["id", "stop_name", "latitude", "longitude"],
+       },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+    if (route.active === true && isToday ===true ) {
+
+      if (
+        lastLoaction &&
+        lastLoaction.latitude != null &&
+        lastLoaction.longitude != null
+      ) {
+        const collectedStopIds = new Set(
+          trackedData.map((item) => Number(item.stop_id))
+        );
+
+        const remainingStops = stops.filter(
+          (stop) =>
+            !collectedStopIds.has(Number(stop.id)) &&
+            stop.latitude != null &&
+            stop.longitude != null
+        );
+
+        let minDistanceKm = Infinity;
+        let closestStop = null;
+
+        for (const stop of remainingStops) {
+          const distanceKm = calculateDistanceKm(
+            lastLoaction.latitude,
+            lastLoaction.longitude,
+            stop.latitude,
+            stop.longitude
+          );
+
+          if (distanceKm < minDistanceKm) {
+            minDistanceKm = distanceKm;
+            closestStop = stop;
+          }
+        }
+
+        if (closestStop) {
+          const distanceMeters = Math.round(minDistanceKm * 1000);
+          nearestStop = {
+            id: closestStop.id,
+            stop_name: closestStop.stop_name,
+            latitude: closestStop.latitude,
+            longitude: closestStop.longitude,
+            priority:
+              closestStop.StopRoutes?.[0]?.priority ??
+              closestStop.StopRoute?.priority ??
+              null,
+            distance_km: Number(minDistanceKm.toFixed(2)),
+            distance_meters: distanceMeters,
+            distance:
+              minDistanceKm < 1
+                ? `${distanceMeters} m`
+                : `${minDistanceKm.toFixed(2)} km`,
+          };
+        }
+      }
     }
-    );
-  
+
     return res.status(200).json({
       message: "Route fetched successfully",
       student,
       route,
       stops,
       data: trackedData,
+      lastLoaction,
+      nearestStop,
     });
   } catch (error) {
     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error in getting route details:", error);
@@ -1991,83 +2102,176 @@ const deleteRoute = async (req, res) => {
     });
   }
 };
-const getLiveLocationHistoryWIthDateByRouteId=async (req, res) => {
+const getLiveLocationHistoryWIthDateByRouteId = async (req, res) => {
   try {
-    const  route_id = req.params.id;
+    const route_id = req.params.id;
     const school_id = req.user.school_id;
-    const date = req.query.date || moment().format("YYYY-MM-DD");
-  
+    const today = moment().format("YYYY-MM-DD");
+    const date = req.query.date || today;
+    const isToday = date === today;
+
     const routeData = await Routes.findOne({
       where: {
         id: route_id,
         school_id: school_id,
         trash: false,
       },
-      attributes: ["id", "route_name", "type"],
-      include:[
+      attributes: ["id", "route_name", "type", "active"],
+      include: [
         {
-          model:Vehicle,
-          as:"vehicle",
-          attributes:["id","vehicle_number","type","model"],
+          model: Vehicle,
+          as: "vehicle",
+          attributes: ["id", "vehicle_number", "type", "model"],
         },
         {
-          model:User,
-          as:"driver",
-          attributes:["id","name","phone"],
+          model: User,
+          as: "driver",
+          attributes: ["id", "name", "phone"],
         },
         {
-          model:Stop,
+          model: Stop,
           as: "stops",
-          attributes: ["id", "stop_name"],
+          where: { trash: false },
+          required: false,
+          attributes: ["id", "stop_name", "latitude", "longitude"],
           include: [
             {
               model: StopRoute,
+              where: { route_id },
+              required: false,
               attributes: ["priority"],
             },
-          ]
-        }
+          ],
+        },
       ],
     });
-      const whereClause ={
+
+    if (!routeData) {
+      return res.status(404).json({ message: "Route not found" });
+    }
+
+    const whereClause = {
       route_id,
-      stop_id:{[Op.ne]: null},
+      stop_id: { [Op.ne]: null },
       createdAt: {
         [Op.gte]: date + " 00:00:00",
         [Op.lte]: date + " 23:59:59",
-      }
-    }
+      },
+    };
     const liveLocationHistory = await LiveLocation.findAll({
       where: whereClause,
-     include:[
+      include: [
         {
-          model:StudentsStopStatus,
-          required:false,
-          include:[
+          model: StudentsStopStatus,
+          required: false,
+          include: [
             {
-              model:Student,
-              attributes:["id","full_name","reg_no","roll_number"],
-              include:[
+              model: Student,
+              attributes: ["id", "full_name", "reg_no", "roll_number"],
+              include: [
                 {
-                  model:Class,
-                  attributes:["id","classname"],
-                }
-              ]
+                  model: Class,
+                  attributes: ["id", "classname"],
+                },
+              ],
             },
           ],
         },
         {
-          model:Stop,
-          where:{trash:false},
-          required:true,
-          attributes: ["id", "stop_name"]
+          model: Stop,
+          where: { trash: false },
+          required: true,
+          attributes: ["id", "stop_name"],
         },
-    ]    
+      ],
     });
-    return res.status(200).json({
+
+    const lastLoaction = await LiveLocation.findOne({
+      where: {
+        route_id,
+        createdAt: {
+          [Op.gte]: date + " 00:00:00",
+          [Op.lte]: date + " 23:59:59",
+        },
+      },
+      include: [
+        {
+          model: Stop,
+          required: false,
+          attributes: ["id", "stop_name", "latitude", "longitude"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    let nearestStop = null;
+    if (isToday && routeData.active === true) {
+
+      if (
+        lastLoaction &&
+        lastLoaction.latitude != null &&
+        lastLoaction.longitude != null
+      ) {
+        const collectedStopIds = new Set(
+          liveLocationHistory.map((item) => Number(item.stop_id))
+        );
+
+        const stops = routeData.stops || [];
+        const remainingStops = stops.filter(
+          (stop) =>
+            !collectedStopIds.has(Number(stop.id)) &&
+            stop.latitude != null &&
+            stop.longitude != null
+        );
+
+        let minDistanceKm = Infinity;
+        let closestStop = null;
+
+        for (const stop of remainingStops) {
+          const distanceKm = calculateDistanceKm(
+            lastLoaction.latitude,
+            lastLoaction.longitude,
+            stop.latitude,
+            stop.longitude
+          );
+
+          if (distanceKm < minDistanceKm) {
+            minDistanceKm = distanceKm;
+            closestStop = stop;
+          }
+        }
+
+        if (closestStop) {
+          const distanceMeters = Math.round(minDistanceKm * 1000);
+          nearestStop = {
+            id: closestStop.id,
+            stop_name: closestStop.stop_name,
+            latitude: closestStop.latitude,
+            longitude: closestStop.longitude,
+            priority:
+              closestStop.StopRoutes?.[0]?.priority ??
+              closestStop.StopRoute?.priority ??
+              null,
+            distance_km: Number(minDistanceKm.toFixed(2)),
+            distance_meters: distanceMeters,
+            distance:
+              minDistanceKm < 1
+                ? `${distanceMeters} m`
+                : `${minDistanceKm.toFixed(2)} km`,
+          };
+        }
+      }
+    }
+
+    const responsePayload = {
       message: "Live location history fetched successfully",
       routeData: routeData,
       data: liveLocationHistory,
-    });
+      active: routeData.active,
+      lastLoaction,
+      nearestStop,
+    };
+    return res.status(200).json(responsePayload);
   } catch (error) {
     logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching live location history:", error);
     console.error("Error fetching live location history:", error);
@@ -2076,6 +2280,42 @@ const getLiveLocationHistoryWIthDateByRouteId=async (req, res) => {
     });
   }
 }
+const getLivelocationLastDataWIthRouteId = async (req, res) => {
+  try {
+    const {route_id } = req.params;
+    const school_id = req.user.school_id;
+    const route = await Routes.findOne({
+      where:{
+        id:route_id,
+        school_id,
+        trash:false,
+      } 
+    })
+    if(!route){ return res.status(404).json({ message: "Route not found" });}
+    if(route.active!=true){
+      return res.status(404).json({ message: "Route is not active" }); 
+    }
+    const liveLocation = await LiveLocation.findOne({
+      where: {
+        route_id,
+      },
+      order: [["createdAt", "DESC"]],
+    });
+    return res.status(200).json({
+      message: "Live location last data fetched successfully",
+      data: liveLocation,
+      route,
+    });
+  } catch (error) {
+    logger.error("role:", req.user.role,"userId:", req.user.user_id, "Error fetching live location last data:", error);
+    console.error("Error fetching live location last data:", error);
+    return res.status(500).json({
+      error: "Failed to fetch live location last data",
+    });
+  }
+}   
+    
+
 const getStopByIdAndRouteId = async (req, res) => {
   try {
     const { id,route_id } = req.params;
@@ -2556,6 +2796,61 @@ const assignedStopIdsFromPairRoute = async (req, res) => {
   }
 };
 
+// Auto-inactivate routes that are currently active=true and updatedAt is >= 2 hours ago
+const autoInactive = async (req, res) => {
+  try {
+    const twoHoursAgo = moment().subtract(2, "hours").toDate();
+
+    const [updatedCount] = await Routes.update(
+      { active: false },
+      {
+        where: {
+          active: true,
+          trash: false,
+          activated_at: {
+            [Op.lte]: twoHoursAgo,
+          },
+        },
+      }
+    );
+
+    logger.info(
+      `Auto-inactivated ${updatedCount} route(s) that were active for more than 2 hours.`
+    );
+
+    if (res && typeof res.status === "function") {
+      return res.status(200).json({
+        message: "Routes auto-inactivated successfully",
+        updatedCount,
+      });
+    }
+
+    return { updatedCount };
+  } catch (error) {
+    logger.error("Error in autoInactive routes:", error);
+    console.error("Error in autoInactive routes:", error);
+    if (res && typeof res.status === "function") {
+      return res.status(500).json({
+        error: "Failed to auto-inactivate routes",
+      });
+    }
+  }
+};
+
+// Schedule autoInactive to run daily at 12:00 PM and 8:00 PM (Asia/Kolkata)
+cron.schedule(
+  "0 12,20 * * *",
+  async () => {
+    logger.info("Running scheduled autoInactive cron job (12:00 PM / 8:00 PM)...");
+    await autoInactive();
+  },
+  {
+    timezone: "Asia/Kolkata",
+  }
+);
+
+
+
 module.exports = {
   getDriverById,
   updateDriverById,
@@ -2575,6 +2870,7 @@ module.exports = {
   getStopDetailsForDriver,
   updateRouteActive,
   routeInactive,
+  autoInactive,
   getStudentsByRouteId,
   deleteStudentFromStop,
   bulkchangeStopPrioritybyRouteId,
@@ -2599,7 +2895,7 @@ module.exports = {
   updateStopForDriver ,
 
   getTodayTransportationByStudentId,
-
+  getLivelocationLastDataWIthRouteId,
 };
 
 
